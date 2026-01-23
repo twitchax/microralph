@@ -1,0 +1,305 @@
+---
+id: PRD-0001
+title: Build Micro Ralph MVP
+status: active                 # draft | active | done | parked
+owner: Aaron Roney
+created: 2026-01-23
+updated: 2026-01-23
+
+product_name: Micro Ralph
+binary_name: mr
+
+state_dir: .mr
+prds_dir: .mr/prds
+index_file: .mr/PRDS.md
+templates_dir: .mr/templates
+prompts_dir: .mr/prompts
+agents_file: AGENTS.md
+
+principles:
+  - "No direct API calls: Micro Ralph shells out to runner CLIs only."
+  - "State lives in git + Markdown PRDs (YAML frontmatter + History section)."
+  - "One-or-zero tasks per `mr run` invocation."
+  - "Runner can fail; we still append History so the next run has context."
+  - "Avoid XML/JSON state blobs."
+  - "Almost all dev workflows run via `cargo make` (fmt/clippy/test/ci/uat wrappers)."
+
+references:
+  - name: "kord (style reference for CI + README + repo ergonomics)"
+    url: https://github.com/twitchax/kord            # use as reference patterns :contentReference[oaicite:1]{index=1}
+
+runner:
+  default: copilot
+  allow_runners: [copilot, mock]     # typed adapters; more later
+  permissions_mode: yolo             # yolo | allow_all | manual
+  fallback_flags:
+    - "--allow-all-tools"
+    - "--allow-all-paths"
+    - "--allow-all-urls"
+
+git:
+  branch_mode: current               # current | feature
+  feature_branch_prefix: mr/
+  commit_policy: auto_clean          # never | auto_clean | always
+
+loop:
+  prd_pick: first_incomplete         # first_incomplete | by_priority | explicit
+  task_pick: highest_priority        # highest_priority | oldest_incomplete
+  max_iterations: 1                  # `mr run` attempts one task max
+  max_task_attempts: 8               # ergonomic limit across history entries per task
+  max_session_minutes: 30            # per runner invocation (timeout)
+  max_transcript_kb: 128             # stored into PRD history (truncate beyond)
+
+bootstrap:
+  generate_index: true
+  generate_prds: true
+  prd_budget: 6
+  heuristics:
+    - "Detect cargo-make entrypoints and required tasks"
+    - "Detect crates/modules and responsibilities"
+    - "Detect CI workflows and required checks"
+    - "Detect docs that imply features (README/DEVELOPMENT/etc.)"
+    - "Detect TODO/FIXME hotspots"
+
+prompts:
+  # Static prompt files are committed and versioned. They are the “system prompt” layer for each stage.
+  # Micro Ralph fills placeholders and passes to the runner CLI.
+  init: ".mr/prompts/init.md"
+  bootstrap_plan: ".mr/prompts/bootstrap_plan.md"
+  bootstrap_generate_prds: ".mr/prompts/bootstrap_generate_prds.md"
+  prd_new_round1_questions: ".mr/prompts/prd_new_round1_questions.md"
+  prd_new_roundN_questions: ".mr/prompts/prd_new_roundN_questions.md"
+  prd_new_synthesize_prd: ".mr/prompts/prd_new_synthesize_prd.md"
+  run_task: ".mr/prompts/run_task.md"
+  run_task_finalize: ".mr/prompts/run_task_finalize.md"
+  update_agents: ".mr/prompts/update_agents.md"
+
+dev:
+  command_router: "cargo make"       # make is the default entrypoint for dev actions
+  make_tasks_required:
+    - "ci"
+    - "fmt"
+    - "clippy"
+    - "test"
+    - "uat"                          # alias for whatever this repo considers acceptance gate
+    - "mr:test"                      # integration tests for MR itself
+    - "mr:uat"                       # MR end-to-end (mock runner) acceptance tests
+
+tags: [mvp, cli, prd, loop, copilot, cargo-make]
+
+acceptance_tests:
+  # UATs should be callable via cargo-make; most repos can map uat -> ci.
+  - id: uat-001
+    name: "Repo acceptance gate passes via cargo-make"
+    command: "cargo make uat"
+  - id: uat-002
+    name: "`mr init` is idempotent (via cargo-make test target)"
+    command: "cargo make mr:test init"
+  - id: uat-003
+    name: "`mr prd new` produces valid PRD (frontmatter + tasks + history scaffold)"
+    command: "cargo make mr:test prd_new"
+  - id: uat-004
+    name: "`mr run --runner mock` attempts <=1 task and appends History (success + failure)"
+    command: "cargo make mr:test run_mock"
+  - id: uat-005
+    name: "`mr status` output is stable"
+    command: "cargo make mr:test status"
+  - id: uat-006
+    name: "`mr bootstrap --runner mock` generates PRD index + starter PRDs deterministically"
+    command: "cargo make mr:test bootstrap_mock"
+
+tasks:
+  - id: T-001
+    title: "Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)"
+    priority: 1
+    status: todo
+    notes: "Use kord as the reference: CI shape, README tone, cargo-make workflow. :contentReference[oaicite:2]{index=2}"
+  - id: T-002
+    title: "Define PRD file format + parser (YAML frontmatter + Markdown body)"
+    priority: 2
+    status: todo
+    notes: "Must round-trip without trashing human Markdown."
+  - id: T-003
+    title: "Implement PRD index generator (`.mr/PRDS.md`)"
+    priority: 3
+    status: todo
+    notes: "Index is derived from scanning `.mr/prds/*.md`."
+  - id: T-004
+    title: "Implement `mr init` (new repo setup)"
+    priority: 4
+    status: todo
+    notes: "Creates `.mr/` dirs, templates, prompts, starter AGENTS.md, PRD index."
+  - id: T-005
+    title: "Implement static prompt library + placeholder system"
+    priority: 5
+    status: todo
+    notes: "All stages use committed prompt files; placeholders expanded by MR."
+  - id: T-006
+    title: "Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)"
+    priority: 6
+    status: todo
+    notes: "Round1: runner generates follow-ups; user answers; MR loops runner until ‘enough’; final synthesis writes PRD."
+  - id: T-007
+    title: "Runner abstraction + MockRunner (deterministic tests)"
+    priority: 7
+    status: todo
+    notes: "Typed adapters; mock runner supports scripted Q/A and task runs."
+  - id: T-008
+    title: "CopilotRunner adapter (programmatic prompts + allow-all perms by default)"
+    priority: 8
+    status: todo
+    notes: "No API calls. Always prefer allow-all/yolo; fallback to allow-all-* flags."
+  - id: T-009
+    title: "Implement `mr run` (one-or-zero tasks per invocation)"
+    priority: 9
+    status: todo
+    notes: "Pick task; invoke runner; run `cargo make uat`; update task status; append History even on failure."
+  - id: T-010
+    title: "Implement `mr status`"
+    priority: 10
+    status: todo
+    notes: "Summarize PRDs + tasks; show next task and last History summary."
+  - id: T-011
+    title: "AGENTS.md updater (safe, bounded patching driven by a prompt stage)"
+    priority: 11
+    status: todo
+    notes: "Auto-managed section; updated during prd_new and run."
+  - id: T-012
+    title: "Implement `mr bootstrap` (ingest an existing repo into PRDs)"
+    priority: 12
+    status: todo
+    notes: "Scan repo; generate PRD index; generate starter PRDs reflecting current repo reality."
+  - id: T-013
+    title: "Wrap-up: docs + example PRDs + end-to-end smoke"
+    priority: 99
+    status: todo
+    notes: "README + DEVELOPMENT + example PRDs; `cargo make uat` is the one true gate."
+
+---
+
+# Summary
+
+Micro Ralph (`mr`) is a tiny CLI that helps you **create PRDs** and **execute PRDs** by repeatedly invoking an underlying coding-agent CLI (starting with GitHub Copilot CLI) and updating PRD state (tasks + History) after every run.
+
+**MVP promise (GSD-style):** minimal ceremony. You can:
+- bootstrap or init a repo,
+- write PRDs via a guided Q/A,
+- run an iterative “try → verify → log” loop,
+- and watch tasks flip to done when `cargo make uat` passes.
+
+---
+
+# Problem
+
+Agent loops are useful, but many systems make the *workflow engine* the project. I want the smallest possible system where:
+
+- PRDs are easy to write, and progress lives inside them
+- Each run attempts one task and logs what happened
+- The PRD itself becomes the memory
+- The runner can fail without losing context
+- Almost everything routes through `cargo make`
+- No direct API calls: only shelling out to runner CLIs
+
+---
+
+# Goals
+
+1. **PRD authoring is a guided Q/A**
+   - `mr prd new` drives a back-and-forth with the runner and the user in one command session.
+2. **Execution loop is one-step**
+   - `mr run` attempts <=1 task, runs `cargo make uat`, updates task status, appends History.
+3. **Static prompts for every stage**
+   - `.mr/prompts/*.md` are committed, versioned, and used as the stable instruction layer.
+4. **Kord as a reference**
+   - Micro Ralph should copy patterns from `kord` for CI, README, and cargo-make ergonomics. :contentReference[oaicite:3]{index=3}
+5. **No direct API calls**
+   - Only runner CLIs. Typed adapters.
+
+---
+
+# Non-Goals (MVP)
+
+- No TUI.
+- No daemon/service.
+- No direct API usage.
+- No requirement of one commit per task.
+- No forced branch workflow.
+
+---
+
+# Commands (MVP)
+
+## `mr init`
+New repo setup:
+- `.mr/` structure: `prds/`, `templates/`, `prompts/`
+- `.mr/PRDS.md` index
+- starter `AGENTS.md`
+- `Makefile.toml` tasks (kord-style) so most actions are `cargo make ...` :contentReference[oaicite:4]{index=4}
+
+## `mr bootstrap`
+Existing repo ingest:
+- Generate `.mr/PRDS.md`
+- Generate starter PRDs (bounded)
+- Patch `AGENTS.md` auto-managed section with inferred norms (via prompt stage)
+
+## `mr prd new <slug>`
+Guided Q/A flow (one user session):
+1. MR invokes runner using `prompts/prd_new_round1_questions.md`:
+   - "Look at PRD list; here is what the user wants; ask follow-up questions."
+2. MR prints questions to user and collects answers.
+3. MR invokes runner using `prompts/prd_new_roundN_questions.md`:
+   - include prior Q/A + repo context; ask any remaining questions or say “ready”.
+4. When ready, MR invokes runner using `prompts/prd_new_synthesize_prd.md`:
+   - create PRD draft with tasks + UATs + links + history scaffold.
+5. MR may invoke `prompts/update_agents.md` to patch `AGENTS.md`.
+
+> Alternative (future): let Copilot CLI run an interactive “interview” inside the agent itself.
+> MVP prefers MR-mediated Q/A because it’s deterministic and testable.
+
+## `mr run [--prd ...] [--runner ...]`
+- Pick PRD + task
+- Invoke runner with `prompts/run_task.md` (or `run_task_finalize.md` for wrap-up)
+- Run `cargo make uat`
+- Update task status if UAT passes
+- Append History always (success/failure/partial)
+
+## `mr status`
+- Summarize PRDs + tasks + last History entry
+
+---
+
+# Static Prompts (Contract)
+
+Prompts are files (not hard-coded strings), so:
+- users can tune the “house style”
+- behavior is stable across runs
+- tests can validate exact prompt payloads
+
+Each prompt must define:
+- objective
+- allowed actions (shell-only)
+- required outputs (structured but *not* JSON state blobs)
+- what to write into PRD History for success/failure
+
+---
+
+# Task Completion Semantics
+
+- UATs are commands, usually `cargo make uat`.
+- A task is “done” when all PRD UATs pass.
+- Runner failure is acceptable; History captures what happened and what to try next.
+- Each PRD includes a wrap-up task using `run_task_finalize.md`.
+
+---
+
+# History
+
+## 2026-01-23
+- Updated PRD: route most dev commands through `cargo make`.
+- Updated PRD: added static prompt library for every stage.
+- Updated PRD: `mr prd new` becomes MR-mediated runner↔user Q/A in one session.
+- Updated PRD: use `kord` repo as reference for CI/README/workflow norms. :contentReference[oaicite:5]{index=5}
+
+(Entries appended by `mr run` will go below this line.)
+
+---
