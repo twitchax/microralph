@@ -35,6 +35,9 @@ pub enum PromptKind {
 
     /// AGENTS.md update prompt.
     UpdateAgents,
+
+    /// PRD edit prompt for quick modifications.
+    PrdEdit,
 }
 
 impl PromptKind {
@@ -52,6 +55,7 @@ impl PromptKind {
             Self::RunTask => "run_task.md",
             Self::RunTaskFinalize => "run_task_finalize.md",
             Self::UpdateAgents => "update_agents.md",
+            Self::PrdEdit => "prd_edit.md",
         }
     }
 
@@ -67,6 +71,7 @@ impl PromptKind {
             Self::RunTask,
             Self::RunTaskFinalize,
             Self::UpdateAgents,
+            Self::PrdEdit,
         ]
     }
 }
@@ -94,9 +99,10 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 9);
+        assert_eq!(all.len(), 10);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
+        assert!(all.contains(&PromptKind::PrdEdit));
     }
 
     #[test]

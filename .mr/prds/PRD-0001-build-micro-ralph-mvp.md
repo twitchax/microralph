@@ -177,7 +177,7 @@ tasks:
   - id: T-014
     title: "Implement `mr prd edit` for quick PRD modifications via runner"
     priority: 14
-    status: todo
+    status: done
     notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow up question loop if needed."
   - id: T-016
     title: "Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)"
@@ -548,5 +548,27 @@ Each prompt must define:
   - Used `Runner::name()` method in logging (`run.rs`, `prd_new.rs`) to make it non-dead
   - Used `PrdNewResult::qa_history` in output to show questions answered
   - All 145 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-014 Completed
+- **Task**: Implement `mr prd edit` for quick PRD modifications via runner
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `PrdEdit` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_PRD_EDIT` constant to `src/init.rs` with the edit prompt template
+  - Updated `init()` function to create `prd_edit.md` prompt file on initialization
+  - Updated `get_default_prompt()` in `src/prompt/loader.rs` to handle new prompt kind
+  - Created `src/prd_edit.rs` module with full edit functionality:
+    - `PrdEditConfig` and `PrdEditResult` types
+    - `edit_prd()` function with Q/A loop support (up to 3 rounds)
+    - `find_prd()` to locate PRD by ID
+    - `build_edit_prompt()` for prompt expansion with context
+    - `parse_questions()` and `collect_answers()` for follow-up Q/A
+    - `extract_prd_content()` to parse runner output
+  - Added `Edit` subcommand to `PrdCommand` in `main.rs`
+  - Implemented `cmd_prd_edit()` function for CLI integration
+  - Created `.mr/prompts/prd_edit.md` prompt file
+  - Updated test counts for new prompt file (12 → 13 files, 9 → 10 prompt kinds)
+  - Wrote 9 tests covering edit flow, Q/A, and content extraction
+  - All 154 tests pass, clippy clean, UAT passes
 
 ---

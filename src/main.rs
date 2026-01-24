@@ -6,6 +6,7 @@ mod agents;
 mod bootstrap;
 mod init;
 mod prd;
+mod prd_edit;
 mod prd_new;
 mod prompt;
 mod run;
@@ -79,6 +80,19 @@ enum PrdCommand {
         runner: String,
     },
 
+    /// Edit an existing PRD via runner-assisted modifications.
+    Edit {
+        /// The PRD ID to edit (e.g., "PRD-0001").
+        prd_id: String,
+
+        /// The edit request (what changes to make).
+        request: String,
+
+        /// The runner to use for the edit session.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+    },
+
     /// List all PRDs.
     List,
 }
@@ -101,6 +115,14 @@ fn main() -> Result<()> {
             PrdCommand::New { slug, runner } => {
                 tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
                 cmd_prd_new(&slug, &runner)?;
+            }
+            PrdCommand::Edit {
+                prd_id,
+                request,
+                runner,
+            } => {
+                tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
+                cmd_prd_edit(&prd_id, &request, &runner)?;
             }
             PrdCommand::List => {
                 tracing::info!("Listing PRDs...");
@@ -281,6 +303,60 @@ fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
     println!("  Path: {}", result.path.display());
     println!("  Q/A Rounds: {}", result.rounds);
     println!("  Questions answered: {}", result.qa_history.len());
+
+    Ok(())
+}
+
+/// Runs the `mr prd edit` command.
+fn cmd_prd_edit(prd_id: &str, request: &str, runner_name: &str) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::new();
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = prd_edit::PrdEditConfig {
+        root: &cwd,
+        prd_id,
+        request,
+    };
+
+    let stdin = std::io::stdin();
+    let mut stdin_lock = stdin.lock();
+    let stdout = std::io::stdout();
+    let mut stdout_lock = stdout.lock();
+
+    let result = prd_edit::edit_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+
+    println!();
+    println!("PRD edited successfully!");
+    println!("  ID: {}", result.prd.id());
+    println!("  Title: {}", result.prd.title());
+    println!("  Path: {}", result.path.display());
+    println!("  Q/A Rounds: {}", result.rounds);
+
+    if !result.qa_history.is_empty() {
+        println!("  Questions answered: {}", result.qa_history.len());
+    }
 
     Ok(())
 }
