@@ -823,6 +823,27 @@ fn cmd_prd_finalize(
     Ok(())
 }
 
+/// Normalizes a PRD identifier.
+///
+/// Accepts either a full PRD ID like "PRD-0005" or just a number like "5" or "13".
+/// Returns the normalized form "PRD-NNNN".
+fn normalize_prd_id(input: &str) -> String {
+    let trimmed = input.trim();
+
+    // If it already looks like a PRD ID, return as-is.
+    if trimmed.starts_with("PRD-") {
+        return trimmed.to_string();
+    }
+
+    // Try to parse as a number and format as PRD-NNNN.
+    if let Ok(num) = trimmed.parse::<u32>() {
+        return format!("PRD-{num:04}");
+    }
+
+    // Fall back to the original input.
+    trimmed.to_string()
+}
+
 /// Runs the `mr run` command.
 fn cmd_run(
     prd_id: Option<&str>,
@@ -836,6 +857,9 @@ fn cmd_run(
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
+
+    // Normalize PRD ID if provided (e.g., "5" -> "PRD-0005").
+    let normalized_prd_id = prd_id.map(normalize_prd_id);
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -862,7 +886,7 @@ fn cmd_run(
 
     let config = run::RunConfig {
         root: &cwd,
-        prd_id,
+        prd_id: normalized_prd_id.as_deref(),
         stream,
     };
 
@@ -1260,5 +1284,28 @@ mod tests {
         } else {
             panic!("Expected Prd Finalize command");
         }
+    }
+
+    #[test]
+    fn test_normalize_prd_id_full_id() {
+        assert_eq!(normalize_prd_id("PRD-0001"), "PRD-0001");
+        assert_eq!(normalize_prd_id("PRD-0042"), "PRD-0042");
+        assert_eq!(normalize_prd_id("  PRD-0005  "), "PRD-0005");
+    }
+
+    #[test]
+    fn test_normalize_prd_id_number() {
+        assert_eq!(normalize_prd_id("5"), "PRD-0005");
+        assert_eq!(normalize_prd_id("13"), "PRD-0013");
+        assert_eq!(normalize_prd_id("1"), "PRD-0001");
+        assert_eq!(normalize_prd_id("9999"), "PRD-9999");
+        assert_eq!(normalize_prd_id("  42  "), "PRD-0042");
+    }
+
+    #[test]
+    fn test_normalize_prd_id_fallback() {
+        // Non-numeric, non-PRD strings fall back to original.
+        assert_eq!(normalize_prd_id("my-feature"), "my-feature");
+        assert_eq!(normalize_prd_id("abc"), "abc");
     }
 }
