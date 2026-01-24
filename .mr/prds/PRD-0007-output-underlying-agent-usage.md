@@ -1,21 +1,18 @@
 ---
 id: PRD-0007
-title: "Output Underlying Agent Usage"
+title: Output Underlying Agent Usage
 status: done
-owner: "twitchax"
+owner: twitchax
 created: 2026-01-24
 updated: 2026-01-24
-
 principles:
 - Runner-specific implementation - each runner handles its own usage metrics
 - Graceful degradation - runners without usage info simply omit the output
 - Ephemeral display only - no persistence of token usage data
 - Minimal output footprint - display usage inline with existing truncated output
-
 references:
 - name: GitHub Copilot CLI Documentation
   url: https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-in-the-command-line
-
 acceptance_tests:
 - id: uat-001
   name: CopilotRunner displays token usage after truncated output when available
@@ -25,7 +22,6 @@ acceptance_tests:
   name: Token usage is omitted when runner does not provide metrics
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Extend RunnerOutput to include optional usage metadata
@@ -47,7 +43,6 @@ tasks:
   priority: 4
   status: done
   notes: Default behavior should be to omit usage output when UsageInfo is None.
-
 ---
 
 # Summary
@@ -146,3 +141,13 @@ When running `mr run`, users see truncated LLM output but have no visibility int
 - **Cleanup**: No temporary files or debug statements found
 
 ---
+## 2026-01-24 — Finalization Complete
+- **PRD**: PRD-0007 — Output Underlying Agent Usage
+- **Finalized**: 2026-01-24T22:05:56Z
+- **Tasks Completed**: 4
+- **Summary**:
+  - T-001: Extend RunnerOutput to include optional usage metadata
+  - T-002: Parse token usage from Copilot CLI output in CopilotRunner
+  - T-003: Display usage info in stdout after truncated LLM output
+  - T-004: Ensure runners without usage info omit the usage display
+- **Status**: ✅ All acceptance tests passed

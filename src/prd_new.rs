@@ -193,21 +193,12 @@ where
         bail!("Runner failed during synthesis: {}", synthesize_output.text);
     }
 
-    // Log raw output for debugging.
-    tracing::debug!(
-        raw_output_len = synthesize_output.text.len(),
-        raw_first_100 = ?synthesize_output.text.chars().take(100).collect::<String>(),
-        "Received synthesize output from runner"
-    );
-
-    // Strategy: The runner may have created the PRD file directly on disk,
-    // or it may have returned the PRD content in its response.
-    // First, check if a new PRD file was created. If so, use that.
-    // Otherwise, try to parse the response.
-
+    // Strategy: The runner can create the PRD file directly (production),
+    // or return content that we write (tests with MockRunner).
+    // We check for file first, then fall back to parsing response if needed.
     let prds_dir = config.root.join(".mr").join("prds");
 
-    // Look for a newly created PRD file matching our slug.
+    // Look for the newly created PRD file matching our slug.
     let (prd, prd_path, prd_content) =
         if let Some((path, content)) = find_created_prd_file(&prds_dir, config.slug, &next_id)? {
             tracing::debug!(path = %path.display(), "Found PRD file created by runner");
@@ -221,14 +212,14 @@ where
 
             (parsed, path, content)
         } else {
-            // Fall back to parsing the response.
+            // Fall back to parsing the response (for tests or if runner didn't create file).
             tracing::debug!("No PRD file found, parsing response content");
 
             let prd_content = extract_prd_content(&synthesize_output.text);
 
             let prd = parse_prd(&prd_content).with_context(|| {
                 format!(
-                    "Failed to parse synthesized PRD. First 200 chars of extracted content: {:?}",
+                    "Failed to parse synthesized PRD content. First 200 chars: {:?}",
                     prd_content.chars().take(200).collect::<String>()
                 )
             })?;
