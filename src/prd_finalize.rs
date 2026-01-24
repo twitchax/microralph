@@ -10,6 +10,9 @@ use thiserror::Error;
 
 use crate::prd::types::Task;
 use crate::prd::{self, Prd, TaskStatus};
+use crate::prompt::{
+    PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
+};
 use crate::runner::Runner;
 
 /// Errors that can occur during PRD finalization.
@@ -98,12 +101,24 @@ fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
     }
 }
 
+/// Builds the finalization prompt for the runner.
+fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
+    let template = load_prompt_with_fallback(root, PromptKind::RunTaskFinalize);
+
+    let mut ctx = PlaceholderContext::new();
+
+    ctx.insert("prd_id", prd.id());
+    ctx.insert("prd_summary", prd.body.clone());
+
+    expand_placeholders(&template, &ctx)
+}
+
 /// Finalizes a PRD.
 ///
 /// This function:
 /// 1. Finds the PRD by ID
 /// 2. Validates all tasks are done (returns error if not)
-/// 3. (Future: runs acceptance tests via runner)
+/// 3. Runs acceptance tests via the finalization prompt
 /// 4. (Future: generates changelog entry)
 /// 5. (Future: updates PRD status to done)
 /// 6. (Future: refreshes the index)
@@ -111,7 +126,7 @@ fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
 /// # Arguments
 ///
 /// * `config` - Configuration for finalization
-/// * `_runner` - The runner to use for acceptance test verification
+/// * `runner` - The runner to use for acceptance test verification
 ///
 /// # Returns
 ///
@@ -121,7 +136,8 @@ fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
 ///
 /// Returns `FinalizeError::IncompleteTasks` if any task is not done.
 /// Returns `FinalizeError::PrdNotFound` if the PRD doesn't exist.
-pub fn finalize_prd(config: &PrdFinalizeConfig, _runner: &dyn Runner) -> Result<PrdFinalizeResult> {
+/// Returns an error if the runner fails.
+pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<PrdFinalizeResult> {
     tracing::debug!(
         prd_id = config.prd_id,
         stream = config.stream,
@@ -141,7 +157,41 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, _runner: &dyn Runner) -> Result<
 
     tracing::info!(
         prd_id = config.prd_id,
-        "All tasks done, PRD ready for finalization"
+        "All tasks done, running acceptance test verification"
+    );
+
+    // Build and execute the finalization prompt.
+    let prompt = build_finalize_prompt(config.root, &prd);
+
+    tracing::debug!(
+        prompt_len = prompt.len(),
+        runner = %runner.name(),
+        "Invoking runner for acceptance test verification"
+    );
+
+    let output = if config.stream {
+        let mut stdout = std::io::stdout();
+
+        runner
+            .execute_streaming(&prompt, config.root, &mut stdout)
+            .with_context(|| format!("Runner failed during finalization of {}", config.prd_id))?
+    } else {
+        runner
+            .execute(&prompt, config.root)
+            .with_context(|| format!("Runner failed during finalization of {}", config.prd_id))?
+    };
+
+    if !output.success {
+        anyhow::bail!(
+            "Finalization verification failed for {}: {}",
+            config.prd_id,
+            output.text
+        );
+    }
+
+    tracing::info!(
+        prd_id = config.prd_id,
+        "Finalization verification completed successfully"
     );
 
     Ok(PrdFinalizeResult {
@@ -324,5 +374,35 @@ mod tests {
         } else {
             panic!("Expected IncompleteTasks error");
         }
+    }
+
+    #[test]
+    fn test_build_finalize_prompt() {
+        let temp = tempfile::TempDir::new().unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            tasks: Some(vec![make_task("T-001", TaskStatus::Done)]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(
+            frontmatter,
+            "# Test PRD Summary\n\nThis is the PRD body content.".to_string(),
+        );
+
+        let prompt = build_finalize_prompt(temp.path(), &prd);
+
+        // Verify placeholders are expanded.
+        assert!(prompt.contains("PRD-0001"), "Prompt should contain PRD ID");
+        assert!(
+            prompt.contains("Test PRD Summary"),
+            "Prompt should contain PRD body"
+        );
+        assert!(
+            prompt.contains("This is the PRD body content"),
+            "Prompt should contain full body"
+        );
     }
 }

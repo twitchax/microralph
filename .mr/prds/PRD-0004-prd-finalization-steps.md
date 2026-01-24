@@ -18,7 +18,7 @@ tasks:
   - id: T-003
     title: "Run acceptance test verification via finalization prompt"
     priority: 2
-    status: todo
+    status: done
   - id: T-004
     title: "Create CHANGELOG.md at project root with Keep a Changelog format"
     priority: 2
@@ -162,3 +162,19 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
   - Added test for multiple incomplete tasks
   - Updated `cmd_prd_finalize` in `src/main.rs` to remove conditional output (now errors propagate)
   - UAT passes: 204/204 tests pass
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Run acceptance test verification via finalization prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Added import for prompt module (`PlaceholderContext`, `PromptKind`, `expand_placeholders`, `load_prompt_with_fallback`) in `src/prd_finalize.rs`
+  - Created `build_finalize_prompt()` function that:
+    - Loads the `RunTaskFinalize` prompt template
+    - Expands `{{prd_id}}` and `{{prd_summary}}` placeholders
+  - Updated `finalize_prd()` to actually use the runner:
+    - Invokes the finalization prompt via runner after task validation
+    - Supports streaming mode for real-time output
+    - Returns error if runner reports failure
+    - Added tracing for acceptance test verification step
+  - Added test `test_build_finalize_prompt()` to verify placeholder expansion
+  - UAT passes: 205/205 tests pass
