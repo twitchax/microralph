@@ -36,7 +36,7 @@ acceptance_tests:
 - id: uat-006
   name: Verified UATs updated in PRD frontmatter
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-007
   name: UAT verification results appended to History
   command: cargo make uat
@@ -279,3 +279,15 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - The test also verifies that PRDs with all UATs verified can proceed with finalization
   - Test command: `cargo make uat finalize_unverified_blocks`
   - Result: All 248 tests passed (1 test run for filter: 1 passed, 247 skipped)
+## 2026-01-24 — uat-006 Verification
+- **UAT**: Verified UATs updated in PRD frontmatter
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`
+  - Test name: `test_update_uat_status` (line 1501)
+  - This test verifies that the `update_uat_status()` function correctly updates a UAT's status from `unverified` to `verified` in the PRD frontmatter
+  - Test creates a PRD with 2 unverified UATs, calls `update_uat_status()` on uat-001, then verifies that uat-001 is now `verified` while uat-002 remains `unverified`
+  - Also tested by `test_uat_verification_integration_flow` which verifies the full flow including UAT status updates during the verification loop
+  - Test command: `cargo make uat update_uat_status`
+  - Result: All 248 tests passed (2 tests matched filter: test_update_uat_status, test_update_uat_status_not_found)
