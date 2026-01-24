@@ -147,13 +147,13 @@ tasks:
   - id: T-008
     title: "CopilotRunner adapter (programmatic prompts + allow-all perms by default)"
     priority: 8
-    status: todo
+    status: done
     notes: "No API calls. Always prefer allow-all/yolo; fallback to allow-all-* flags."
   - id: T-009
     title: "Implement `mr run` (one-or-zero tasks per invocation)"
     priority: 9
     status: todo
-    notes: "Supports `--prd <id>` to target a specific PRD. Pick task; invoke runner; run `cargo make uat`; update task status; append History even on failure."
+    notes: "Supports `--prd <id>` to target a specific PRD. Pick task; invoke runner; run `cargo make uat`; update task status; append History even on failure. History entry must include UAT pass/fail proof (command output or summary). After updating task status, regenerate `.mr/PRDS.md` to reflect new progress."
   - id: T-010
     title: "Implement `mr status`"
     priority: 10
@@ -409,5 +409,23 @@ Each prompt must define:
   - Added `scan_prd_summaries()` and `generate_index_from_root()` helper functions
   - Wrote 17 new tests covering Q/A flow, question parsing, PRD generation, and edge cases
   - All 92 tests pass, clippy clean, CI green
+
+## 2026-01-24 — T-008 Completed
+- **Task**: CopilotRunner adapter (programmatic prompts + allow-all perms by default)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/runner/copilot.rs` module with CopilotRunner implementation
+  - Implemented `CopilotRunner` that shells out to the `copilot` CLI with `--allow-all` (yolo mode)
+  - Added `CopilotConfig` struct with configurable options:
+    - `copilot_path`: path to the copilot CLI binary
+    - `permission_mode`: Yolo (--allow-all), AllowAll (individual flags), or Manual
+    - `silent`: use `-s` for clean output
+    - `no_ask_user`: disable ask_user tool for autonomous operation
+  - Implemented `PermissionMode` enum for permission strategies
+  - CopilotRunner executes `copilot -p "<prompt>" --allow-all -s --no-ask-user`
+  - Added `is_available()` check using `which copilot`
+  - Integrated CopilotRunner into main.rs `cmd_prd_new()` function
+  - Added 7 tests covering config, arg building, and runner behavior
+  - All 99 tests pass, clippy clean, CI green, UAT passes
 
 ---

@@ -1,7 +1,5 @@
 //! Mock runner for testing.
 
-#![allow(dead_code)]
-
 use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::Mutex;
@@ -12,7 +10,9 @@ use super::types::{Runner, RunnerOutput, RunnerResult};
 ///
 /// The mock runner returns pre-configured responses in sequence.
 /// This allows testing the Q/A flow without invoking a real runner.
+// TODO(T-013): Remove allow(dead_code) when all methods are used.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct MockRunner {
     /// The name of this runner.
     name: String,
@@ -24,6 +24,7 @@ pub struct MockRunner {
     recorded_prompts: Mutex<Vec<String>>,
 }
 
+#[allow(dead_code)]
 impl MockRunner {
     /// Creates a new mock runner with the given responses.
     ///

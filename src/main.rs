@@ -8,6 +8,8 @@ mod prd_new;
 mod prompt;
 mod runner;
 
+use runner::Runner;
+
 /// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -180,10 +182,15 @@ fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => Box::new(runner::MockRunner::empty()),
         "copilot" => {
-            // For now, we don't have a real Copilot runner, so we bail.
-            anyhow::bail!(
-                "Copilot runner is not yet implemented. Use `--runner mock` for testing."
-            );
+            let copilot = runner::CopilotRunner::new();
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it with `npm install -g @anthropic-ai/copilot-cli` or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
         }
         other => {
             anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
