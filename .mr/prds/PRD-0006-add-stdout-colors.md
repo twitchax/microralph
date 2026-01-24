@@ -21,7 +21,7 @@ acceptance_tests:
 - id: uat-004
   name: Colors disabled when stdout is piped
   command: cargo run -- prd list 2>&1 | cat | grep -v $'\033'
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: Existing emoji usage preserved and enhanced
   command: cargo run -- prd list 2>&1 | grep -E '✅|📋|🧪|⚠️'
@@ -242,3 +242,14 @@ See frontmatter for UAT definitions.
   - Implementation uses `msg.blue()` and `.bold()` from owo-colors which automatically applies blue color and bold formatting when stdout supports it
   - Question prompts are used in `src/prd_new.rs:555` and `src/prd_edit.rs:292`
   - All 255 tests pass in `cargo make uat`
+
+## 2026-01-24 — uat-004 Verification
+- **UAT**: Colors disabled when stdout is piped
+- **Status**: ✅ Verified
+- **Method**: Existing implementation
+- **Details**:
+  - Command: `cargo run -- prd list 2>&1 | cat | grep -v $'\033'`
+  - Successfully verified no ANSI escape sequences in piped output (exit code 0)
+  - The `owo-colors` crate automatically detects TTY support via `if_supports_color(Stream::Stdout, ...)` in all color utility functions
+  - When stdout is piped (not a TTY), colors are automatically disabled and plain text is emitted
+  - Implementation in `src/colors.rs` provides automatic degradation without requiring explicit TTY checks

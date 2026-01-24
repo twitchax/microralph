@@ -283,7 +283,6 @@ Check if tests require specific environment:
 - Also update the README to explain that a project that is mostly ralphed should be called a ralph, and the real selling point is on locking time for the artisanal code that you actually want to write. Essentially, Ralph lets you develop small products and tools that you need so you can free up your time for other more valuable work.
 - Also add a Claude Code runner,
 - Also remove the reliance on the LLM response during PRD creation. We should only care about the file that was generated.
-- Add information about how to create and go into a dev container so that people can run the application in a sandbox environment very easily.  Also enable a command to generate or regenerate the dev container file.
 - Cleanup pass.  Refactor out common code between prd_new and prd_edit.  Possibly refactor out common code between run and prd_edit as well.  Add more comments to the code to explain what is going on in various places.  Check that usual Rust patterns are respected, but don't change if too hard.
 
 ## License
