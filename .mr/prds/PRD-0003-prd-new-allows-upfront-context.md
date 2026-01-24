@@ -36,7 +36,7 @@ tasks:
 - id: T-001
   title: Add --context CLI flag to prd new command
   priority: 1
-  status: todo
+  status: done
   notes: Add optional --context argument to the prd new subcommand in main.rs.
 - id: T-002
   title: Add upfront context prompt before question generation
@@ -87,4 +87,15 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
 - Context stored in PRD frontmatter (context is ephemeral, used only during creation).
 
 ## History
+
+## 2026-01-24 — T-001 Completed
+- **Task**: Add --context CLI flag to prd new command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `--context <CONTEXT>` optional argument to `PrdCommand::New` in `src/main.rs`
+  - Updated `cmd_prd_new` function signature to accept `context: Option<&str>`
+  - Added `context` field to `PrdNewConfig` struct in `src/prd_new.rs`
+  - Updated all tests to include the new `context` field
+  - UAT: All 227 tests passed
+  - CLI help now shows: `--context <CONTEXT>  Upfront context to provide before question generation`
 

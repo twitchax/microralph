@@ -57,6 +57,11 @@ pub struct PrdNewConfig<'a> {
 
     /// Optional initial description from the user.
     pub description: Option<&'a str>,
+
+    /// Optional upfront context from the user (via --context flag).
+    /// Used by `build_round1_prompt` and subsequent rounds.
+    #[allow(dead_code)]
+    pub context: Option<&'a str>,
 }
 
 /// Runs the PRD creation flow.
@@ -712,6 +717,7 @@ A test feature.
             root: temp.path(),
             slug: "test-feature",
             description: None,
+            context: None,
         };
 
         let input = "Solving problem X\nMVP scope\n";
@@ -782,6 +788,7 @@ tasks: []
             root: temp.path(),
             slug: "test",
             description: None,
+            context: None,
         };
 
         // Provide enough answers: 1 for round1 + (MAX_QA_ROUNDS - 1) for subsequent rounds

@@ -132,6 +132,11 @@ enum PrdCommand {
         /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
         #[arg(long)]
         model: Option<String>,
+
+        /// Upfront context to provide before question generation.
+        /// This helps the AI ask more relevant, targeted questions.
+        #[arg(long)]
+        context: Option<String>,
     },
 
     /// Edit an existing PRD via runner-assisted modifications.
@@ -200,9 +205,10 @@ fn main() -> Result<()> {
                 slug,
                 runner,
                 model,
+                context,
             } => {
                 tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
-                cmd_prd_new(&slug, &runner, model.as_deref())?;
+                cmd_prd_new(&slug, &runner, model.as_deref(), context.as_deref())?;
             }
             PrdCommand::Edit {
                 prd_id,
@@ -489,7 +495,12 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
 }
 
 /// Runs the `mr prd new` command.
-fn cmd_prd_new(slug: &str, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
+fn cmd_prd_new(
+    slug: &str,
+    runner_name: &str,
+    cli_model: Option<&str>,
+    context: Option<&str>,
+) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
@@ -523,6 +534,7 @@ fn cmd_prd_new(slug: &str, runner_name: &str, cli_model: Option<&str>) -> Result
         root: &cwd,
         slug,
         description: None,
+        context,
     };
 
     let stdin = std::io::stdin();
@@ -968,12 +980,14 @@ mod tests {
                     slug,
                     runner,
                     model,
+                    context,
                 },
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
             assert_eq!(runner, "copilot");
             assert!(model.is_none());
+            assert!(context.is_none());
         } else {
             panic!("Expected Prd New command");
         }
@@ -989,12 +1003,14 @@ mod tests {
                     slug,
                     runner,
                     model,
+                    context,
                 },
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
             assert_eq!(runner, "copilot");
             assert_eq!(model, Some("gpt-4o".to_string()));
+            assert!(context.is_none());
         } else {
             panic!("Expected Prd New command");
         }
