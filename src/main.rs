@@ -1516,4 +1516,11 @@ mod tests {
             panic!("Expected Run command without positional PRD argument");
         }
     }
+
+    #[test]
+    fn test_args_parse_list() {
+        // Verify list command works at top level
+        let args = Args::try_parse_from(["mr", "list"]).unwrap();
+        assert!(matches!(args.command, Some(Command::List)));
+    }
 }

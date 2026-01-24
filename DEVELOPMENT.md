@@ -277,7 +277,6 @@ Check if tests require specific environment:
 
 ## Upcoming PRD / Change Ideas
 
-- `prd suggest`
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
 
 ## License

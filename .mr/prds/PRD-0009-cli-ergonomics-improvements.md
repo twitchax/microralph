@@ -28,7 +28,7 @@ acceptance_tests:
 - id: uat-003
   name: Top-level list command works
   command: cargo run -- list
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: Top-level new command works
   command: cargo run -- new test-slug
@@ -258,5 +258,15 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - This test was created during uat-001 verification as a companion test
   - Verifies that `mr run` without arguments parses correctly with prd = None
   - Test passes successfully
+
+## 2026-01-24 — uat-003 Verification
+- **UAT**: Top-level list command works
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_args_parse_list` in src/main.rs (line 1520)
+  - Test verifies `mr list` parses correctly as Command::List
+  - Full test suite passes: 266 tests
+  - Manual verification confirms command works correctly and displays PRD list
 
 ---
