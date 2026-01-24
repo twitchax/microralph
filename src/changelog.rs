@@ -78,7 +78,6 @@ pub fn ensure_changelog_exists(root: impl AsRef<Path>) -> Result<EnsureChangelog
 /// # Returns
 ///
 /// The contents of CHANGELOG.md, or `None` if it doesn't exist.
-#[allow(dead_code)] // Will be used by T-005 for changelog entry generation.
 pub fn read_changelog(root: impl AsRef<Path>) -> Option<String> {
     let path = root.as_ref().join("CHANGELOG.md");
 

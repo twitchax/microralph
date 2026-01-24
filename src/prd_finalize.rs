@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use thiserror::Error;
 
-use crate::changelog::ensure_changelog_exists;
+use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::Task;
 use crate::prd::{self, Prd, TaskStatus};
 use crate::prompt::{
@@ -108,6 +108,21 @@ fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
     }
 }
 
+/// Formats completed tasks as a bullet list.
+fn format_completed_tasks(prd: &Prd) -> String {
+    let tasks = prd.completed_tasks();
+
+    if tasks.is_empty() {
+        return "(No completed tasks)".to_string();
+    }
+
+    tasks
+        .iter()
+        .map(|t| format!("- **{}**: {}", t.id, t.title))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Builds the finalization prompt for the runner.
 fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
     let template = load_prompt_with_fallback(root, PromptKind::RunTaskFinalize);
@@ -115,7 +130,14 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
     let mut ctx = PlaceholderContext::new();
 
     ctx.insert("prd_id", prd.id());
+    ctx.insert("prd_title", prd.title());
     ctx.insert("prd_summary", prd.body.clone());
+    ctx.insert("completed_tasks", format_completed_tasks(prd));
+
+    // Read the current changelog content for context.
+    let changelog_content =
+        read_changelog(root).unwrap_or_else(|| "(Changelog not found)".to_string());
+    ctx.insert("changelog_content", changelog_content);
 
     expand_placeholders(&template, &ctx)
 }
@@ -126,7 +148,7 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
 /// 1. Finds the PRD by ID
 /// 2. Validates all tasks are done (returns error if not)
 /// 3. Runs acceptance tests via the finalization prompt
-/// 4. (Future: generates changelog entry)
+/// 4. Provides changelog entry generation instructions to the runner
 /// 5. (Future: updates PRD status to done)
 /// 6. (Future: refreshes the index)
 ///
@@ -422,6 +444,10 @@ mod tests {
         // Verify placeholders are expanded.
         assert!(prompt.contains("PRD-0001"), "Prompt should contain PRD ID");
         assert!(
+            prompt.contains("Test PRD"),
+            "Prompt should contain PRD title"
+        );
+        assert!(
             prompt.contains("Test PRD Summary"),
             "Prompt should contain PRD body"
         );
@@ -429,5 +455,89 @@ mod tests {
             prompt.contains("This is the PRD body content"),
             "Prompt should contain full body"
         );
+        assert!(
+            prompt.contains("**T-001**"),
+            "Prompt should contain completed task ID"
+        );
+        assert!(
+            prompt.contains("Task T-001"),
+            "Prompt should contain completed task title"
+        );
+    }
+
+    #[test]
+    fn test_build_finalize_prompt_with_changelog() {
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create a changelog file.
+        std::fs::write(
+            temp.path().join("CHANGELOG.md"),
+            "# Changelog\n\n## [Unreleased]\n",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0002".to_string(),
+            title: "Second PRD".to_string(),
+            tasks: Some(vec![
+                make_task("T-001", TaskStatus::Done),
+                make_task("T-002", TaskStatus::Done),
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Summary\n".to_string());
+
+        let prompt = build_finalize_prompt(temp.path(), &prd);
+
+        // Verify changelog content is included.
+        assert!(
+            prompt.contains("# Changelog"),
+            "Prompt should contain changelog content"
+        );
+        assert!(
+            prompt.contains("[Unreleased]"),
+            "Prompt should contain Unreleased section"
+        );
+
+        // Verify both completed tasks are listed.
+        assert!(
+            prompt.contains("**T-001**"),
+            "Prompt should contain first task"
+        );
+        assert!(
+            prompt.contains("**T-002**"),
+            "Prompt should contain second task"
+        );
+    }
+
+    #[test]
+    fn test_format_completed_tasks() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            tasks: Some(vec![
+                make_task("T-001", TaskStatus::Done),
+                make_task("T-002", TaskStatus::Todo),
+                make_task("T-003", TaskStatus::Done),
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, String::new());
+        let formatted = format_completed_tasks(&prd);
+
+        // Should only include done tasks.
+        assert!(formatted.contains("**T-001**"));
+        assert!(!formatted.contains("T-002"));
+        assert!(formatted.contains("**T-003**"));
+    }
+
+    #[test]
+    fn test_format_completed_tasks_empty() {
+        let prd = make_test_prd("PRD-0001", vec![make_task("T-001", TaskStatus::Todo)]);
+        let formatted = format_completed_tasks(&prd);
+
+        assert_eq!(formatted, "(No completed tasks)");
     }
 }

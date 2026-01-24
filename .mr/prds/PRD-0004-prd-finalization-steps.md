@@ -26,7 +26,7 @@ tasks:
   - id: T-005
     title: "Add changelog entry generation to finalization prompt"
     priority: 2
-    status: todo
+    status: done
   - id: T-006
     title: "Generate summary report (append to PRD + stdout)"
     priority: 2
@@ -196,3 +196,31 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - Called `ensure_changelog_exists()` after acceptance test verification
   - Updated `cmd_prd_finalize` in `src/main.rs` to report changelog creation
   - UAT passes: 210/210 tests pass
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Add changelog entry generation to finalization prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `.mr/prompts/run_task_finalize.md` with:
+    - New `{{prd_title}}` placeholder in context section
+    - New `{{completed_tasks}}` section listing all completed tasks
+    - New `{{changelog_content}}` section showing current changelog
+    - Detailed changelog entry generation instructions with Keep a Changelog format
+    - Category guidelines (Added, Changed, Fixed, Deprecated, Removed, Security)
+  - Updated `src/init.rs`:
+    - Synced `PROMPT_RUN_TASK_FINALIZE` constant with new prompt content
+  - Updated `src/prd_finalize.rs`:
+    - Added import for `read_changelog` from changelog module
+    - Added `format_completed_tasks()` function to generate bullet list of done tasks
+    - Extended `build_finalize_prompt()` to populate new placeholders:
+      - `prd_title`: PRD title
+      - `completed_tasks`: Formatted list of completed tasks
+      - `changelog_content`: Current changelog content (or fallback message)
+    - Updated doc comment to reflect T-005 implementation
+  - Updated `src/changelog.rs`:
+    - Removed `#[allow(dead_code)]` from `read_changelog()` (now used)
+  - Added new tests:
+    - `test_build_finalize_prompt_with_changelog()`: Verifies changelog content inclusion
+    - `test_format_completed_tasks()`: Verifies task formatting
+    - `test_format_completed_tasks_empty()`: Verifies empty task handling
+  - UAT passes: 213/213 tests pass

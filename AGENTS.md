@@ -109,20 +109,10 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-The T-003 task completed adds acceptance test verification via finalization prompt. Looking at the current auto-managed section, it's incomplete/malformed - it contains descriptive text but no actual structured documentation. Let me check the current source to understand the patterns properly:
-
-Now let me check the current CLI commands to document them properly:
-
-Now I have a complete picture. The auto-managed section is currently malformed (contains descriptive text but not structured content). Based on the T-003 completion and the full codebase view, I should update it with proper documentation. The key patterns are:
-
-1. **CLI Commands** - now includes `mr prd finalize`
-2. **Error Handling** - `thiserror` for domain-specific errors (from T-002)
-3. **Prompt system** - `PromptKind`, `PlaceholderContext`, `expand_placeholders`, `load_prompt_with_fallback`
-4. **Runner pattern** - for LLM command execution with streaming support
+Based on my review, the recent change (T-004) adds a new `changelog.rs` module with changelog management functionality. The auto-managed section needs to be updated to document this new module and the Keep a Changelog pattern. Let me update AGENTS.md:
 
 Updated the auto-managed section with:
-- **CLI Commands** table including the new `mr prd finalize` command
-- **Error Handling** documenting both `anyhow` and `thiserror` patterns
-- **Prompt System** explaining the placeholder expansion workflow
-- **Module Organization** covering the Config/Result struct pattern and Runner abstraction
+- **Changelog section**: Documents the Keep a Changelog format and `ensure_changelog_exists()` function from T-004
+- Cleaned up the malformed descriptive text that was previously in the section
+- Restructured content with proper markdown formatting
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
