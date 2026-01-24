@@ -137,12 +137,12 @@ tasks:
   - id: T-006
     title: "Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)"
     priority: 6
-    status: todo
-    notes: "Round1: runner generates follow-ups; user answers; MR loops runner until ‘enough’; final synthesis writes PRD."
+    status: done
+    notes: "Round1: runner generates follow-ups; user answers; MR loops runner until 'enough'; final synthesis writes PRD."
   - id: T-007
     title: "Runner abstraction + MockRunner (deterministic tests)"
     priority: 7
-    status: todo
+    status: done
     notes: "Typed adapters; mock runner supports scripted Q/A and task runs."
   - id: T-008
     title: "CopilotRunner adapter (programmatic prompts + allow-all perms by default)"
@@ -178,12 +178,12 @@ tasks:
     title: "Implement `mr prd edit` for quick PRD modifications via runner"
     priority: 14
     status: todo
-    notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow upq uestion loop if needed."
+    notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow up question loop if needed."
   - id: T-015
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
     status: todo
-    notes: "README + DEVELOPMENT + example PRDs; `cargo make uat` is the one true gate."
+    notes: "README + DEVELOPMENT + example PRDs; `cargo make uat` is the one true gate.  README should describe normal flow.  README should be a little bit funny...something 'small ralph to help you ralph your ralphs' style.  Also, make sure to reference that this whole thing was 'ralph'ed into existence by `microralph` itself.  It should be stylized as `microralph` everywhere."
 
 ---
 
@@ -388,5 +388,26 @@ Each prompt must define:
   - Added convenience functions: `load_prompt()`, `load_prompt_with_fallback()`
   - Wrote 36 tests covering prompt loading, placeholder expansion, conditionals, and loops
   - All 75 tests pass, clippy clean, CI green
+
+## 2026-01-24 — T-006 & T-007 Completed
+- **Task**: Implement `mr prd new` as a guided Q/A + Runner abstraction
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/runner/` module with `mod.rs`, `types.rs`, and `mock.rs`
+  - Implemented `Runner` trait with `name()`, `execute()`, and `is_available()` methods
+  - Implemented `RunnerOutput` and `RunnerError` types for runner responses
+  - Implemented `MockRunner` with scripted responses, prompt recording, and deterministic behavior
+  - Created `src/prd_new.rs` module for `mr prd new` guided Q/A flow:
+    - `PrdNewConfig` for configurable max_rounds, max_questions_per_round, root_dir
+    - `QaPair` struct for storing question/answer pairs
+    - `PrdNewResult` with generated PRD path and Q/A history
+    - Multi-round Q/A loop: runner asks questions → user answers → loop until "READY_TO_SYNTHESIZE"
+    - Final synthesis: runner generates PRD from collected context
+    - Automatic PRD ID generation (scans existing PRDs)
+  - Integrated with CLI: `mr prd new <slug>` and `mr prd list` commands functional
+  - Updated `scan_prds()` to return `Vec<(String, Prd, PathBuf)>` including file paths
+  - Added `scan_prd_summaries()` and `generate_index_from_root()` helper functions
+  - Wrote 17 new tests covering Q/A flow, question parsing, PRD generation, and edge cases
+  - All 92 tests pass, clippy clean, CI green
 
 ---

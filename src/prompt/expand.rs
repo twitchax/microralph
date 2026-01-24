@@ -78,16 +78,19 @@ impl PlaceholderContext {
     }
 
     /// Returns the number of values in the context.
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
     /// Returns true if the context is empty.
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
 
     /// Creates a context from an iterator of key-value pairs.
+    #[allow(dead_code)]
     pub fn from_iter<K, V, I>(iter: I) -> Self
     where
         K: Into<String>,

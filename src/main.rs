@@ -3,10 +3,10 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod init;
-#[allow(dead_code)]
 mod prd;
-#[allow(dead_code)]
+mod prd_new;
 mod prompt;
+mod runner;
 
 /// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 #[derive(Parser, Debug)]
@@ -90,11 +90,11 @@ fn main() -> Result<()> {
         Some(Command::Prd { prd_command }) => match prd_command {
             PrdCommand::New { slug, runner } => {
                 tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
-                println!("mr prd new {slug} --runner {runner}: not yet implemented");
+                cmd_prd_new(&slug, &runner)?;
             }
             PrdCommand::List => {
                 tracing::info!("Listing PRDs...");
-                println!("mr prd list: not yet implemented");
+                cmd_prd_list()?;
             }
         },
         Some(Command::Run { prd, runner }) => {
@@ -164,6 +164,90 @@ fn cmd_init() -> Result<()> {
     println!("  1. Review and customize AGENTS.md");
     println!("  2. Create your first PRD: `mr prd new my-feature`");
     println!("  3. Run a task: `mr run`");
+
+    Ok(())
+}
+
+/// Runs the `mr prd new` command.
+fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+    }
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            // For now, we don't have a real Copilot runner, so we bail.
+            anyhow::bail!(
+                "Copilot runner is not yet implemented. Use `--runner mock` for testing."
+            );
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = prd_new::PrdNewConfig {
+        root: &cwd,
+        slug,
+        description: None,
+    };
+
+    let stdin = std::io::stdin();
+    let mut stdin_lock = stdin.lock();
+    let stdout = std::io::stdout();
+    let mut stdout_lock = stdout.lock();
+
+    let result = prd_new::create_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+
+    println!();
+    println!("PRD created successfully!");
+    println!("  ID: {}", result.prd.id());
+    println!("  Title: {}", result.prd.title());
+    println!("  Path: {}", result.path.display());
+    println!("  Q/A Rounds: {}", result.rounds);
+
+    Ok(())
+}
+
+/// Runs the `mr prd list` command.
+fn cmd_prd_list() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+    }
+
+    let prds = prd::scan_prd_summaries(&cwd)?;
+
+    if prds.is_empty() {
+        println!("No PRDs found.");
+        println!();
+        println!("Create your first PRD with: `mr prd new my-feature`");
+        return Ok(());
+    }
+
+    println!("PRDs:");
+    println!();
+
+    for prd_summary in &prds {
+        let progress = if prd_summary.total_tasks > 0 {
+            format!(
+                " [{}/{}]",
+                prd_summary.completed_tasks, prd_summary.total_tasks
+            )
+        } else {
+            String::new()
+        };
+
+        println!(
+            "  {} - {} ({}){}",
+            prd_summary.id, prd_summary.title, prd_summary.status, progress
+        );
+    }
 
     Ok(())
 }

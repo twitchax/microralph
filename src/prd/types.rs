@@ -389,6 +389,7 @@ impl Prd {
     }
 
     /// Returns the next incomplete task (by priority).
+    #[allow(dead_code)]
     pub fn next_task(&self) -> Option<&Task> {
         self.frontmatter.tasks.as_ref().and_then(|tasks| {
             tasks
@@ -399,6 +400,7 @@ impl Prd {
     }
 
     /// Returns all incomplete tasks.
+    #[allow(dead_code)]
     pub fn incomplete_tasks(&self) -> Vec<&Task> {
         self.frontmatter
             .tasks

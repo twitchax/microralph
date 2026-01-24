@@ -1,5 +1,7 @@
 //! Prompt type definitions.
 
+#![allow(dead_code)]
+
 use std::fmt;
 
 /// The different kinds of prompts used by Micro Ralph.

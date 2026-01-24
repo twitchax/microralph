@@ -30,11 +30,15 @@ pub struct PrdSummary {
 
     /// Relative path to the PRD file from the index file's directory.
     pub relative_path: String,
+
+    /// Absolute path to the PRD file.
+    #[allow(dead_code)]
+    pub path: std::path::PathBuf,
 }
 
 impl PrdSummary {
     /// Creates a new PrdSummary from a Prd and its file path.
-    pub fn from_prd(prd: &Prd, relative_path: String) -> Self {
+    pub fn from_prd(prd: &Prd, relative_path: String, absolute_path: std::path::PathBuf) -> Self {
         let tasks = prd.tasks().unwrap_or_default();
         let completed_tasks = prd.completed_tasks().len();
         let total_tasks = tasks.len();
@@ -46,6 +50,7 @@ impl PrdSummary {
             completed_tasks,
             total_tasks,
             relative_path,
+            path: absolute_path,
         }
     }
 
@@ -63,9 +68,9 @@ impl PrdSummary {
 ///
 /// # Returns
 ///
-/// A vector of (filename, Prd) tuples for successfully parsed PRDs.
+/// A vector of (filename, Prd, absolute_path) tuples for successfully parsed PRDs.
 /// Files that fail to parse are logged and skipped.
-pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd)>> {
+pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd, std::path::PathBuf)>> {
     let prds_dir = prds_dir.as_ref();
 
     if !prds_dir.exists() {
@@ -87,7 +92,7 @@ pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd)>> {
 
             match parse_prd_file(&path) {
                 Ok(prd) => {
-                    prds.push((filename, prd));
+                    prds.push((filename, prd, path));
                 }
                 Err(e) => {
                     tracing::warn!(
@@ -110,12 +115,12 @@ pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd)>> {
 ///
 /// # Arguments
 ///
-/// * `prds` - Vector of (filename, Prd) tuples
+/// * `prds` - Vector of (filename, Prd, absolute_path) tuples
 ///
 /// # Returns
 ///
 /// The generated Markdown content for the index file.
-pub fn generate_index(prds: &[(String, Prd)]) -> String {
+pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     let mut output = String::new();
 
     // Header.
@@ -125,9 +130,9 @@ pub fn generate_index(prds: &[(String, Prd)]) -> String {
     // Group PRDs by status.
     let mut by_status: HashMap<PrdStatus, Vec<PrdSummary>> = HashMap::new();
 
-    for (filename, prd) in prds {
+    for (filename, prd, abs_path) in prds {
         let relative_path = format!("prds/{}", filename);
-        let summary = PrdSummary::from_prd(prd, relative_path);
+        let summary = PrdSummary::from_prd(prd, relative_path, abs_path.clone());
         by_status.entry(summary.status).or_default().push(summary);
     }
 
@@ -243,6 +248,47 @@ pub fn generate_index_file(
     Ok(count)
 }
 
+/// Scans PRDs from a repository root and returns PrdSummary objects.
+///
+/// # Arguments
+///
+/// * `root` - The repository root directory
+///
+/// # Returns
+///
+/// A vector of PrdSummary objects for all successfully parsed PRDs.
+pub fn scan_prd_summaries(root: impl AsRef<Path>) -> Result<Vec<PrdSummary>> {
+    let prds_dir = root.as_ref().join(".mr").join("prds");
+    let prds = scan_prds(&prds_dir)?;
+
+    Ok(prds
+        .into_iter()
+        .map(|(filename, prd, abs_path)| {
+            let relative_path = format!("prds/{}", filename);
+            PrdSummary::from_prd(&prd, relative_path, abs_path)
+        })
+        .collect())
+}
+
+/// Generates the index file from a repository root.
+///
+/// Convenience function that determines paths from the root.
+///
+/// # Arguments
+///
+/// * `root` - The repository root directory
+///
+/// # Returns
+///
+/// The number of PRDs included in the index.
+pub fn generate_index_from_root(root: impl AsRef<Path>) -> Result<usize> {
+    let root = root.as_ref();
+    let prds_dir = root.join(".mr").join("prds");
+    let index_path = root.join(".mr").join("PRDS.md");
+
+    generate_index_file(prds_dir, index_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,7 +329,11 @@ mod tests {
             ],
         );
 
-        let summary = PrdSummary::from_prd(&prd, "prds/test.md".to_string());
+        let summary = PrdSummary::from_prd(
+            &prd,
+            "prds/test.md".to_string(),
+            std::path::PathBuf::from("test.md"),
+        );
 
         assert_eq!(summary.completed_tasks, 2);
         assert_eq!(summary.total_tasks, 3);
@@ -294,7 +344,11 @@ mod tests {
     fn test_prd_summary_no_tasks() {
         let prd = make_test_prd("PRD-0001", "Test", PrdStatus::Draft, vec![]);
 
-        let summary = PrdSummary::from_prd(&prd, "prds/test.md".to_string());
+        let summary = PrdSummary::from_prd(
+            &prd,
+            "prds/test.md".to_string(),
+            std::path::PathBuf::from("test.md"),
+        );
 
         assert_eq!(summary.completed_tasks, 0);
         assert_eq!(summary.total_tasks, 0);
@@ -311,6 +365,7 @@ mod tests {
                 completed_tasks: 2,
                 total_tasks: 5,
                 relative_path: "prds/PRD-0001.md".to_string(),
+                path: std::path::PathBuf::from("prds/PRD-0001.md"),
             },
             PrdSummary {
                 id: "PRD-0002".to_string(),
@@ -319,6 +374,7 @@ mod tests {
                 completed_tasks: 0,
                 total_tasks: 3,
                 relative_path: "prds/PRD-0002.md".to_string(),
+                path: std::path::PathBuf::from("prds/PRD-0002.md"),
             },
         ];
 
@@ -334,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_generate_index_empty() {
-        let prds: Vec<(String, Prd)> = vec![];
+        let prds: Vec<(String, Prd, std::path::PathBuf)> = vec![];
         let index = generate_index(&prds);
 
         assert!(index.contains("# Micro Ralph — PRD Index"));
@@ -359,10 +415,12 @@ mod tests {
                         make_task("T-002", 2, TaskStatus::Todo),
                     ],
                 ),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
             ),
             (
                 "PRD-0002.md".to_string(),
                 make_test_prd("PRD-0002", "Draft PRD", PrdStatus::Draft, vec![]),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
             ),
             (
                 "PRD-0003.md".to_string(),
@@ -372,6 +430,7 @@ mod tests {
                     PrdStatus::Done,
                     vec![make_task("T-001", 1, TaskStatus::Done)],
                 ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
             ),
         ];
 
@@ -410,7 +469,7 @@ mod tests {
             // Should find at least PRD-0001.
             assert!(!prds.is_empty());
 
-            let prd_0001 = prds.iter().find(|(_, p)| p.id() == "PRD-0001");
+            let prd_0001 = prds.iter().find(|(_, p, _)| p.id() == "PRD-0001");
 
             assert!(prd_0001.is_some());
         }

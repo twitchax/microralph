@@ -31,6 +31,7 @@ impl PromptLoader {
     }
 
     /// Returns the path to the prompts directory.
+    #[allow(dead_code)]
     pub fn prompts_dir(&self) -> &Path {
         &self.prompts_dir
     }
@@ -68,16 +69,19 @@ impl PromptLoader {
     }
 
     /// Checks if a prompt file exists.
+    #[allow(dead_code)]
     pub fn exists(&self, kind: PromptKind) -> bool {
         self.prompts_dir.join(kind.filename()).exists()
     }
 
     /// Checks if all prompt files exist.
+    #[allow(dead_code)]
     pub fn all_exist(&self) -> bool {
         PromptKind::all().iter().all(|kind| self.exists(*kind))
     }
 
     /// Returns a list of missing prompt files.
+    #[allow(dead_code)]
     pub fn missing_prompts(&self) -> Vec<PromptKind> {
         PromptKind::all()
             .iter()
@@ -117,6 +121,7 @@ fn get_default_prompt(kind: PromptKind) -> &'static str {
 /// # Returns
 ///
 /// The content of the prompt file.
+#[allow(dead_code)]
 pub fn load_prompt(root: impl AsRef<Path>, kind: PromptKind) -> Result<String> {
     let loader = PromptLoader::new(root);
 
