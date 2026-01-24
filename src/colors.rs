@@ -56,3 +56,29 @@ pub fn dim(msg: &str) -> String {
     msg.if_supports_color(Stream::Stdout, |text| text.dimmed())
         .to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_question_has_emoji_and_styling() {
+        let result = question("What is your name");
+
+        // Should contain the question mark emoji
+        assert!(result.contains("❓"), "Question should have ❓ emoji");
+
+        // Should contain the message
+        assert!(
+            result.contains("What is your name"),
+            "Question should contain the message"
+        );
+
+        // When TTY is not detected (testing environment), it should still have emoji
+        // but may not have ANSI codes. Let's verify the emoji is at the start.
+        assert!(
+            result.starts_with("❓"),
+            "Question should start with ❓ emoji"
+        );
+    }
+}

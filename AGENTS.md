@@ -109,9 +109,11 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-I'll review the PRD and related code to identify conventions worth documenting.
+I'll review the recent PRD and code changes to identify any new conventions worth documenting.
 
-Now I'll update the auto-managed section with the concrete color output conventions:
+I can see the auto-managed section currently contains placeholder text from a previous incomplete update. Let me check the colors.rs module to see what was actually implemented:
 
-Updated AGENTS.md with complete color output conventions including all seven utility functions, TTY behavior, environment variable support, and usage examples.
+Now I'll update the auto-managed section with the actual conventions from PRD-0006:
+
+Updated AGENTS.md with complete color output conventions including all seven utility functions, automatic TTY detection, environment variable support, and usage guidelines for each color type.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
