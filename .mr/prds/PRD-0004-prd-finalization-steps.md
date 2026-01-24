@@ -46,7 +46,7 @@ tasks:
   - id: T-010
     title: "Append finalization history entry to PRD"
     priority: 2
-    status: todo
+    status: done
   - id: T-011
     title: "Update run_task_finalize.md and init.rs default prompt with comprehensive instructions"
     priority: 2
@@ -273,4 +273,16 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
       - `test_update_prd_status_preserves_tasks()`: Verifies tasks and body preserved
   - Updated `src/main.rs`:
     - Added output lines for "PRD Status: Updated to done" and "Index: PRDS.md regenerated"
+  - UAT passes: 219/219 tests pass
+
+## 2026-01-24 — T-010 Completed
+- **Task**: Append finalization history entry to PRD
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that T-006 already implemented the finalization history entry functionality:
+    - `generate_summary_report()` creates a formatted history entry with date, timestamp, PRD info, and outcome
+    - `append_to_prd()` appends the entry to the PRD file
+    - History entry includes: date header, PRD ID and title, finalization timestamp, tasks completed count/list, status confirmation
+  - This task was marked todo but functionality was already complete from T-006
+  - No code changes required; task is verified complete
   - UAT passes: 219/219 tests pass
