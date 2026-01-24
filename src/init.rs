@@ -555,6 +555,26 @@ Add a new History entry at the bottom of the PRD file with this format:
   - Note UAT pass/fail with brief evidence
 ```
 
+## Opportunistic UAT Verification (Per-Task)
+
+After completing a task, check if any UATs (acceptance tests) can be verified **now** based on the work just completed:
+
+1. **Review the PRD's `acceptance_tests`**: Identify UATs that are currently `unverified`.
+2. **Determine feasibility**: A UAT can be verified NOW if:
+   - The functionality it tests was implemented by this task or previous completed tasks
+   - It does NOT depend on incomplete tasks (check the task list)
+   - A test can be created or an existing test can be run
+3. **If a UAT is feasible**: Create or run the test, and if it passes, update `uat_status: verified` in the frontmatter.
+4. **If a UAT requires incomplete tasks**: Skip it — the full UAT verification loop will handle it later.
+5. **Document in History**: Note which UATs (if any) were opportunistically verified.
+
+**Example reasoning**:
+- UAT "CLI accepts --verbose flag" → If T-003 (add verbose flag) is done, verify it now.
+- UAT "Build pipeline passes" → Requires all tasks, skip until finalization.
+- UAT "Color output works" → If T-001 (add color module) is done, verify it now.
+
+This reduces work during the final UAT verification loop and catches issues earlier.
+
 ## Constraints
 
 - Do not modify unrelated code.

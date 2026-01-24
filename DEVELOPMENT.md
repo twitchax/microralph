@@ -280,7 +280,6 @@ Check if tests require specific environment:
 - `prd suggest`
 - init / bootstrap should also emit a default constitution that is user editable.  That constitution needs to be respected during runs.  A good example of this would be something like "one off acceptance tests are unacceptable: all acceptance tests must be codified as a runnable test".
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
-- Also update the README to explain that a project that is mostly ralphed should be called a ralph, and the real selling point is on locking time for the artisanal code that you actually want to write. Essentially, Ralph lets you develop small products and tools that you need so you can free up your time for other more valuable work.
 - Also add a Claude Code runner,
 - Also remove the reliance on the LLM response during PRD creation. We should only care about the file that was generated.
 - Cleanup pass.  Refactor out common code between prd_new and prd_edit.  Possibly refactor out common code between run and prd_edit as well.  Add more comments to the code to explain what is going on in various places.  Check that usual Rust patterns are respected, but don't change if too hard.
