@@ -71,10 +71,61 @@ enum Command {
         model: Option<String>,
     },
 
-    /// PRD management commands.
-    Prd {
-        #[command(subcommand)]
-        prd_command: PrdCommand,
+    /// Create a new PRD via guided Q/A.
+    New {
+        /// The slug for the new PRD (e.g., "add-user-auth").
+        slug: String,
+
+        /// The runner to use for the Q/A session.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Upfront context to provide before question generation.
+        /// This helps the AI ask more relevant, targeted questions.
+        #[arg(long)]
+        context: Option<String>,
+    },
+
+    /// Edit an existing PRD via runner-assisted modifications.
+    Edit {
+        /// The PRD ID to edit (e.g., "PRD-0001").
+        prd_id: String,
+
+        /// The edit request (what changes to make).
+        request: String,
+
+        /// The runner to use for the edit session.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+    },
+
+    /// List all PRDs.
+    List,
+
+    /// Finalize a PRD after all tasks are complete.
+    Finalize {
+        /// The PRD ID to finalize (e.g., "PRD-0001").
+        prd_id: String,
+
+        /// The runner to use for finalization.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
     },
 
     /// Run the next task from the active PRD.
@@ -118,66 +169,6 @@ enum Command {
     },
 }
 
-#[derive(Subcommand, Debug)]
-enum PrdCommand {
-    /// Create a new PRD via guided Q/A.
-    New {
-        /// The slug for the new PRD (e.g., "add-user-auth").
-        slug: String,
-
-        /// The runner to use for the Q/A session.
-        #[arg(long, default_value = "copilot")]
-        runner: String,
-
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
-        #[arg(long)]
-        model: Option<String>,
-
-        /// Upfront context to provide before question generation.
-        /// This helps the AI ask more relevant, targeted questions.
-        #[arg(long)]
-        context: Option<String>,
-    },
-
-    /// Edit an existing PRD via runner-assisted modifications.
-    Edit {
-        /// The PRD ID to edit (e.g., "PRD-0001").
-        prd_id: String,
-
-        /// The edit request (what changes to make).
-        request: String,
-
-        /// The runner to use for the edit session.
-        #[arg(long, default_value = "copilot")]
-        runner: String,
-
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
-        #[arg(long)]
-        model: Option<String>,
-    },
-
-    /// Finalize a PRD after all tasks are complete.
-    Finalize {
-        /// The PRD ID to finalize (e.g., "PRD-0001").
-        prd_id: String,
-
-        /// The runner to use for finalization.
-        #[arg(long, default_value = "copilot")]
-        runner: String,
-
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
-        #[arg(long)]
-        model: Option<String>,
-
-        /// Stream runner output to stdout in real-time.
-        #[arg(long)]
-        stream: bool,
-    },
-
-    /// List all PRDs.
-    List,
-}
-
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -200,41 +191,39 @@ fn main() -> Result<()> {
             tracing::info!(runner = %runner, language = ?language, "Bootstrapping repo...");
             cmd_bootstrap(&runner, language.as_deref(), model.as_deref())?;
         }
-        Some(Command::Prd { prd_command }) => match prd_command {
-            PrdCommand::New {
-                slug,
-                runner,
-                model,
-                context,
-            } => {
-                tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
-                cmd_prd_new(&slug, &runner, model.as_deref(), context.as_deref())?;
-            }
-            PrdCommand::Edit {
-                prd_id,
-                request,
-                runner,
-                model,
-            } => {
-                let prd_id = normalize_prd_id(&prd_id);
-                tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
-                cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
-            }
-            PrdCommand::List => {
-                tracing::info!("Listing PRDs...");
-                cmd_prd_list()?;
-            }
-            PrdCommand::Finalize {
-                prd_id,
-                runner,
-                model,
-                stream,
-            } => {
-                let prd_id = normalize_prd_id(&prd_id);
-                tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Finalizing PRD...");
-                cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream)?;
-            }
-        },
+        Some(Command::New {
+            slug,
+            runner,
+            model,
+            context,
+        }) => {
+            tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
+            cmd_prd_new(&slug, &runner, model.as_deref(), context.as_deref())?;
+        }
+        Some(Command::Edit {
+            prd_id,
+            request,
+            runner,
+            model,
+        }) => {
+            let prd_id = normalize_prd_id(&prd_id);
+            tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
+            cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
+        }
+        Some(Command::List) => {
+            tracing::info!("Listing PRDs...");
+            cmd_prd_list()?;
+        }
+        Some(Command::Finalize {
+            prd_id,
+            runner,
+            model,
+            stream,
+        }) => {
+            let prd_id = normalize_prd_id(&prd_id);
+            tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Finalizing PRD...");
+            cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream)?;
+        }
         Some(Command::Run {
             prd,
             runner,
@@ -1331,15 +1320,12 @@ mod tests {
 
     #[test]
     fn test_args_parse_prd_new() {
-        let args = Args::try_parse_from(["mr", "prd", "new", "my-feature"]).unwrap();
-        if let Some(Command::Prd {
-            prd_command:
-                PrdCommand::New {
-                    slug,
-                    runner,
-                    model,
-                    context,
-                },
+        let args = Args::try_parse_from(["mr", "new", "my-feature"]).unwrap();
+        if let Some(Command::New {
+            slug,
+            runner,
+            model,
+            context,
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
@@ -1347,22 +1333,18 @@ mod tests {
             assert!(model.is_none());
             assert!(context.is_none());
         } else {
-            panic!("Expected Prd New command");
+            panic!("Expected New command");
         }
     }
 
     #[test]
     fn test_args_parse_prd_new_with_model() {
-        let args =
-            Args::try_parse_from(["mr", "prd", "new", "my-feature", "--model", "gpt-4o"]).unwrap();
-        if let Some(Command::Prd {
-            prd_command:
-                PrdCommand::New {
-                    slug,
-                    runner,
-                    model,
-                    context,
-                },
+        let args = Args::try_parse_from(["mr", "new", "my-feature", "--model", "gpt-4o"]).unwrap();
+        if let Some(Command::New {
+            slug,
+            runner,
+            model,
+            context,
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
@@ -1370,7 +1352,7 @@ mod tests {
             assert_eq!(model, Some("gpt-4o".to_string()));
             assert!(context.is_none());
         } else {
-            panic!("Expected Prd New command");
+            panic!("Expected New command");
         }
     }
 
@@ -1451,15 +1433,12 @@ mod tests {
 
     #[test]
     fn test_args_parse_prd_finalize() {
-        let args = Args::try_parse_from(["mr", "prd", "finalize", "PRD-0001"]).unwrap();
-        if let Some(Command::Prd {
-            prd_command:
-                PrdCommand::Finalize {
-                    prd_id,
-                    runner,
-                    model,
-                    stream,
-                },
+        let args = Args::try_parse_from(["mr", "finalize", "PRD-0001"]).unwrap();
+        if let Some(Command::Finalize {
+            prd_id,
+            runner,
+            model,
+            stream,
         }) = args.command
         {
             assert_eq!(prd_id, "PRD-0001");
@@ -1467,25 +1446,21 @@ mod tests {
             assert!(model.is_none());
             assert!(!stream);
         } else {
-            panic!("Expected Prd Finalize command");
+            panic!("Expected Finalize command");
         }
     }
 
     #[test]
     fn test_args_parse_prd_finalize_with_options() {
         let args = Args::try_parse_from([
-            "mr", "prd", "finalize", "PRD-0002", "--runner", "mock", "--model", "gpt-4o",
-            "--stream",
+            "mr", "finalize", "PRD-0002", "--runner", "mock", "--model", "gpt-4o", "--stream",
         ])
         .unwrap();
-        if let Some(Command::Prd {
-            prd_command:
-                PrdCommand::Finalize {
-                    prd_id,
-                    runner,
-                    model,
-                    stream,
-                },
+        if let Some(Command::Finalize {
+            prd_id,
+            runner,
+            model,
+            stream,
         }) = args.command
         {
             assert_eq!(prd_id, "PRD-0002");

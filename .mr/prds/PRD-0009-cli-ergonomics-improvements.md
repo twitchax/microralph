@@ -59,7 +59,7 @@ tasks:
 - id: T-002
   title: Remove Prd subcommand enum and flatten subcommands to top level
   priority: 2
-  status: todo
+  status: done
   notes: Move List, New, Edit, Finalize from PrdCommand to top-level Command enum. Remove Prd variant.
 - id: T-003
   title: Update all code references from prd subcommands to top-level commands
@@ -139,5 +139,19 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - UAT passed: All 262 tests passed successfully
   - The CLI now accepts `mr run PRD-0001` instead of `mr run --prd PRD-0001`
   - `mr run` without arguments still works (interactive mode)
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Remove Prd subcommand enum and flatten subcommands to top level
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/main.rs`: Removed `PrdCommand` enum entirely
+  - Moved `New`, `Edit`, `List`, and `Finalize` from `PrdCommand` to top-level `Command` enum
+  - Removed the `Prd` variant from `Command` enum that wrapped `PrdCommand`
+  - Updated main() match statements to handle flattened commands directly
+  - Updated test functions to use new command structure:
+    - Changed `mr prd new` to `mr new` in tests
+    - Changed `mr prd finalize` to `mr finalize` in tests
+  - UAT passed: All 262 tests passed successfully
+  - The CLI now uses `mr new <slug>`, `mr edit <id>`, `mr list`, `mr finalize <id>` instead of `mr prd new`, etc.
 
 ---

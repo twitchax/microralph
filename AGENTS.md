@@ -109,9 +109,7 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-I'll review the PRD file to understand the recent changes and determine if any conventions should be added to AGENTS.md.
+Based on the PRD review, I'll update the auto-managed section with actionable CLI command conventions:
 
-The PRD shows completed work on token usage tracking. The auto-managed section currently contains narrative commentary that shouldn't be there. I'll replace it with concise, actionable conventions from this PRD.
-
-Updated AGENTS.md with actionable conventions for token usage tracking, `UsageInfo` patterns, and Copilot CLI integration details. Removed the narrative commentary.
+Updated AGENTS.md with CLI command pattern showing the new `mr run [PRD-ID]` positional argument syntax and deprecated `--prd` flag. Kept existing token usage tracking conventions.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
