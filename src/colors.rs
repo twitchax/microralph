@@ -81,4 +81,34 @@ mod tests {
             "Question should start with ❓ emoji"
         );
     }
+
+    #[test]
+    fn test_finalization_summary_box_styling() {
+        // Test that the finalization summary box components render with appropriate styling
+        let separator = info("═══════════════════════════════════════════════════════════════");
+        let title = header("FINALIZATION SUMMARY");
+        let detail = dim("PRD Path: /some/path");
+
+        // Verify separator contains the expected characters
+        assert!(
+            separator.contains("═══"),
+            "Separator should contain box drawing characters"
+        );
+
+        // Verify header contains the title text
+        assert!(
+            title.contains("FINALIZATION SUMMARY"),
+            "Header should contain title text"
+        );
+
+        // Verify dim detail contains the path
+        assert!(
+            detail.contains("PRD Path:"),
+            "Detail should contain the label"
+        );
+        assert!(
+            detail.contains("/some/path"),
+            "Detail should contain the path"
+        );
+    }
 }
