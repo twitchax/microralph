@@ -109,10 +109,7 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Based on my review, T-011 completed the finalization prompt with comprehensive instructions. The auto-managed section currently contains incomplete draft text. I should update it with proper documentation about the finalization workflow.
+The PRD shows T-008 added inter-PRD link tracking to the index. Reviewing the current auto-managed section, it contains incomplete draft text that doesn't provide actionable information. Let me update it with proper documentation about the finalization workflow based on the completed tasks.
 
-Updated the auto-managed section with:
-- **PRD Finalization Workflow**: 6-step process from T-011's comprehensive prompt
-- **Changelog Categories**: Keep a Changelog format reference
-- **Finalization Prompt Placeholders**: Table of all 5 placeholders used in the finalization prompt
+Updated the auto-managed section with proper documentation covering the PRD finalization workflow, changelog categories, and inter-PRD reference tracking (the feature added in T-008).
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

@@ -42,7 +42,7 @@ tasks:
   - id: T-009
     title: "Add cleanup tasks to finalization prompt (temp files, comments)"
     priority: 3
-    status: todo
+    status: done
   - id: T-010
     title: "Append finalization history entry to PRD"
     priority: 2
@@ -318,4 +318,17 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
   - Added 7 new unit tests for reference extraction and cross-references rendering
   - Updated existing tests in `prd_new.rs` and `status.rs` to include new `references` field
   - The index now shows inter-PRD links (e.g., `PRD-0001 → PRD-0002`)
+  - UAT passes: 227/227 tests pass
+
+## 2026-01-24 — T-009 Completed
+- **Task**: Add cleanup tasks to finalization prompt (temp files, comments)
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that cleanup instructions were already implemented in T-011:
+    - Section 4 of `run_task_finalize.md` contains comprehensive cleanup guidance
+    - Covers temporary files (.tmp, .bak, scratch files, debug scripts)
+    - Covers excessive comments (resolved TODOs, debug logging, commented-out code)
+    - Includes clear "Do NOT remove" guidance for legitimate items
+  - Same instructions exist in `src/init.rs` `PROMPT_RUN_TASK_FINALIZE` constant
+  - No additional code changes required; acceptance test already satisfied
   - UAT passes: 227/227 tests pass
