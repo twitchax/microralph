@@ -899,7 +899,7 @@ Add a History entry documenting your verification attempt:
 If verification succeeds:
 1. Update `uat_status: verified` in the PRD frontmatter.
 2. Append a verification History entry.
-3. Regenerate `.mr/PRDS.md` by running: `cargo run -- prd list`
+3. Regenerate `.mr/PRDS.md` by running: `cargo run -- list`
 4. Commit with message: `prd({{prd_id}})uat({{uat_id}}): [brief description]`
 
 ## On Opt-Out
@@ -1132,7 +1132,7 @@ Path: `{{repo_root}}`
 
 1. **Read all PRD files** in `{{prds_dir}}`.
 
-2. **Regenerate the index** by running: `cargo run -- prd list`
+2. **Regenerate the index** by running: `cargo run -- list`
 
 3. **Scan for inter-PRD references** in each PRD:
    - Look for mentions of PRD IDs like `PRD-0001`, `PRD-0002`, etc.

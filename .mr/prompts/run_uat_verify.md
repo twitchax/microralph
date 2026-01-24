@@ -85,7 +85,7 @@ Add a History entry documenting your verification attempt:
 If verification succeeds:
 1. Update `uat_status: verified` in the PRD frontmatter.
 2. Append a verification History entry.
-3. Regenerate `.mr/PRDS.md` by running: `cargo run -- prd list`
+3. Regenerate `.mr/PRDS.md` by running: `cargo run -- list`
 4. Commit with message: `prd({{prd_id}})uat({{uat_id}}): [brief description]`
 
 ## On Opt-Out

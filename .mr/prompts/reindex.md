@@ -30,7 +30,7 @@ Path: `{{repo_root}}`
 
 1. **Read all PRD files** in `{{prds_dir}}`.
 
-2. **Regenerate the index** by running: `cargo run -- prd list`
+2. **Regenerate the index** by running: `cargo run -- list`
 
 3. **Scan for inter-PRD references** in each PRD:
    - Look for mentions of PRD IDs like `PRD-0001`, `PRD-0002`, etc.
