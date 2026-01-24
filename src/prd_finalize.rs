@@ -226,20 +226,24 @@ fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
 
 /// Updates the PRD status to done and saves the file.
 ///
-/// This re-serializes the PRD with the updated status and writes it back.
-fn update_prd_status_to_done(prd: &Prd, prd_path: &Path) -> Result<()> {
-    // Clone the PRD and update the status.
-    let mut updated_prd = prd.clone();
+/// This re-reads the PRD from disk (to capture any runner modifications),
+/// updates the status, and writes it back.
+fn update_prd_status_to_done(prd_path: &Path) -> Result<()> {
+    // Re-read the PRD from disk to capture any changes made by the runner.
+    let mut updated_prd = prd::parse_prd_file(prd_path)
+        .with_context(|| format!("Failed to re-read PRD file: {}", prd_path.display()))?;
+
+    // Update the status.
     updated_prd.frontmatter.status = PrdStatus::Done;
 
     // Serialize and write.
     let content = serialize_prd(&updated_prd)
-        .with_context(|| format!("Failed to serialize PRD: {}", prd.id()))?;
+        .with_context(|| format!("Failed to serialize PRD: {}", updated_prd.id()))?;
 
     fs::write(prd_path, &content)
         .with_context(|| format!("Failed to write updated PRD file: {}", prd_path.display()))?;
 
-    tracing::info!(prd_id = prd.id(), "Updated PRD status to done");
+    tracing::info!(prd_id = updated_prd.id(), "Updated PRD status to done");
 
     Ok(())
 }
@@ -359,8 +363,8 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
 
     tracing::info!(prd_id = config.prd_id, "Summary report appended to PRD");
 
-    // Update PRD status to done.
-    update_prd_status_to_done(&prd, &path)
+    // Update PRD status to done (re-reads from disk to preserve runner changes).
+    update_prd_status_to_done(&path)
         .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
 
     // Refresh the PRDS.md index.
@@ -791,11 +795,8 @@ mod tests {
         let original = "---\nid: PRD-0001\ntitle: Test PRD\nstatus: draft\n---\n\n# Body\n\nSome content here.\n";
         std::fs::write(&prd_path, original).unwrap();
 
-        // Create a Prd struct (with draft status).
-        let prd = make_test_prd("PRD-0001", vec![make_task("T-001", TaskStatus::Done)]);
-
-        // Update the status.
-        update_prd_status_to_done(&prd, &prd_path).unwrap();
+        // Update the status (re-reads from disk).
+        update_prd_status_to_done(&prd_path).unwrap();
 
         // Read the updated file.
         let content = std::fs::read_to_string(&prd_path).unwrap();
@@ -809,7 +810,7 @@ mod tests {
 
         // PRD ID and title should be preserved.
         assert!(content.contains("id: PRD-0001"));
-        assert!(content.contains("title: Test PRD PRD-0001"));
+        assert!(content.contains("title: Test PRD"));
     }
 
     #[test]
@@ -835,8 +836,8 @@ mod tests {
         let original = serialize_prd(&prd).unwrap();
         std::fs::write(&prd_path, &original).unwrap();
 
-        // Update the status.
-        update_prd_status_to_done(&prd, &prd_path).unwrap();
+        // Update the status (re-reads from disk).
+        update_prd_status_to_done(&prd_path).unwrap();
 
         // Parse the updated file.
         let updated = prd::parse_prd_file(&prd_path).unwrap();
