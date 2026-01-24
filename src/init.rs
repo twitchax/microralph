@@ -264,30 +264,44 @@ pub const PROMPT_BOOTSTRAP_GENERATE_PRDS: &str = r#"# microralph — Bootstrap G
 
 ## Objective
 
-Generate PRDs based on the bootstrap plan.
+Generate starter PRDs based on the bootstrap plan.
 
 ## Context
 
-You have analyzed the repository and created a plan. Now generate the PRD files.
-
-## Plan
-
-{{plan}}
+You have analyzed the repository and created a bootstrap plan. Now generate the actual PRD files.
 
 ## Required Actions
 
-1. For each proposed PRD in the plan:
-   - Generate a complete PRD file with YAML frontmatter
-   - Include tasks with IDs, titles, priorities, and status
-   - Add acceptance tests where applicable
+For each PRD in the plan:
 
-2. Ensure PRD IDs are sequential (PRD-0001, PRD-0002, etc.)
+1. Create a PRD file in `.mr/prds/` with the format:
+   - `PRD-NNNN-slug.md`
 
-3. Follow the PRD template format.
+2. Include YAML frontmatter with:
+   - `id`: PRD identifier
+   - `title`: Human-readable title
+   - `status`: `active` or `draft`
+   - `owner`: Repository owner
+   - `created`: Current date
+   - `updated`: Current date
+   - `tasks`: List of tasks with id, title, priority, status
+
+3. Include Markdown body with:
+   - Summary section
+   - Problem section
+   - Goals section
+   - Non-Goals section (if applicable)
+   - Empty History section
+
+## Constraints
+
+- Generate at most {{prd_budget}} PRDs
+- Each PRD should have 3-8 tasks
+- Tasks should be actionable and verifiable
 
 ## Output
 
-Generate the complete content for each PRD file.
+Confirm PRDs are generated and update `.mr/PRDS.md` index.
 "#;
 
 /// Default content for the PRD new round 1 questions prompt.
@@ -304,6 +318,11 @@ The user wants to create a new PRD with slug: `{{slug}}`
 {{#if user_description}}
 User's initial description:
 > {{user_description}}
+{{/if}}
+
+{{#if user_context}}
+User's upfront context:
+> {{user_context}}
 {{/if}}
 
 ## Existing PRDs
@@ -343,6 +362,12 @@ Continue the Q/A session for PRD creation, or signal readiness.
 
 The user is creating a new PRD with slug: `{{slug}}`
 
+{{#if user_context}}
+### User-Provided Context
+
+{{user_context}}
+
+{{/if}}
 ## Previous Q/A
 
 {{#each qa_history}}
