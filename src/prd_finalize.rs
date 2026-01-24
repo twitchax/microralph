@@ -3,9 +3,12 @@
 //! Validates PRD completion, runs final acceptance tests, generates artifacts,
 //! updates the index, and marks the PRD as done.
 
+use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use chrono::{Local, Utc};
 use thiserror::Error;
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
@@ -47,6 +50,7 @@ pub struct PrdFinalizeConfig<'a> {
 }
 
 /// Result of PRD finalization.
+#[allow(dead_code)]
 pub struct PrdFinalizeResult {
     /// The PRD ID.
     pub prd_id: String,
@@ -62,6 +66,9 @@ pub struct PrdFinalizeResult {
 
     /// Whether the changelog was newly created.
     pub changelog_created: bool,
+
+    /// The summary report content.
+    pub summary_report: String,
 }
 
 /// Finds a PRD by ID from the scanned PRDs.
@@ -142,6 +149,49 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
     expand_placeholders(&template, &ctx)
 }
 
+/// Generates a summary report for a finalized PRD.
+fn generate_summary_report(prd: &Prd) -> String {
+    let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
+    let local_date = Local::now().format("%Y-%m-%d");
+    let tasks = prd.completed_tasks();
+    let task_count = tasks.len();
+
+    let mut report = String::new();
+
+    report.push_str(&format!("## {} — Finalization Complete\n", local_date));
+    report.push_str(&format!("- **PRD**: {} — {}\n", prd.id(), prd.title()));
+    report.push_str(&format!("- **Finalized**: {}\n", timestamp));
+    report.push_str(&format!("- **Tasks Completed**: {}\n", task_count));
+    report.push_str("- **Summary**:\n");
+
+    for task in tasks {
+        report.push_str(&format!("  - {}: {}\n", task.id, task.title));
+    }
+
+    report.push_str("- **Status**: ✅ All acceptance tests passed\n");
+
+    report
+}
+
+/// Appends a summary report to the PRD file.
+fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
+    let mut file = fs::OpenOptions::new()
+        .append(true)
+        .open(prd_path)
+        .with_context(|| {
+            format!(
+                "Failed to open PRD file for appending: {}",
+                prd_path.display()
+            )
+        })?;
+
+    // Ensure we start on a new line.
+    writeln!(file)?;
+    write!(file, "{}", summary)?;
+
+    Ok(())
+}
+
 /// Finalizes a PRD.
 ///
 /// This function:
@@ -149,8 +199,9 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
 /// 2. Validates all tasks are done (returns error if not)
 /// 3. Runs acceptance tests via the finalization prompt
 /// 4. Provides changelog entry generation instructions to the runner
-/// 5. (Future: updates PRD status to done)
-/// 6. (Future: refreshes the index)
+/// 5. Generates summary report and appends to PRD
+/// 6. (Future: updates PRD status to done)
+/// 7. (Future: refreshes the index)
 ///
 /// # Arguments
 ///
@@ -239,12 +290,21 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         );
     }
 
+    // Generate summary report and append to PRD.
+    let summary_report = generate_summary_report(&prd);
+
+    append_to_prd(&path, &summary_report)
+        .with_context(|| format!("Failed to append summary report to PRD: {}", path.display()))?;
+
+    tracing::info!(prd_id = config.prd_id, "Summary report appended to PRD");
+
     Ok(PrdFinalizeResult {
         prd_id: prd.id().to_string(),
         prd_title: prd.title().to_string(),
         path,
         changelog_path: changelog_result.path,
         changelog_created: changelog_result.created,
+        summary_report,
     })
 }
 
@@ -539,5 +599,86 @@ mod tests {
         let formatted = format_completed_tasks(&prd);
 
         assert_eq!(formatted, "(No completed tasks)");
+    }
+
+    #[test]
+    fn test_generate_summary_report() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            tasks: Some(vec![
+                make_task("T-001", TaskStatus::Done),
+                make_task("T-002", TaskStatus::Done),
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, String::new());
+        let report = generate_summary_report(&prd);
+
+        // Verify structure.
+        assert!(report.contains("Finalization Complete"));
+        assert!(report.contains("PRD-0001"));
+        assert!(report.contains("Test PRD"));
+        assert!(report.contains("Tasks Completed**: 2"));
+        assert!(report.contains("T-001: Task T-001"));
+        assert!(report.contains("T-002: Task T-002"));
+        assert!(report.contains("✅ All acceptance tests passed"));
+    }
+
+    #[test]
+    fn test_generate_summary_report_no_tasks() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0002".to_string(),
+            title: "Empty PRD".to_string(),
+            tasks: None,
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, String::new());
+        let report = generate_summary_report(&prd);
+
+        assert!(report.contains("PRD-0002"));
+        assert!(report.contains("Tasks Completed**: 0"));
+    }
+
+    #[test]
+    fn test_append_to_prd() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let prd_path = temp.path().join("test.md");
+
+        // Create a minimal PRD file.
+        std::fs::write(&prd_path, "---\nid: PRD-0001\ntitle: Test\n---\n\n# Body\n").unwrap();
+
+        let summary = "## Summary\n- Test entry\n";
+        append_to_prd(&prd_path, summary).unwrap();
+
+        let content = std::fs::read_to_string(&prd_path).unwrap();
+
+        assert!(content.contains("# Body"));
+        assert!(content.contains("## Summary"));
+        assert!(content.contains("- Test entry"));
+    }
+
+    #[test]
+    fn test_append_to_prd_preserves_existing() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let prd_path = temp.path().join("test.md");
+
+        let original = "---\nid: PRD-0001\ntitle: Test\n---\n\n# Body\n\n## History\n\n## 2026-01-01 — T-001\n- First entry\n";
+        std::fs::write(&prd_path, original).unwrap();
+
+        let summary = "## 2026-01-24 — Finalization Complete\n- Second entry\n";
+        append_to_prd(&prd_path, summary).unwrap();
+
+        let content = std::fs::read_to_string(&prd_path).unwrap();
+
+        // Original content preserved.
+        assert!(content.contains("## 2026-01-01 — T-001"));
+        assert!(content.contains("- First entry"));
+
+        // New content appended.
+        assert!(content.contains("## 2026-01-24 — Finalization Complete"));
+        assert!(content.contains("- Second entry"));
     }
 }

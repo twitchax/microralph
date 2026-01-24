@@ -109,10 +109,12 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Based on my review, the recent change (T-004) adds a new `changelog.rs` module with changelog management functionality. The auto-managed section needs to be updated to document this new module and the Keep a Changelog pattern. Let me update AGENTS.md:
+Let me check the finalization prompt to understand the complete changelog pattern:
+
+Now I understand the full scope of T-005. The key addition is the changelog entry generation workflow with Keep a Changelog format. Let me update the auto-managed section:
 
 Updated the auto-managed section with:
-- **Changelog section**: Documents the Keep a Changelog format and `ensure_changelog_exists()` function from T-004
-- Cleaned up the malformed descriptive text that was previously in the section
-- Restructured content with proper markdown formatting
+- **Changelog Management**: Documents `ensure_changelog_exists()` and `read_changelog()` functions
+- **Finalization Prompt Placeholders**: Lists all 5 placeholders used in `run_task_finalize.md`  
+- **Changelog Entry Format**: Shows the Keep a Changelog format with category options
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

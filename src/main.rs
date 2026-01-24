@@ -692,12 +692,16 @@ fn cmd_prd_finalize(
 
     let result = prd_finalize::finalize_prd(&config, runner.as_ref())?;
 
+    // Output summary report to stdout.
     println!();
-    println!("PRD finalization complete!");
-    println!("  ID: {}", result.prd_id);
-    println!("  Title: {}", result.prd_title);
-    println!("  Path: {}", result.path.display());
-    println!("  Status: All tasks completed");
+    println!("═══════════════════════════════════════════════════════════════");
+    println!("                    FINALIZATION SUMMARY");
+    println!("═══════════════════════════════════════════════════════════════");
+    println!();
+    print!("{}", result.summary_report);
+    println!();
+    println!("───────────────────────────────────────────────────────────────");
+    println!("  PRD Path: {}", result.path.display());
 
     if result.changelog_created {
         println!(
@@ -707,6 +711,9 @@ fn cmd_prd_finalize(
     } else {
         println!("  Changelog: {}", result.changelog_path.display());
     }
+
+    println!("  Summary Report: Appended to PRD");
+    println!("═══════════════════════════════════════════════════════════════");
 
     Ok(())
 }

@@ -30,7 +30,7 @@ tasks:
   - id: T-006
     title: "Generate summary report (append to PRD + stdout)"
     priority: 2
-    status: todo
+    status: done
   - id: T-007
     title: "Update PRD status to done and refresh PRDS.md index"
     priority: 2
@@ -224,3 +224,28 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - `test_format_completed_tasks()`: Verifies task formatting
     - `test_format_completed_tasks_empty()`: Verifies empty task handling
   - UAT passes: 213/213 tests pass
+## 2026-01-24 — T-006 Completed
+- **Task**: Generate summary report (append to PRD + stdout)
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd_finalize.rs`:
+    - Added imports for `fs`, `io::Write`, `chrono::{Local, Utc}`
+    - Added `generate_summary_report()` function that creates formatted report with:
+      - Finalization date and timestamp
+      - PRD ID and title
+      - Count of completed tasks
+      - Summary list of all completed tasks
+      - Status confirmation
+    - Added `append_to_prd()` function to append content to PRD file
+    - Extended `PrdFinalizeResult` with `summary_report` field
+    - Updated `finalize_prd()` to generate summary and append to PRD
+    - Added `#[allow(dead_code)]` to `PrdFinalizeResult` for unused fields
+    - Added unit tests:
+      - `test_generate_summary_report()`: Verifies report format and content
+      - `test_generate_summary_report_no_tasks()`: Verifies empty task handling
+      - `test_append_to_prd()`: Verifies file append functionality
+      - `test_append_to_prd_preserves_existing()`: Verifies existing content preserved
+  - Updated `src/main.rs`:
+    - Enhanced `cmd_prd_finalize` to output formatted summary report to stdout
+    - Added visual separators and clear sections for finalization output
+  - UAT passes: 217/217 tests pass
