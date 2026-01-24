@@ -955,4 +955,58 @@ mod tests {
             panic!("Expected UnverifiedUats error");
         }
     }
+
+    #[test]
+    fn finalize_unverified_blocks() {
+        // Integration test: Unverified UATs block PRD finalization.
+        // This test verifies that when all tasks are done but UATs remain unverified,
+        // the finalize_prd validation logic correctly prevents finalization.
+
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Unverified),
+                make_uat("uat-003", UatStatus::Unverified),
+            ],
+        );
+
+        // Validate that finalization is blocked by unverified UATs.
+        let result = validate_all_uats_verified(&prd);
+        assert!(
+            result.is_err(),
+            "Finalization should be blocked when UATs are unverified"
+        );
+
+        // Verify the error details.
+        match result {
+            Err(FinalizeError::UnverifiedUats {
+                unverified_count,
+                uat_details,
+            }) => {
+                assert_eq!(unverified_count, 2, "Should report 2 unverified UATs");
+                assert_eq!(uat_details.len(), 2, "Should provide details for 2 UATs");
+                assert_eq!(uat_details[0].0, "uat-002");
+                assert_eq!(uat_details[1].0, "uat-003");
+            }
+            _ => panic!("Expected UnverifiedUats error"),
+        }
+
+        // Verify that PRDs with all UATs verified can proceed.
+        let verified_prd = make_test_prd_with_uats(
+            "PRD-0002",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Verified),
+            ],
+        );
+
+        let verified_result = validate_all_uats_verified(&verified_prd);
+        assert!(
+            verified_result.is_ok(),
+            "Finalization should proceed when all UATs are verified"
+        );
+    }
 }

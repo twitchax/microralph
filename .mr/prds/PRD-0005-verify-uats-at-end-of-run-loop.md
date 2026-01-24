@@ -32,7 +32,7 @@ acceptance_tests:
 - id: uat-005
   name: Unverified UATs block PRD finalization
   command: cargo make uat finalize_unverified_blocks
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: Verified UATs updated in PRD frontmatter
   command: cargo make uat
@@ -268,3 +268,14 @@ This leads to PRDs being finalized without proper acceptance test coverage.
     - `test_uat_verification_integration_flow` (line 1592): Integration test that verifies the loop stops when max_iterations is reached (2 iterations with 3 UATs, asserts `hit_max_iterations` is true)
   - Test command: `cargo make uat`
   - Result: All 247 tests passed
+## 2026-01-24 — uat-005 Verification
+- **UAT**: Unverified UATs block PRD finalization
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Test file: `src/prd_finalize.rs`
+  - Test name: `finalize_unverified_blocks` (line 960)
+  - This integration test verifies that when all tasks are done but UATs remain unverified, the `validate_all_uats_verified()` function correctly prevents finalization by returning `FinalizeError::UnverifiedUats`
+  - The test also verifies that PRDs with all UATs verified can proceed with finalization
+  - Test command: `cargo make uat finalize_unverified_blocks`
+  - Result: All 248 tests passed (1 test run for filter: 1 passed, 247 skipped)
