@@ -400,39 +400,64 @@ where
 
 /// Extracts PRD content from runner output.
 ///
-/// Handles markdown code blocks if present.
+/// Handles markdown code blocks if present, with robust fence detection.
+/// PRDs must start with `---` frontmatter, so we look for that as the
+/// primary content indicator.
 fn extract_prd_content(output: &str) -> String {
-    // Check for markdown code block.
-    if let Some(start) = output.find("```markdown")
-        && let Some(end) = output[start + 11..].find("```")
-    {
-        return output[start + 11..start + 11 + end].trim().to_string();
+    let trimmed = output.trim();
+
+    // If output starts directly with frontmatter, use it as-is.
+    if trimmed.starts_with("---") {
+        return trimmed.to_string();
     }
 
-    if let Some(start) = output.find("```yaml")
-        && let Some(end) = output[start + 7..].find("```")
-    {
-        return output[start + 7..start + 7 + end].trim().to_string();
-    }
+    // Try to find a code fence containing frontmatter.
+    // Handle various fence patterns: ```markdown, ```md, ```yaml, ``` (generic).
+    for fence_pattern in ["```markdown", "```md", "```yaml", "```"] {
+        if let Some(fence_start) = trimmed.find(fence_pattern) {
+            let after_fence = fence_start + fence_pattern.len();
 
-    if let Some(start) = output.find("```") {
-        let after_first = start + 3;
+            // Skip to the next newline (past any remaining language identifier).
+            let content_start = trimmed[after_fence..]
+                .find('\n')
+                .map(|i| after_fence + i + 1)
+                .unwrap_or(after_fence);
 
-        // Skip the language identifier if present.
-        let content_start = output[after_first..]
-            .find('\n')
-            .map(|i| after_first + i + 1)
-            .unwrap_or(after_first);
+            // Look for the closing fence, but find the LAST one to handle
+            // nested code blocks inside the PRD content.
+            let remaining = &trimmed[content_start..];
 
-        if let Some(end) = output[content_start..].find("```") {
-            return output[content_start..content_start + end]
-                .trim()
-                .to_string();
+            if let Some(end) = remaining.rfind("\n```") {
+                let content = &remaining[..end];
+
+                // Verify this looks like a PRD (starts with ---).
+                let content_trimmed = content.trim();
+
+                if content_trimmed.starts_with("---") {
+                    return content_trimmed.to_string();
+                }
+            }
+
+            // Fallback: try to find closing fence, even if not at line start.
+            if let Some(end) = remaining.rfind("```") {
+                let content = &remaining[..end];
+                let content_trimmed = content.trim();
+
+                if content_trimmed.starts_with("---") {
+                    return content_trimmed.to_string();
+                }
+            }
         }
     }
 
-    // No code block, use the whole output.
-    output.trim().to_string()
+    // Last resort: look for --- delimiters directly in the output.
+    // Find the first --- and extract from there.
+    if let Some(fm_start) = trimmed.find("---") {
+        return trimmed[fm_start..].trim().to_string();
+    }
+
+    // No recognizable PRD content found, return as-is.
+    trimmed.to_string()
 }
 
 #[cfg(test)]
@@ -535,6 +560,54 @@ Done!
     }
 
     #[test]
+    fn test_extract_prd_content_md_fence() {
+        // LLMs often use ```md instead of ```markdown
+        let output = r#"Here's the PRD:
+
+```md
+---
+id: PRD-0001
+title: Test
+---
+
+# Summary
+```
+"#;
+
+        let content = extract_prd_content(output);
+        assert!(content.starts_with("---"), "Content was: {content}");
+        assert!(content.contains("id: PRD-0001"));
+    }
+
+    #[test]
+    fn test_extract_prd_content_nested_code_blocks() {
+        // PRD content itself may contain code blocks
+        let output = r#"```markdown
+---
+id: PRD-0001
+title: Test
+---
+
+# Summary
+
+Example code:
+
+```bash
+echo "hello"
+```
+
+More text.
+```
+"#;
+
+        let content = extract_prd_content(output);
+        assert!(content.starts_with("---"), "Content was: {content}");
+        assert!(content.contains("id: PRD-0001"));
+        assert!(content.contains("echo \"hello\""));
+        assert!(content.contains("More text."));
+    }
+
+    #[test]
     fn test_extract_prd_content_plain() {
         let output = r#"---
 id: PRD-0001
@@ -546,6 +619,24 @@ title: Test
 
         let content = extract_prd_content(output);
         assert!(content.starts_with("---"));
+    }
+
+    #[test]
+    fn test_extract_prd_content_with_leading_text() {
+        // Fallback: find --- in output even without proper fencing
+        let output = r#"Sure, here's the PRD you asked for:
+
+---
+id: PRD-0001
+title: Test
+---
+
+# Summary
+"#;
+
+        let content = extract_prd_content(output);
+        assert!(content.starts_with("---"), "Content was: {content}");
+        assert!(content.contains("id: PRD-0001"));
     }
 
     #[test]
