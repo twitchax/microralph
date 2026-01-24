@@ -66,8 +66,8 @@ microralph/
 │   ├── reindex.rs        # `mr reindex` implementation
 │   ├── config.rs         # Config file loading (.mr/config.toml)
 │   ├── agents.rs         # AGENTS.md updater
-│   ├── prd_new.rs        # `mr prd new` Q/A flow
-│   ├── prd_edit.rs       # `mr prd edit` flow
+│   ├── prd_new.rs        # `mr new` Q/A flow
+│   ├── prd_edit.rs       # `mr edit` flow
 │   ├── prd/              # PRD parsing and manipulation
 │   │   ├── mod.rs
 │   │   ├── parser.rs     # YAML frontmatter + markdown body parsing
