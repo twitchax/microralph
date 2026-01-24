@@ -307,6 +307,49 @@ impl Runner for CopilotRunner {
         "copilot"
     }
 
+    fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
+        let mut parts = vec![self.config.copilot_path.clone()];
+
+        // Add permission flags
+        match self.config.permission_mode {
+            PermissionMode::Yolo => {
+                parts.push("--allow-all".to_string());
+            }
+            #[cfg(test)]
+            PermissionMode::AllowAll => {
+                parts.push("--allow-all-tools".to_string());
+                parts.push("--allow-all-paths".to_string());
+                parts.push("--allow-all-urls".to_string());
+            }
+            #[cfg(test)]
+            PermissionMode::Manual => {}
+        }
+
+        // Add silent mode flag
+        if self.config.silent {
+            parts.push("-s".to_string());
+        }
+
+        // Add no-ask-user flag
+        if self.config.no_ask_user {
+            parts.push("--no-ask-user".to_string());
+        }
+
+        // Add model flag
+        if let Some(ref model) = self.config.model {
+            parts.push("--model".to_string());
+            parts.push(model.clone());
+        }
+
+        // Add working directory info
+        parts.push("-p".to_string());
+        parts.push("<prompt>".to_string());
+        parts.push("--working-dir".to_string());
+        parts.push(working_dir.display().to_string());
+
+        Some(parts.join(" "))
+    }
+
     fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
         let args = self.build_args(prompt);
 
@@ -630,6 +673,45 @@ mod tests {
         let usage = CopilotRunner::parse_usage(output);
 
         assert!(usage.is_none());
+    }
+
+    #[test]
+    fn test_format_command_display() {
+        let runner = CopilotRunner::with_model(Some("claude-sonnet-4".to_string()));
+        let prompt = "test prompt";
+        let working_dir = Path::new("/home/user/project");
+
+        let cmd_display = runner.format_command_display(prompt, working_dir).unwrap();
+
+        // Should include copilot path
+        assert!(cmd_display.contains("copilot"));
+        // Should include permission flags
+        assert!(cmd_display.contains("--allow-all"));
+        // Should include no-ask-user flag
+        assert!(cmd_display.contains("--no-ask-user"));
+        // Should include model
+        assert!(cmd_display.contains("--model"));
+        assert!(cmd_display.contains("claude-sonnet-4"));
+        // Should include prompt placeholder
+        assert!(cmd_display.contains("-p"));
+        assert!(cmd_display.contains("<prompt>"));
+        // Should include working directory
+        assert!(cmd_display.contains("--working-dir"));
+        assert!(cmd_display.contains("/home/user/project"));
+        // Should NOT include the actual prompt content
+        assert!(!cmd_display.contains("test prompt"));
+    }
+
+    #[test]
+    fn test_format_command_display_no_model() {
+        let runner = CopilotRunner::new();
+        let prompt = "test";
+        let working_dir = Path::new("/tmp");
+
+        let cmd_display = runner.format_command_display(prompt, working_dir).unwrap();
+
+        // Should NOT include model flags
+        assert!(!cmd_display.contains("--model"));
     }
 
     #[test]

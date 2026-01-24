@@ -220,6 +220,11 @@ fn pick_prd_via_runner(root: &Path, runner: &dyn Runner, stream: bool) -> Result
 
     tracing::info!("Asking runner to pick the next PRD to work on...");
 
+    // Display the command being invoked (without the prompt)
+    if let Some(cmd_display) = runner.format_command_display(&prompt, root) {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
     // Invoke the runner.
     let output: RunnerOutput = if stream {
         let mut stdout = std::io::stdout();
@@ -385,6 +390,11 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         stream = config.stream,
         "Invoking runner to execute task"
     );
+
+    // Display the command being invoked (without the prompt)
+    if let Some(cmd_display) = runner.format_command_display(&prompt, config.root) {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
 
     let output: RunnerOutput = if config.stream {
         // Stream output to stdout in real-time.
@@ -704,6 +714,11 @@ pub fn run_uat_verification_loop(
 
         // Build and execute the verification prompt.
         let prompt = build_uat_verify_prompt(config.root, &current_prd, &current_prd_path, uat);
+
+        // Display the command being invoked (without the prompt)
+        if let Some(cmd_display) = runner.format_command_display(&prompt, config.root) {
+            println!("\n🔧 Executing: {}", cmd_display);
+        }
 
         let output = if config.stream {
             let mut stdout = std::io::stdout();

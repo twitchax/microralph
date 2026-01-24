@@ -101,6 +101,13 @@ pub trait Runner: Send + Sync {
     /// Returns the name of the runner.
     fn name(&self) -> &str;
 
+    /// Formats the command that will be executed for display to the user.
+    /// Should include all relevant parameters but exclude the prompt content.
+    /// Returns None if command display is not applicable for this runner.
+    fn format_command_display(&self, _prompt: &str, _working_dir: &std::path::Path) -> Option<String> {
+        None
+    }
+
     /// Executes a prompt and returns the response.
     ///
     /// # Arguments

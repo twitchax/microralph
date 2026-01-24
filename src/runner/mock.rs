@@ -75,6 +75,10 @@ impl Runner for MockRunner {
         &self.name
     }
 
+    fn format_command_display(&self, _prompt: &str, _working_dir: &Path) -> Option<String> {
+        Some("mock-runner (no actual command)".to_string())
+    }
+
     fn execute(&self, prompt: &str, _working_dir: &Path) -> RunnerResult<RunnerOutput> {
         // Record the prompt.
         self.recorded_prompts
