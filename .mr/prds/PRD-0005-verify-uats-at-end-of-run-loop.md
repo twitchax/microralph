@@ -66,7 +66,7 @@ tasks:
 - id: T-005
   title: Update mr prd finalize to block on unverified UATs
   priority: 2
-  status: todo
+  status: done
   notes: In src/prd_finalize.rs, add validate_all_uats_verified() check alongside task validation. Return error if any UAT has uat_status unverified.
 - id: T-006
   title: Update run_task.md prompt to reference UAT verification phase
@@ -175,3 +175,16 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Updated `test_uat_verification_loop_opt_out` to verify History entry is appended during loop opt-out
   - History entry format: `## YYYY-MM-DD — {uat_id} Opt-Out` with UAT name, status, and reason
   - UAT passed: 239 tests, all passed
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Update mr prd finalize to block on unverified UATs
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `UnverifiedUats` variant to `FinalizeError` enum in `src/prd_finalize.rs` with `unverified_count` and `uat_details` fields
+  - Added `get_unverified_uats()` helper function to retrieve unverified UATs from a PRD
+  - Added `validate_all_uats_verified()` function to validate all UATs are verified before finalization
+  - Updated `finalize_prd()` to call `validate_all_uats_verified()` after task validation, blocking finalization if any UATs are unverified
+  - Updated doc comment to document `FinalizeError::UnverifiedUats` error case
+  - Added 5 unit tests: `test_validate_all_uats_verified_with_all_verified`, `test_validate_all_uats_verified_with_unverified`, `test_validate_all_uats_verified_with_no_uats`, `test_validate_multiple_unverified_uats`, `test_validate_all_unverified_uats`
+  - Added `make_test_prd_with_uats()` and `make_uat()` helper functions for testing
+  - UAT passed: 244 tests, all passed

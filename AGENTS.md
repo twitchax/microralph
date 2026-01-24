@@ -109,11 +109,14 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Let me check the current implementation to understand the new patterns better.
+Now I have enough context. T-004 added the model opt-out mechanism. The key patterns for agents:
+1. OPT-OUT syntax (`OPT-OUT: <reason>`)
+2. History entry format for opt-outs
+3. The `parse_opt_out` and `append_opt_out_history` functions
 
-Now I have enough context. Let me update the auto-managed section with the new patterns from T-003.
+Let me update the auto-managed section:
 
 Updated the auto-managed section with:
-- **Run Loop Architecture**: Documented `RunResult` enum variants and key `Prd` methods
-- **UAT Verification Phase**: Configuration struct, prompt placeholders, three verification approaches, opt-out detection, and result struct fields
+- **Run Loop Architecture**: `RunResult` enum variants and key `Prd` methods
+- **UAT Verification Phase**: Prompt placeholders, three verification approaches, opt-out syntax (`OPT-OUT: <reason>`), History entry format, and key functions
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

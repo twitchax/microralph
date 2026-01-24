@@ -12,7 +12,7 @@ use chrono::{Local, Utc};
 use thiserror::Error;
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
-use crate::prd::types::Task;
+use crate::prd::types::{AcceptanceTest, Task};
 use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
@@ -30,6 +30,16 @@ pub enum FinalizeError {
 
         /// Details about the incomplete tasks.
         task_details: Vec<(String, TaskStatus)>,
+    },
+
+    /// Some UATs are not verified.
+    #[error("Cannot finalize PRD: {unverified_count} UAT(s) are not verified")]
+    UnverifiedUats {
+        /// Number of unverified UATs.
+        unverified_count: usize,
+
+        /// Details about the unverified UATs (id, name).
+        uat_details: Vec<(String, String)>,
     },
 
     /// The PRD was not found.
@@ -110,6 +120,28 @@ fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
             task_details: incomplete
                 .into_iter()
                 .map(|(t, status)| (t.id.clone(), status))
+                .collect(),
+        })
+    }
+}
+
+/// Gets all unverified acceptance tests from a PRD.
+fn get_unverified_uats(prd: &Prd) -> Vec<&AcceptanceTest> {
+    prd.unverified_uats()
+}
+
+/// Validates that all acceptance tests in the PRD are verified.
+fn validate_all_uats_verified(prd: &Prd) -> Result<(), FinalizeError> {
+    let unverified = get_unverified_uats(prd);
+
+    if unverified.is_empty() {
+        Ok(())
+    } else {
+        Err(FinalizeError::UnverifiedUats {
+            unverified_count: unverified.len(),
+            uat_details: unverified
+                .into_iter()
+                .map(|t| (t.id.clone(), t.name.clone()))
                 .collect(),
         })
     }
@@ -235,6 +267,7 @@ fn update_prd_status_to_done(prd: &Prd, prd_path: &Path) -> Result<()> {
 /// # Errors
 ///
 /// Returns `FinalizeError::IncompleteTasks` if any task is not done.
+/// Returns `FinalizeError::UnverifiedUats` if any UAT is not verified.
 /// Returns `FinalizeError::PrdNotFound` if the PRD doesn't exist.
 /// Returns an error if the runner fails.
 pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<PrdFinalizeResult> {
@@ -255,9 +288,17 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         )
     })?;
 
+    // Validate all UATs are verified - this returns an error if any are unverified.
+    validate_all_uats_verified(&prd).with_context(|| {
+        format!(
+            "PRD {} cannot be finalized: unverified UATs remain",
+            config.prd_id
+        )
+    })?;
+
     tracing::info!(
         prd_id = config.prd_id,
-        "All tasks done, running acceptance test verification"
+        "All tasks done and UATs verified, running acceptance test verification"
     );
 
     // Build and execute the finalization prompt.
@@ -341,13 +382,33 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prd::types::{PrdFrontmatter, Task, TaskStatus};
+    use crate::prd::types::{PrdFrontmatter, Task, TaskStatus, UatStatus};
 
     fn make_test_prd(id: &str, tasks: Vec<Task>) -> Prd {
         let frontmatter = PrdFrontmatter {
             id: id.to_string(),
             title: format!("Test PRD {}", id),
             tasks: if tasks.is_empty() { None } else { Some(tasks) },
+            ..Default::default()
+        };
+
+        Prd::new(frontmatter, "# Body\n".to_string())
+    }
+
+    fn make_test_prd_with_uats(
+        id: &str,
+        tasks: Vec<Task>,
+        acceptance_tests: Vec<AcceptanceTest>,
+    ) -> Prd {
+        let frontmatter = PrdFrontmatter {
+            id: id.to_string(),
+            title: format!("Test PRD {}", id),
+            tasks: if tasks.is_empty() { None } else { Some(tasks) },
+            acceptance_tests: if acceptance_tests.is_empty() {
+                None
+            } else {
+                Some(acceptance_tests)
+            },
             ..Default::default()
         };
 
@@ -361,6 +422,15 @@ mod tests {
             priority: 1,
             status,
             notes: None,
+        }
+    }
+
+    fn make_uat(id: &str, uat_status: UatStatus) -> AcceptanceTest {
+        AcceptanceTest {
+            id: id.to_string(),
+            name: format!("Test {}", id),
+            command: "cargo test".to_string(),
+            uat_status,
         }
     }
 
@@ -782,5 +852,107 @@ mod tests {
 
         // Body should be preserved.
         assert!(updated.body.contains("Test content."));
+    }
+
+    #[test]
+    fn test_validate_all_uats_verified_with_all_verified() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Verified),
+            ],
+        );
+
+        assert!(validate_all_uats_verified(&prd).is_ok());
+    }
+
+    #[test]
+    fn test_validate_all_uats_verified_with_unverified() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Unverified),
+            ],
+        );
+
+        let result = validate_all_uats_verified(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::UnverifiedUats {
+            unverified_count,
+            uat_details,
+        }) = result
+        {
+            assert_eq!(unverified_count, 1);
+            assert_eq!(uat_details.len(), 1);
+            assert_eq!(uat_details[0].0, "uat-002");
+            assert_eq!(uat_details[0].1, "Test uat-002");
+        } else {
+            panic!("Expected UnverifiedUats error");
+        }
+    }
+
+    #[test]
+    fn test_validate_all_uats_verified_with_no_uats() {
+        let prd = make_test_prd("PRD-0001", vec![make_task("T-001", TaskStatus::Done)]);
+
+        // No UATs means validation passes.
+        assert!(validate_all_uats_verified(&prd).is_ok());
+    }
+
+    #[test]
+    fn test_validate_multiple_unverified_uats() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Unverified),
+                make_uat("uat-003", UatStatus::Unverified),
+            ],
+        );
+
+        let result = validate_all_uats_verified(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::UnverifiedUats {
+            unverified_count,
+            uat_details,
+        }) = result
+        {
+            assert_eq!(unverified_count, 2);
+            assert_eq!(uat_details.len(), 2);
+        } else {
+            panic!("Expected UnverifiedUats error");
+        }
+    }
+
+    #[test]
+    fn test_validate_all_unverified_uats() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Unverified),
+                make_uat("uat-002", UatStatus::Unverified),
+            ],
+        );
+
+        let result = validate_all_uats_verified(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::UnverifiedUats {
+            unverified_count,
+            uat_details: _,
+        }) = result
+        {
+            assert_eq!(unverified_count, 2);
+        } else {
+            panic!("Expected UnverifiedUats error");
+        }
     }
 }
