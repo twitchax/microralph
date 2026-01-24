@@ -109,11 +109,11 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Now I understand T-020 added a `reindex` command. Let me update the auto-managed section with the new command documentation.
+The recent changes (T-099) added comprehensive documentation in README.md and DEVELOPMENT.md. The current auto-managed section in AGENTS.md is malformed - it contains raw prose instead of properly formatted bullet points. I should clean it up and add any new relevant conventions from the docs.
 
-Updated the auto-managed section with properly formatted content:
-- **Streaming Output** — `mr run --stream` for real-time output
-- **Reindex Command** — `mr reindex` to regenerate index and fix links
-- **Clippy Policy** — `#[allow(...)]` requires reason comments
-- **Configuration** — `.mr/config.toml` settings and `--language` flag
+Updated the auto-managed section with:
+- **Key Commands** — streaming, reindex, verbose, mock runner
+- **Configuration** — config file, language flag, auto-detection
+- **Code Policies** — no bare allows, DEVELOPMENT.md reference, runner trait
+- **Adding New Features** — step-by-step guide from DEVELOPMENT.md
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
