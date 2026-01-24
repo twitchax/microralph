@@ -617,7 +617,7 @@ fn cmd_prd_list() -> Result<()> {
     // Regenerate the index file.
     prd::generate_index_from_root(&cwd)?;
 
-    let prds = prd::scan_prd_summaries(&cwd)?;
+    let mut prds = prd::scan_prd_summaries(&cwd)?;
 
     if prds.is_empty() {
         println!("No PRDs found.");
@@ -625,6 +625,9 @@ fn cmd_prd_list() -> Result<()> {
         println!("Create your first PRD with: `mr prd new my-feature`");
         return Ok(());
     }
+
+    // Sort by status: active, draft, done, parked.
+    prds.sort_by_key(|p| p.status.sort_order());
 
     println!("PRDs:");
     println!();
