@@ -109,14 +109,13 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Now I understand T-018. It adds `.mr/config.toml` for persistent settings. This is relevant for agents to know about because:
-1. Configuration can be set in `.mr/config.toml` instead of CLI flags
-2. CLI flags override config file values
+T-019 adds a `--stream` flag to `mr run` that enables real-time output streaming. This is relevant for agents to know about. Let me update the auto-managed section.
 
-Let me update the auto-managed section with this information.
+The current auto-managed section contains stale notes from a previous update rather than properly formatted content. I'll replace it with proper content including the streaming feature from T-019.
 
-Updated the auto-managed section with:
-- **Clippy Policy** - existing convention
-- **Multi-Language Support** - T-016's `--language` flag
-- **Configuration File** - T-018's new `.mr/config.toml` with key details about available options and CLI override behavior
+Updated the auto-managed section with properly formatted content including the new `--stream` flag from T-019. The section now documents:
+- **Clippy Policy** - `#[allow(...)]` requires reason comments
+- **Multi-Language Support** - `--language` flag
+- **Configuration File** - `.mr/config.toml` settings
+- **Streaming Output** - new `mr run --stream` flag for real-time output
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

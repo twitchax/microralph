@@ -10,6 +10,7 @@ mod prd;
 mod prd_edit;
 mod prd_new;
 mod prompt;
+mod reindex;
 mod run;
 mod runner;
 mod status;
@@ -98,6 +99,21 @@ enum Command {
 
     /// Show status of PRDs and tasks.
     Status,
+
+    /// Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
+    Reindex {
+        /// The runner to use for link verification/fixing.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -195,6 +211,14 @@ fn main() -> Result<()> {
         Some(Command::Status) => {
             tracing::info!("Showing status...");
             cmd_status()?;
+        }
+        Some(Command::Reindex {
+            runner,
+            model,
+            stream,
+        }) => {
+            tracing::info!(runner = %runner, stream = %stream, "Reindexing PRDs...");
+            cmd_reindex(&runner, model.as_deref(), stream)?;
         }
         None => {
             println!(
@@ -711,6 +735,40 @@ fn cmd_status() -> Result<()> {
     let output = status::format_status(&report);
 
     print!("{output}");
+
+    Ok(())
+}
+
+/// Runs the `mr reindex` command.
+fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::with_model(model);
+            Box::new(copilot)
+        }
+        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, mock"),
+    };
+
+    // Run reindex.
+    let result = reindex::reindex(&cwd, runner.as_ref(), stream)?;
+
+    println!();
+    println!("Reindex complete!");
+    println!("  PRDs indexed: {}", result.prds_indexed);
+    println!("  Links verified: {}", result.links_verified);
+    println!("  Links fixed: {}", result.links_fixed);
 
     Ok(())
 }

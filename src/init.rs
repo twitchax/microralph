@@ -707,6 +707,92 @@ The following files in `.mr/` need to be adapted for {{language}}:
 Confirm which files were updated and summarize the key changes made for {{language}}.
 "#;
 
+/// Default content for the reindex prompt.
+pub const PROMPT_REINDEX: &str = r#"# microralph — Reindex Prompt
+
+## Objective
+
+Regenerate the `.mr/PRDS.md` index file and verify/fix inter-PRD links and code links across all PRDs.
+
+## Context
+
+The user wants to:
+1. Regenerate the `.mr/PRDS.md` index to reflect the current state of all PRDs.
+2. Scan all PRDs for inter-PRD links (e.g., references to other PRD IDs) and code links (e.g., references to source files).
+3. Verify that all links are valid and use proper Markdown link syntax.
+4. Fix any broken or incorrectly formatted links.
+
+## PRDs Directory
+
+Path: `{{prds_dir}}`
+
+## Current PRD Files
+
+{{#each prd_files}}
+- `{{filename}}` (ID: {{id}}, Title: {{title}})
+{{/each}}
+
+## Repository Root
+
+Path: `{{repo_root}}`
+
+## Required Actions
+
+1. **Read all PRD files** in `{{prds_dir}}`.
+
+2. **Regenerate the index** by running: `cargo run -- prd list`
+
+3. **Scan for inter-PRD references** in each PRD:
+   - Look for mentions of PRD IDs like `PRD-0001`, `PRD-0002`, etc.
+   - Convert plain text references to proper Markdown links: `[PRD-0001](./PRD-0001-slug.md)`
+   - Use relative paths from the PRD's location.
+
+4. **Scan for code references** in each PRD:
+   - Look for file paths like `src/module.rs`, `lib/file.js`, etc.
+   - Verify the files exist in the repository.
+   - Convert plain text references to proper Markdown links: `[src/module.rs](../../src/module.rs)`
+   - Use relative paths from the PRD's location (`.mr/prds/`).
+   - For line references like "line 42", consider using GitHub-style anchors: `[src/module.rs#L42](../../src/module.rs#L42)`
+
+5. **Update PRD files** with fixed links:
+   - Only modify files that have broken or incorrectly formatted links.
+   - Preserve all other content exactly as-is.
+
+## Link Format Guidelines
+
+### Inter-PRD Links
+
+- From: `see PRD-0002 for details`
+- To: `see [PRD-0002](./PRD-0002-feature-name.md) for details`
+
+### Code File Links
+
+- From: `implementation in src/run.rs`
+- To: `implementation in [src/run.rs](../../src/run.rs)`
+
+### Code Line Links
+
+- From: `defined at src/run.rs line 42`
+- To: `defined at [src/run.rs#L42](../../src/run.rs#L42)`
+
+## Constraints
+
+- Do not modify PRD content other than fixing links.
+- Do not change the structure of PRD files.
+- Do not add links where none were intended (only convert existing plain-text references).
+- Preserve the YAML frontmatter exactly.
+- Keep History sections intact.
+
+## Output
+
+Report what was done:
+- Confirmation that the index was regenerated
+- Number of PRDs scanned
+- Number of inter-PRD links verified/fixed
+- Number of code links verified/fixed
+- List of files modified (if any)
+"#;
+
 /// Default content for the empty PRDS.md index.
 pub const EMPTY_INDEX: &str = r#"# microralph — PRD Index
 
@@ -908,6 +994,7 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         PROMPT_ADAPT_LANGUAGE,
         &mut result,
     )?;
+    create_file_if_missing(&prompts_dir.join("reindex.md"), PROMPT_REINDEX, &mut result)?;
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
@@ -1015,6 +1102,7 @@ mod tests {
         assert!(root.join(".mr/prompts/run_task_finalize.md").exists());
         assert!(root.join(".mr/prompts/update_agents.md").exists());
         assert!(root.join(".mr/prompts/adapt_language.md").exists());
+        assert!(root.join(".mr/prompts/reindex.md").exists());
 
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
@@ -1027,7 +1115,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 15); // 1 template + 11 prompts + 1 index + 1 config + 1 AGENTS.md
+        assert_eq!(result.files_created, 16); // 1 template + 12 prompts + 1 index + 1 config + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1038,13 +1126,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 15);
+        assert_eq!(result1.files_created, 16);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 15);
+        assert_eq!(result2.files_skipped, 16);
         assert_eq!(result2.dirs_created, 0);
     }
 

@@ -39,6 +39,9 @@ pub enum PromptKind {
 
     /// Language adaptation prompt for rewriting prompts/templates.
     AdaptLanguage,
+
+    /// Reindex prompt for regenerating index and fixing links.
+    Reindex,
 }
 
 impl PromptKind {
@@ -58,6 +61,7 @@ impl PromptKind {
             Self::UpdateAgents => "update_agents.md",
             Self::PrdEdit => "prd_edit.md",
             Self::AdaptLanguage => "adapt_language.md",
+            Self::Reindex => "reindex.md",
         }
     }
 
@@ -75,6 +79,7 @@ impl PromptKind {
             Self::UpdateAgents,
             Self::PrdEdit,
             Self::AdaptLanguage,
+            Self::Reindex,
         ]
     }
 }
@@ -102,11 +107,12 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 11);
+        assert_eq!(all.len(), 12);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));
+        assert!(all.contains(&PromptKind::Reindex));
     }
 
     #[test]

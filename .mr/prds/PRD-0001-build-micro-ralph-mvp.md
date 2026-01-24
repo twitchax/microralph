@@ -202,13 +202,13 @@ tasks:
   - id: T-020
     title: "Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links."
     priority: 19
-    status: todo
+    status: done
     notes: "This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it."
   - id: T-099
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
     status: todo
-    notes: "README + DEVELOPMENT + example PRDs; `cargo make uat` is the one true gate.  README should describe normal flow.  README should be a little bit funny...something 'small ralph to help you ralph your ralphs' style.  Also, make sure to reference that this whole thing was 'ralph'ed into existence by `microralph` itself.  It should be stylized as `microralph` everywhere."
+    notes: "README + DEVELOPMENT + example PRDs + end-to-end smoke; `cargo make uat` is the one true gate.  README should describe normal flow.  README should be a little bit funny...something 'small ralph to help you ralph your ralphs' style.  Also, make sure to reference that this whole thing was 'ralph'ed into existence by `microralph` itself.  It should be stylized as `microralph` everywhere.  Also, link out to ralph / resources about PRDs and agent loops, and explain why we want to get rid of context.  Add a comparison table to other projects at the bottom (explain the differences, and why microralph is different)."
 
 ---
 
@@ -645,5 +645,26 @@ Each prompt must define:
   - When streaming is enabled, output summary shows "(output was streamed above)"
   - Added 2 new tests for `--stream` flag parsing
   - All 188 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-020 Completed
+- **Task**: Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `Reindex` command variant to main.rs with `--runner`, `--model`, and `--stream` flags
+  - Added `Reindex` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_REINDEX` constant in `src/init.rs` with comprehensive reindex prompt
+    - Instructs runner to regenerate index, scan PRDs for inter-PRD and code links
+    - Documents link format guidelines (inter-PRD links, code file links, code line links)
+  - Created `src/reindex.rs` module with `reindex()` function and `ReindexResult` struct
+    - Regenerates `.mr/PRDS.md` index using existing `generate_index_from_root()`
+    - Builds prompt context with PRD file info for `{{#each prd_files}}` expansion
+    - Invokes runner to verify and fix links in PRDs
+    - Parses runner output for verified/fixed link counts (best effort)
+  - Added `cmd_reindex()` function to main.rs
+  - Added `reindex.md` to prompt file creation in `init()` scaffolding
+  - Created `.mr/prompts/reindex.md` prompt file in this repo
+  - Updated test counts (16 files created in init, 12 prompt kinds)
+  - Added 4 new tests for link count parsing
+  - All 192 tests pass, clippy clean, UAT passes
 
 ---
