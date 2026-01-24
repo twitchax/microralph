@@ -27,7 +27,7 @@ acceptance_tests:
 - id: uat-003
   name: Context influences question generation
   command: cargo make uat prd_new_context_in_questions
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: Context persists through Q/A rounds
   command: cargo make uat prd_new_context_persistence
@@ -172,5 +172,16 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Created `test_prd_new_context_flag` in `src/prd_new.rs`
   - Test verifies that when `--context` flag is provided, the context is used directly without an interactive prompt
   - Test confirms the output does NOT contain the context prompt and the flag-provided context is included in the AI runner prompt
+  - UAT: Test passed (1/1 tests run, 1 passed)
+
+## 2026-01-24 — uat-003 Verification
+- **UAT**: Context influences question generation
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_prd_new_context_in_questions` in `src/prd_new.rs`
+  - Test verifies that user-provided context is actually included in the round1 prompt sent to the AI
+  - Test confirms the round1 prompt template expansion includes the context with "considering context:" marker
+  - Validated that context flows from config → build_round1_prompt → template expansion
   - UAT: Test passed (1/1 tests run, 1 passed)
 

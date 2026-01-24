@@ -287,6 +287,7 @@ Check if tests require specific environment:
 - Also add a Claude Code runner,
 - Also remove the reliance on the LLM response during PRD creation. We should only care about the file that was generated.
 - Add information about how to create and go into a dev container so that people can run the application in a sandbox environment very easily.
+- CLI ergonomics updates: `run` should just take an optional command arg instead of the `--prd` arg.  The UAT verification loop should also show truncated LLM output, and the tokens used just like the task loop does.
 
 ## License
 
