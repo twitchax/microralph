@@ -305,7 +305,7 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
 
     let result = init::init(&cwd)?;
 
-    println!("Initialized microralph!");
+    println!("{}", colors::success("Initialized microralph!"));
     println!();
     println!(
         "Created {} directories, {} files.",
@@ -548,7 +548,7 @@ fn cmd_prd_new(
     let result = prd_new::create_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
 
     println!();
-    println!("PRD created successfully!");
+    println!("{}", colors::success("PRD created successfully!"));
     println!("  ID: {}", result.prd.id());
     println!("  Title: {}", result.prd.title());
     println!("  Path: {}", result.path.display());
@@ -608,7 +608,7 @@ fn cmd_prd_edit(
     let result = prd_edit::edit_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
 
     println!();
-    println!("PRD edited successfully!");
+    println!("{}", colors::success("PRD edited successfully!"));
     println!("  ID: {}", result.prd.id());
     println!("  Title: {}", result.prd.title());
     println!("  Path: {}", result.path.display());
@@ -930,7 +930,10 @@ fn cmd_run(
                 println!();
 
                 if runner_success {
-                    println!("Task {} completed successfully!", task_id);
+                    println!(
+                        "{}",
+                        colors::success(&format!("Task {} completed successfully!", task_id))
+                    );
                 } else {
                     println!("Task {} did not complete successfully.", task_id);
                     last_failed = true;
@@ -1011,7 +1014,10 @@ fn cmd_run(
 
             run::RunResult::PrdComplete { prd_id, prd_path } => {
                 println!();
-                println!("PRD {} is complete!", prd_id);
+                println!(
+                    "{}",
+                    colors::success(&format!("PRD {} is complete!", prd_id))
+                );
                 println!("  All tasks done, all UATs verified.");
                 println!("  PRD: {}", prd_path.display());
                 break;
