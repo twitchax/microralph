@@ -1,7 +1,7 @@
 ---
 id: PRD-0010
 title: Support Multi-line Q/A During PRD Creation
-status: draft
+status: active
 owner: ""
 created: 2026-01-24
 updated: 2026-01-24
@@ -24,7 +24,7 @@ tasks:
   - id: T-001
     title: Detect and display newlines in model-generated questions
     priority: 1
-    status: todo
+    status: done
     notes: Model output sometimes includes newlines for lists/formatting; ensure full question is displayed with proper line breaks
   - id: T-002
     title: Support multi-line answer input with double-enter termination
@@ -64,3 +64,12 @@ This limitation makes the interactive PRD creation process less effective when d
 - Editing or reformatting of multi-line content after input
 
 # History
+
+## 2026-01-24 — T-001 Completed
+- **Task**: Detect and display newlines in model-generated questions
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `parse_questions()` function in `src/prd_new.rs` to capture multi-line questions instead of truncating after the first line
+  - Enhanced parsing logic to accumulate question content across multiple lines until an empty line or next question number is encountered
+  - Updated `collect_answers()` function to display multi-line questions with proper formatting (first line with number, subsequent lines indented)
+  - All 271 UAT tests pass

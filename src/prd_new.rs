@@ -537,26 +537,56 @@ fn build_synthesize_prompt(
 /// 2. Question two?
 fn parse_questions(output: &str) -> Vec<String> {
     let mut questions = Vec::new();
+    let mut current_question = String::new();
+    let mut in_question = false;
 
     for line in output.lines() {
         let trimmed = line.trim();
 
-        // Match numbered questions (1., 2., etc.).
-        if let Some(rest) = trimmed
-            .strip_prefix(|c: char| c.is_ascii_digit())
-            .and_then(|s| s.strip_prefix('.'))
-            .or_else(|| {
-                trimmed
-                    .strip_prefix(|c: char| c.is_ascii_digit())
-                    .and_then(|s| s.strip_prefix(')'))
-            })
-        {
-            let question = rest.trim().to_string();
+        // Check if this line starts a new numbered question (1., 2., etc.).
+        let is_question_start = trimmed
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
+            && (trimmed.contains(". ") || trimmed.contains(") "));
 
-            if !question.is_empty() {
-                questions.push(question);
+        if is_question_start {
+            // Save previous question if any.
+            if in_question && !current_question.trim().is_empty() {
+                questions.push(current_question.trim().to_string());
+            }
+
+            // Start new question.
+            if let Some(rest) = trimmed
+                .strip_prefix(|c: char| c.is_ascii_digit())
+                .and_then(|s| s.strip_prefix('.'))
+                .or_else(|| {
+                    trimmed
+                        .strip_prefix(|c: char| c.is_ascii_digit())
+                        .and_then(|s| s.strip_prefix(')'))
+                })
+            {
+                current_question = rest.trim().to_string();
+                in_question = true;
+            }
+        } else if in_question {
+            // Continue previous question if line is non-empty.
+            if !trimmed.is_empty() {
+                current_question.push('\n');
+                current_question.push_str(trimmed);
+            } else if !current_question.trim().is_empty() {
+                // Empty line after content signals end of question.
+                questions.push(current_question.trim().to_string());
+                current_question.clear();
+                in_question = false;
             }
         }
+    }
+
+    // Save last question if any.
+    if in_question && !current_question.trim().is_empty() {
+        questions.push(current_question.trim().to_string());
     }
 
     questions
@@ -606,7 +636,23 @@ where
     let mut pairs = Vec::new();
 
     for (i, question) in questions.iter().enumerate() {
-        writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
+        // Display question with proper multi-line formatting.
+        let question_lines: Vec<&str> = question.lines().collect();
+        if question_lines.len() == 1 {
+            writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
+        } else {
+            // First line with number.
+            writeln!(
+                output,
+                "{}. {}",
+                i + 1,
+                crate::colors::question(question_lines[0])
+            )?;
+            // Subsequent lines indented.
+            for line in &question_lines[1..] {
+                writeln!(output, "   {}", crate::colors::question(line))?;
+            }
+        }
         write!(output, "   > ")?;
         output.flush()?;
 
