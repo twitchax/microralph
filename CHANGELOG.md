@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0004: PRD Finalization Steps** — Explicit `mr prd finalize <id>` command
+  - Task completion validation (blocks finalization if tasks are incomplete)
+  - Acceptance test verification via finalization prompt
+  - Automatic CHANGELOG.md creation with Keep a Changelog format
+  - Summary report generation (stdout + PRD history)
+  - PRD status update to `done` and PRDS.md index refresh
+  - Inter-PRD cross-references in the index
+  - Cleanup guidance in finalization prompt (temp files, excessive comments)
+
 - **PRD-0001: Build microralph MVP** — Complete CLI tool for PRD-driven development
   - `mr init` — Initialize a new repo with `.mr/` structure, templates, and prompts
   - `mr bootstrap` — Ingest existing repos and auto-generate PRDs with language detection
