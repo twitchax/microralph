@@ -1,7 +1,5 @@
 //! Prompt type definitions.
 
-#![allow(dead_code)]
-
 use std::fmt;
 
 /// The different kinds of prompts used by microralph.
@@ -38,6 +36,9 @@ pub enum PromptKind {
 
     /// PRD edit prompt for quick modifications.
     PrdEdit,
+
+    /// Language adaptation prompt for rewriting prompts/templates.
+    AdaptLanguage,
 }
 
 impl PromptKind {
@@ -56,6 +57,7 @@ impl PromptKind {
             Self::RunTaskFinalize => "run_task_finalize.md",
             Self::UpdateAgents => "update_agents.md",
             Self::PrdEdit => "prd_edit.md",
+            Self::AdaptLanguage => "adapt_language.md",
         }
     }
 
@@ -72,6 +74,7 @@ impl PromptKind {
             Self::RunTaskFinalize,
             Self::UpdateAgents,
             Self::PrdEdit,
+            Self::AdaptLanguage,
         ]
     }
 }
@@ -99,10 +102,11 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 10);
+        assert_eq!(all.len(), 11);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
         assert!(all.contains(&PromptKind::PrdEdit));
+        assert!(all.contains(&PromptKind::AdaptLanguage));
     }
 
     #[test]

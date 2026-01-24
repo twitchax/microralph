@@ -34,13 +34,28 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md.
-    Init,
+    Init {
+        /// Target programming language (rust, python, node, go, java).
+        /// If unspecified or "rust", uses default prompts.
+        /// Otherwise, invokes runner to adapt prompts/templates.
+        #[arg(long)]
+        language: Option<String>,
+
+        /// The runner to use for language adaptation (only needed for non-Rust languages).
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+    },
 
     /// Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs.
     Bootstrap {
         /// The runner to use for bootstrapping.
         #[arg(long, default_value = "copilot")]
         runner: String,
+
+        /// Target programming language (rust, python, node, go, java).
+        /// If unspecified, auto-detects from project files.
+        #[arg(long)]
+        language: Option<String>,
     },
 
     /// PRD management commands.
@@ -103,13 +118,13 @@ fn main() -> Result<()> {
     init_tracing(args.verbose, args.quiet);
 
     match args.command {
-        Some(Command::Init) => {
-            tracing::info!("Initializing microralph...");
-            cmd_init()?;
+        Some(Command::Init { language, runner }) => {
+            tracing::info!(language = ?language, "Initializing microralph...");
+            cmd_init(language.as_deref(), &runner)?;
         }
-        Some(Command::Bootstrap { runner }) => {
-            tracing::info!(runner = %runner, "Bootstrapping repo...");
-            cmd_bootstrap(&runner)?;
+        Some(Command::Bootstrap { runner, language }) => {
+            tracing::info!(runner = %runner, language = ?language, "Bootstrapping repo...");
+            cmd_bootstrap(&runner, language.as_deref())?;
         }
         Some(Command::Prd { prd_command }) => match prd_command {
             PrdCommand::New { slug, runner } => {
@@ -165,7 +180,7 @@ fn init_tracing(verbose: bool, quiet: bool) {
 }
 
 /// Runs the `mr init` command.
-fn cmd_init() -> Result<()> {
+fn cmd_init(language: Option<&str>, runner_name: &str) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if init::is_initialized(&cwd) {
@@ -173,6 +188,14 @@ fn cmd_init() -> Result<()> {
         println!("Run `mr status` to see PRD status.");
         return Ok(());
     }
+
+    // Parse language if provided.
+    let lang = match language {
+        Some(l) => l
+            .parse::<init::Language>()
+            .map_err(|e| anyhow::anyhow!("{e}"))?,
+        None => init::Language::Rust,
+    };
 
     let result = init::init(&cwd)?;
 
@@ -191,6 +214,16 @@ fn cmd_init() -> Result<()> {
         }
     }
 
+    // Adapt prompts/templates for non-Rust languages.
+    if lang != init::Language::Rust {
+        println!();
+        println!("Adapting prompts and templates for {}...", lang);
+
+        adapt_language(&cwd, lang, runner_name)?;
+
+        println!("Prompts adapted for {}.", lang);
+    }
+
     println!();
     println!("Next steps:");
     println!("  1. Review and customize AGENTS.md");
@@ -200,9 +233,87 @@ fn cmd_init() -> Result<()> {
     Ok(())
 }
 
+/// Adapts prompts and templates for a specific programming language.
+fn adapt_language(root: &std::path::Path, lang: init::Language, runner_name: &str) -> Result<()> {
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => {
+            tracing::warn!("Using mock runner for language adaptation - no changes will be made");
+            return Ok(());
+        }
+        "copilot" => {
+            let copilot = runner::CopilotRunner::new();
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    // Build the language adaptation prompt.
+    let template = prompt::load_prompt_with_fallback(root, prompt::PromptKind::AdaptLanguage);
+
+    let mut ctx = prompt::PlaceholderContext::new();
+    ctx.insert("language", lang.to_string());
+
+    // Add build commands as a list.
+    let build_commands: Vec<std::collections::HashMap<String, String>> = lang
+        .build_commands()
+        .iter()
+        .map(|cmd| {
+            [("command".to_string(), cmd.to_string())]
+                .into_iter()
+                .collect()
+        })
+        .collect();
+
+    ctx.insert(
+        "build_commands",
+        prompt::PlaceholderValue::List(build_commands),
+    );
+
+    let prompt_text = prompt::expand_placeholders(&template, &ctx);
+
+    // Execute the runner with the adaptation prompt.
+    let output = runner
+        .execute(&prompt_text, root)
+        .map_err(|e| anyhow::anyhow!("Runner failed during language adaptation: {e}"))?;
+
+    if !output.success {
+        anyhow::bail!("Language adaptation failed: {}", output.text);
+    }
+
+    tracing::debug!(
+        output_len = output.text.len(),
+        "Language adaptation completed"
+    );
+
+    Ok(())
+}
+
 /// Runs the `mr bootstrap` command.
-fn cmd_bootstrap(runner_name: &str) -> Result<()> {
+fn cmd_bootstrap(runner_name: &str, language: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
+
+    // Detect or parse language.
+    let lang = match language {
+        Some(l) => l
+            .parse::<init::Language>()
+            .map_err(|e| anyhow::anyhow!("{e}"))?,
+        None => {
+            // Auto-detect language from project files.
+            init::detect_language(&cwd).unwrap_or(init::Language::Rust)
+        }
+    };
+
+    tracing::info!(language = %lang, "Detected/specified language");
 
     // Select runner based on name.
     let runner: Box<dyn runner::Runner> = match runner_name {
@@ -226,6 +337,7 @@ fn cmd_bootstrap(runner_name: &str) -> Result<()> {
     let config = bootstrap::BootstrapConfig::new(&cwd);
 
     println!("Bootstrapping repository...");
+    println!("Detected language: {}", lang);
     println!();
 
     let result = bootstrap::bootstrap(&config, runner.as_ref())?;
@@ -242,6 +354,16 @@ fn cmd_bootstrap(runner_name: &str) -> Result<()> {
 
     if result.prds_generated {
         println!("Generated {} PRD(s).", result.prds_created);
+    }
+
+    // Adapt prompts/templates for non-Rust languages after bootstrap.
+    if lang != init::Language::Rust {
+        println!();
+        println!("Adapting prompts and templates for {}...", lang);
+
+        adapt_language(&cwd, lang, runner_name)?;
+
+        println!("Prompts adapted for {}.", lang);
     }
 
     println!();
@@ -522,7 +644,18 @@ mod tests {
     #[test]
     fn test_args_parse_init() {
         let args = Args::try_parse_from(["mr", "init"]).unwrap();
-        assert!(matches!(args.command, Some(Command::Init)));
+        assert!(matches!(args.command, Some(Command::Init { .. })));
+    }
+
+    #[test]
+    fn test_args_parse_init_with_language() {
+        let args = Args::try_parse_from(["mr", "init", "--language", "python"]).unwrap();
+        if let Some(Command::Init { language, runner }) = args.command {
+            assert_eq!(language, Some("python".to_string()));
+            assert_eq!(runner, "copilot");
+        } else {
+            panic!("Expected Init command");
+        }
     }
 
     #[test]
@@ -558,8 +691,22 @@ mod tests {
     #[test]
     fn test_args_parse_bootstrap() {
         let args = Args::try_parse_from(["mr", "bootstrap", "--runner", "mock"]).unwrap();
-        if let Some(Command::Bootstrap { runner }) = args.command {
+        if let Some(Command::Bootstrap { runner, language }) = args.command {
             assert_eq!(runner, "mock");
+            assert!(language.is_none());
+        } else {
+            panic!("Expected Bootstrap command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_bootstrap_with_language() {
+        let args =
+            Args::try_parse_from(["mr", "bootstrap", "--runner", "mock", "--language", "node"])
+                .unwrap();
+        if let Some(Command::Bootstrap { runner, language }) = args.command {
+            assert_eq!(runner, "mock");
+            assert_eq!(language, Some("node".to_string()));
         } else {
             panic!("Expected Bootstrap command");
         }

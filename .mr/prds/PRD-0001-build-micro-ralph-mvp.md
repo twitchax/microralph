@@ -182,7 +182,7 @@ tasks:
   - id: T-016
     title: "Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)"
     priority: 15
-    status: todo
+    status: done
     notes: "Allow user to specify language (rust, python, node, etc.). If rust or unspecified, use current defaults. Otherwise, invoke runner to 'rewrite the default prompts/templates for the target language' after scaffolding. Bootstrap should auto-detect language from repo (Cargo.toml → rust, package.json → node, pyproject.toml → python, etc.)."
   - id: T-017
     title: "Document placeholder variables for each prompt in README"
@@ -570,5 +570,25 @@ Each prompt must define:
   - Updated test counts for new prompt file (12 → 13 files, 9 → 10 prompt kinds)
   - Wrote 9 tests covering edit flow, Q/A, and content extraction
   - All 154 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-016 Completed
+- **Task**: Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `Language` enum to `src/init.rs` with variants: Rust, Python, Node, Go, Java
+  - Implemented `FromStr` for Language with aliases (e.g., "py" → Python, "ts" → Node)
+  - Added `Language::build_commands()` returning typical commands per language
+  - Implemented `detect_language()` function for auto-detection from project files:
+    - Cargo.toml → Rust, package.json → Node, pyproject.toml/setup.py → Python
+    - go.mod → Go, pom.xml/build.gradle → Java
+  - Added `AdaptLanguage` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_ADAPT_LANGUAGE` constant with language adaptation prompt
+  - Updated `init` command with `--language` and `--runner` flags
+  - Updated `bootstrap` command with `--language` flag (auto-detects if not specified)
+  - Implemented `adapt_language()` function in `main.rs` to invoke runner for non-Rust languages
+  - Created `.mr/prompts/adapt_language.md` prompt file
+  - Added 14 new tests for Language enum and detection logic
+  - Updated test counts (14 files, 11 prompt kinds, 167 total tests)
+  - All 167 tests pass, clippy clean, UAT passes
 
 ---

@@ -2,9 +2,122 @@
 //!
 //! Creates the `.mr/` directory structure, templates, prompts, and starter AGENTS.md.
 
+use std::fmt;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
+
+use crate::prompt::PromptKind;
+
+/// Supported programming languages for project initialization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Language {
+    /// Rust projects (default).
+    #[default]
+    Rust,
+    /// Python projects.
+    Python,
+    /// Node.js/JavaScript/TypeScript projects.
+    Node,
+    /// Go projects.
+    Go,
+    /// Java projects.
+    Java,
+}
+
+impl Language {
+    /// Returns the typical build/test commands for this language.
+    pub fn build_commands(&self) -> &'static [&'static str] {
+        match self {
+            Self::Rust => &[
+                "cargo build",
+                "cargo test",
+                "cargo make ci",
+                "cargo make uat",
+            ],
+            Self::Python => &[
+                "pip install -e .",
+                "pytest",
+                "python -m pytest",
+                "make test",
+            ],
+            Self::Node => &["npm install", "npm test", "npm run build", "npm run lint"],
+            Self::Go => &[
+                "go build ./...",
+                "go test ./...",
+                "go vet ./...",
+                "make test",
+            ],
+            Self::Java => &["mvn compile", "mvn test", "gradle build", "gradle test"],
+        }
+    }
+}
+
+impl fmt::Display for Language {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Rust => write!(f, "rust"),
+            Self::Python => write!(f, "python"),
+            Self::Node => write!(f, "node"),
+            Self::Go => write!(f, "go"),
+            Self::Java => write!(f, "java"),
+        }
+    }
+}
+
+impl FromStr for Language {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "rust" | "rs" => Ok(Self::Rust),
+            "python" | "py" => Ok(Self::Python),
+            "node" | "nodejs" | "js" | "javascript" | "ts" | "typescript" => Ok(Self::Node),
+            "go" | "golang" => Ok(Self::Go),
+            "java" | "jvm" | "kotlin" | "kt" => Ok(Self::Java),
+            _ => Err(format!(
+                "Unknown language: '{s}'. Supported: rust, python, node, go, java"
+            )),
+        }
+    }
+}
+
+/// Detects the primary language of a repository based on project files.
+///
+/// Returns `None` if no recognizable project files are found.
+pub fn detect_language(root: impl AsRef<Path>) -> Option<Language> {
+    let root = root.as_ref();
+
+    // Order matters: check most specific first.
+    if root.join("Cargo.toml").exists() {
+        return Some(Language::Rust);
+    }
+
+    if root.join("go.mod").exists() {
+        return Some(Language::Go);
+    }
+
+    if root.join("package.json").exists() {
+        return Some(Language::Node);
+    }
+
+    if root.join("pyproject.toml").exists()
+        || root.join("setup.py").exists()
+        || root.join("requirements.txt").exists()
+    {
+        return Some(Language::Python);
+    }
+
+    if root.join("pom.xml").exists()
+        || root.join("build.gradle").exists()
+        || root.join("build.gradle.kts").exists()
+    {
+        return Some(Language::Java);
+    }
+
+    None
+}
 
 /// Default content for the PRD template.
 pub const PRD_TEMPLATE: &str = r#"---
@@ -530,6 +643,69 @@ id: PRD-XXXX
 Ensure the output is the complete PRD file, not just the changed sections.
 "#;
 
+/// Default content for the language adaptation prompt.
+pub const PROMPT_ADAPT_LANGUAGE: &str = r#"# microralph — Adapt Language Prompt
+
+## Objective
+
+Rewrite the microralph prompts and templates for a different programming language.
+
+## Context
+
+The user has initialized microralph for a **{{language}}** project. The default prompts and templates are designed for Rust projects. You need to adapt them.
+
+## Target Language
+
+**{{language}}**
+
+## Typical Build/Test Commands for {{language}}
+
+{{#if build_commands}}
+{{#each build_commands}}
+- {{command}}
+{{/each}}
+{{/if}}
+
+## Files to Update
+
+The following files in `.mr/` need to be adapted for {{language}}:
+
+### Templates (`.mr/templates/`)
+- `prd.md` — Update example commands in the template
+
+### Prompts (`.mr/prompts/`)
+- `run_task.md` — Change `cargo make uat` to the appropriate test/build command for {{language}}
+- `run_task_finalize.md` — Update verification commands
+- `bootstrap_plan.md` — Update detection heuristics for {{language}} project structure
+- `init.md` — Update Makefile.toml references if not applicable
+
+### AGENTS.md
+- Update the Quick Start section with {{language}}-appropriate commands
+- Update build/test commands
+
+## Required Actions
+
+1. Read each file listed above from `.mr/` and the root `AGENTS.md`.
+2. For each file, rewrite it to use {{language}}-appropriate:
+   - Build commands (e.g., `npm test`, `pytest`, `go test`, `mvn test`)
+   - Project structure references (e.g., `package.json`, `pyproject.toml`, `go.mod`)
+   - Tool chains and conventions
+3. Write the updated files back to disk.
+4. Keep the overall structure and purpose of each file intact.
+5. Preserve all `{{placeholder}}` template variables — only change the static content.
+
+## Constraints
+
+- Do not change the file structure or add new files.
+- Do not remove placeholder variables like `{{prd_path}}`, `{{next_task_id}}`, etc.
+- Keep the microralph-specific sections (e.g., History format, PRD frontmatter references).
+- Preserve the auto-managed section markers in AGENTS.md.
+
+## Output
+
+Confirm which files were updated and summarize the key changes made for {{language}}.
+"#;
+
 /// Default content for the empty PRDS.md index.
 pub const EMPTY_INDEX: &str = r#"# microralph — PRD Index
 
@@ -726,12 +902,23 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         PROMPT_PRD_EDIT,
         &mut result,
     )?;
+    create_file_if_missing(
+        &prompts_dir.join("adapt_language.md"),
+        PROMPT_ADAPT_LANGUAGE,
+        &mut result,
+    )?;
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
 
     // Create AGENTS.md at repo root (if not exists).
     create_file_if_missing(&root.join("AGENTS.md"), STARTER_AGENTS, &mut result)?;
+
+    // Log the number of available prompt kinds (uses PromptKind::all()).
+    tracing::debug!(
+        prompt_kinds = PromptKind::all().len(),
+        "Initialization complete with all prompt kinds available"
+    );
 
     Ok(result)
 }
@@ -819,6 +1006,7 @@ mod tests {
         assert!(root.join(".mr/prompts/run_task.md").exists());
         assert!(root.join(".mr/prompts/run_task_finalize.md").exists());
         assert!(root.join(".mr/prompts/update_agents.md").exists());
+        assert!(root.join(".mr/prompts/adapt_language.md").exists());
 
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
@@ -828,7 +1016,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 13); // 1 template + 10 prompts + 1 index + 1 AGENTS.md
+        assert_eq!(result.files_created, 14); // 1 template + 11 prompts + 1 index + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -839,13 +1027,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 13);
+        assert_eq!(result1.files_created, 14);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 13);
+        assert_eq!(result2.files_skipped, 14);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -923,5 +1111,109 @@ mod tests {
         assert!(result.created_paths.contains(&"init.md".to_string()));
         assert!(result.created_paths.contains(&"PRDS.md".to_string()));
         assert!(result.created_paths.contains(&"AGENTS.md".to_string()));
+    }
+
+    #[test]
+    fn test_language_display() {
+        assert_eq!(format!("{}", Language::Rust), "rust");
+        assert_eq!(format!("{}", Language::Python), "python");
+        assert_eq!(format!("{}", Language::Node), "node");
+        assert_eq!(format!("{}", Language::Go), "go");
+        assert_eq!(format!("{}", Language::Java), "java");
+    }
+
+    #[test]
+    fn test_language_from_str() {
+        assert_eq!("rust".parse::<Language>().unwrap(), Language::Rust);
+        assert_eq!("rs".parse::<Language>().unwrap(), Language::Rust);
+        assert_eq!("python".parse::<Language>().unwrap(), Language::Python);
+        assert_eq!("py".parse::<Language>().unwrap(), Language::Python);
+        assert_eq!("node".parse::<Language>().unwrap(), Language::Node);
+        assert_eq!("nodejs".parse::<Language>().unwrap(), Language::Node);
+        assert_eq!("js".parse::<Language>().unwrap(), Language::Node);
+        assert_eq!("typescript".parse::<Language>().unwrap(), Language::Node);
+        assert_eq!("go".parse::<Language>().unwrap(), Language::Go);
+        assert_eq!("golang".parse::<Language>().unwrap(), Language::Go);
+        assert_eq!("java".parse::<Language>().unwrap(), Language::Java);
+        assert_eq!("jvm".parse::<Language>().unwrap(), Language::Java);
+
+        assert!("unknown".parse::<Language>().is_err());
+    }
+
+    #[test]
+    fn test_language_build_commands() {
+        assert!(Language::Rust.build_commands().contains(&"cargo test"));
+        assert!(Language::Python.build_commands().contains(&"pytest"));
+        assert!(Language::Node.build_commands().contains(&"npm test"));
+        assert!(Language::Go.build_commands().contains(&"go test ./..."));
+        assert!(Language::Java.build_commands().contains(&"mvn test"));
+    }
+
+    #[test]
+    fn test_detect_language_rust() {
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("Cargo.toml"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Rust));
+    }
+
+    #[test]
+    fn test_detect_language_python() {
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("pyproject.toml"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Python));
+
+        let temp2 = TempDir::new().unwrap();
+        std::fs::write(temp2.path().join("setup.py"), "").unwrap();
+
+        assert_eq!(detect_language(temp2.path()), Some(Language::Python));
+    }
+
+    #[test]
+    fn test_detect_language_node() {
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("package.json"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Node));
+    }
+
+    #[test]
+    fn test_detect_language_go() {
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("go.mod"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Go));
+    }
+
+    #[test]
+    fn test_detect_language_java() {
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("pom.xml"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Java));
+    }
+
+    #[test]
+    fn test_detect_language_none() {
+        let temp = TempDir::new().unwrap();
+
+        assert_eq!(detect_language(temp.path()), None);
+    }
+
+    #[test]
+    fn test_detect_language_priority() {
+        // Rust takes priority over others.
+        let temp = TempDir::new().unwrap();
+        std::fs::write(temp.path().join("Cargo.toml"), "").unwrap();
+        std::fs::write(temp.path().join("package.json"), "").unwrap();
+
+        assert_eq!(detect_language(temp.path()), Some(Language::Rust));
+    }
+
+    #[test]
+    fn test_adapt_language_prompt_placeholders() {
+        assert!(PROMPT_ADAPT_LANGUAGE.contains("{{language}}"));
+        assert!(PROMPT_ADAPT_LANGUAGE.contains("{{#each build_commands}}"));
     }
 }
