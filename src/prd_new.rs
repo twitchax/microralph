@@ -1234,4 +1234,85 @@ tasks: []
             "Round1 prompt should contain actual user context"
         );
     }
+
+    #[test]
+    fn test_prd_new_context_persistence() {
+        // UAT: uat-004 — Context persists through Q/A rounds
+        // This test verifies that user-provided context is carried through
+        // all Q/A rounds, not just round 1.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create prompt files that show context in both round1 and roundN.
+        std::fs::write(
+            prompts_dir.join("prd_new_round1_questions.md"),
+            "Round1 for {{slug}}{{#if user_context}} with context: {{user_context}}{{/if}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_roundN_questions.md"),
+            "RoundN for {{slug}}{{#if user_context}} with persisted context: {{user_context}}{{/if}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD",
+        )
+        .unwrap();
+
+        let prd_content = r#"---
+id: PRD-0004
+title: Persistence Test
+status: draft
+tasks: []
+---
+# Summary
+"#;
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("1. First question?"),
+            crate::runner::RunnerOutput::success("2. Follow-up question?"), // RoundN
+            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),    // RoundN ready signal
+            crate::runner::RunnerOutput::success(prd_content),
+        ]);
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "persistence-test",
+            description: None,
+            context: Some("Multi-tenant auth system with role-based access"),
+        };
+
+        let input = "Answer 1\nAnswer 2\n";
+        let mut input = input.as_bytes();
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0004");
+        assert_eq!(result.rounds, 3, "Should have 3 rounds (round1 + 2 roundN)");
+
+        // Verify context in round1 prompt (index 0)
+        let recorded = runner.recorded_prompts();
+        assert!(
+            recorded[0].contains("with context:"),
+            "Round1 prompt should contain context marker"
+        );
+        assert!(
+            recorded[0].contains("Multi-tenant auth system with role-based access"),
+            "Round1 prompt should contain user context"
+        );
+
+        // Verify context persists in roundN prompt (index 1)
+        assert!(
+            recorded[1].contains("with persisted context:"),
+            "RoundN prompt should contain persisted context marker"
+        );
+        assert!(
+            recorded[1].contains("Multi-tenant auth system with role-based access"),
+            "RoundN prompt should contain the same user context"
+        );
+    }
 }

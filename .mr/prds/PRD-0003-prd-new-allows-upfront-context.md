@@ -31,7 +31,7 @@ acceptance_tests:
 - id: uat-004
   name: Context persists through Q/A rounds
   command: cargo make uat prd_new_context_persistence
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: Context included in final synthesis
   command: cargo make uat prd_new_context_synthesis
@@ -184,4 +184,16 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Test confirms the round1 prompt template expansion includes the context with "considering context:" marker
   - Validated that context flows from config → build_round1_prompt → template expansion
   - UAT: Test passed (1/1 tests run, 1 passed)
+
+## 2026-01-24 — uat-004 Verification
+- **UAT**: Context persists through Q/A rounds
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_prd_new_context_persistence` in `src/prd_new.rs`
+  - Test verifies that user-provided context persists through multiple Q/A rounds (round1 and roundN)
+  - Test confirms context appears in both round1 and roundN prompts with appropriate markers
+  - Validated 3-round flow: round1 questions → roundN follow-up → roundN ready signal → synthesis
+  - UAT: Test passed (1/1 tests run, 1 passed)
+
 
