@@ -162,7 +162,7 @@ tasks:
   - id: T-011
     title: "AGENTS.md updater (safe, bounded patching driven by a prompt stage)"
     priority: 11
-    status: todo
+    status: done
     notes: "Auto-managed section; updated during prd_new and run."
   - id: T-012
     title: "Implement `mr bootstrap` (ingest an existing repo into PRDs)"
@@ -484,5 +484,23 @@ Each prompt must define:
   - Shows next task with PRD context, last history entry, PRD list grouped by status, and statistics
   - Wrote 9 new tests covering status generation, history extraction, and formatting
   - All 117 tests pass, clippy clean, CI green, UAT passes
+
+## 2026-01-24 — T-011 Completed
+- **Task**: AGENTS.md updater (safe, bounded patching driven by a prompt stage)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/agents.rs` module with 15 tests for AGENTS.md management
+  - Implemented `RecentChange` struct to describe file changes for prompt context
+  - Implemented `AgentsUpdateResult` struct with `modified` and `new_content` fields
+  - Implemented `read_agents_file()` to read current AGENTS.md content
+  - Implemented `extract_auto_managed_section()` to find content between markers
+  - Implemented `patch_auto_managed_section()` for safe, bounded replacement
+  - Implemented `build_update_agents_prompt()` to construct prompt with changes context
+  - Implemented `parse_update_response()` to handle `NO_CHANGES`, code blocks, and plain text
+  - Implemented `update_agents_md()` as the main entry point for updates
+  - Integrated into `prd_new.rs`: updates AGENTS.md after creating a new PRD
+  - Integrated into `run.rs`: updates AGENTS.md after successful task completion
+  - Uses existing `update_agents.md` prompt template with placeholders
+  - All 132 tests pass, clippy clean, CI green, UAT passes
 
 ---

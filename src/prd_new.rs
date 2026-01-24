@@ -9,6 +9,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
+use crate::agents::{RecentChange, update_agents_md};
 use crate::prd::{Prd, PrdSummary, generate_index_from_root, parse_prd, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
@@ -69,6 +70,7 @@ pub struct PrdNewConfig<'a> {
 /// 5. Synthesizes the final PRD
 /// 6. Writes the PRD to disk
 /// 7. Updates the index
+/// 8. Updates AGENTS.md auto-managed section
 pub fn create_prd<R, I, O>(
     config: &PrdNewConfig,
     runner: &R,
@@ -196,6 +198,28 @@ where
     // Update the index.
     generate_index_from_root(config.root)?;
     writeln!(output, "Updated PRD index")?;
+
+    // Update AGENTS.md with recent changes.
+    let changes = vec![RecentChange {
+        file: prd_path.display().to_string(),
+        description: format!("Created PRD: {} ({})", prd.id(), prd.title()),
+    }];
+
+    let agents_result = update_agents_md(config.root, runner, &changes);
+    match agents_result {
+        Ok(result) if result.modified => {
+            writeln!(output, "Updated AGENTS.md auto-managed section")?;
+            if let Some(content) = &result.new_content {
+                tracing::debug!(content_len = content.len(), "AGENTS.md new section content");
+            }
+        }
+        Ok(_) => {
+            tracing::debug!("No changes needed for AGENTS.md");
+        }
+        Err(e) => {
+            tracing::warn!("Failed to update AGENTS.md: {e}");
+        }
+    }
 
     Ok(PrdNewResult {
         prd,
