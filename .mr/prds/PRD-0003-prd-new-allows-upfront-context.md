@@ -35,7 +35,7 @@ acceptance_tests:
 - id: uat-005
   name: Context included in final synthesis
   command: cargo make uat prd_new_context_synthesis
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -194,6 +194,17 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Test verifies that user-provided context persists through multiple Q/A rounds (round1 and roundN)
   - Test confirms context appears in both round1 and roundN prompts with appropriate markers
   - Validated 3-round flow: round1 questions → roundN follow-up → roundN ready signal → synthesis
+  - UAT: Test passed (1/1 tests run, 1 passed)
+
+## 2026-01-24 — uat-005 Verification
+- **UAT**: Context included in final synthesis
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_prd_new_context_synthesis` in `src/prd_new.rs`
+  - Test verifies that user-provided context is included in the final PRD synthesis prompt
+  - Test confirms the synthesis prompt contains the context marker and user-provided context
+  - Validated that context flows all the way to the synthesis stage where AI generates the final PRD
   - UAT: Test passed (1/1 tests run, 1 passed)
 
 

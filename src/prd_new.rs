@@ -1315,4 +1315,79 @@ tasks: []
             "RoundN prompt should contain the same user context"
         );
     }
+
+    #[test]
+    fn test_prd_new_context_synthesis() {
+        // UAT: uat-005 — Context included in final synthesis
+        // This test verifies that user-provided context is included in the final
+        // PRD synthesis prompt so the AI can use it during PRD generation.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create prompt files, with synthesis prompt showing context inclusion.
+        std::fs::write(
+            prompts_dir.join("prd_new_round1_questions.md"),
+            "Round1 for {{slug}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_roundN_questions.md"),
+            "RoundN for {{slug}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD for {{slug}}{{#if user_context}} with synthesis context: {{user_context}}{{/if}}",
+        )
+        .unwrap();
+
+        let prd_content = r#"---
+id: PRD-0005
+title: Synthesis Context Test
+status: draft
+tasks: []
+---
+# Summary
+"#;
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("1. First question?"),
+            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
+            crate::runner::RunnerOutput::success(prd_content),
+        ]);
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "synthesis-test",
+            description: None,
+            context: Some("API Gateway with rate limiting and JWT auth"),
+        };
+
+        let input = "Answer 1\n";
+        let mut input = input.as_bytes();
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0005");
+        assert_eq!(
+            result.rounds, 2,
+            "Should have 2 rounds (round1 + ready signal)"
+        );
+
+        // Verify context in final synthesis prompt (index 2, after round1 and roundN ready signal)
+        let recorded = runner.recorded_prompts();
+        let synthesis_prompt = &recorded[2];
+
+        assert!(
+            synthesis_prompt.contains("with synthesis context:"),
+            "Synthesis prompt should contain context marker"
+        );
+        assert!(
+            synthesis_prompt.contains("API Gateway with rate limiting and JWT auth"),
+            "Synthesis prompt should contain user context so AI can use it during PRD generation"
+        );
+    }
 }
