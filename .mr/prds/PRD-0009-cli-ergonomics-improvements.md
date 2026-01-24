@@ -40,7 +40,7 @@ acceptance_tests:
 - id: uat-006
   name: Top-level finalize command works
   command: cargo run -- finalize PRD-0001
-  uat_status: unverified
+  uat_status: verified
 - id: uat-007
   name: LLM output shows tail instead of beginning
   command: cargo make uat
@@ -288,5 +288,15 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Test verifies `mr edit PRD-0001 "test edit"` parses correctly with prd_id and request arguments
   - Full test suite passes: 270 tests
   - Manual verification confirms command works (starts PRD edit flow with interactive prompts)
+
+## 2026-01-24 — uat-006 Verification
+- **UAT**: Top-level finalize command works
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_args_parse_finalize` in src/main.rs (line 1553)
+  - Test verifies `mr finalize PRD-0001` parses correctly with prd_id argument
+  - Full test suite passes: 271 tests
+  - Manual verification confirms command works (successfully finalizes PRD-0001, updates status to done, regenerates index)
 
 ---

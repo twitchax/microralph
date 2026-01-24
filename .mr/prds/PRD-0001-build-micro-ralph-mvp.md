@@ -643,3 +643,30 @@ Each prompt must define:
   - Comprehensive documentation (README.md, DEVELOPMENT.md, AGENTS.md)
   - 270 tests with full CI/CD pipeline
   - All features working as designed
+
+## 2026-01-24 — Finalization Complete
+- **PRD**: PRD-0001 — Build microralph MVP
+- **Finalized**: 2026-01-24T23:05:09Z
+- **Tasks Completed**: 20
+- **Summary**:
+  - T-001: Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)
+  - T-002: Define PRD file format + parser (YAML frontmatter + Markdown body)
+  - T-003: Implement PRD index generator (`.mr/PRDS.md`)
+  - T-004: Implement `mr init` (new repo setup)
+  - T-005: Implement static prompt library + placeholder system
+  - T-006: Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)
+  - T-007: Runner abstraction + MockRunner (deterministic tests)
+  - T-008: CopilotRunner adapter (programmatic prompts + allow-all perms by default)
+  - T-009: Implement `mr run` (one-or-zero tasks per invocation)
+  - T-010: Implement `mr status`
+  - T-011: AGENTS.md updater (safe, bounded patching driven by a prompt stage)
+  - T-012: Implement `mr bootstrap` (ingest an existing repo into PRDs)
+  - T-013: Remove `allow` flags and make sure clippy lints are clean
+  - T-014: Implement `mr prd edit` for quick PRD modifications via runner
+  - T-016: Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)
+  - T-017: Document placeholder variables for each prompt in README
+  - T-018: Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)
+  - T-019: Stream/display runner output during `mr run`
+  - T-020: Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links.
+  - T-099: Wrap-up: docs + example PRDs + end-to-end smoke
+- **Status**: ✅ All acceptance tests passed

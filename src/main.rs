@@ -1549,4 +1549,15 @@ mod tests {
             panic!("Expected Edit command with prd_id 'PRD-0001' and request 'test edit'");
         }
     }
+
+    #[test]
+    fn test_args_parse_finalize() {
+        // Verify finalize command works at top level with prd_id argument
+        let args = Args::try_parse_from(["mr", "finalize", "PRD-0001"]).unwrap();
+        if let Some(Command::Finalize { prd_id, .. }) = args.command {
+            assert_eq!(prd_id, "PRD-0001");
+        } else {
+            panic!("Expected Finalize command with prd_id 'PRD-0001'");
+        }
+    }
 }
