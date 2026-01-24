@@ -56,6 +56,10 @@ enum Command {
         /// The runner to use for task execution.
         #[arg(long, default_value = "copilot")]
         runner: String,
+
+        /// Run only one task and exit (default is to loop until all tasks are done).
+        #[arg(long)]
+        one: bool,
     },
 
     /// Show status of PRDs and tasks.
@@ -102,9 +106,9 @@ fn main() -> Result<()> {
                 cmd_prd_list()?;
             }
         },
-        Some(Command::Run { prd, runner }) => {
-            tracing::info!(prd = ?prd, runner = %runner, "Running next task...");
-            cmd_run(prd.as_deref(), &runner)?;
+        Some(Command::Run { prd, runner, one }) => {
+            tracing::info!(prd = ?prd, runner = %runner, one = %one, "Running next task...");
+            cmd_run(prd.as_deref(), &runner, one)?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -266,7 +270,7 @@ fn cmd_prd_list() -> Result<()> {
 }
 
 /// Runs the `mr run` command.
-fn cmd_run(prd_id: Option<&str>, runner_name: &str) -> Result<()> {
+fn cmd_run(prd_id: Option<&str>, runner_name: &str, one: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
@@ -294,24 +298,62 @@ fn cmd_run(prd_id: Option<&str>, runner_name: &str) -> Result<()> {
 
     let config = run::RunConfig { root: &cwd, prd_id };
 
-    let result = run::run_task(&config, runner.as_ref())?;
+    let mut tasks_completed = 0;
+    let mut last_failed = false;
 
-    println!();
+    loop {
+        let result = match run::run_task(&config, runner.as_ref()) {
+            Ok(result) => result,
+            Err(e) => {
+                // Check if it's the "no active PRD" error, which means we're done.
+                let err_msg = e.to_string();
+                if err_msg.contains("No active PRD") || err_msg.contains("no incomplete tasks") {
+                    if tasks_completed == 0 {
+                        // No tasks were run, propagate original error.
+                        return Err(e);
+                    }
 
-    if result.runner_success {
-        println!("Task {} completed successfully!", result.task_id);
-    } else {
-        println!("Task {} did not complete successfully.", result.task_id);
+                    // We completed some tasks, exit gracefully.
+                    break;
+                }
+
+                return Err(e);
+            }
+        };
+
+        tasks_completed += 1;
+
+        println!();
+
+        if result.runner_success {
+            println!("Task {} completed successfully!", result.task_id);
+        } else {
+            println!("Task {} did not complete successfully.", result.task_id);
+            last_failed = true;
+        }
+
+        println!();
+        println!("  PRD: {} ({})", result.prd_id, result.prd_path.display());
+        println!("  Task: {} — {}", result.task_id, result.task_title);
+        println!();
+
+        if !result.output_summary.is_empty() {
+            println!("Runner output:");
+            println!("{}", result.output_summary);
+        }
+
+        // Exit if --one flag is set or if the task failed.
+        if one || last_failed {
+            break;
+        }
+
+        println!("---");
+        println!("Continuing to next task...");
     }
 
-    println!();
-    println!("  PRD: {} ({})", result.prd_id, result.prd_path.display());
-    println!("  Task: {} — {}", result.task_id, result.task_title);
-    println!();
-
-    if !result.output_summary.is_empty() {
-        println!("Runner output:");
-        println!("{}", result.output_summary);
+    if tasks_completed > 1 {
+        println!("---");
+        println!("Completed {} tasks total.", tasks_completed);
     }
 
     Ok(())
