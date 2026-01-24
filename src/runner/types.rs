@@ -1,6 +1,7 @@
 //! Runner type definitions.
 
 use std::fmt;
+use std::io::Write;
 
 /// Error type for runner operations.
 #[derive(Debug)]
@@ -80,6 +81,36 @@ pub trait Runner: Send + Sync {
     ///
     /// The runner's response.
     fn execute(&self, prompt: &str, working_dir: &std::path::Path) -> RunnerResult<RunnerOutput>;
+
+    /// Executes a prompt with real-time output streaming.
+    ///
+    /// Output is written to the provided writer as it becomes available,
+    /// allowing users to watch progress in real-time.
+    ///
+    /// Default implementation falls back to `execute()` and writes output at the end.
+    ///
+    /// # Arguments
+    ///
+    /// * `prompt` - The prompt text to send to the agent
+    /// * `working_dir` - The working directory for the runner
+    /// * `output` - Writer to stream output to (typically stdout)
+    ///
+    /// # Returns
+    ///
+    /// The runner's response (also contains the full captured output).
+    fn execute_streaming(
+        &self,
+        prompt: &str,
+        working_dir: &std::path::Path,
+        output: &mut dyn Write,
+    ) -> RunnerResult<RunnerOutput> {
+        let result = self.execute(prompt, working_dir)?;
+
+        // Default: write all output at the end.
+        let _ = writeln!(output, "{}", result.text);
+
+        Ok(result)
+    }
 
     /// Checks if the runner is available/configured.
     fn is_available(&self) -> bool {

@@ -3,8 +3,9 @@
 //! This runner shells out to the GitHub Copilot CLI (`copilot`) to execute prompts.
 //! It uses `--allow-all` by default for yolo mode (no permission prompts).
 
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult};
 
@@ -235,6 +236,109 @@ impl Runner for CopilotRunner {
 
         Ok(RunnerOutput {
             text: combined_output,
+            success,
+        })
+    }
+
+    fn execute_streaming(
+        &self,
+        prompt: &str,
+        working_dir: &Path,
+        output: &mut dyn Write,
+    ) -> RunnerResult<RunnerOutput> {
+        let args = self.build_args(prompt);
+
+        tracing::debug!(
+            copilot_path = %self.config.copilot_path,
+            working_dir = %working_dir.display(),
+            args = ?args,
+            "Executing copilot CLI (streaming)"
+        );
+
+        let mut command = Command::new(&self.config.copilot_path);
+
+        command
+            .args(&args)
+            .current_dir(working_dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let mut child = command.spawn().map_err(|e| {
+            RunnerError::ProcessFailed(format!(
+                "Failed to start copilot CLI at '{}': {}",
+                self.config.copilot_path, e
+            ))
+        })?;
+
+        let mut captured_output = String::new();
+
+        // Stream stdout in real-time.
+        if let Some(stdout) = child.stdout.take() {
+            let reader = BufReader::new(stdout);
+
+            for line in reader.lines() {
+                match line {
+                    Ok(line) => {
+                        // Write to the output stream.
+                        let _ = writeln!(output, "{}", line);
+                        let _ = output.flush();
+
+                        // Capture for return value.
+                        if !captured_output.is_empty() {
+                            captured_output.push('\n');
+                        }
+
+                        captured_output.push_str(&line);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Error reading copilot stdout: {}", e);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Capture any stderr after stdout is done.
+        if let Some(stderr) = child.stderr.take() {
+            let reader = BufReader::new(stderr);
+
+            for line in reader.lines() {
+                match line {
+                    Ok(line) => {
+                        // Write stderr to output stream as well.
+                        let _ = writeln!(output, "{}", line);
+                        let _ = output.flush();
+
+                        if !captured_output.is_empty() {
+                            captured_output.push('\n');
+                        }
+
+                        captured_output.push_str(&line);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Error reading copilot stderr: {}", e);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Wait for the process to complete.
+        let status = child.wait().map_err(|e| {
+            RunnerError::ProcessFailed(format!("Failed to wait for copilot CLI: {}", e))
+        })?;
+
+        let success = status.success();
+
+        tracing::debug!(
+            exit_code = ?status.code(),
+            success = success,
+            output_len = captured_output.len(),
+            "Copilot CLI completed (streaming)"
+        );
+
+        Ok(RunnerOutput {
+            text: captured_output,
             success,
         })
     }

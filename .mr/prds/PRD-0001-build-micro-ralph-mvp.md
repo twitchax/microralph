@@ -197,7 +197,7 @@ tasks:
   - id: T-019
     title: "Stream/display runner output during `mr run`"
     priority: 18
-    status: todo
+    status: done
     notes: "Currently runner output is captured silently and only a truncated summary is shown at the end. Add real-time streaming of copilot CLI output to stdout so users can watch progress. Consider a `--verbose` or `--stream` flag, or make streaming the default with `--quiet` to suppress. May require switching from `Command::output()` to `Command::spawn()` with piped stdout."
   - id: T-020
     title: "Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links."
@@ -627,5 +627,23 @@ Each prompt must define:
   - Created `.mr/config.toml` in this repo
   - Added 18 new tests for config loading, CLI parsing, and model handling
   - All 186 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-019 Completed
+- **Task**: Stream/display runner output during `mr run`
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `execute_streaming()` method to `Runner` trait in `src/runner/types.rs`
+    - Default implementation falls back to `execute()` and writes output at end
+    - Takes `&mut dyn Write` parameter for real-time output streaming
+  - Implemented streaming in `CopilotRunner` using `Command::spawn()` with piped stdout/stderr
+    - Reads stdout line-by-line and writes to output stream in real-time
+    - Captures stderr after stdout completes
+    - Returns captured output for summary/history
+  - Added `--stream` flag to `mr run` command (defaults to off for backwards compatibility)
+  - Added `stream` field to `RunConfig` struct in `src/run.rs`
+  - Updated `run_task()` to use streaming when `config.stream` is true
+  - When streaming is enabled, output summary shows "(output was streamed above)"
+  - Added 2 new tests for `--stream` flag parsing
+  - All 188 tests pass, clippy clean, UAT passes
 
 ---

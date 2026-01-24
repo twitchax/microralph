@@ -27,6 +27,9 @@ pub struct RunConfig<'a> {
 
     /// Explicit PRD ID to run (e.g., "PRD-0001"). If None, picks first active PRD.
     pub prd_id: Option<&'a str>,
+
+    /// Whether to stream runner output in real-time.
+    pub stream: bool,
 }
 
 /// Result from running a task.
@@ -156,12 +159,23 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
 
     tracing::debug!(prompt_len = prompt.len(), runner = %runner.name(), "Invoking runner");
 
-    let output: RunnerOutput = runner
-        .execute(&prompt, config.root)
-        .with_context(|| format!("Runner failed for task {task_id}"))?;
+    let output: RunnerOutput = if config.stream {
+        // Stream output to stdout in real-time.
+        let mut stdout = std::io::stdout();
 
-    // Summarize output (truncate if too long).
-    let output_summary = if output.text.len() > 500 {
+        runner
+            .execute_streaming(&prompt, config.root, &mut stdout)
+            .with_context(|| format!("Runner failed for task {task_id}"))?
+    } else {
+        runner
+            .execute(&prompt, config.root)
+            .with_context(|| format!("Runner failed for task {task_id}"))?
+    };
+
+    // Summarize output (truncate if too long). Skip summary if we already streamed.
+    let output_summary = if config.stream {
+        "(output was streamed above)".to_string()
+    } else if output.text.len() > 500 {
         format!("{}... (truncated)", &output.text[..500])
     } else {
         output.text.clone()
@@ -368,6 +382,7 @@ mod tests {
         let config = RunConfig {
             root: &root,
             prd_id: None,
+            stream: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -401,6 +416,7 @@ mod tests {
         let config = RunConfig {
             root: &root,
             prd_id: Some("PRD-0002"),
+            stream: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -418,6 +434,7 @@ mod tests {
         let config = RunConfig {
             root: &root,
             prd_id: None,
+            stream: false,
         };
 
         let result = run_task(&config, &runner);

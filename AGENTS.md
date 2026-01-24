@@ -109,7 +109,14 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-T-016 adds a `--language` flag for language detection and adaptation. This is an internal feature that helps initialize projects in different languages, but it doesn't establish new conventions that agents need to follow. The current auto-managed section contains raw thinking text that needs cleanup.
+Now I understand T-018. It adds `.mr/config.toml` for persistent settings. This is relevant for agents to know about because:
+1. Configuration can be set in `.mr/config.toml` instead of CLI flags
+2. CLI flags override config file values
 
-Updated the auto-managed section: cleaned up raw reasoning text and added **Clippy Policy** (existing convention) plus **Multi-Language Support** (T-016's new feature that agents should be aware of when initializing/bootstrapping repos).
+Let me update the auto-managed section with this information.
+
+Updated the auto-managed section with:
+- **Clippy Policy** - existing convention
+- **Multi-Language Support** - T-016's `--language` flag
+- **Configuration File** - T-018's new `.mr/config.toml` with key details about available options and CLI override behavior
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

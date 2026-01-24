@@ -90,6 +90,10 @@ enum Command {
         /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
         #[arg(long)]
         model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
     },
 
     /// Show status of PRDs and tasks.
@@ -183,9 +187,10 @@ fn main() -> Result<()> {
             runner,
             one,
             model,
+            stream,
         }) => {
-            tracing::info!(prd = ?prd, runner = %runner, one = %one, "Running next task...");
-            cmd_run(prd.as_deref(), &runner, one, model.as_deref())?;
+            tracing::info!(prd = ?prd, runner = %runner, one = %one, stream = %stream, "Running next task...");
+            cmd_run(prd.as_deref(), &runner, one, model.as_deref(), stream)?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -596,6 +601,7 @@ fn cmd_run(
     runner_name: &str,
     one: bool,
     cli_model: Option<&str>,
+    stream: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -626,7 +632,11 @@ fn cmd_run(
         }
     };
 
-    let config = run::RunConfig { root: &cwd, prd_id };
+    let config = run::RunConfig {
+        root: &cwd,
+        prd_id,
+        stream,
+    };
 
     let mut tasks_completed = 0;
     let mut last_failed = false;
@@ -762,6 +772,26 @@ mod tests {
         if let Some(Command::Run { runner, model, .. }) = args.command {
             assert_eq!(runner, "copilot");
             assert_eq!(model, Some("claude-sonnet-4-20250514".to_string()));
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_with_stream() {
+        let args = Args::try_parse_from(["mr", "run", "--stream"]).unwrap();
+        if let Some(Command::Run { stream, .. }) = args.command {
+            assert!(stream);
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_default_stream_off() {
+        let args = Args::try_parse_from(["mr", "run"]).unwrap();
+        if let Some(Command::Run { stream, .. }) = args.command {
+            assert!(!stream);
         } else {
             panic!("Expected Run command");
         }
