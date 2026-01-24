@@ -521,6 +521,8 @@ Test PRD.
                 status: PrdStatus::Active,
                 completed_tasks: 2,
                 total_tasks: 5,
+                verified_uats: 0,
+                total_uats: 0,
                 relative_path: "prds/PRD-0001.md".to_string(),
                 references: vec![],
             }],

@@ -554,6 +554,8 @@ mod tests {
                 relative_path: "prds/test.md".to_string(),
                 completed_tasks: 0,
                 total_tasks: 0,
+                verified_uats: 0,
+                total_uats: 0,
                 references: vec![],
             },
             PrdSummary {
@@ -563,6 +565,8 @@ mod tests {
                 relative_path: "prds/test2.md".to_string(),
                 completed_tasks: 0,
                 total_tasks: 0,
+                verified_uats: 0,
+                total_uats: 0,
                 references: vec![],
             },
         ];

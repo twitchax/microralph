@@ -9,7 +9,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use regex::Regex;
 
-use super::{Prd, PrdStatus, parse_prd_file};
+use super::{Prd, PrdStatus, UatStatus, parse_prd_file};
 
 /// Summary of a PRD for the index.
 #[derive(Debug, Clone)]
@@ -29,6 +29,12 @@ pub struct PrdSummary {
     /// Total number of tasks.
     pub total_tasks: usize,
 
+    /// Number of verified UATs.
+    pub verified_uats: usize,
+
+    /// Total number of UATs.
+    pub total_uats: usize,
+
     /// Relative path to the PRD file from the index file's directory.
     pub relative_path: String,
 
@@ -42,6 +48,18 @@ impl PrdSummary {
         let tasks = prd.tasks().unwrap_or_default();
         let completed_tasks = prd.completed_tasks().len();
         let total_tasks = tasks.len();
+
+        // Count UATs.
+        let acceptance_tests = prd
+            .frontmatter
+            .acceptance_tests
+            .as_deref()
+            .unwrap_or_default();
+        let total_uats = acceptance_tests.len();
+        let verified_uats = acceptance_tests
+            .iter()
+            .filter(|t| t.uat_status == UatStatus::Verified)
+            .count();
 
         // Build searchable text from body and task notes.
         let mut searchable_text = prd.body.clone();
@@ -61,6 +79,8 @@ impl PrdSummary {
             status: prd.status(),
             completed_tasks,
             total_tasks,
+            verified_uats,
+            total_uats,
             relative_path,
             references,
         }
@@ -452,6 +472,8 @@ mod tests {
                 status: PrdStatus::Active,
                 completed_tasks: 2,
                 total_tasks: 5,
+                verified_uats: 0,
+                total_uats: 0,
                 relative_path: "prds/PRD-0001.md".to_string(),
                 references: vec![],
             },
@@ -461,6 +483,8 @@ mod tests {
                 status: PrdStatus::Active,
                 completed_tasks: 0,
                 total_tasks: 3,
+                verified_uats: 0,
+                total_uats: 0,
                 relative_path: "prds/PRD-0002.md".to_string(),
                 references: vec![],
             },
@@ -618,6 +642,8 @@ mod tests {
             status: PrdStatus::Active,
             completed_tasks: 0,
             total_tasks: 0,
+            verified_uats: 0,
+            total_uats: 0,
             relative_path: "prds/PRD-0001.md".to_string(),
             references: vec![],
         };
@@ -636,6 +662,8 @@ mod tests {
             status: PrdStatus::Active,
             completed_tasks: 0,
             total_tasks: 0,
+            verified_uats: 0,
+            total_uats: 0,
             relative_path: "prds/PRD-0001.md".to_string(),
             references: vec!["PRD-0002".to_string()],
         };
@@ -645,6 +673,8 @@ mod tests {
             status: PrdStatus::Done,
             completed_tasks: 1,
             total_tasks: 1,
+            verified_uats: 0,
+            total_uats: 0,
             relative_path: "prds/PRD-0002.md".to_string(),
             references: vec![],
         };

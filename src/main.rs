@@ -663,16 +663,49 @@ fn cmd_prd_list() -> Result<()> {
     println!();
 
     let format_prd = |prd_summary: &prd::PrdSummary| {
-        let progress = if prd_summary.total_tasks > 0 {
+        // Task status with emoji.
+        let task_status = if prd_summary.total_tasks > 0 {
+            let emoji = if prd_summary.completed_tasks == prd_summary.total_tasks {
+                "✅"
+            } else {
+                "📋"
+            };
             format!(
-                " [{}/{}]",
-                prd_summary.completed_tasks, prd_summary.total_tasks
+                "{} {}/{}",
+                emoji, prd_summary.completed_tasks, prd_summary.total_tasks
             )
         } else {
             String::new()
         };
 
-        format!("{} - {}{}", prd_summary.id, prd_summary.title, progress)
+        // UAT status with emoji.
+        let uat_status = if prd_summary.total_uats > 0 {
+            let emoji = if prd_summary.verified_uats == prd_summary.total_uats {
+                "🧪"
+            } else {
+                "⚠️"
+            };
+            format!(
+                "{} {}/{}",
+                emoji, prd_summary.verified_uats, prd_summary.total_uats
+            )
+        } else {
+            String::new()
+        };
+
+        // Combine status parts.
+        let status_parts: Vec<&str> = [task_status.as_str(), uat_status.as_str()]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let status_str = if status_parts.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", status_parts.join(" | "))
+        };
+
+        format!("{} - {}{}", prd_summary.id, prd_summary.title, status_str)
     };
 
     if !active.is_empty() {

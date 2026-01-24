@@ -62,13 +62,25 @@ Add a new History entry at the bottom of the PRD file with this format:
 - Prefer fixing root causes over surface workarounds.
 - Always update the PRD even if the task fails (document what was attempted).
 
+## When All Tasks Are Done
+
+If completing this task means all tasks in the PRD are now `done`:
+1. **Review the Acceptance Tests section** in the PRD for any tests with `uat_status: unverified`.
+2. **Attempt to verify** each unverified acceptance test:
+   - Check if a real test exists in the codebase that covers this criterion.
+   - If a test exists and passes, update `uat_status` to `verified` in the PRD.
+   - If no test exists but you can feasibly create one, do so and mark it `verified`.
+   - If verification is not feasible (e.g., requires manual testing, external dependencies), leave as `unverified` and note why in History.
+3. **Document** which acceptance tests were verified in the History entry.
+
 ## On Success
 
 If `cargo make uat` passes:
 1. Update task status to `done` in the PRD frontmatter.
-2. Append a success History entry.
-3. Regenerate `.mr/PRDS.md` to reflect new progress.
-4. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
+2. If all tasks are now done, verify unverified acceptance tests (see above).
+3. Append a success History entry (include UAT verification results if applicable).
+4. Regenerate `.mr/PRDS.md` to reflect new progress.
+5. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
 
 ## On Failure
 
