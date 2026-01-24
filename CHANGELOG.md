@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0003: PRD New Allows Upfront Context** — Enhanced `mr prd new` with optional upfront context
+  - `--context` CLI flag to provide context directly, skipping interactive prompt
+  - Interactive context prompt before question generation ("Do you want to add more context?")
+  - Context persistence through all Q/A rounds and final PRD synthesis
+  - AI uses upfront context for more relevant, targeted questions from the first round
+
 - **PRD-0005: Verify UATs at End of Run Loop** — Dedicated UAT verification phase after task completion
   - UAT verification loop that triggers automatically when all tasks are done
   - Three verification approaches: run existing tests, create new tests, or opt-out with explanation

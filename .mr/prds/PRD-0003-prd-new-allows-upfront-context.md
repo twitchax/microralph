@@ -1,7 +1,7 @@
 ---
 id: PRD-0003
 title: PRD New Allows Upfront Context
-status: draft
+status: done
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-24
@@ -208,3 +208,14 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - UAT: Test passed (1/1 tests run, 1 passed)
 
 
+## 2026-01-24 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All 6 tasks completed, all 5 UATs verified
+- **Test Results**: 254/254 tests passed
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Changes Summary**:
+  - `--context` CLI flag for direct context provision
+  - Interactive context prompt before question generation
+  - Context persistence through all Q/A rounds and final synthesis
+  - Enhanced AI question generation with upfront context
+- **Cleanup**: No temporary files or excessive comments found

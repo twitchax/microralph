@@ -287,7 +287,8 @@ Check if tests require specific environment:
 - Also add a Claude Code runner,
 - Also remove the reliance on the LLM response during PRD creation. We should only care about the file that was generated.
 - Add information about how to create and go into a dev container so that people can run the application in a sandbox environment very easily.
-- CLI ergonomics updates: `run` should just take an optional command arg instead of the `--prd` arg.  The UAT verification loop should also show truncated LLM output, and the tokens used just like the task loop does.  Both the task loop and verification loop should use the `tail` of the output in stdout insted of the truncated beginning.
+- CLI ergonomics updates: `run` should just take an optional command arg instead of the `--prd` arg.  The UAT verification loop should also show truncated LLM output, and the tokens used just like the task loop does.  Both the task loop and verification loop should use the `tail` of the output in stdout insted of the truncated beginning.  Also, maybe get rid of the `prd` subcommand, and move list, new, edit to be top level commands.
+- Cleanup pass.  Refactor out common code between prd_new and prd_edit.  Possibly refactor out common code between run and prd_edit as well.  Add more comments to the code to explain what is going on in various places.  Check that usual Rust patterns are respected, but don't change if too hard.
 
 ## License
 
