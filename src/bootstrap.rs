@@ -1,0 +1,468 @@
+//! Bootstrap command implementation for `mr bootstrap`.
+//!
+//! Ingests an existing repository into PRDs:
+//! - Ensures `.mr/` structure exists
+//! - Invokes runner with `bootstrap_plan.md` to analyze the repo
+//! - Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
+//! - Updates `.mr/PRDS.md` index
+//! - Patches `AGENTS.md` auto-managed section
+
+use std::path::Path;
+
+use anyhow::{Context, Result, bail};
+
+use crate::agents::{RecentChange, update_agents_md};
+use crate::init;
+use crate::prd::generate_index_from_root;
+use crate::prompt::{
+    PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
+    load_prompt_with_fallback,
+};
+use crate::runner::Runner;
+
+/// Default PRD budget when bootstrapping.
+const DEFAULT_PRD_BUDGET: u32 = 6;
+
+/// Configuration for the bootstrap command.
+#[derive(Debug)]
+pub struct BootstrapConfig<'a> {
+    /// The repository root directory.
+    pub root: &'a Path,
+
+    /// Maximum number of PRDs to generate.
+    pub prd_budget: u32,
+}
+
+impl<'a> BootstrapConfig<'a> {
+    /// Creates a new bootstrap configuration with defaults.
+    pub fn new(root: &'a Path) -> Self {
+        Self {
+            root,
+            prd_budget: DEFAULT_PRD_BUDGET,
+        }
+    }
+}
+
+/// Result from the bootstrap process.
+#[derive(Debug)]
+pub struct BootstrapResult {
+    /// Whether initialization was performed.
+    pub initialized: bool,
+
+    /// Whether the bootstrap plan was generated.
+    pub plan_generated: bool,
+
+    /// Whether PRDs were generated.
+    pub prds_generated: bool,
+
+    /// Number of PRDs created.
+    pub prds_created: usize,
+
+    /// Summary of the bootstrap plan.
+    pub plan_summary: String,
+}
+
+/// Runs the bootstrap process.
+///
+/// This function:
+/// 1. Ensures `.mr/` structure exists (runs init if needed)
+/// 2. Invokes runner with `bootstrap_plan.md` to analyze the repo
+/// 3. Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
+/// 4. Updates `.mr/PRDS.md` index
+/// 5. Patches `AGENTS.md` auto-managed section
+pub fn bootstrap<R>(config: &BootstrapConfig, runner: &R) -> Result<BootstrapResult>
+where
+    R: Runner + ?Sized,
+{
+    let mut result = BootstrapResult {
+        initialized: false,
+        plan_generated: false,
+        prds_generated: false,
+        prds_created: 0,
+        plan_summary: String::new(),
+    };
+
+    // Step 1: Ensure .mr/ structure exists.
+    if !init::is_initialized(config.root) {
+        tracing::info!("Initializing .mr/ structure...");
+
+        init::init(config.root).context("Failed to initialize .mr/ structure")?;
+
+        result.initialized = true;
+    }
+
+    // Step 2: Run bootstrap plan.
+    tracing::info!("Analyzing repository...");
+
+    let plan_prompt = build_plan_prompt(config);
+
+    let plan_output = runner
+        .execute(&plan_prompt, config.root)
+        .map_err(|e| anyhow::anyhow!("Runner failed during plan: {e}"))?;
+
+    if !plan_output.success {
+        bail!("Runner failed during bootstrap plan: {}", plan_output.text);
+    }
+
+    result.plan_generated = true;
+    result.plan_summary = summarize_plan(&plan_output.text);
+
+    tracing::debug!(
+        plan_len = plan_output.text.len(),
+        "Bootstrap plan generated"
+    );
+
+    // Step 3: Generate PRDs.
+    tracing::info!("Generating PRDs...");
+
+    let generate_prompt = build_generate_prompt(config, &plan_output.text);
+
+    let generate_output = runner
+        .execute(&generate_prompt, config.root)
+        .map_err(|e| anyhow::anyhow!("Runner failed during PRD generation: {e}"))?;
+
+    if !generate_output.success {
+        bail!(
+            "Runner failed during PRD generation: {}",
+            generate_output.text
+        );
+    }
+
+    result.prds_generated = true;
+
+    // Count PRDs created (look for PRD-NNNN patterns in output).
+    result.prds_created = count_prds_in_output(&generate_output.text);
+
+    // Step 4: Regenerate index.
+    tracing::info!("Regenerating PRD index...");
+
+    generate_index_from_root(config.root)?;
+
+    // Step 5: Update AGENTS.md.
+    let changes = vec![RecentChange {
+        file: ".mr/".to_string(),
+        description: format!(
+            "Bootstrap completed: analyzed repo, generated {} PRD(s)",
+            result.prds_created
+        ),
+    }];
+
+    match update_agents_md(config.root, runner, &changes) {
+        Ok(agents_result) if agents_result.modified => {
+            tracing::info!("Updated AGENTS.md auto-managed section");
+        }
+        Ok(_) => {
+            tracing::debug!("No changes needed for AGENTS.md");
+        }
+        Err(e) => {
+            tracing::warn!("Failed to update AGENTS.md: {e}");
+        }
+    }
+
+    Ok(result)
+}
+
+/// Builds the bootstrap plan prompt.
+fn build_plan_prompt(config: &BootstrapConfig) -> String {
+    let template = load_prompt_with_fallback(config.root, PromptKind::BootstrapPlan);
+
+    let mut ctx = PlaceholderContext::new();
+
+    ctx.insert("prd_budget", config.prd_budget.to_string());
+
+    // Add common heuristics.
+    let heuristics: Vec<std::collections::HashMap<String, String>> = vec![
+        [(
+            "description".to_string(),
+            "Detect cargo-make entrypoints and required tasks".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+        [(
+            "description".to_string(),
+            "Detect crates/modules and responsibilities".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+        [(
+            "description".to_string(),
+            "Detect CI workflows and required checks".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+        [(
+            "description".to_string(),
+            "Detect docs that imply features (README/DEVELOPMENT/etc.)".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+        [(
+            "description".to_string(),
+            "Detect TODO/FIXME hotspots".to_string(),
+        )]
+        .into_iter()
+        .collect(),
+    ];
+
+    ctx.insert("heuristics", PlaceholderValue::List(heuristics));
+
+    expand_placeholders(&template, &ctx)
+}
+
+/// Builds the bootstrap generate PRDs prompt.
+fn build_generate_prompt(config: &BootstrapConfig, plan: &str) -> String {
+    let template = load_prompt_with_fallback(config.root, PromptKind::BootstrapGeneratePrds);
+
+    let mut ctx = PlaceholderContext::new();
+
+    ctx.insert("plan", plan);
+    ctx.insert("prd_budget", config.prd_budget.to_string());
+
+    expand_placeholders(&template, &ctx)
+}
+
+/// Summarizes the bootstrap plan output.
+fn summarize_plan(plan: &str) -> String {
+    // Take first 500 chars or first few lines as summary.
+    let lines: Vec<&str> = plan.lines().take(10).collect();
+    let summary = lines.join("\n");
+
+    if summary.len() > 500 {
+        format!("{}...", &summary[..500])
+    } else {
+        summary
+    }
+}
+
+/// Counts PRDs mentioned in the output.
+fn count_prds_in_output(output: &str) -> usize {
+    // Look for PRD-NNNN patterns.
+    let re = regex::Regex::new(r"PRD-\d{4}").unwrap();
+    let matches: std::collections::HashSet<&str> =
+        re.find_iter(output).map(|m| m.as_str()).collect();
+
+    matches.len()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runner::MockRunner;
+    use tempfile::TempDir;
+
+    fn setup_test_repo() -> TempDir {
+        TempDir::new().unwrap()
+    }
+
+    #[test]
+    fn test_bootstrap_config_defaults() {
+        let temp = setup_test_repo();
+        let config = BootstrapConfig::new(temp.path());
+
+        assert_eq!(config.prd_budget, DEFAULT_PRD_BUDGET);
+    }
+
+    #[test]
+    fn test_bootstrap_initializes_if_needed() {
+        let temp = setup_test_repo();
+
+        // Verify not initialized.
+        assert!(!init::is_initialized(temp.path()));
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Plan: Generate 2 PRDs..."),
+            crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Verify initialized.
+        assert!(result.initialized);
+        assert!(init::is_initialized(temp.path()));
+    }
+
+    #[test]
+    fn test_bootstrap_skips_init_if_exists() {
+        let temp = setup_test_repo();
+
+        // Initialize first.
+        init::init(temp.path()).unwrap();
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Plan: Generate 1 PRD..."),
+            crate::runner::RunnerOutput::success("Created PRD-0001."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Should not have initialized.
+        assert!(!result.initialized);
+    }
+
+    #[test]
+    fn test_bootstrap_plan_generated() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success(
+                "Bootstrap Plan:\n1. PRD for feature A\n2. PRD for feature B",
+            ),
+            crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        assert!(result.plan_generated);
+        assert!(result.plan_summary.contains("Bootstrap Plan"));
+    }
+
+    #[test]
+    fn test_bootstrap_prds_generated() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Plan complete."),
+            crate::runner::RunnerOutput::success("Generated PRD-0001, PRD-0002, and PRD-0003."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        assert!(result.prds_generated);
+        assert_eq!(result.prds_created, 3);
+    }
+
+    #[test]
+    fn test_bootstrap_runner_failure_plan() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::failure(
+            "Error analyzing repo",
+        )]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("bootstrap plan"));
+    }
+
+    #[test]
+    fn test_bootstrap_runner_failure_generate() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Plan complete."),
+            crate::runner::RunnerOutput::failure("Error generating PRDs"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("PRD generation"));
+    }
+
+    #[test]
+    fn test_count_prds_in_output() {
+        let output = "Created PRD-0001, PRD-0002, and PRD-0003. Also updated PRD-0001.";
+
+        let count = count_prds_in_output(output);
+
+        assert_eq!(count, 3); // Unique PRDs only.
+    }
+
+    #[test]
+    fn test_count_prds_in_output_none() {
+        let output = "No PRDs created.";
+
+        let count = count_prds_in_output(output);
+
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_summarize_plan() {
+        let plan = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5";
+
+        let summary = summarize_plan(plan);
+
+        assert!(summary.contains("Line 1"));
+        assert!(summary.contains("Line 5"));
+    }
+
+    #[test]
+    fn test_build_plan_prompt() {
+        let temp = setup_test_repo();
+
+        // Initialize to have prompts available.
+        init::init(temp.path()).unwrap();
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let prompt = build_plan_prompt(&config);
+
+        // Should contain content from the bootstrap_plan.md template.
+        assert!(prompt.contains("Objective") || prompt.contains("objective"));
+    }
+
+    #[test]
+    fn test_build_generate_prompt() {
+        let temp = setup_test_repo();
+
+        // Initialize to have prompts available.
+        init::init(temp.path()).unwrap();
+
+        let config = BootstrapConfig::new(temp.path());
+        let plan = "Generate 2 PRDs for features A and B.";
+
+        let prompt = build_generate_prompt(&config, plan);
+
+        // Should contain the plan.
+        assert!(prompt.contains("Generate 2 PRDs"));
+    }
+
+    #[test]
+    fn test_full_bootstrap_flow() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success(
+                "Bootstrap Plan:\n- PRD-0001: Core feature\n- PRD-0002: Extended feature",
+            ),
+            crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002 successfully."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Verify all steps completed.
+        assert!(result.initialized);
+        assert!(result.plan_generated);
+        assert!(result.prds_generated);
+        assert_eq!(result.prds_created, 2);
+
+        // Verify runner was called 3 times (plan, generate, agents update).
+        assert_eq!(runner.recorded_prompts().len(), 3);
+
+        // Verify .mr/ structure exists.
+        assert!(temp.path().join(".mr/prds").exists());
+        assert!(temp.path().join(".mr/PRDS.md").exists());
+        assert!(temp.path().join("AGENTS.md").exists());
+    }
+}

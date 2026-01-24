@@ -167,7 +167,7 @@ tasks:
   - id: T-012
     title: "Implement `mr bootstrap` (ingest an existing repo into PRDs)"
     priority: 12
-    status: todo
+    status: done
     notes: "Scan repo; generate PRD index; generate starter PRDs reflecting current repo reality."
   - id: T-013
     title: "Remove `allow` flags and make sure clippy lints are clean"
@@ -199,7 +199,12 @@ tasks:
     priority: 18
     status: todo
     notes: "Currently runner output is captured silently and only a truncated summary is shown at the end. Add real-time streaming of copilot CLI output to stdout so users can watch progress. Consider a `--verbose` or `--stream` flag, or make streaming the default with `--quiet` to suppress. May require switching from `Command::output()` to `Command::spawn()` with piped stdout."
-  - id: T-015
+  - id: T-020
+    title: "Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links."
+    priority: 19
+    status: todo
+    notes: "This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links."
+  - id: T-099
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
     status: todo
@@ -502,5 +507,24 @@ Each prompt must define:
   - Integrated into `run.rs`: updates AGENTS.md after successful task completion
   - Uses existing `update_agents.md` prompt template with placeholders
   - All 132 tests pass, clippy clean, CI green, UAT passes
+
+## 2026-01-24 — T-012 Completed
+- **Task**: Implement `mr bootstrap` (ingest an existing repo into PRDs)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/bootstrap.rs` module with 13 tests for bootstrap functionality
+  - Implemented `BootstrapConfig` struct with `root` and `prd_budget` fields
+  - Implemented `BootstrapResult` struct tracking initialization, plan generation, and PRD creation
+  - Implemented `bootstrap()` function as the main entry point:
+    - Step 1: Ensures `.mr/` structure exists (runs `init` if needed)
+    - Step 2: Invokes runner with `bootstrap_plan.md` to analyze the repo
+    - Step 3: Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
+    - Step 4: Regenerates `.mr/PRDS.md` index
+    - Step 5: Updates AGENTS.md auto-managed section
+  - Implemented `build_plan_prompt()` and `build_generate_prompt()` for prompt expansion
+  - Implemented `summarize_plan()` and `count_prds_in_output()` helper functions
+  - Added `regex` dependency for PRD pattern matching
+  - Integrated into `main.rs`: `mr bootstrap --runner <runner>` command fully functional
+  - All 145 tests pass, clippy clean, UAT passes
 
 ---

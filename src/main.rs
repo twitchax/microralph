@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod agents;
+mod bootstrap;
 mod init;
 mod prd;
 mod prd_new;
@@ -94,7 +95,7 @@ fn main() -> Result<()> {
         }
         Some(Command::Bootstrap { runner }) => {
             tracing::info!(runner = %runner, "Bootstrapping repo...");
-            println!("mr bootstrap --runner {runner}: not yet implemented");
+            cmd_bootstrap(&runner)?;
         }
         Some(Command::Prd { prd_command }) => match prd_command {
             PrdCommand::New { slug, runner } => {
@@ -173,6 +174,62 @@ fn cmd_init() -> Result<()> {
     println!("  1. Review and customize AGENTS.md");
     println!("  2. Create your first PRD: `mr prd new my-feature`");
     println!("  3. Run a task: `mr run`");
+
+    Ok(())
+}
+
+/// Runs the `mr bootstrap` command.
+fn cmd_bootstrap(runner_name: &str) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::new();
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = bootstrap::BootstrapConfig::new(&cwd);
+
+    println!("Bootstrapping repository...");
+    println!();
+
+    let result = bootstrap::bootstrap(&config, runner.as_ref())?;
+
+    println!();
+
+    if result.initialized {
+        println!("Initialized .mr/ structure.");
+    }
+
+    if result.plan_generated {
+        println!("Bootstrap plan generated.");
+    }
+
+    if result.prds_generated {
+        println!("Generated {} PRD(s).", result.prds_created);
+    }
+
+    println!();
+    println!("Bootstrap complete!");
+    println!();
+    println!("Next steps:");
+    println!("  1. Review generated PRDs in .mr/prds/");
+    println!("  2. Check .mr/PRDS.md for the index");
+    println!("  3. Run `mr status` to see task summary");
+    println!("  4. Run `mr run` to start executing tasks");
 
     Ok(())
 }
