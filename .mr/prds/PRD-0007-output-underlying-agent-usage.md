@@ -35,7 +35,7 @@ tasks:
 - id: T-002
   title: Parse token usage from Copilot CLI output in CopilotRunner
   priority: 2
-  status: todo
+  status: done
   notes: Investigate what usage info Copilot CLI emits (likely in stderr or special format). Extract and populate UsageInfo.
 - id: T-003
   title: Display usage info in stdout after truncated LLM output
@@ -99,5 +99,20 @@ When running `mr run`, users see truncated LLM output but have no visibility int
   - Updated display logic in `main.rs` to show token usage in dim color after runner output
   - Usage info is displayed inline (e.g., "Token usage: Input: 123, Output: 456, Total: 579") when available
   - UAT passes: All 256 tests pass, CI pipeline (fmt, clippy, test) passes
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Parse token usage from Copilot CLI output in CopilotRunner
+- **Status**: ✅ Done
+- **Changes**:
+  - Investigated Copilot CLI output format and discovered usage stats are emitted in non-silent mode
+  - Updated `parse_usage()` method to correctly parse Copilot CLI's actual format: "18.3k in, 38 out"
+  - Added support for k/M suffixes (e.g., "18.3k" = 18,300 tokens, "1.2M" = 1,200,000 tokens)
+  - Changed default silent mode from `true` to `false` in `CopilotConfig` to enable usage tracking
+  - Added `strip_stats()` method to remove the statistics section from output while preserving the actual response
+  - Updated both `execute()` and `execute_streaming()` to parse from combined stdout+stderr and strip stats
+  - Updated `parse_usage()` to compute `total_tokens` as input + output when both are available
+  - Added comprehensive unit tests for `parse_usage()` and `strip_stats()` functions
+  - Fixed all tests to expect silent mode disabled by default
+  - UAT passes: All 261 tests pass, CI pipeline (fmt, clippy, test) passes
 
 ---

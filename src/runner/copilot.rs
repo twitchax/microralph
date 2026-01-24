@@ -35,6 +35,7 @@ pub struct CopilotConfig {
     pub permission_mode: PermissionMode,
 
     /// Whether to use silent mode (-s) for clean output.
+    /// When false, enables usage tracking via stats output.
     pub silent: bool,
 
     /// Whether to disable the ask_user tool.
@@ -49,7 +50,7 @@ impl Default for CopilotConfig {
         Self {
             copilot_path: "copilot".to_string(),
             permission_mode: PermissionMode::Yolo,
-            silent: true,
+            silent: false, // Disable silent mode to get usage stats
             no_ask_user: true,
             model: None,
         }
@@ -183,22 +184,49 @@ impl CopilotRunner {
 
     /// Attempts to parse token usage information from Copilot CLI output.
     ///
-    /// Copilot CLI may emit usage information in various formats:
-    /// - "Token usage: input=123, output=456"
-    /// - "Input tokens: 123, Output tokens: 456"
-    /// - JSON format with usage field
+    /// Copilot CLI outputs usage information in non-silent mode like:
+    /// ```
+    /// Breakdown by AI model:
+    ///  claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)
+    /// ```
     ///
-    /// This function looks for common patterns and extracts what's available.
+    /// This function parses the actual format emitted by the CLI.
     fn parse_usage(text: &str) -> Option<UsageInfo> {
         let mut input_tokens = None;
         let mut output_tokens = None;
-        let mut total_tokens = None;
 
-        // Pattern 1: "Token usage: input=123, output=456"
+        // Pattern for Copilot CLI format: "18.3k in, 38 out"
+        // This matches lines like:
+        // " claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)"
+        // " gpt-5                   1.2M in, 456 out"
         if let Some(caps) =
-            regex::Regex::new(r"[Tt]oken usage:\s*input[=:\s]+(\d+)[,\s]*output[=:\s]+(\d+)")
+            regex::Regex::new(r"(?m)^\s+[\w\-\.]+\s+([\d.]+)([kKmM]?)\s+in,\s+(\d+)\s+out")
                 .ok()
                 .and_then(|re| re.captures(text))
+        {
+            // Parse input tokens with possible k/M suffix
+            if let (Some(num_match), Some(suffix_match)) = (caps.get(1), caps.get(2))
+                && let Ok(num) = num_match.as_str().parse::<f64>()
+            {
+                let multiplier = match suffix_match.as_str().to_lowercase().as_str() {
+                    "k" => 1000.0,
+                    "m" => 1_000_000.0,
+                    _ => 1.0,
+                };
+                input_tokens = Some((num * multiplier) as u64);
+            }
+
+            // Parse output tokens (no suffix in observed format)
+            output_tokens = caps.get(3).and_then(|m| m.as_str().parse().ok());
+        }
+
+        // Fallback: Generic patterns for other potential formats
+        // Pattern 1: "Token usage: input=123, output=456"
+        if input_tokens.is_none()
+            && let Some(caps) =
+                regex::Regex::new(r"[Tt]oken usage:\s*input[=:\s]+(\d+)[,\s]*output[=:\s]+(\d+)")
+                    .ok()
+                    .and_then(|re| re.captures(text))
         {
             input_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
             output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
@@ -218,16 +246,14 @@ impl CopilotRunner {
                 .ok()
                 .and_then(|re| re.captures(text))
         {
-            output_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+            output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
         }
 
-        // Pattern 3: "Total tokens: 123"
-        if let Some(caps) = regex::Regex::new(r"[Tt]otal tokens[=:\s]+(\d+)")
-            .ok()
-            .and_then(|re| re.captures(text))
-        {
-            total_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
-        }
+        // Compute total if we have both input and output
+        let total_tokens = match (input_tokens, output_tokens) {
+            (Some(i), Some(o)) => Some(i + o),
+            _ => None,
+        };
 
         // Only return UsageInfo if we found at least one piece of information.
         if input_tokens.is_some() || output_tokens.is_some() || total_tokens.is_some() {
@@ -238,6 +264,34 @@ impl CopilotRunner {
             })
         } else {
             None
+        }
+    }
+
+    /// Strips the statistics section from Copilot CLI output.
+    ///
+    /// When not in silent mode, Copilot CLI appends statistics like:
+    /// ```
+    /// Total usage est:        3 Premium requests
+    /// API time spent:         2s
+    /// Total session time:     4s
+    /// Total code changes:     +0 -0
+    /// Breakdown by AI model:
+    ///  claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)
+    /// ```
+    ///
+    /// This function removes that section while preserving the actual response.
+    fn strip_stats(text: &str) -> String {
+        // Find the start of the stats section
+        // It typically starts with "Total usage est:" or "API time spent:"
+        if let Some(pos) = text.find("\n\nTotal usage est:") {
+            text[..pos].to_string()
+        } else if let Some(pos) = text.find("\n\nAPI time spent:") {
+            text[..pos].to_string()
+        } else if let Some(pos) = text.find("\n\nBreakdown by AI model:") {
+            text[..pos].to_string()
+        } else {
+            // No stats section found, return as-is
+            text.to_string()
         }
     }
 }
@@ -277,29 +331,32 @@ impl Runner for CopilotRunner {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-        // Try to parse usage information from stderr (where Copilot CLI typically logs it).
-        let usage = Self::parse_usage(&stderr);
-
         let combined_output = if stderr.is_empty() {
-            stdout
+            stdout.clone()
         } else if stdout.is_empty() {
-            stderr
+            stderr.clone()
         } else {
             format!("{}\n{}", stdout, stderr)
         };
+
+        // Try to parse usage information from combined output (stats are in stdout when not silent).
+        let usage = Self::parse_usage(&combined_output);
+
+        // Strip stats section from output to keep it clean
+        let cleaned_output = Self::strip_stats(&combined_output);
 
         let success = output.status.success();
 
         tracing::debug!(
             exit_code = ?output.status.code(),
             success = success,
-            output_len = combined_output.len(),
+            output_len = cleaned_output.len(),
             usage_present = usage.is_some(),
             "Copilot CLI completed"
         );
 
         let mut runner_output = RunnerOutput {
-            text: combined_output,
+            text: cleaned_output,
             success,
             usage: None,
         };
@@ -404,16 +461,19 @@ impl Runner for CopilotRunner {
         // Try to parse usage information from captured output.
         let usage = Self::parse_usage(&captured_output);
 
+        // Strip stats section from output to keep it clean
+        let cleaned_output = Self::strip_stats(&captured_output);
+
         tracing::debug!(
             exit_code = ?status.code(),
             success = success,
-            output_len = captured_output.len(),
+            output_len = cleaned_output.len(),
             usage_present = usage.is_some(),
             "Copilot CLI completed (streaming)"
         );
 
         let mut runner_output = RunnerOutput {
-            text: captured_output,
+            text: cleaned_output,
             success,
             usage: None,
         };
@@ -440,7 +500,7 @@ mod tests {
 
         assert_eq!(config.copilot_path, "copilot");
         assert_eq!(config.permission_mode, PermissionMode::Yolo);
-        assert!(config.silent);
+        assert!(!config.silent); // Silent mode disabled by default to enable usage tracking
         assert!(config.no_ask_user);
     }
 
@@ -466,7 +526,7 @@ mod tests {
         assert!(args.contains(&"-p".to_string()));
         assert!(args.contains(&"test prompt".to_string()));
         assert!(args.contains(&"--allow-all".to_string()));
-        assert!(args.contains(&"-s".to_string()));
+        assert!(!args.contains(&"-s".to_string())); // Silent mode disabled for usage tracking
         assert!(args.contains(&"--no-ask-user".to_string()));
     }
 
@@ -539,7 +599,55 @@ mod tests {
 
         // Should still have other default flags.
         assert!(args.contains(&"--allow-all".to_string()));
-        assert!(args.contains(&"-s".to_string()));
+        assert!(!args.contains(&"-s".to_string())); // Silent mode disabled for usage tracking
+    }
+
+    #[test]
+    fn test_parse_usage_copilot_format() {
+        let output = "Hello world\n\nTotal usage est:        3 Premium requests\nAPI time spent:         2s\nTotal session time:     4s\nTotal code changes:     +0 -0\nBreakdown by AI model:\n claude-opus-4.5         18.3k in, 38 out, 11.8k cached (Est. 3 Premium requests)";
+
+        let usage = CopilotRunner::parse_usage(output).expect("Should parse usage");
+
+        assert_eq!(usage.input_tokens, Some(18300));
+        assert_eq!(usage.output_tokens, Some(38));
+        assert_eq!(usage.total_tokens, Some(18338));
+    }
+
+    #[test]
+    fn test_parse_usage_copilot_format_megabytes() {
+        let output = "Breakdown by AI model:\n gpt-5                   1.2M in, 456 out";
+
+        let usage = CopilotRunner::parse_usage(output).expect("Should parse usage");
+
+        assert_eq!(usage.input_tokens, Some(1_200_000));
+        assert_eq!(usage.output_tokens, Some(456));
+    }
+
+    #[test]
+    fn test_parse_usage_no_stats() {
+        let output = "Hello world\nThis is just normal output.";
+
+        let usage = CopilotRunner::parse_usage(output);
+
+        assert!(usage.is_none());
+    }
+
+    #[test]
+    fn test_strip_stats() {
+        let output = "Hello world\n\nTotal usage est:        3 Premium requests\nAPI time spent:         2s\nTotal session time:     4s\nTotal code changes:     +0 -0\nBreakdown by AI model:\n claude-opus-4.5         18.3k in, 38 out, 11.8k cached (Est. 3 Premium requests)";
+
+        let cleaned = CopilotRunner::strip_stats(output);
+
+        assert_eq!(cleaned, "Hello world");
+    }
+
+    #[test]
+    fn test_strip_stats_no_stats() {
+        let output = "Hello world\nThis is just normal output.";
+
+        let cleaned = CopilotRunner::strip_stats(output);
+
+        assert_eq!(cleaned, output);
     }
 
     // Note: Integration tests that actually invoke copilot should be
