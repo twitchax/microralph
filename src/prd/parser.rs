@@ -341,7 +341,7 @@ status: {status_str}
         let prd = parse_prd(prd_content).unwrap();
 
         assert_eq!(prd.id(), "PRD-0001");
-        assert_eq!(prd.title(), "Build Micro Ralph MVP");
+        assert_eq!(prd.title(), "Build microralph MVP");
         assert_eq!(prd.status(), PrdStatus::Active);
 
         // Check tasks exist.

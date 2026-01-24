@@ -187,7 +187,7 @@ pub fn format_status(report: &StatusReport) -> String {
     let mut output = String::new();
 
     // Header.
-    output.push_str("Micro Ralph Status\n");
+    output.push_str("microralph Status\n");
     output.push_str("==================\n\n");
 
     // Next task (most important info).
@@ -546,7 +546,7 @@ Test PRD.
 
         let output = format_status(&report);
 
-        assert!(output.contains("Micro Ralph Status"));
+        assert!(output.contains("microralph Status"));
         assert!(output.contains("PRD-0001"));
         assert!(output.contains("T-003"));
         assert!(output.contains("Do something"));

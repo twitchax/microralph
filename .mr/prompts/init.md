@@ -1,12 +1,12 @@
-# Micro Ralph — Init Prompt
+# microralph — Init Prompt
 
 ## Objective
 
-Initialize a new repository with Micro Ralph structure.
+Initialize a new repository with microralph structure.
 
 ## Context
 
-You are initializing a new repository for use with Micro Ralph (`mr`).
+You are initializing a new repository for use with microralph (`mr`).
 
 ## Required Actions
 

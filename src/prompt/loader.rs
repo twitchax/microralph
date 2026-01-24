@@ -201,7 +201,7 @@ mod tests {
 
         // Should fall back to embedded default.
         let content = loader.load_with_fallback(PromptKind::Init);
-        assert!(content.contains("Micro Ralph"));
+        assert!(content.contains("microralph"));
         assert!(content.contains("Init"));
     }
 
@@ -307,7 +307,7 @@ mod tests {
                 kind
             );
             assert!(
-                content.contains("Micro Ralph"),
+                content.contains("microralph"),
                 "Default prompt for {:?} missing header",
                 kind
             );

@@ -1,4 +1,4 @@
-# Micro Ralph — Bootstrap Plan Prompt
+# microralph — Bootstrap Plan Prompt
 
 ## Objective
 

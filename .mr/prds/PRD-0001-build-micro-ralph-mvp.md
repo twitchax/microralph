@@ -1,12 +1,12 @@
 ---
 id: PRD-0001
-title: Build Micro Ralph MVP
+title: Build microralph MVP
 status: active                 # draft | active | done | parked
 owner: Aaron Roney
 created: 2026-01-23
 updated: 2026-01-23
 
-product_name: Micro Ralph
+product_name: microralph
 binary_name: mr
 
 state_dir: .mr
@@ -17,7 +17,7 @@ prompts_dir: .mr/prompts
 agents_file: AGENTS.md
 
 principles:
-  - "No direct API calls: Micro Ralph shells out to runner CLIs only."
+  - "No direct API calls: microralph shells out to runner CLIs only."
   - "State lives in git + Markdown PRDs (YAML frontmatter + History section)."
   - "One-or-zero tasks per `mr run` invocation."
   - "Runner can fail; we still append History so the next run has context."
@@ -63,7 +63,7 @@ bootstrap:
 
 prompts:
   # Static prompt files are committed and versioned. They are the “system prompt” layer for each stage.
-  # Micro Ralph fills placeholders and passes to the runner CLI.
+  # microralph fills placeholders and passes to the runner CLI.
   init: ".mr/prompts/init.md"
   bootstrap_plan: ".mr/prompts/bootstrap_plan.md"
   bootstrap_generate_prds: ".mr/prompts/bootstrap_generate_prds.md"
@@ -209,7 +209,7 @@ tasks:
 
 # Summary
 
-Micro Ralph (`mr`) is a tiny CLI that helps you **create PRDs** and **execute PRDs** by repeatedly invoking an underlying coding-agent CLI (starting with GitHub Copilot CLI) and updating PRD state (tasks + History) after every run.
+microralph (`mr`) is a tiny CLI that helps you **create PRDs** and **execute PRDs** by repeatedly invoking an underlying coding-agent CLI (starting with GitHub Copilot CLI) and updating PRD state (tasks + History) after every run.
 
 **MVP promise (GSD-style):** minimal ceremony. You can:
 - bootstrap or init a repo,
@@ -241,7 +241,7 @@ Agent loops are useful, but many systems make the *workflow engine* the project.
 3. **Static prompts for every stage**
    - `.mr/prompts/*.md` are committed, versioned, and used as the stable instruction layer.
 4. **Kord as a reference**
-   - Micro Ralph should copy patterns from `kord` for CI, README, and cargo-make ergonomics. :contentReference[oaicite:3]{index=3}
+   - microralph should copy patterns from `kord` for CI, README, and cargo-make ergonomics. :contentReference[oaicite:3]{index=3}
 5. **No direct API calls**
    - Only runner CLIs. Typed adapters.
 

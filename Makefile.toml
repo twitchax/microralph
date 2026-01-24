@@ -1,4 +1,4 @@
-# Micro Ralph — cargo-make configuration
+# microralph — cargo-make configuration
 # Reference: https://github.com/twitchax/kord/blob/main/Makefile.toml
 
 # =============================================================================
@@ -93,7 +93,7 @@ workspace = false
 dependencies = ["ci"]
 
 # =============================================================================
-# Micro Ralph Integration Tests
+# microralph Integration Tests
 # =============================================================================
 
 [tasks.mr-test]

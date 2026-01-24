@@ -1,4 +1,4 @@
-# Micro Ralph — Update Agents Prompt
+# microralph — Update Agents Prompt
 
 ## Objective
 
@@ -28,9 +28,9 @@ A PRD has been created or a task has been completed.
 
 Only modify content between these markers:
 ```
-<!-- BEGIN MICRO RALPH AUTO-MANAGED SECTION -->
+<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
 ...
-<!-- END MICRO RALPH AUTO-MANAGED SECTION -->
+<!-- END MICRORALPH AUTO-MANAGED SECTION -->
 ```
 
 ## Constraints

@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/crates/v/microralph.svg)](https://crates.io/crates/microralph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# Micro Ralph
+# microralph
 
 A tiny CLI that helps you **create PRDs** and **execute PRDs** by repeatedly invoking an underlying coding-agent CLI (starting with GitHub Copilot CLI) and updating PRD state (tasks + History) after every run.
 
@@ -108,7 +108,7 @@ cargo make uat
 
 ## Principles
 
-- **No direct API calls**: Micro Ralph shells out to runner CLIs only
+- **No direct API calls**: microralph shells out to runner CLIs only
 - **State lives in git**: PRDs are Markdown files with YAML frontmatter + History section
 - **One-or-zero tasks per `mr run`**: Each invocation attempts at most one task
 - **Runner can fail**: History captures what happened and what to try next

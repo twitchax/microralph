@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-/// The different kinds of prompts used by Micro Ralph.
+/// The different kinds of prompts used by microralph.
 ///
 /// Each variant corresponds to a static prompt file in `.mr/prompts/`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

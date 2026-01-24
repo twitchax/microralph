@@ -1,11 +1,11 @@
-# Micro Ralph — Agents Guide
+# microralph — Agents Guide
 
 This document provides detailed workflows and troubleshooting for AI coding agents working in this repository.
 
 ## Workspace Overview
 
 - `src/`: Main Rust source code
-- `.mr/`: Micro Ralph state directory
+- `.mr/`: microralph state directory
   - `prds/`: PRD files
   - `templates/`: PRD templates
   - `prompts/`: Static prompt files for each stage
@@ -108,6 +108,6 @@ cargo make uat
 
 ---
 
-<!-- BEGIN MICRO RALPH AUTO-MANAGED SECTION -->
+<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
 <!-- This section is auto-updated by `mr prd new` and `mr run`. -->
-<!-- END MICRO RALPH AUTO-MANAGED SECTION -->
+<!-- END MICRORALPH AUTO-MANAGED SECTION -->

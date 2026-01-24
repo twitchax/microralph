@@ -12,7 +12,7 @@ mod status;
 
 use runner::Runner;
 
-/// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
+/// microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -84,7 +84,7 @@ fn main() -> Result<()> {
 
     match args.command {
         Some(Command::Init) => {
-            tracing::info!("Initializing Micro Ralph...");
+            tracing::info!("Initializing microralph...");
             cmd_init()?;
         }
         Some(Command::Bootstrap { runner }) => {
@@ -111,7 +111,7 @@ fn main() -> Result<()> {
         }
         None => {
             println!(
-                "Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents."
+                "microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents."
             );
             println!();
             println!("Run `mr --help` for available commands.");
@@ -141,14 +141,14 @@ fn cmd_init() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if init::is_initialized(&cwd) {
-        println!("Micro Ralph is already initialized in this directory.");
+        println!("microralph is already initialized in this directory.");
         println!("Run `mr status` to see PRD status.");
         return Ok(());
     }
 
     let result = init::init(&cwd)?;
 
-    println!("Initialized Micro Ralph!");
+    println!("Initialized microralph!");
     println!();
     println!(
         "Created {} directories, {} files.",
@@ -177,7 +177,7 @@ fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
-        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
     // Select runner based on name.
@@ -227,7 +227,7 @@ fn cmd_prd_list() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
-        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
     // Regenerate the index file.
@@ -269,7 +269,7 @@ fn cmd_run(prd_id: Option<&str>, runner_name: &str) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
-        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
     // Select runner based on name.
@@ -321,7 +321,7 @@ fn cmd_status() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
-        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
     let report = status::get_status(&cwd)?;

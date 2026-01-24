@@ -1,4 +1,4 @@
-# Micro Ralph — Bootstrap Generate PRDs Prompt
+# microralph — Bootstrap Generate PRDs Prompt
 
 ## Objective
 

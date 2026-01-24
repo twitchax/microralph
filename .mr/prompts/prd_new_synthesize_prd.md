@@ -1,4 +1,4 @@
-# Micro Ralph — PRD New Synthesize Prompt
+# microralph — PRD New Synthesize Prompt
 
 ## Objective
 

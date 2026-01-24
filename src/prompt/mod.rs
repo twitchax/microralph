@@ -3,7 +3,7 @@
 //! This module provides:
 //! - Loading of static prompt files from `.mr/prompts/`
 //! - Placeholder expansion using `{{variable}}` syntax
-//! - Type-safe prompt kinds for all Micro Ralph stages
+//! - Type-safe prompt kinds for all microralph stages
 
 mod expand;
 mod loader;
