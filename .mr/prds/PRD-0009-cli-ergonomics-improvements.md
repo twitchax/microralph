@@ -32,7 +32,7 @@ acceptance_tests:
 - id: uat-004
   name: Top-level new command works
   command: cargo run -- new test-slug
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: Top-level edit command works
   command: cargo run -- edit PRD-0001 "test edit"
@@ -268,5 +268,15 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Test verifies `mr list` parses correctly as Command::List
   - Full test suite passes: 266 tests
   - Manual verification confirms command works correctly and displays PRD list
+
+## 2026-01-24 — uat-004 Verification
+- **UAT**: Top-level new command works
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_args_parse_new` in src/main.rs (line 1527)
+  - Test verifies `mr new test-slug` parses correctly with slug argument
+  - Full test suite passes: 267 tests
+  - Manual verification confirms command works (starts PRD creation flow correctly)
 
 ---

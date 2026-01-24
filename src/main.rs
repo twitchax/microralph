@@ -1523,4 +1523,15 @@ mod tests {
         let args = Args::try_parse_from(["mr", "list"]).unwrap();
         assert!(matches!(args.command, Some(Command::List)));
     }
+
+    #[test]
+    fn test_args_parse_new() {
+        // Verify new command works at top level with slug argument
+        let args = Args::try_parse_from(["mr", "new", "test-slug"]).unwrap();
+        if let Some(Command::New { slug, .. }) = args.command {
+            assert_eq!(slug, "test-slug");
+        } else {
+            panic!("Expected New command with slug 'test-slug'");
+        }
+    }
 }
