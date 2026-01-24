@@ -348,3 +348,18 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
 - **Changelog**: Entry added under [Unreleased] → Changed
 - **Cleanup**: No temporary files or excessive comments found
 - **Impact**: Significantly improved CLI ergonomics and debugging experience
+
+## 2026-01-24 — Finalization Complete
+- **PRD**: PRD-0009 — CLI Ergonomics Improvements
+- **Finalized**: 2026-01-24T23:15:07Z
+- **Tasks Completed**: 8
+- **Summary**:
+  - T-001: Remove --prd flag and add optional positional PRD argument to run command
+  - T-002: Remove Prd subcommand enum and flatten subcommands to top level
+  - T-003: Update all code references from prd subcommands to top-level commands
+  - T-004: Add tracing info for commands executed by runner
+  - T-005: Change LLM output display to show tail instead of beginning
+  - T-006: Apply tail output behavior to UAT verification loop
+  - T-007: Update documentation for new CLI structure
+  - T-008: Run full test suite to verify changes
+- **Status**: ✅ All acceptance tests passed
