@@ -76,7 +76,7 @@ tasks:
 - id: T-007
   title: Add UAT status update logic to write verified status back to PRD
   priority: 2
-  status: todo
+  status: done
   notes: After runner successfully verifies a UAT, update the PRD frontmatter to set uat_status verified for that UAT.
 - id: T-008
   title: Add integration test for UAT verification loop
@@ -199,3 +199,13 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Updated embedded `PROMPT_RUN_TASK` constant in `src/init.rs` to match the prompt file changes
   - Added clarifying note that unverified UATs will block PRD finalization
   - UAT passed: 244 tests, all passed
+
+## 2026-01-24 — T-007 Completed
+- **Task**: Add UAT status update logic to write verified status back to PRD
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `update_uat_status()` function in `src/run.rs` that reads PRD, updates a specific UAT's status to `verified`, and writes back
+  - Modified `run_uat_verification_loop()` to call `update_uat_status()` when runner succeeds but didn't update the PRD itself
+  - Updated existing test `test_uat_verification_loop_max_iterations` to reflect new behavior (runner success → UATs get verified)
+  - Added 2 new unit tests: `test_update_uat_status` and `test_update_uat_status_not_found`
+  - UAT passed: 246 tests, all passed

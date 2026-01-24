@@ -507,6 +507,73 @@ fn append_opt_out_history(
     Ok(())
 }
 
+/// Updates a UAT's status to verified in the PRD frontmatter.
+///
+/// This reads the PRD, finds the matching UAT by ID, updates its status to verified,
+/// and writes the PRD back to disk.
+///
+/// # Arguments
+///
+/// * `prd_path` - Path to the PRD file
+/// * `uat_id` - ID of the UAT to update (e.g., "uat-001")
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The PRD file cannot be read or parsed
+/// - The UAT ID is not found in the PRD
+/// - The updated PRD cannot be written back
+pub fn update_uat_status(prd_path: &Path, uat_id: &str) -> Result<()> {
+    use crate::prd::{UatStatus, parse_prd_file, serialize_prd};
+
+    // Read and parse the PRD.
+    let mut prd = parse_prd_file(prd_path).with_context(|| {
+        format!(
+            "Failed to read PRD for UAT status update: {}",
+            prd_path.display()
+        )
+    })?;
+
+    // Find and update the UAT.
+    let acceptance_tests = prd.frontmatter.acceptance_tests.as_mut().ok_or_else(|| {
+        anyhow::anyhow!(
+            "PRD has no acceptance_tests section: {}",
+            prd_path.display()
+        )
+    })?;
+
+    let uat = acceptance_tests
+        .iter_mut()
+        .find(|t| t.id == uat_id)
+        .ok_or_else(|| anyhow::anyhow!("UAT not found: {} in {}", uat_id, prd_path.display()))?;
+
+    // Update status to verified.
+    uat.uat_status = UatStatus::Verified;
+
+    // Serialize and write back.
+    let content = serialize_prd(&prd).with_context(|| {
+        format!(
+            "Failed to serialize PRD after UAT update: {}",
+            prd_path.display()
+        )
+    })?;
+
+    fs::write(prd_path, &content).with_context(|| {
+        format!(
+            "Failed to write PRD after UAT update: {}",
+            prd_path.display()
+        )
+    })?;
+
+    tracing::info!(
+        prd_path = %prd_path.display(),
+        uat_id = %uat_id,
+        "Updated UAT status to verified"
+    );
+
+    Ok(())
+}
+
 /// Configuration for UAT verification loop.
 #[derive(Debug)]
 pub struct UatVerificationConfig<'a> {
@@ -662,23 +729,31 @@ pub fn run_uat_verification_loop(
                 continue;
             }
         } else if output.success {
-            // Runner completed successfully - assume UAT was handled.
-            // Reload to check if it was actually marked verified.
+            // Runner completed successfully - check if UAT was marked verified.
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
-            if !refreshed_prd
+            let still_unverified = refreshed_prd
                 .unverified_uats()
                 .iter()
-                .any(|u| u.id == uat.id)
-            {
+                .any(|u| u.id == uat.id);
+
+            if still_unverified {
+                // Runner succeeded but didn't update UAT status - update it ourselves.
+                update_uat_status(&current_prd_path, &uat.id)?;
                 tracing::info!(
                     prd_id = %config.prd_id,
                     uat_id = %uat.id,
-                    "UAT verified"
+                    "UAT verified (status updated by microralph)"
                 );
-                verified_count += 1;
+            } else {
+                tracing::info!(
+                    prd_id = %config.prd_id,
+                    uat_id = %uat.id,
+                    "UAT verified (status updated by runner)"
+                );
             }
+            verified_count += 1;
         }
     }
 
@@ -1394,10 +1469,10 @@ Test PRD.
         let prd_file = prds_dir.join("PRD-0001-test.md");
         std::fs::write(&prd_file, &content).unwrap();
 
-        // Runner always succeeds but doesn't update PRD (simulates failed verification).
+        // Runner always succeeds - now microralph will update UAT status automatically.
         let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("Tried but failed"),
-            crate::runner::RunnerOutput::success("Tried again"),
+            crate::runner::RunnerOutput::success("Verified test 1"),
+            crate::runner::RunnerOutput::success("Verified test 2"),
         ]);
 
         let config = UatVerificationConfig {
@@ -1412,7 +1487,100 @@ Test PRD.
 
         assert_eq!(result.prd_id, "PRD-0001");
         assert_eq!(result.iterations, 2);
-        assert!(result.hit_max_iterations);
-        assert_eq!(result.remaining_unverified, 2);
+        assert!(!result.hit_max_iterations); // All UATs verified before hitting limit.
+        assert_eq!(result.verified_count, 2); // Both UATs verified.
+        assert_eq!(result.remaining_unverified, 0);
+
+        // Verify the PRD was actually updated.
+        let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
+        let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
+        assert!(uats.iter().all(|u| u.uat_status == UatStatus::Verified));
+    }
+
+    #[test]
+    fn test_update_uat_status() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a PRD with unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            acceptance_tests: Some(vec![
+                AcceptanceTest {
+                    id: "uat-001".to_string(),
+                    name: "Test 1".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-002".to_string(),
+                    name: "Test 2".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Update uat-001 to verified.
+        update_uat_status(&prd_file, "uat-001").unwrap();
+
+        // Reload and verify.
+        let updated = crate::prd::parse_prd_file(&prd_file).unwrap();
+        let uats = updated.frontmatter.acceptance_tests.unwrap();
+
+        let uat1 = uats.iter().find(|u| u.id == "uat-001").unwrap();
+        let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
+
+        assert_eq!(uat1.uat_status, UatStatus::Verified);
+        assert_eq!(uat2.uat_status, UatStatus::Unverified);
+    }
+
+    #[test]
+    fn test_update_uat_status_not_found() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a PRD with UAT.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Unverified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Try to update non-existent UAT.
+        let result = update_uat_status(&prd_file, "uat-999");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("UAT not found"));
     }
 }
