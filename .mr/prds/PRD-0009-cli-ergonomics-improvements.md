@@ -79,7 +79,7 @@ tasks:
 - id: T-006
   title: Apply tail output behavior to UAT verification loop
   priority: 6
-  status: todo
+  status: done
   notes: Ensure UAT verification loop uses same tail output truncation as task loop.
 - id: T-007
   title: Update documentation for new CLI structure
@@ -196,5 +196,16 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - All truncations now show tail with "... (truncated)" prefix instead of "... (truncated)" suffix
   - UAT passed: All 263 tests passed successfully
   - This improves debugging by showing the most recent/relevant output (errors, completion status) instead of preamble
+
+## 2026-01-24 — T-006 Completed
+- **Task**: Apply tail output behavior to UAT verification loop
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/run.rs` lines 708-727: Added output summary display in non-streaming mode for UAT verification
+  - Applied same tail truncation logic as task loop (last 500 chars if output > 500 chars)
+  - Output is now displayed after each UAT verification attempt in non-streaming mode
+  - Streaming mode skips summary display (output already shown in real-time)
+  - UAT passed: All 263 tests passed successfully
+  - This ensures consistency between task execution and UAT verification output behavior, improving debugging experience
 
 ---

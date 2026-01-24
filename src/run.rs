@@ -716,6 +716,16 @@ pub fn run_uat_verification_loop(
                 .with_context(|| format!("Runner failed for UAT {}", uat.id))?
         };
 
+        // Summarize output (truncate if too long). Skip summary if we already streamed.
+        if !config.stream {
+            if output.text.len() > 500 {
+                let start = output.text.len() - 500;
+                println!("... (truncated)\n{}", &output.text[start..]);
+            } else {
+                println!("{}", output.text);
+            }
+        }
+
         iterations += 1;
 
         // Check for OPT-OUT in response.
