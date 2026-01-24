@@ -193,9 +193,22 @@ where
         bail!("Runner failed during synthesis: {}", synthesize_output.text);
     }
 
+    // Log raw output for debugging.
+    tracing::debug!(
+        raw_output_len = synthesize_output.text.len(),
+        raw_first_100 = ?synthesize_output.text.chars().take(100).collect::<String>(),
+        "Received synthesize output from runner"
+    );
+
     // Parse the PRD content.
     let prd_content = extract_prd_content(&synthesize_output.text);
-    let prd = parse_prd(&prd_content).context("Failed to parse synthesized PRD")?;
+
+    let prd = parse_prd(&prd_content).with_context(|| {
+        format!(
+            "Failed to parse synthesized PRD. First 200 chars of extracted content: {:?}",
+            prd_content.chars().take(200).collect::<String>()
+        )
+    })?;
 
     // Write the PRD to disk.
     let filename = format!("{}-{}.md", prd.id(), config.slug);
@@ -469,10 +482,20 @@ where
 /// PRDs must start with `---` frontmatter, so we look for that as the
 /// primary content indicator.
 fn extract_prd_content(output: &str) -> String {
-    let trimmed = output.trim();
+    // First, strip any ANSI escape sequences that might be in the output.
+    let cleaned = strip_ansi_escapes(output);
+    let trimmed = cleaned.trim();
+
+    tracing::debug!(
+        output_len = output.len(),
+        cleaned_len = trimmed.len(),
+        first_50_chars = ?trimmed.chars().take(50).collect::<String>(),
+        "Extracting PRD content from runner output"
+    );
 
     // If output starts directly with frontmatter, use it as-is.
     if trimmed.starts_with("---") {
+        tracing::debug!("Output starts with frontmatter directly");
         return trimmed.to_string();
     }
 
@@ -499,6 +522,10 @@ fn extract_prd_content(output: &str) -> String {
                 let content_trimmed = content.trim();
 
                 if content_trimmed.starts_with("---") {
+                    tracing::debug!(
+                        fence_pattern,
+                        "Extracted from code block with newline+fence"
+                    );
                     return content_trimmed.to_string();
                 }
             }
@@ -509,6 +536,7 @@ fn extract_prd_content(output: &str) -> String {
                 let content_trimmed = content.trim();
 
                 if content_trimmed.starts_with("---") {
+                    tracing::debug!(fence_pattern, "Extracted from code block with inline fence");
                     return content_trimmed.to_string();
                 }
             }
@@ -516,13 +544,62 @@ fn extract_prd_content(output: &str) -> String {
     }
 
     // Last resort: look for --- delimiters directly in the output.
-    // Find the first --- and extract from there.
+    // Find the first --- that starts at the beginning of a line.
+    for (i, line) in trimmed.lines().enumerate() {
+        if line.trim() == "---" {
+            // Found a frontmatter delimiter, extract from here.
+            let lines: Vec<&str> = trimmed.lines().skip(i).collect();
+            let result = lines.join("\n");
+            tracing::debug!(line_number = i, "Found frontmatter delimiter on line");
+            return result;
+        }
+    }
+
+    // Really last resort: find --- anywhere.
     if let Some(fm_start) = trimmed.find("---") {
+        tracing::debug!(position = fm_start, "Found --- at position (fallback)");
         return trimmed[fm_start..].trim().to_string();
     }
 
     // No recognizable PRD content found, return as-is.
+    tracing::warn!(
+        first_100_chars = ?trimmed.chars().take(100).collect::<String>(),
+        "No frontmatter found in output"
+    );
     trimmed.to_string()
+}
+
+/// Strips ANSI escape sequences from a string.
+fn strip_ansi_escapes(s: &str) -> String {
+    // Simple regex-like removal of ANSI escape sequences.
+    // Matches: ESC [ ... (letter) sequences.
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // ESC character - start of escape sequence.
+            if chars.peek() == Some(&'[') {
+                chars.next(); // consume '['
+
+                // Skip until we hit a letter (the terminator).
+                while let Some(&next) = chars.peek() {
+                    chars.next();
+
+                    if next.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            } else {
+                // Some other escape, skip next char.
+                chars.next();
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result
 }
 
 #[cfg(test)]
