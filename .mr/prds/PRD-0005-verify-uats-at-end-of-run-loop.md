@@ -81,7 +81,7 @@ tasks:
 - id: T-008
   title: Add integration test for UAT verification loop
   priority: 3
-  status: todo
+  status: done
   notes: Create test in src/run.rs that simulates all tasks done with unverified UATs, verifies loop executes, and respects max_iterations.
 ---
 
@@ -209,3 +209,15 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Updated existing test `test_uat_verification_loop_max_iterations` to reflect new behavior (runner success → UATs get verified)
   - Added 2 new unit tests: `test_update_uat_status` and `test_update_uat_status_not_found`
   - UAT passed: 246 tests, all passed
+
+## 2026-01-24 — T-008 Completed
+- **Task**: Add integration test for UAT verification loop
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `test_uat_verification_integration_flow` integration test in `src/run.rs`
+  - Test covers full flow: `run_task()` → `NeedsUatVerification` → `run_uat_verification_loop()`
+  - Simulates PRD with all tasks done and 3 unverified UATs
+  - Verifies loop respects max_iterations limit (set to 2)
+  - Verifies first UAT gets verified, second UAT opts out with History entry
+  - Asserts PRD frontmatter is correctly updated
+  - UAT passed: 247 tests, all passed

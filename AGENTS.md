@@ -109,12 +109,17 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Now I understand the T-005 changes. Let me check the key implementation details in `prd_finalize.rs` to ensure I capture the right patterns for agents.
+Let me check the key implementations to understand the new patterns:
 
-Now I have a clear picture of T-005. Let me update the auto-managed section of AGENTS.md to reflect this new finalization gate pattern.
+Now I have a complete picture of T-007. The key additions are:
+1. `update_uat_status()` function to write verified status back to PRD
+2. `append_opt_out_history()` for opt-out History entries
+3. `UatVerificationLoopResult` struct for loop results
+
+Let me update the AGENTS.md auto-managed section with better documentation:
 
 Updated the auto-managed section with:
-- **Run Loop Architecture**: `RunResult` enum and key `Prd` methods
-- **UAT Verification Phase**: Prompt placeholders, three verification approaches, opt-out syntax
-- **PRD Finalization Gates**: New section documenting the two validation conditions (all tasks done + all UATs verified) with associated error types
+- **Run Loop Architecture**: `RunResult` enum variants and key `Prd` methods
+- **UAT Verification Phase**: Prompt template, three verification approaches, loop mechanics including `update_uat_status()` and `append_opt_out_history()`
+- **PRD Finalization Gates**: Two validation conditions that must pass before finalization
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

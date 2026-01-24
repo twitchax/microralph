@@ -1583,4 +1583,141 @@ Test PRD.
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("UAT not found"));
     }
+
+    /// Integration test for the full UAT verification flow:
+    /// 1. run_task() returns NeedsUatVerification when all tasks done but UATs unverified
+    /// 2. run_uat_verification_loop() processes the unverified UATs
+    /// 3. Loop respects max_iterations and correctly updates UAT status
+    #[test]
+    fn test_uat_verification_integration_flow() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}: {{uat_name}}",
+        )
+        .unwrap();
+
+        // Create a PRD with all tasks done but multiple unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Integration Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![
+                Task {
+                    id: "T-001".to_string(),
+                    title: "Task 1".to_string(),
+                    priority: 1,
+                    status: TaskStatus::Done,
+                    notes: None,
+                },
+                Task {
+                    id: "T-002".to_string(),
+                    title: "Task 2".to_string(),
+                    priority: 2,
+                    status: TaskStatus::Done,
+                    notes: None,
+                },
+            ]),
+            acceptance_tests: Some(vec![
+                AcceptanceTest {
+                    id: "uat-001".to_string(),
+                    name: "Build passes".to_string(),
+                    command: "cargo build".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-002".to_string(),
+                    name: "Tests pass".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-003".to_string(),
+                    name: "Lint passes".to_string(),
+                    command: "cargo clippy".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(
+            frontmatter,
+            "# Summary\n\nIntegration test.\n\n# History\n".to_string(),
+        );
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-integration-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Step 1: run_task should return NeedsUatVerification.
+        let run_runner = MockRunner::new(vec![]);
+        let run_config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+        };
+
+        let run_result = run_task(&run_config, &run_runner).unwrap();
+
+        let (prd_id, prd_path) = match run_result {
+            RunResult::NeedsUatVerification {
+                prd_id,
+                prd_path,
+                unverified_count,
+            } => {
+                assert_eq!(prd_id, "PRD-0001");
+                assert_eq!(unverified_count, 3);
+                (prd_id, prd_path)
+            }
+            other => panic!("Expected NeedsUatVerification, got {:?}", other),
+        };
+
+        // Step 2: Run the UAT verification loop with max_iterations = 2.
+        // Runner verifies first UAT, opts out of second UAT.
+        let uat_runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Verified: build passes"),
+            crate::runner::RunnerOutput::success("OPT-OUT: Requires CI environment"),
+        ]);
+
+        let uat_config = UatVerificationConfig {
+            root: &root,
+            prd_id: &prd_id,
+            prd_path: &prd_path,
+            stream: false,
+            max_iterations: Some(2),
+        };
+
+        let uat_result = run_uat_verification_loop(&uat_config, &uat_runner).unwrap();
+
+        // Verify loop behavior.
+        assert_eq!(uat_result.prd_id, "PRD-0001");
+        assert_eq!(uat_result.verified_count, 1); // First UAT verified.
+        assert_eq!(uat_result.opted_out_count, 1); // Second UAT opted out.
+        assert_eq!(uat_result.iterations, 2); // Ran for 2 iterations.
+        assert!(uat_result.hit_max_iterations); // Hit the limit.
+        assert_eq!(uat_result.remaining_unverified, 2); // uat-002 (opted out) + uat-003 (not reached).
+
+        // Step 3: Verify PRD was updated correctly.
+        let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
+        let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
+
+        let uat1 = uats.iter().find(|u| u.id == "uat-001").unwrap();
+        let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
+        let uat3 = uats.iter().find(|u| u.id == "uat-003").unwrap();
+
+        assert_eq!(uat1.uat_status, UatStatus::Verified); // Verified by loop.
+        assert_eq!(uat2.uat_status, UatStatus::Unverified); // Opted out, still unverified.
+        assert_eq!(uat3.uat_status, UatStatus::Unverified); // Not reached due to max_iterations.
+
+        // Step 4: Verify History entry was appended for opt-out.
+        let prd_content = std::fs::read_to_string(&prd_file).unwrap();
+        assert!(prd_content.contains("uat-002 Opt-Out"));
+        assert!(prd_content.contains("Requires CI environment"));
+    }
 }
