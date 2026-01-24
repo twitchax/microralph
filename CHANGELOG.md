@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0005: Verify UATs at End of Run Loop** — Dedicated UAT verification phase after task completion
+  - UAT verification loop that triggers automatically when all tasks are done
+  - Three verification approaches: run existing tests, create new tests, or opt-out with explanation
+  - Model opt-out mechanism with automatic History entry appending
+  - UAT status updates written back to PRD frontmatter (`uat_status: verified`)
+  - Respects `loop.max_iterations` config to bound verification iterations
+  - Unverified UATs block `mr prd finalize` from succeeding
+  - New `run_uat_verify.md` prompt template for verification instructions
+  - `RunResult` enum with variants: `TaskExecuted`, `NeedsUatVerification`, `PrdComplete`
+
 - **PRD-0004: PRD Finalization Steps** — Explicit `mr prd finalize <id>` command
   - Task completion validation (blocks finalization if tasks are incomplete)
   - Acceptance test verification via finalization prompt

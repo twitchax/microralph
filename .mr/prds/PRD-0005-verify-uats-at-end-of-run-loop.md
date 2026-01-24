@@ -1,7 +1,7 @@
 ---
 id: PRD-0005
 title: Verify UATs at End of Run Loop
-status: active
+status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
@@ -304,3 +304,27 @@ This leads to PRDs being finalized without proper acceptance test coverage.
     - This is by design: the runner has full context to write meaningful History entries with test details, while the system can automatically append standardized opt-out entries
   - Test command: `cargo make uat test_uat_verification_history_appending`
   - Result: All 249 tests passed
+
+## 2026-01-24 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All tasks completed, acceptance tests passed
+- **Tasks Completed**: 8 tasks
+  - T-001: Add unverified UAT check to run loop
+  - T-002: Create UAT verification prompt template
+  - T-003: Implement UAT verification loop in run.rs
+  - T-004: Add model opt-out mechanism with History entry
+  - T-005: Update mr prd finalize to block on unverified UATs
+  - T-006: Update run_task.md prompt to reference UAT verification phase
+  - T-007: Add UAT status update logic to write verified status back to PRD
+  - T-008: Add integration test for UAT verification loop
+- **Acceptance Tests**: 7 UATs verified (uat-001 through uat-007)
+- **Changes Made**:
+  - Added UAT verification loop that triggers after all tasks are done
+  - Implemented three verification approaches: run tests, create tests, or opt-out
+  - Added automatic UAT status updates to PRD frontmatter
+  - Validation blocks PRD finalization if UATs are unverified
+  - Created `run_uat_verify.md` prompt template
+  - Converted `RunResult` to enum with `TaskExecuted`, `NeedsUatVerification`, `PrdComplete` variants
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Test Results**: 249/249 tests passed
+- **Cleanup**: No temporary files or excessive comments found
