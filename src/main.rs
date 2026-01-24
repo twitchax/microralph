@@ -889,34 +889,69 @@ fn cmd_run(
             }
         };
 
-        tasks_completed += 1;
+        match result {
+            run::RunResult::TaskExecuted {
+                prd_id,
+                task_id,
+                task_title,
+                prd_path,
+                runner_success,
+                output_summary,
+            } => {
+                tasks_completed += 1;
 
-        println!();
+                println!();
 
-        if result.runner_success {
-            println!("Task {} completed successfully!", result.task_id);
-        } else {
-            println!("Task {} did not complete successfully.", result.task_id);
-            last_failed = true;
+                if runner_success {
+                    println!("Task {} completed successfully!", task_id);
+                } else {
+                    println!("Task {} did not complete successfully.", task_id);
+                    last_failed = true;
+                }
+
+                println!();
+                println!("  PRD: {} ({})", prd_id, prd_path.display());
+                println!("  Task: {} — {}", task_id, task_title);
+                println!();
+
+                if !output_summary.is_empty() {
+                    println!("Runner output:");
+                    println!("{}", output_summary);
+                }
+
+                // Exit if --one flag is set or if the task failed.
+                if one || last_failed {
+                    break;
+                }
+
+                println!("---");
+                println!("Continuing to next task...");
+            }
+
+            run::RunResult::NeedsUatVerification {
+                prd_id,
+                prd_path,
+                unverified_count,
+            } => {
+                println!();
+                println!(
+                    "All tasks done for {} but {} UAT(s) need verification.",
+                    prd_id, unverified_count
+                );
+                println!("  PRD: {}", prd_path.display());
+                println!();
+                println!("Run `mr run` again to start UAT verification loop.");
+                break;
+            }
+
+            run::RunResult::PrdComplete { prd_id, prd_path } => {
+                println!();
+                println!("PRD {} is complete!", prd_id);
+                println!("  All tasks done, all UATs verified.");
+                println!("  PRD: {}", prd_path.display());
+                break;
+            }
         }
-
-        println!();
-        println!("  PRD: {} ({})", result.prd_id, result.prd_path.display());
-        println!("  Task: {} — {}", result.task_id, result.task_title);
-        println!();
-
-        if !result.output_summary.is_empty() {
-            println!("Runner output:");
-            println!("{}", result.output_summary);
-        }
-
-        // Exit if --one flag is set or if the task failed.
-        if one || last_failed {
-            break;
-        }
-
-        println!("---");
-        println!("Continuing to next task...");
     }
 
     if tasks_completed > 1 {

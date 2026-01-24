@@ -46,7 +46,7 @@ tasks:
 - id: T-001
   title: Add unverified UAT check to run loop (detect when tasks done but UATs unverified)
   priority: 1
-  status: todo
+  status: done
   notes: In src/run.rs, after all tasks are done, check if any UATs are unverified. If so, transition to UAT verification phase instead of exiting.
 - id: T-002
   title: Create UAT verification prompt template
@@ -126,3 +126,13 @@ This leads to PRDs being finalized without proper acceptance test coverage.
 
 ## History
 
+## 2026-01-24 — T-001 Completed
+- **Task**: Add unverified UAT check to run loop (detect when tasks done but UATs unverified)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `acceptance_tests()`, `all_tasks_done()`, `has_unverified_uats()`, and `unverified_uats()` methods to `Prd` struct in `src/prd/types.rs`
+  - Changed `RunResult` from a struct to an enum with three variants: `TaskExecuted`, `NeedsUatVerification`, and `PrdComplete`
+  - Updated `run_task()` in `src/run.rs` to detect when all tasks are done and check for unverified UATs, returning appropriate result variant
+  - Updated `main.rs` run loop to handle new `RunResult` variants with appropriate user messages
+  - Added 3 new unit tests: `test_run_task_all_done_with_unverified_uats`, `test_run_task_all_done_and_verified`, `test_run_task_all_done_no_uats`
+  - UAT passed: 230 tests, all passed

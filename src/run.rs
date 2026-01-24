@@ -32,26 +32,50 @@ pub struct RunConfig<'a> {
     pub stream: bool,
 }
 
-/// Result from running a task.
+/// Result from running a task or checking run status.
 #[derive(Debug)]
-pub struct RunResult {
-    /// The PRD that was run.
-    pub prd_id: String,
+pub enum RunResult {
+    /// A task was executed.
+    TaskExecuted {
+        /// The PRD that was run.
+        prd_id: String,
 
-    /// The task that was attempted.
-    pub task_id: String,
+        /// The task that was attempted.
+        task_id: String,
 
-    /// The task title.
-    pub task_title: String,
+        /// The task title.
+        task_title: String,
 
-    /// Path to the PRD file.
-    pub prd_path: PathBuf,
+        /// Path to the PRD file.
+        prd_path: PathBuf,
 
-    /// Whether the runner reported success.
-    pub runner_success: bool,
+        /// Whether the runner reported success.
+        runner_success: bool,
 
-    /// Runner output summary.
-    pub output_summary: String,
+        /// Runner output summary.
+        output_summary: String,
+    },
+
+    /// All tasks are done but there are unverified UATs that need verification.
+    NeedsUatVerification {
+        /// The PRD that needs UAT verification.
+        prd_id: String,
+
+        /// Path to the PRD file.
+        prd_path: PathBuf,
+
+        /// Number of unverified UATs.
+        unverified_count: usize,
+    },
+
+    /// PRD is fully complete (all tasks done, no unverified UATs).
+    PrdComplete {
+        /// The PRD that is complete.
+        prd_id: String,
+
+        /// Path to the PRD file.
+        prd_path: PathBuf,
+    },
 }
 
 /// Summary of a PRD for the pick prompt.
@@ -280,10 +304,31 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
 
     // Pick the next task.
     let Some(task) = prd.next_task() else {
-        anyhow::bail!(
-            "PRD {} has no incomplete tasks. All tasks are done!",
-            prd.id()
+        // All tasks are done. Check if there are unverified UATs.
+        let prd_id = prd.id().to_string();
+
+        if prd.has_unverified_uats() {
+            let unverified_count = prd.unverified_uats().len();
+
+            tracing::info!(
+                prd_id = %prd_id,
+                unverified_count = unverified_count,
+                "All tasks done but UATs need verification"
+            );
+
+            return Ok(RunResult::NeedsUatVerification {
+                prd_id,
+                prd_path,
+                unverified_count,
+            });
+        }
+
+        tracing::info!(
+            prd_id = %prd_id,
+            "PRD is complete (all tasks done, all UATs verified)"
         );
+
+        return Ok(RunResult::PrdComplete { prd_id, prd_path });
     };
 
     let task_id = task.id.clone();
@@ -349,7 +394,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         }
     }
 
-    Ok(RunResult {
+    Ok(RunResult::TaskExecuted {
         prd_id,
         task_id,
         task_title,
@@ -503,9 +548,19 @@ mod tests {
 
         let result = run_task(&config, &runner).unwrap();
 
-        assert_eq!(result.prd_id, "PRD-0001");
-        assert_eq!(result.task_id, "T-002"); // Lower priority = higher precedence.
-        assert!(result.runner_success);
+        match result {
+            RunResult::TaskExecuted {
+                prd_id,
+                task_id,
+                runner_success,
+                ..
+            } => {
+                assert_eq!(prd_id, "PRD-0001");
+                assert_eq!(task_id, "T-002"); // Lower priority = higher precedence.
+                assert!(runner_success);
+            }
+            _ => panic!("Expected TaskExecuted result"),
+        }
     }
 
     #[test]
@@ -538,7 +593,12 @@ mod tests {
 
         let result = run_task(&config, &runner).unwrap();
 
-        assert_eq!(result.prd_id, "PRD-0002");
+        match result {
+            RunResult::TaskExecuted { prd_id, .. } => {
+                assert_eq!(prd_id, "PRD-0002");
+            }
+            _ => panic!("Expected TaskExecuted result"),
+        }
     }
 
     #[test]
@@ -590,5 +650,155 @@ mod tests {
 
         assert!(prompt.contains("T-001"));
         assert!(prompt.contains("PRD-0001.md"));
+    }
+
+    #[test]
+    fn test_run_task_all_done_with_unverified_uats() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create a PRD with all tasks done but unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Unverified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), content).unwrap();
+
+        let runner = MockRunner::new(vec![]);
+
+        let config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+        };
+
+        let result = run_task(&config, &runner).unwrap();
+
+        match result {
+            RunResult::NeedsUatVerification {
+                prd_id,
+                unverified_count,
+                ..
+            } => {
+                assert_eq!(prd_id, "PRD-0001");
+                assert_eq!(unverified_count, 1);
+            }
+            _ => panic!("Expected NeedsUatVerification result"),
+        }
+    }
+
+    #[test]
+    fn test_run_task_all_done_and_verified() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create a PRD with all tasks done and all UATs verified.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Verified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), content).unwrap();
+
+        let runner = MockRunner::new(vec![]);
+
+        let config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+        };
+
+        let result = run_task(&config, &runner).unwrap();
+
+        match result {
+            RunResult::PrdComplete { prd_id, .. } => {
+                assert_eq!(prd_id, "PRD-0001");
+            }
+            _ => panic!("Expected PrdComplete result"),
+        }
+    }
+
+    #[test]
+    fn test_run_task_all_done_no_uats() {
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create a PRD with all tasks done and no UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), content).unwrap();
+
+        let runner = MockRunner::new(vec![]);
+
+        let config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+        };
+
+        let result = run_task(&config, &runner).unwrap();
+
+        match result {
+            RunResult::PrdComplete { prd_id, .. } => {
+                assert_eq!(prd_id, "PRD-0001");
+            }
+            _ => panic!("Expected PrdComplete result when no UATs defined"),
+        }
     }
 }
