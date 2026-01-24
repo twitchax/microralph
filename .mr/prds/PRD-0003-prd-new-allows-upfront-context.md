@@ -51,7 +51,7 @@ tasks:
 - id: T-004
   title: Persist context through all Q/A rounds
   priority: 2
-  status: todo
+  status: done
   notes: Store context in PrdNewConfig and include it in all roundN prompts.
 - id: T-005
   title: Include context in final PRD synthesis prompt
@@ -116,5 +116,15 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_round1_questions.md`
   - The template now includes user's upfront context in the prompt when provided
   - Context flows from CLI flag or interactive prompt → `build_round1_prompt` → template expansion
+  - UAT: All 227 tests passed
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Persist context through all Q/A rounds
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `build_round_n_prompt` in `src/prd_new.rs` to accept `user_context: Option<&str>` parameter
+  - Updated call site in `create_prd` loop to pass `user_context.as_deref()` to `build_round_n_prompt`
+  - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_roundN_questions.md`
+  - Context now flows through all Q/A rounds (rounds 2+), not just round 1
   - UAT: All 227 tests passed
 

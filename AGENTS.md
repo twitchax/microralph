@@ -109,9 +109,4 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-The completed task adds a `--context` CLI flag to `prd new`. This is a CLI usage pattern, not a coding convention that would help future agents. The current auto-managed section contains incomplete draft text that should be cleaned up.
-
-Since the change is just adding a CLI flag (user-facing feature), there are no new conventions or patterns that coding agents need to follow. The auto-managed section should be cleaned to remove the draft text.
-
-Cleaned the auto-managed section. The T-001 change (adding `--context` CLI flag) is a user-facing feature, not a coding convention or pattern that agents need to follow. The previous draft text was incomplete and not actionable.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

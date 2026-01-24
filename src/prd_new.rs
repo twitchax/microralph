@@ -144,7 +144,7 @@ where
             break;
         }
 
-        let round_n_prompt = build_round_n_prompt(config, &qa_history);
+        let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
         let round_n_output = runner
             .execute(&round_n_prompt, config.root)
             .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -292,11 +292,19 @@ fn build_round1_prompt(
 }
 
 /// Builds the round N prompt with Q/A history.
-fn build_round_n_prompt(config: &PrdNewConfig, qa_history: &[QaPair]) -> String {
+fn build_round_n_prompt(
+    config: &PrdNewConfig,
+    qa_history: &[QaPair],
+    user_context: Option<&str>,
+) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewRoundNQuestions);
 
     let mut ctx = PlaceholderContext::new();
     ctx.insert("slug", config.slug);
+
+    if let Some(context) = user_context {
+        ctx.insert("user_context", context);
+    }
 
     // Build Q/A history.
     let qa_list: Vec<HashMap<String, String>> = qa_history

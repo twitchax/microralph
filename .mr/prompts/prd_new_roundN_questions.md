@@ -8,6 +8,12 @@ Continue the Q/A session for PRD creation, or signal readiness.
 
 The user is creating a new PRD with slug: `{{slug}}`
 
+{{#if user_context}}
+### User-Provided Context
+
+{{user_context}}
+
+{{/if}}
 ## Previous Q/A
 
 {{#each qa_history}}
