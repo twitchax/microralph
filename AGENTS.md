@@ -109,11 +109,11 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Let me also check the new prompt template to understand the verification workflow:
+Let me check the current implementation to understand the new patterns better.
 
-Now I have enough context. T-002 added a new prompt template for UAT verification with specific placeholders and output conventions. Let me update the auto-managed section:
+Now I have enough context. Let me update the auto-managed section with the new patterns from T-003.
 
 Updated the auto-managed section with:
-- Documented `RunResult` enum variants and key `Prd` methods for the run loop
-- Added new **UAT Verification Phase** section with prompt placeholders, three verification approaches, and the opt-out mechanism (`OPT-OUT: [explanation]`)
+- **Run Loop Architecture**: Documented `RunResult` enum variants and key `Prd` methods
+- **UAT Verification Phase**: Configuration struct, prompt placeholders, three verification approaches, opt-out detection, and result struct fields
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

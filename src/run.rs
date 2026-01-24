@@ -8,6 +8,8 @@
 //! - Appending to the History section
 //! - Regenerating `.mr/PRDS.md`
 
+use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -468,6 +470,43 @@ fn parse_opt_out(text: &str) -> Option<String> {
     None
 }
 
+/// Appends an opt-out History entry to the PRD.
+///
+/// This ensures that even if the runner doesn't append a History entry, the opt-out is recorded.
+fn append_opt_out_history(
+    prd_path: &Path,
+    uat_id: &str,
+    uat_name: &str,
+    explanation: &str,
+) -> Result<()> {
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+
+    let history_entry = format!(
+        "\n## {} — {} Opt-Out\n- **UAT**: {}\n- **Status**: ⏭️ Opted-out\n- **Reason**: {}\n",
+        today, uat_id, uat_name, explanation
+    );
+
+    let mut file = fs::OpenOptions::new()
+        .append(true)
+        .open(prd_path)
+        .with_context(|| {
+            format!(
+                "Failed to open PRD file for appending opt-out history: {}",
+                prd_path.display()
+            )
+        })?;
+
+    write!(file, "{}", history_entry)?;
+
+    tracing::debug!(
+        prd_path = %prd_path.display(),
+        uat_id = %uat_id,
+        "Appended opt-out History entry"
+    );
+
+    Ok(())
+}
+
 /// Configuration for UAT verification loop.
 #[derive(Debug)]
 pub struct UatVerificationConfig<'a> {
@@ -603,6 +642,9 @@ pub fn run_uat_verification_loop(
                 "UAT verification opted out"
             );
             opted_out_count += 1;
+
+            // Append opt-out History entry to the PRD.
+            append_opt_out_history(&current_prd_path, &uat.id, &uat.name, &explanation)?;
 
             // Reload to check if UAT is still unverified (runner might have updated it).
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
@@ -1084,6 +1126,50 @@ mod tests {
     }
 
     #[test]
+    fn test_append_opt_out_history() {
+        let temp = TempDir::new().unwrap();
+        let prd_file = temp.path().join("PRD-0001-test.md");
+
+        // Create a minimal PRD file.
+        let prd_content = r#"---
+id: PRD-0001
+title: Test PRD
+status: active
+acceptance_tests:
+  - id: uat-001
+    name: Test UAT
+    command: cargo test
+    uat_status: unverified
+---
+
+# Summary
+
+Test PRD.
+
+# History
+"#;
+        std::fs::write(&prd_file, prd_content).unwrap();
+
+        // Append opt-out history.
+        append_opt_out_history(
+            &prd_file,
+            "uat-001",
+            "Test UAT",
+            "Requires external API access",
+        )
+        .unwrap();
+
+        // Verify the History entry was appended.
+        let updated_content = std::fs::read_to_string(&prd_file).unwrap();
+
+        assert!(updated_content.contains("## "));
+        assert!(updated_content.contains("uat-001 Opt-Out"));
+        assert!(updated_content.contains("**UAT**: Test UAT"));
+        assert!(updated_content.contains("⏭️ Opted-out"));
+        assert!(updated_content.contains("**Reason**: Requires external API access"));
+    }
+
+    #[test]
     fn test_build_uat_verify_prompt() {
         use crate::prd::types::{AcceptanceTest, UatStatus};
 
@@ -1252,6 +1338,11 @@ mod tests {
         assert_eq!(result.iterations, 1);
         assert!(result.hit_max_iterations);
         assert_eq!(result.remaining_unverified, 1);
+
+        // Verify History entry was appended.
+        let updated_content = std::fs::read_to_string(&prd_file).unwrap();
+        assert!(updated_content.contains("uat-001 Opt-Out"));
+        assert!(updated_content.contains("Requires manual testing"));
     }
 
     #[test]

@@ -61,7 +61,7 @@ tasks:
 - id: T-004
   title: Add model opt-out mechanism with History entry
   priority: 2
-  status: todo
+  status: done
   notes: Allow runner to respond with OPT-OUT or similar. Parse response, append explanation to History, and exit loop gracefully.
 - id: T-005
   title: Update mr prd finalize to block on unverified UATs
@@ -163,3 +163,15 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Wired up verification loop in `main.rs` when `RunResult::NeedsUatVerification` is returned
   - Added 4 new unit tests: `test_parse_opt_out`, `test_build_uat_verify_prompt`, `test_uat_verification_loop_all_verified_by_runner`, `test_uat_verification_loop_opt_out`, `test_uat_verification_loop_max_iterations`
   - UAT passed: 238 tests, all passed
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Add model opt-out mechanism with History entry
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `append_opt_out_history()` function in `src/run.rs` to append opt-out History entries to the PRD
+  - Modified the opt-out detection in `run_uat_verification_loop()` to call `append_opt_out_history()` when an OPT-OUT response is detected
+  - Added imports for `std::fs` and `std::io::Write` to support file appending
+  - Added unit test `test_append_opt_out_history` to verify History entry format and content
+  - Updated `test_uat_verification_loop_opt_out` to verify History entry is appended during loop opt-out
+  - History entry format: `## YYYY-MM-DD — {uat_id} Opt-Out` with UAT name, status, and reason
+  - UAT passed: 239 tests, all passed
