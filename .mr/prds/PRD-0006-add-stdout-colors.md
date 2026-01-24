@@ -25,7 +25,7 @@ acceptance_tests:
 - id: uat-005
   name: Existing emoji usage preserved and enhanced
   command: cargo run -- prd list 2>&1 | grep -E '✅|📋|🧪|⚠️'
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: Finalization summary box renders with styling
   command: echo "manual verification required"
@@ -253,3 +253,17 @@ See frontmatter for UAT definitions.
   - The `owo-colors` crate automatically detects TTY support via `if_supports_color(Stream::Stdout, ...)` in all color utility functions
   - When stdout is piped (not a TTY), colors are automatically disabled and plain text is emitted
   - Implementation in `src/colors.rs` provides automatic degradation without requiring explicit TTY checks
+
+## 2026-01-24 — uat-005 Verification
+- **UAT**: Existing emoji usage preserved and enhanced
+- **Status**: ✅ Verified
+- **Method**: Existing implementation
+- **Details**:
+  - Command: `cargo run -- prd list 2>&1 | grep -E '✅|📋|🧪|⚠️'`
+  - Successfully verified all four emoji types appear in PRD list output:
+    - ✅ (checkmark) for completed tasks
+    - 📋 (clipboard) for pending tasks
+    - 🧪 (test tube) for verified UATs
+    - ⚠️ (warning) for unverified UATs
+  - Emoji usage from `src/main.rs:668-686` is preserved and working correctly
+  - Implementation maintains existing emoji patterns while adding color enhancements
