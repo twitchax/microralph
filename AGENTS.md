@@ -109,4 +109,7 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
+The PRD shows that a new `--context` flag was added to `mr prd new` command, allowing users to provide upfront context. This is a new CLI feature that would be useful for agents to know about. Let me update the auto-managed section in AGENTS.md.
+
+Updated AGENTS.md auto-managed section with information about the new `--context` flag for `mr prd new`, which helps agents provide upfront context when creating PRDs.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
