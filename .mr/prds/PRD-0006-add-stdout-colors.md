@@ -21,7 +21,7 @@ tasks:
   - id: T-004
     title: Style question prompts with blue color, bold text, and emoji prefix
     priority: 2
-    status: todo
+    status: done
   - id: T-005
     title: Add color to informational and status messages
     priority: 2
@@ -164,5 +164,18 @@ See frontmatter for UAT definitions.
   - Applied yellow color with ⚠️ emoji prefix to warning message:
     - "All tasks done for {} but {} UAT(s) need verification." (lines 972-975)
   - All error and warning messages now display with consistent visual emphasis
+  - All 254 tests pass in `cargo make uat`
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Style question prompts with blue color, bold text, and emoji prefix
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd_new.rs` to use `colors::question()` for question prompts
+  - Applied blue color, bold formatting, and ❓ emoji prefix to:
+    - "Would you like to provide additional context..." prompt (line 522)
+    - All numbered questions in `collect_answers()` (line 552)
+  - Updated `src/prd_edit.rs` to use `colors::question()` for question prompts
+  - Applied same styling to numbered questions in `collect_answers()` (line 292)
+  - Question prompts now display consistently with blue bold text and emoji
   - All 254 tests pass in `cargo make uat`
 

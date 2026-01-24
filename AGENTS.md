@@ -109,9 +109,9 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-I'll review the recent changes and check if there are any new conventions to document.
+I'll review the recent changes and examine the color output implementation to identify conventions for the auto-managed section.
 
-Based on my review, the recent changes added a new color output system. The current auto-managed section contains confusing placeholder text that should be replaced with proper documentation. Here's the update:
+Now I'll update the auto-managed section with the actual color output conventions:
 
-Updated the auto-managed section with **Color Output Conventions** documenting the new `src/colors.rs` module patterns, including all utility functions, key behaviors (TTY detection, environment variable respect), and the pattern to use color helpers for user-facing output.
+Updated the auto-managed section with proper **Color Output Conventions** documentation including all utility functions, key behaviors, and usage patterns for the new `src/colors.rs` module.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

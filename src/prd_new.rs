@@ -518,7 +518,10 @@ where
 {
     writeln!(
         output,
-        "Would you like to provide additional context for the AI? (optional)"
+        "{}",
+        crate::colors::question(
+            "Would you like to provide additional context for the AI? (optional)"
+        )
     )?;
     writeln!(
         output,
@@ -549,7 +552,7 @@ where
     let mut pairs = Vec::new();
 
     for (i, question) in questions.iter().enumerate() {
-        writeln!(output, "{}. {}", i + 1, question)?;
+        writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
         write!(output, "   > ")?;
         output.flush()?;
 
