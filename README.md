@@ -99,6 +99,7 @@ mr status
 | `mr init --language <lang>`    | Initialize for a specific language (rust, python, node, go, java)                      |
 | `mr bootstrap`                 | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
 | `mr prd new <slug>`            | Create a new PRD via guided Q/A                                                        |
+| `mr prd new <slug> --context`  | Create a new PRD with upfront context to guide initial questions                       |
 | `mr prd edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |
 | `mr prd list`                  | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
 | `mr run`                       | Run the next task from the highest-priority active PRD                                 |
@@ -213,6 +214,7 @@ Used for the first round of questions when creating a new PRD.
 |-------------|------|-------------|
 | `{{slug}}` | string | The slug for the new PRD |
 | `{{user_description}}` | string | Optional initial description from user |
+| `{{user_context}}` | string | Optional upfront context provided by user |
 | `{{#each existing_prds}}` | list | Existing PRDs for context |
 | ↳ `{{id}}` | string | PRD identifier |
 | ↳ `{{title}}` | string | PRD title |
@@ -225,6 +227,7 @@ Used for follow-up rounds of questions during PRD creation.
 | Placeholder | Type | Description |
 |-------------|------|-------------|
 | `{{slug}}` | string | The slug for the new PRD |
+| `{{user_context}}` | string | Optional upfront context provided by user |
 | `{{#each qa_history}}` | list | Previous Q/A pairs |
 | ↳ `{{question}}` | string | The question that was asked |
 | ↳ `{{answer}}` | string | The user's answer |

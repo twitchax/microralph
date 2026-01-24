@@ -61,7 +61,7 @@ tasks:
 - id: T-006
   title: Update help text and documentation
   priority: 3
-  status: todo
+  status: done
   notes: Update README placeholder docs and CLI help for the new --context flag.
 ---
 
@@ -137,5 +137,15 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_synthesize_prd.md`
   - Updated README.md placeholder documentation table for `prd_new_synthesize_prd.md`
   - Context now flows through to final PRD synthesis, completing the context flow chain
+  - UAT: All 227 tests passed
+
+## 2026-01-24 — T-006 Completed
+- **Task**: Update help text and documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated README.md commands table to document `mr prd new <slug> --context` flag
+  - Added `{{user_context}}` placeholder to `prd_new_round1_questions.md` documentation table
+  - Added `{{user_context}}` placeholder to `prd_new_roundN_questions.md` documentation table
+  - CLI help was already updated in T-001
   - UAT: All 227 tests passed
 
