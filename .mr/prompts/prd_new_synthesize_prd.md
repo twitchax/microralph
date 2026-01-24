@@ -2,7 +2,7 @@
 
 ## Objective
 
-Synthesize a complete PRD from the Q/A session.
+Synthesize a complete PRD from the Q/A session, following the template structure exactly.
 
 ## Context
 
@@ -27,38 +27,62 @@ User's upfront context:
 - {{id}}: {{title}}
 {{/each}}
 
+## PRD Template Structure
+
+**CRITICAL**: Read `.mr/templates/prd.md` for the exact structure. The PRD has two parts:
+
+### 1. YAML Frontmatter (between `---` delimiters)
+
+The frontmatter contains ALL structured data:
+- `id`: PRD-NNNN (generate next ID based on existing PRDs)
+- `title`: Human-readable title
+- `status`: draft (for new PRDs)
+- `owner`: Owner name
+- `created` / `updated`: Date in YYYY-MM-DD format
+- `principles`: List of guiding constraints or design decisions
+- `references`: List of objects with `name` and `url` fields
+- `acceptance_tests`: List of UATs with `id`, `name`, `command`, `uat_status`
+- `tasks`: List of tasks with `id`, `title`, `priority`, `status`, `notes`
+
+### 2. Markdown Body (after closing `---`)
+
+The body contains ONLY narrative/exposition sections:
+- `# Summary` — Brief overview
+- `# Problem` — Problem statement
+- `# Goals` — Numbered list of goals
+- `# Non-Goals (MVP)` — What's explicitly out of scope
+- `# History` — Empty section for `mr run` to append entries
+
 ## Required Actions
 
-1. Generate the next PRD ID (e.g., PRD-0002 if PRD-0001 exists).
-2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
-3. Review existing PRDs for relevant sections (e.g., patterns, lessons learned, related features).
-4. Create a complete PRD file with:
-   - YAML frontmatter (id, title, status, owner, created, updated, tasks)
-   - Summary section
-   - Problem section
-   - Goals section
-   - Non-Goals section (if applicable)
-   - Relevant References section (links to specific sections in other PRDs and code files)
-   - Acceptance Tests section
-   - Empty History section
+1. Generate the next PRD ID (e.g., PRD-0006 if PRD-0005 exists).
+2. Scan the codebase for relevant files, patterns, or entry points.
+3. Review existing PRDs for related work or patterns.
+4. Create the PRD following the template structure EXACTLY.
 
-5. Tasks should:
-   - Have unique IDs (T-001, T-002, etc.)
-   - Have clear, actionable titles
-   - Be prioritized (1 = highest)
-   - Start with status: todo
-   - Include code file links where relevant (e.g., `See src/module.rs` for entry point)
+## Acceptance Tests Format
 
-6. Acceptance tests should:
-   - Have unique IDs (uat-001, uat-002, etc.)
-   - Include a `uat_status` field: `unverified` (default, no real test exists yet) or `verified` (a real test exists)
-   - New acceptance tests should start as `unverified` unless you create the actual test
+Each acceptance test in the frontmatter MUST have these fields:
+```yaml
+- id: uat-001
+  name: Short description of what the test verifies
+  command: cargo make uat  # or specific test command
+  uat_status: unverified   # always start as unverified
+```
 
-7. Relevant References section should:
-   - Link to specific sections in other PRDs that inform this work (e.g., `See PRD-0001 ## Lessons Learned`)
-   - Link to relevant code files that bootstrap tasks (e.g., `src/main.rs` for CLI entry points)
-   - Only include genuinely useful references, not exhaustive lists
+## Tasks Format
+
+Each task in the frontmatter MUST have these fields:
+```yaml
+- id: T-001
+  title: Clear, actionable task title
+  priority: 1              # lower = higher priority
+  status: todo             # always start as todo
+  notes: Optional implementation hints or dependencies
+```
 
 ## Output
 
-The complete PRD file content in Markdown format.
+CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.
+
+The first three characters of your response MUST be exactly: `---`
