@@ -17,7 +17,7 @@ tasks:
   - id: T-003
     title: Colorize error and warning messages with red/yellow and emoji prefixes
     priority: 1
-    status: todo
+    status: done
   - id: T-004
     title: Style question prompts with blue color, bold text, and emoji prefix
     priority: 2
@@ -151,5 +151,18 @@ See frontmatter for UAT definitions.
     - "Task {} completed successfully!" (line 933)
     - "PRD {} is complete!" (line 1014)
   - All success messages now display consistently with visual emphasis
+  - All 254 tests pass in `cargo make uat`
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Colorize error and warning messages with red/yellow and emoji prefixes
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/main.rs` to use `colors::error()` and `colors::warning()` for error and warning messages
+  - Applied red color with ❌ emoji prefix to error messages:
+    - "Task {} did not complete successfully." (line 940)
+    - "UAT verification loop failed: {e}" (line 1015)
+  - Applied yellow color with ⚠️ emoji prefix to warning message:
+    - "All tasks done for {} but {} UAT(s) need verification." (lines 972-975)
+  - All error and warning messages now display with consistent visual emphasis
   - All 254 tests pass in `cargo make uat`
 

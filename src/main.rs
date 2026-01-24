@@ -935,7 +935,10 @@ fn cmd_run(
                         colors::success(&format!("Task {} completed successfully!", task_id))
                     );
                 } else {
-                    println!("Task {} did not complete successfully.", task_id);
+                    println!(
+                        "{}",
+                        colors::error(&format!("Task {} did not complete successfully.", task_id))
+                    );
                     last_failed = true;
                 }
 
@@ -965,8 +968,11 @@ fn cmd_run(
             } => {
                 println!();
                 println!(
-                    "All tasks done for {} but {} UAT(s) need verification.",
-                    prd_id, unverified_count
+                    "{}",
+                    colors::warning(&format!(
+                        "All tasks done for {} but {} UAT(s) need verification.",
+                        prd_id, unverified_count
+                    ))
                 );
                 println!("  PRD: {}", prd_path.display());
                 println!();
@@ -1004,7 +1010,10 @@ fn cmd_run(
                         }
                     }
                     Err(e) => {
-                        eprintln!("UAT verification loop failed: {e}");
+                        eprintln!(
+                            "{}",
+                            colors::error(&format!("UAT verification loop failed: {e}"))
+                        );
                         return Err(e);
                     }
                 }
