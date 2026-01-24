@@ -157,7 +157,7 @@ tasks:
   - id: T-010
     title: "Implement `mr status`"
     priority: 10
-    status: todo
+    status: done
     notes: "Summarize PRDs + tasks; show next task and last History summary."
   - id: T-011
     title: "AGENTS.md updater (safe, bounded patching driven by a prompt stage)"
@@ -464,5 +464,20 @@ Each prompt must define:
   - Added `#[cfg(test)]` exports for test-only types (PrdFrontmatter, Task, serialize_prd)
   - Wrote 9 new tests covering PRD picking, task selection, and runner invocation
   - All 108 tests pass, clippy clean, CI green, UAT passes
+
+## 2026-01-24 — T-010 Completed
+- **Task**: Implement `mr status`
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/status.rs` module with status report logic
+  - Implemented `StatusReport`, `NextTaskInfo`, and `StatusStats` types
+  - Implemented `get_status()` to scan PRDs and compute status
+  - Implemented `format_status()` for pretty-printing to terminal
+  - Implemented `extract_last_history()` to parse the most recent History entry from PRD body
+  - Implemented `find_next_task()` to identify the next incomplete task from active PRDs
+  - Integrated with CLI: `mr status` command now fully functional
+  - Shows next task with PRD context, last history entry, PRD list grouped by status, and statistics
+  - Wrote 9 new tests covering status generation, history extraction, and formatting
+  - All 117 tests pass, clippy clean, CI green, UAT passes
 
 ---

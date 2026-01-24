@@ -8,6 +8,7 @@ mod prd_new;
 mod prompt;
 mod run;
 mod runner;
+mod status;
 
 use runner::Runner;
 
@@ -106,7 +107,7 @@ fn main() -> Result<()> {
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
-            println!("mr status: not yet implemented");
+            cmd_status()?;
         }
         None => {
             println!(
@@ -229,6 +230,9 @@ fn cmd_prd_list() -> Result<()> {
         anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
     }
 
+    // Regenerate the index file.
+    prd::generate_index_from_root(&cwd)?;
+
     let prds = prd::scan_prd_summaries(&cwd)?;
 
     if prds.is_empty() {
@@ -308,6 +312,22 @@ fn cmd_run(prd_id: Option<&str>, runner_name: &str) -> Result<()> {
         println!("Runner output:");
         println!("{}", result.output_summary);
     }
+
+    Ok(())
+}
+
+/// Runs the `mr status` command.
+fn cmd_status() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+    }
+
+    let report = status::get_status(&cwd)?;
+    let output = status::format_status(&report);
+
+    print!("{output}");
 
     Ok(())
 }
