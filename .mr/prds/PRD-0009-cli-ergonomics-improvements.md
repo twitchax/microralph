@@ -24,7 +24,7 @@ acceptance_tests:
 - id: uat-002
   name: Run command works without arguments (interactive mode)
   command: cargo run -- run
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Top-level list command works
   command: cargo run -- list
@@ -248,5 +248,15 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Both tests pass successfully
   - Verified command manually: `cargo run -- run PRD-0001` works correctly
   - Full test suite passes: 265 tests (2 new tests added)
+
+## 2026-01-24 — uat-002 Verification
+- **UAT**: Run command works without arguments (interactive mode)
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `test_args_parse_run_without_positional_prd` in src/main.rs (line 1510)
+  - This test was created during uat-001 verification as a companion test
+  - Verifies that `mr run` without arguments parses correctly with prd = None
+  - Test passes successfully
 
 ---
