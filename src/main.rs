@@ -5,6 +5,7 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 mod agents;
 mod bootstrap;
 mod changelog;
+mod colors;
 mod config;
 mod init;
 mod prd;

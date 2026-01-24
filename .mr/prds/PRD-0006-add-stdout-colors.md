@@ -1,7 +1,7 @@
 ---
 id: PRD-0006
 title: Add Stdout Colors
-status: draft
+status: active
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-24
@@ -9,7 +9,7 @@ tasks:
   - id: T-001
     title: Add owo-colors dependency and create color utilities module
     priority: 1
-    status: todo
+    status: done
   - id: T-002
     title: Colorize success messages with green and emoji prefixes
     priority: 1
@@ -127,4 +127,15 @@ Recommend **owo-colors** based on research:
 See frontmatter for UAT definitions.
 
 ## History
+
+## 2026-01-24 — T-001 Completed
+- **Task**: Add owo-colors dependency and create color utilities module
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `owo-colors` crate v4 with `supports-colors` feature to Cargo.toml
+  - Created `src/colors.rs` module with utility functions for success, error, warning, info, question, header, and dim styling
+  - Color utilities automatically detect TTY support and degrade gracefully for piped output
+  - Module honors `NO_COLOR` and `FORCE_COLOR` environment variables via owo-colors
+  - Added module declaration to main.rs
+  - All 254 tests pass in `cargo make uat`
 
