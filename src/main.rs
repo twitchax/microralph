@@ -964,7 +964,45 @@ fn cmd_run(
                 );
                 println!("  PRD: {}", prd_path.display());
                 println!();
-                println!("Run `mr run` again to start UAT verification loop.");
+                println!("Starting UAT verification loop...");
+                println!();
+
+                // Run the UAT verification loop.
+                let uat_config = run::UatVerificationConfig {
+                    root: &cwd,
+                    prd_id: &prd_id,
+                    prd_path: &prd_path,
+                    stream,
+                    max_iterations: None, // Use PRD config or default.
+                };
+
+                match run::run_uat_verification_loop(&uat_config, runner.as_ref()) {
+                    Ok(result) => {
+                        println!();
+                        println!("UAT verification loop completed:");
+                        println!("  Verified: {}", result.verified_count);
+                        println!("  Opted out: {}", result.opted_out_count);
+                        println!("  Iterations: {}", result.iterations);
+
+                        if result.hit_max_iterations {
+                            println!("  ⚠️  Hit max iterations limit.");
+                        }
+
+                        if result.remaining_unverified > 0 {
+                            println!("  Remaining unverified: {}", result.remaining_unverified);
+                            println!();
+                            println!("Run `mr run` again to continue verification.");
+                        } else {
+                            println!();
+                            println!("All UATs verified or opted out. PRD is complete!");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("UAT verification loop failed: {e}");
+                        return Err(e);
+                    }
+                }
+
                 break;
             }
 

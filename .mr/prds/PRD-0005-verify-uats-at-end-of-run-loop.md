@@ -1,7 +1,7 @@
 ---
 id: PRD-0005
 title: Verify UATs at End of Run Loop
-status: draft
+status: active
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
@@ -56,7 +56,7 @@ tasks:
 - id: T-003
   title: Implement UAT verification loop in run.rs
   priority: 1
-  status: todo
+  status: done
   notes: Add run_uat_verification_loop() function that iterates over unverified UATs, invokes runner with verification prompt, respects max_iterations limit.
 - id: T-004
   title: Add model opt-out mechanism with History entry
@@ -149,3 +149,17 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Prompt includes placeholders: `{{uat_id}}`, `{{uat_name}}`, `{{uat_command}}`, `{{prd_id}}`, `{{prd_path}}`
   - Supports three verification approaches: Option A (verify existing test), Option B (create new test), Option C (opt-out with explanation)
   - UAT passed: 230 tests, all passed
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Implement UAT verification loop in run.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `run_uat_verification_loop()` function in `src/run.rs` that iterates over unverified UATs
+  - Added `UatVerificationConfig` struct to configure the verification loop (root, prd_id, stream, max_iterations)
+  - Added `UatVerificationLoopResult` struct to report results (verified_count, opted_out_count, iterations, hit_max_iterations, remaining_unverified)
+  - Added `build_uat_verify_prompt()` helper to construct verification prompts using the RunUatVerify template
+  - Added `parse_opt_out()` function to detect "OPT-OUT:" responses from the runner
+  - Loop respects `max_iterations` from PRD's `loop_config` or defaults to 10
+  - Wired up verification loop in `main.rs` when `RunResult::NeedsUatVerification` is returned
+  - Added 4 new unit tests: `test_parse_opt_out`, `test_build_uat_verify_prompt`, `test_uat_verification_loop_all_verified_by_runner`, `test_uat_verification_loop_opt_out`, `test_uat_verification_loop_max_iterations`
+  - UAT passed: 238 tests, all passed

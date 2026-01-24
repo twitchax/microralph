@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::agents::{RecentChange, update_agents_md};
-use crate::prd::{Prd, PrdStatus, TaskStatus, scan_prds};
+use crate::prd::{AcceptanceTest, Prd, PrdStatus, TaskStatus, scan_prds};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
@@ -76,6 +76,33 @@ pub enum RunResult {
         /// Path to the PRD file.
         prd_path: PathBuf,
     },
+}
+
+/// Result from running the UAT verification loop.
+#[derive(Debug)]
+pub struct UatVerificationLoopResult {
+    /// The PRD ID.
+    #[allow(dead_code)] // Used for display purposes.
+    pub prd_id: String,
+
+    /// Path to the PRD file.
+    #[allow(dead_code)] // Used for display purposes.
+    pub prd_path: PathBuf,
+
+    /// Number of UATs verified.
+    pub verified_count: usize,
+
+    /// Number of UATs opted out.
+    pub opted_out_count: usize,
+
+    /// Total iterations performed.
+    pub iterations: usize,
+
+    /// Whether the loop was stopped due to max_iterations limit.
+    pub hit_max_iterations: bool,
+
+    /// Remaining unverified UATs after the loop.
+    pub remaining_unverified: usize,
 }
 
 /// Summary of a PRD for the pick prompt.
@@ -401,6 +428,232 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         prd_path,
         runner_success: output.success,
         output_summary,
+    })
+}
+
+/// Default max iterations for UAT verification loop if not configured.
+const DEFAULT_MAX_UAT_ITERATIONS: u32 = 10;
+
+/// Builds the prompt for UAT verification.
+fn build_uat_verify_prompt(
+    root: &Path,
+    prd: &Prd,
+    prd_path: &Path,
+    uat: &AcceptanceTest,
+) -> String {
+    let prompt_template = load_prompt_with_fallback(root, PromptKind::RunUatVerify);
+
+    let mut ctx = PlaceholderContext::new();
+
+    ctx.insert("prd_path", prd_path.display().to_string());
+    ctx.insert("prd_id", prd.id());
+    ctx.insert("uat_id", uat.id.clone());
+    ctx.insert("uat_name", uat.name.clone());
+    ctx.insert("uat_command", uat.command.clone());
+
+    expand_placeholders(&prompt_template, &ctx)
+}
+
+/// Checks if a runner response contains an OPT-OUT.
+fn parse_opt_out(text: &str) -> Option<String> {
+    // Look for "OPT-OUT:" pattern in the response.
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("OPT-OUT:") {
+            let explanation = trimmed.strip_prefix("OPT-OUT:").unwrap_or("").trim();
+            return Some(explanation.to_string());
+        }
+    }
+
+    None
+}
+
+/// Configuration for UAT verification loop.
+#[derive(Debug)]
+pub struct UatVerificationConfig<'a> {
+    /// The repository root directory.
+    pub root: &'a Path,
+
+    /// The PRD ID to verify UATs for.
+    pub prd_id: &'a str,
+
+    /// Path to the PRD file (for display purposes).
+    #[allow(dead_code)]
+    pub prd_path: &'a Path,
+
+    /// Whether to stream runner output in real-time.
+    pub stream: bool,
+
+    /// Maximum number of iterations (None = use default).
+    pub max_iterations: Option<u32>,
+}
+
+/// Runs the UAT verification loop.
+///
+/// Iterates over unverified UATs, invoking the runner for each one.
+/// Respects max_iterations limit and handles OPT-OUT responses.
+///
+/// # Arguments
+///
+/// * `config` - Configuration for the verification loop
+/// * `runner` - The runner to use for verification
+///
+/// # Returns
+///
+/// A `UatVerificationLoopResult` describing what happened.
+pub fn run_uat_verification_loop(
+    config: &UatVerificationConfig,
+    runner: &dyn Runner,
+) -> Result<UatVerificationLoopResult> {
+    // Load the PRD to get current state.
+    let (_filename, prd, prd_path) = find_prd_by_id(config.root, config.prd_id)?
+        .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+
+    // Get max_iterations from PRD config or use default.
+    let max_iterations = config.max_iterations.unwrap_or_else(|| {
+        prd.frontmatter
+            .loop_config
+            .as_ref()
+            .and_then(|lc| lc.max_iterations)
+            .unwrap_or(DEFAULT_MAX_UAT_ITERATIONS)
+    });
+
+    let mut verified_count = 0;
+    let mut opted_out_count = 0;
+    let mut iterations = 0;
+
+    tracing::info!(
+        prd_id = %config.prd_id,
+        max_iterations = max_iterations,
+        "Starting UAT verification loop"
+    );
+
+    loop {
+        // Reload PRD to get current unverified UATs (they may have been updated by runner).
+        let (_filename, current_prd, current_prd_path) =
+            find_prd_by_id(config.root, config.prd_id)?
+                .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+
+        let unverified = current_prd.unverified_uats();
+
+        if unverified.is_empty() {
+            tracing::info!(
+                prd_id = %config.prd_id,
+                verified = verified_count,
+                opted_out = opted_out_count,
+                "All UATs verified or opted out"
+            );
+            break;
+        }
+
+        if iterations >= max_iterations as usize {
+            tracing::info!(
+                prd_id = %config.prd_id,
+                iterations = iterations,
+                max_iterations = max_iterations,
+                remaining = unverified.len(),
+                "Hit max iterations limit"
+            );
+
+            return Ok(UatVerificationLoopResult {
+                prd_id: config.prd_id.to_string(),
+                prd_path: prd_path.clone(),
+                verified_count,
+                opted_out_count,
+                iterations,
+                hit_max_iterations: true,
+                remaining_unverified: unverified.len(),
+            });
+        }
+
+        // Get the next unverified UAT.
+        let uat = unverified[0];
+
+        tracing::info!(
+            prd_id = %config.prd_id,
+            uat_id = %uat.id,
+            uat_name = %uat.name,
+            iteration = iterations + 1,
+            max_iterations = max_iterations,
+            "Verifying UAT"
+        );
+
+        // Build and execute the verification prompt.
+        let prompt = build_uat_verify_prompt(config.root, &current_prd, &current_prd_path, uat);
+
+        let output = if config.stream {
+            let mut stdout = std::io::stdout();
+            runner
+                .execute_streaming(&prompt, config.root, &mut stdout)
+                .with_context(|| format!("Runner failed for UAT {}", uat.id))?
+        } else {
+            runner
+                .execute(&prompt, config.root)
+                .with_context(|| format!("Runner failed for UAT {}", uat.id))?
+        };
+
+        iterations += 1;
+
+        // Check for OPT-OUT in response.
+        if let Some(explanation) = parse_opt_out(&output.text) {
+            tracing::info!(
+                prd_id = %config.prd_id,
+                uat_id = %uat.id,
+                explanation = %explanation,
+                "UAT verification opted out"
+            );
+            opted_out_count += 1;
+
+            // Reload to check if UAT is still unverified (runner might have updated it).
+            let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
+                .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+
+            // If UAT is still unverified after opt-out, we need to continue to next UAT.
+            // The OPT-OUT means the runner decided not to verify this specific UAT.
+            // The loop should still try to verify remaining UATs.
+            if refreshed_prd
+                .unverified_uats()
+                .iter()
+                .any(|u| u.id == uat.id)
+            {
+                // UAT is still unverified after opt-out - continue to see if others can be verified.
+                continue;
+            }
+        } else if output.success {
+            // Runner completed successfully - assume UAT was handled.
+            // Reload to check if it was actually marked verified.
+            let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
+                .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+
+            if !refreshed_prd
+                .unverified_uats()
+                .iter()
+                .any(|u| u.id == uat.id)
+            {
+                tracing::info!(
+                    prd_id = %config.prd_id,
+                    uat_id = %uat.id,
+                    "UAT verified"
+                );
+                verified_count += 1;
+            }
+        }
+    }
+
+    // Final state check.
+    let (_filename, final_prd, _final_path) = find_prd_by_id(config.root, config.prd_id)?
+        .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+
+    let remaining = final_prd.unverified_uats().len();
+
+    Ok(UatVerificationLoopResult {
+        prd_id: config.prd_id.to_string(),
+        prd_path,
+        verified_count,
+        opted_out_count,
+        iterations,
+        hit_max_iterations: false,
+        remaining_unverified: remaining,
     })
 }
 
@@ -800,5 +1053,275 @@ mod tests {
             }
             _ => panic!("Expected PrdComplete result when no UATs defined"),
         }
+    }
+
+    #[test]
+    fn test_parse_opt_out() {
+        // Test basic OPT-OUT detection.
+        assert_eq!(
+            parse_opt_out("OPT-OUT: This requires manual testing"),
+            Some("This requires manual testing".to_string())
+        );
+
+        // Test OPT-OUT with extra whitespace.
+        assert_eq!(
+            parse_opt_out("  OPT-OUT:  Too complex  "),
+            Some("Too complex".to_string())
+        );
+
+        // Test OPT-OUT in multi-line response.
+        let response = "I tried to verify this UAT but couldn't.\nOPT-OUT: Requires external API\nSee history for details.";
+        assert_eq!(
+            parse_opt_out(response),
+            Some("Requires external API".to_string())
+        );
+
+        // Test no OPT-OUT.
+        assert_eq!(parse_opt_out("Task completed successfully"), None);
+
+        // Test partial match (not a real OPT-OUT).
+        assert_eq!(parse_opt_out("OPT-OUT-ish"), None);
+    }
+
+    #[test]
+    fn test_build_uat_verify_prompt() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}: {{uat_name}} for {{prd_id}} at {{prd_path}} using {{uat_command}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Unverified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let uat = AcceptanceTest {
+            id: "uat-001".to_string(),
+            name: "Test 1".to_string(),
+            command: "cargo test".to_string(),
+            uat_status: UatStatus::Unverified,
+        };
+
+        let prompt = build_uat_verify_prompt(&root, &prd, &prd_path, &uat);
+
+        assert!(prompt.contains("uat-001"));
+        assert!(prompt.contains("Test 1"));
+        assert!(prompt.contains("PRD-0001"));
+        assert!(prompt.contains("cargo test"));
+    }
+
+    #[test]
+    fn test_uat_verification_loop_all_verified_by_runner() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // Create a PRD with an already verified UAT (simulates runner having updated it).
+        // This tests the loop correctly exits when no unverified UATs remain.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Verified, // Already verified.
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, content).unwrap();
+
+        // Runner shouldn't be called since no unverified UATs exist.
+        let runner = MockRunner::new(vec![]);
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            prd_path: &prd_file,
+            stream: false,
+            max_iterations: Some(5),
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        assert_eq!(result.prd_id, "PRD-0001");
+        assert_eq!(result.verified_count, 0); // None verified in this loop - already was verified.
+        assert_eq!(result.opted_out_count, 0);
+        assert_eq!(result.iterations, 0); // No iterations needed.
+        assert!(!result.hit_max_iterations);
+        assert_eq!(result.remaining_unverified, 0);
+    }
+
+    #[test]
+    fn test_uat_verification_loop_opt_out() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // Create a PRD with unverified UAT.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Unverified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Runner returns OPT-OUT without modifying the PRD.
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(
+            "OPT-OUT: Requires manual testing",
+        )]);
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            prd_path: &prd_file,
+            stream: false,
+            max_iterations: Some(1), // Only 1 iteration allowed.
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        assert_eq!(result.prd_id, "PRD-0001");
+        assert_eq!(result.opted_out_count, 1);
+        assert_eq!(result.iterations, 1);
+        assert!(result.hit_max_iterations);
+        assert_eq!(result.remaining_unverified, 1);
+    }
+
+    #[test]
+    fn test_uat_verification_loop_max_iterations() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // Create a PRD with multiple unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![
+                AcceptanceTest {
+                    id: "uat-001".to_string(),
+                    name: "Test 1".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-002".to_string(),
+                    name: "Test 2".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Runner always succeeds but doesn't update PRD (simulates failed verification).
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Tried but failed"),
+            crate::runner::RunnerOutput::success("Tried again"),
+        ]);
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            prd_path: &prd_file,
+            stream: false,
+            max_iterations: Some(2),
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        assert_eq!(result.prd_id, "PRD-0001");
+        assert_eq!(result.iterations, 2);
+        assert!(result.hit_max_iterations);
+        assert_eq!(result.remaining_unverified, 2);
     }
 }
