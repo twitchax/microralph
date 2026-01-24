@@ -15,7 +15,7 @@ acceptance_tests:
   - id: uat-001
     name: Question with bullet list displays completely
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: Multi-line answer is captured correctly
     command: cargo make uat
@@ -72,4 +72,7 @@ This limitation makes the interactive PRD creation process less effective when d
   - Modified `parse_questions()` function in `src/prd_new.rs` to capture multi-line questions instead of truncating after the first line
   - Enhanced parsing logic to accumulate question content across multiple lines until an empty line or next question number is encountered
   - Updated `collect_answers()` function to display multi-line questions with proper formatting (first line with number, subsequent lines indented)
-  - All 271 UAT tests pass
+  - Added `test_parse_questions_multiline_with_bullets` test to verify multi-line question parsing works correctly
+  - All 272 UAT tests pass
+- **UATs Verified**:
+  - uat-001: Question with bullet list displays completely ✅ (verified via `test_parse_questions_multiline_with_bullets`)

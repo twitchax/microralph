@@ -877,6 +877,29 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_questions_multiline_with_bullets() {
+        let output = r#"Here are some questions:
+
+1. What problem are you solving?
+2. What features do you need?
+   - Feature A
+   - Feature B
+   - Feature C
+3. What is your timeline?
+
+Some additional text here."#;
+
+        let questions = parse_questions(output);
+        assert_eq!(questions.len(), 3);
+        assert_eq!(questions[0], "What problem are you solving?");
+        assert_eq!(
+            questions[1],
+            "What features do you need?\n- Feature A\n- Feature B\n- Feature C"
+        );
+        assert_eq!(questions[2], "What is your timeline?");
+    }
+
+    #[test]
     fn test_extract_prd_content_code_block() {
         let output = r#"Here's the PRD:
 
