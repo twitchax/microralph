@@ -4,6 +4,7 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod agents;
 mod bootstrap;
+mod config;
 mod init;
 mod prd;
 mod prd_edit;
@@ -44,6 +45,10 @@ enum Command {
         /// The runner to use for language adaptation (only needed for non-Rust languages).
         #[arg(long, default_value = "copilot")]
         runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs.
@@ -56,6 +61,10 @@ enum Command {
         /// If unspecified, auto-detects from project files.
         #[arg(long)]
         language: Option<String>,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// PRD management commands.
@@ -77,6 +86,10 @@ enum Command {
         /// Run only one task and exit (default is to loop until all tasks are done).
         #[arg(long)]
         one: bool,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// Show status of PRDs and tasks.
@@ -93,6 +106,10 @@ enum PrdCommand {
         /// The runner to use for the Q/A session.
         #[arg(long, default_value = "copilot")]
         runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// Edit an existing PRD via runner-assisted modifications.
@@ -106,6 +123,10 @@ enum PrdCommand {
         /// The runner to use for the edit session.
         #[arg(long, default_value = "copilot")]
         runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 
     /// List all PRDs.
@@ -118,35 +139,53 @@ fn main() -> Result<()> {
     init_tracing(args.verbose, args.quiet);
 
     match args.command {
-        Some(Command::Init { language, runner }) => {
+        Some(Command::Init {
+            language,
+            runner,
+            model,
+        }) => {
             tracing::info!(language = ?language, "Initializing microralph...");
-            cmd_init(language.as_deref(), &runner)?;
+            cmd_init(language.as_deref(), &runner, model.as_deref())?;
         }
-        Some(Command::Bootstrap { runner, language }) => {
+        Some(Command::Bootstrap {
+            runner,
+            language,
+            model,
+        }) => {
             tracing::info!(runner = %runner, language = ?language, "Bootstrapping repo...");
-            cmd_bootstrap(&runner, language.as_deref())?;
+            cmd_bootstrap(&runner, language.as_deref(), model.as_deref())?;
         }
         Some(Command::Prd { prd_command }) => match prd_command {
-            PrdCommand::New { slug, runner } => {
+            PrdCommand::New {
+                slug,
+                runner,
+                model,
+            } => {
                 tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
-                cmd_prd_new(&slug, &runner)?;
+                cmd_prd_new(&slug, &runner, model.as_deref())?;
             }
             PrdCommand::Edit {
                 prd_id,
                 request,
                 runner,
+                model,
             } => {
                 tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
-                cmd_prd_edit(&prd_id, &request, &runner)?;
+                cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
             }
             PrdCommand::List => {
                 tracing::info!("Listing PRDs...");
                 cmd_prd_list()?;
             }
         },
-        Some(Command::Run { prd, runner, one }) => {
+        Some(Command::Run {
+            prd,
+            runner,
+            one,
+            model,
+        }) => {
             tracing::info!(prd = ?prd, runner = %runner, one = %one, "Running next task...");
-            cmd_run(prd.as_deref(), &runner, one)?;
+            cmd_run(prd.as_deref(), &runner, one, model.as_deref())?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -180,7 +219,7 @@ fn init_tracing(verbose: bool, quiet: bool) {
 }
 
 /// Runs the `mr init` command.
-fn cmd_init(language: Option<&str>, runner_name: &str) -> Result<()> {
+fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if init::is_initialized(&cwd) {
@@ -219,7 +258,11 @@ fn cmd_init(language: Option<&str>, runner_name: &str) -> Result<()> {
         println!();
         println!("Adapting prompts and templates for {}...", lang);
 
-        adapt_language(&cwd, lang, runner_name)?;
+        // Load config for model (config file was just created).
+        let cfg = config::Config::load_or_default(&cwd)?;
+        let model = cfg.effective_model(cli_model);
+
+        adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
         println!("Prompts adapted for {}.", lang);
     }
@@ -234,7 +277,12 @@ fn cmd_init(language: Option<&str>, runner_name: &str) -> Result<()> {
 }
 
 /// Adapts prompts and templates for a specific programming language.
-fn adapt_language(root: &std::path::Path, lang: init::Language, runner_name: &str) -> Result<()> {
+fn adapt_language(
+    root: &std::path::Path,
+    lang: init::Language,
+    runner_name: &str,
+    model: Option<&str>,
+) -> Result<()> {
     // Select runner based on name.
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => {
@@ -242,7 +290,7 @@ fn adapt_language(root: &std::path::Path, lang: init::Language, runner_name: &st
             return Ok(());
         }
         "copilot" => {
-            let copilot = runner::CopilotRunner::new();
+            let copilot = runner::CopilotRunner::with_model(model.map(|s| s.to_string()));
 
             if !copilot.is_available() {
                 anyhow::bail!(
@@ -299,8 +347,12 @@ fn adapt_language(root: &std::path::Path, lang: init::Language, runner_name: &st
 }
 
 /// Runs the `mr bootstrap` command.
-fn cmd_bootstrap(runner_name: &str, language: Option<&str>) -> Result<()> {
+fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
 
     // Detect or parse language.
     let lang = match language {
@@ -319,7 +371,7 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>) -> Result<()> {
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => Box::new(runner::MockRunner::empty()),
         "copilot" => {
-            let copilot = runner::CopilotRunner::new();
+            let copilot = runner::CopilotRunner::with_model(model.clone());
 
             if !copilot.is_available() {
                 anyhow::bail!(
@@ -361,7 +413,7 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>) -> Result<()> {
         println!();
         println!("Adapting prompts and templates for {}...", lang);
 
-        adapt_language(&cwd, lang, runner_name)?;
+        adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
         println!("Prompts adapted for {}.", lang);
     }
@@ -379,18 +431,22 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>) -> Result<()> {
 }
 
 /// Runs the `mr prd new` command.
-fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
+fn cmd_prd_new(slug: &str, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
     // Select runner based on name.
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => Box::new(runner::MockRunner::empty()),
         "copilot" => {
-            let copilot = runner::CopilotRunner::new();
+            let copilot = runner::CopilotRunner::with_model(model);
 
             if !copilot.is_available() {
                 anyhow::bail!(
@@ -430,18 +486,27 @@ fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
 }
 
 /// Runs the `mr prd edit` command.
-fn cmd_prd_edit(prd_id: &str, request: &str, runner_name: &str) -> Result<()> {
+fn cmd_prd_edit(
+    prd_id: &str,
+    request: &str,
+    runner_name: &str,
+    cli_model: Option<&str>,
+) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
     // Select runner based on name.
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => Box::new(runner::MockRunner::empty()),
         "copilot" => {
-            let copilot = runner::CopilotRunner::new();
+            let copilot = runner::CopilotRunner::with_model(model);
 
             if !copilot.is_available() {
                 anyhow::bail!(
@@ -526,18 +591,27 @@ fn cmd_prd_list() -> Result<()> {
 }
 
 /// Runs the `mr run` command.
-fn cmd_run(prd_id: Option<&str>, runner_name: &str, one: bool) -> Result<()> {
+fn cmd_run(
+    prd_id: Option<&str>,
+    runner_name: &str,
+    one: bool,
+    cli_model: Option<&str>,
+) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
     // Select runner based on name.
     let runner: Box<dyn runner::Runner> = match runner_name {
         "mock" => Box::new(runner::MockRunner::empty()),
         "copilot" => {
-            let copilot = runner::CopilotRunner::new();
+            let copilot = runner::CopilotRunner::with_model(model);
 
             if !copilot.is_available() {
                 anyhow::bail!(
@@ -650,9 +724,15 @@ mod tests {
     #[test]
     fn test_args_parse_init_with_language() {
         let args = Args::try_parse_from(["mr", "init", "--language", "python"]).unwrap();
-        if let Some(Command::Init { language, runner }) = args.command {
+        if let Some(Command::Init {
+            language,
+            runner,
+            model,
+        }) = args.command
+        {
             assert_eq!(language, Some("python".to_string()));
             assert_eq!(runner, "copilot");
+            assert!(model.is_none());
         } else {
             panic!("Expected Init command");
         }
@@ -667,8 +747,21 @@ mod tests {
     #[test]
     fn test_args_parse_run_with_runner() {
         let args = Args::try_parse_from(["mr", "run", "--runner", "mock"]).unwrap();
-        if let Some(Command::Run { runner, .. }) = args.command {
+        if let Some(Command::Run { runner, model, .. }) = args.command {
             assert_eq!(runner, "mock");
+            assert!(model.is_none());
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_with_model() {
+        let args =
+            Args::try_parse_from(["mr", "run", "--model", "claude-sonnet-4-20250514"]).unwrap();
+        if let Some(Command::Run { runner, model, .. }) = args.command {
+            assert_eq!(runner, "copilot");
+            assert_eq!(model, Some("claude-sonnet-4-20250514".to_string()));
         } else {
             panic!("Expected Run command");
         }
@@ -678,11 +771,38 @@ mod tests {
     fn test_args_parse_prd_new() {
         let args = Args::try_parse_from(["mr", "prd", "new", "my-feature"]).unwrap();
         if let Some(Command::Prd {
-            prd_command: PrdCommand::New { slug, runner },
+            prd_command:
+                PrdCommand::New {
+                    slug,
+                    runner,
+                    model,
+                },
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
             assert_eq!(runner, "copilot");
+            assert!(model.is_none());
+        } else {
+            panic!("Expected Prd New command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_prd_new_with_model() {
+        let args =
+            Args::try_parse_from(["mr", "prd", "new", "my-feature", "--model", "gpt-4o"]).unwrap();
+        if let Some(Command::Prd {
+            prd_command:
+                PrdCommand::New {
+                    slug,
+                    runner,
+                    model,
+                },
+        }) = args.command
+        {
+            assert_eq!(slug, "my-feature");
+            assert_eq!(runner, "copilot");
+            assert_eq!(model, Some("gpt-4o".to_string()));
         } else {
             panic!("Expected Prd New command");
         }
@@ -691,9 +811,15 @@ mod tests {
     #[test]
     fn test_args_parse_bootstrap() {
         let args = Args::try_parse_from(["mr", "bootstrap", "--runner", "mock"]).unwrap();
-        if let Some(Command::Bootstrap { runner, language }) = args.command {
+        if let Some(Command::Bootstrap {
+            runner,
+            language,
+            model,
+        }) = args.command
+        {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
+            assert!(model.is_none());
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -704,9 +830,40 @@ mod tests {
         let args =
             Args::try_parse_from(["mr", "bootstrap", "--runner", "mock", "--language", "node"])
                 .unwrap();
-        if let Some(Command::Bootstrap { runner, language }) = args.command {
+        if let Some(Command::Bootstrap {
+            runner,
+            language,
+            model,
+        }) = args.command
+        {
             assert_eq!(runner, "mock");
             assert_eq!(language, Some("node".to_string()));
+            assert!(model.is_none());
+        } else {
+            panic!("Expected Bootstrap command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_bootstrap_with_model() {
+        let args = Args::try_parse_from([
+            "mr",
+            "bootstrap",
+            "--runner",
+            "copilot",
+            "--model",
+            "claude-opus-4",
+        ])
+        .unwrap();
+        if let Some(Command::Bootstrap {
+            runner,
+            language,
+            model,
+        }) = args.command
+        {
+            assert_eq!(runner, "copilot");
+            assert!(language.is_none());
+            assert_eq!(model, Some("claude-opus-4".to_string()));
         } else {
             panic!("Expected Bootstrap command");
         }

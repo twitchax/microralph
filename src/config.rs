@@ -1,0 +1,241 @@
+//! Configuration file support for microralph.
+//!
+//! This module provides types and loading logic for `.mr/config.toml`.
+//! Configuration values can be overridden by CLI flags.
+
+use std::path::Path;
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+
+/// The config file name within the `.mr/` directory.
+pub const CONFIG_FILE_NAME: &str = "config.toml";
+
+/// Default configuration content for new repos.
+pub const DEFAULT_CONFIG: &str = r#"# microralph configuration
+# See README.md for available options.
+
+# Default runner to use for all commands.
+# Options: "copilot", "mock"
+# runner = "copilot"
+
+# Default model to use with the runner.
+# This is passed to the runner CLI (e.g., `copilot --model <model>`).
+# model = "claude-sonnet-4-20250514"
+
+# Permission mode for the runner.
+# Options: "yolo" (--allow-all), "manual" (prompt for each)
+# permission_mode = "yolo"
+
+# Session timeout in minutes.
+# timeout_minutes = 30
+"#;
+
+/// microralph configuration.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    /// Default runner to use for all commands.
+    #[serde(default)]
+    pub runner: Option<String>,
+
+    /// Default model to use with the runner.
+    #[serde(default)]
+    pub model: Option<String>,
+
+    /// Permission mode for the runner.
+    #[serde(default)]
+    pub permission_mode: Option<String>,
+
+    /// Session timeout in minutes.
+    #[serde(default)]
+    pub timeout_minutes: Option<u32>,
+}
+
+impl Config {
+    /// Loads the configuration from `.mr/config.toml` in the given root directory.
+    ///
+    /// Returns `None` if the config file doesn't exist.
+    /// Returns an error if the file exists but can't be parsed.
+    pub fn load(root: &Path) -> Result<Option<Self>> {
+        let config_path = root.join(".mr").join(CONFIG_FILE_NAME);
+
+        if !config_path.exists() {
+            return Ok(None);
+        }
+
+        let content = std::fs::read_to_string(&config_path)?;
+        let config: Config = toml::from_str(&content)?;
+
+        Ok(Some(config))
+    }
+
+    /// Loads the configuration, returning defaults if the file doesn't exist.
+    pub fn load_or_default(root: &Path) -> Result<Self> {
+        Ok(Self::load(root)?.unwrap_or_default())
+    }
+
+    /// Returns the effective runner, with CLI flag taking precedence.
+    #[cfg(test)]
+    pub fn effective_runner(&self, cli_runner: Option<&str>) -> String {
+        cli_runner
+            .map(|s| s.to_string())
+            .or_else(|| self.runner.clone())
+            .unwrap_or_else(|| "copilot".to_string())
+    }
+
+    /// Returns the effective model, with CLI flag taking precedence.
+    pub fn effective_model(&self, cli_model: Option<&str>) -> Option<String> {
+        cli_model
+            .map(|s| s.to_string())
+            .or_else(|| self.model.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+
+        assert!(config.runner.is_none());
+        assert!(config.model.is_none());
+        assert!(config.permission_mode.is_none());
+        assert!(config.timeout_minutes.is_none());
+    }
+
+    #[test]
+    fn test_config_load_missing_file() {
+        let temp = TempDir::new().unwrap();
+        std::fs::create_dir_all(temp.path().join(".mr")).unwrap();
+
+        let config = Config::load(temp.path()).unwrap();
+
+        assert!(config.is_none());
+    }
+
+    #[test]
+    fn test_config_load_empty_file() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        std::fs::write(mr_dir.join("config.toml"), "").unwrap();
+
+        let config = Config::load(temp.path()).unwrap().unwrap();
+
+        assert!(config.runner.is_none());
+        assert!(config.model.is_none());
+    }
+
+    #[test]
+    fn test_config_load_full() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        std::fs::write(
+            mr_dir.join("config.toml"),
+            r#"
+runner = "mock"
+model = "gpt-4o"
+permission_mode = "manual"
+timeout_minutes = 60
+"#,
+        )
+        .unwrap();
+
+        let config = Config::load(temp.path()).unwrap().unwrap();
+
+        assert_eq!(config.runner, Some("mock".to_string()));
+        assert_eq!(config.model, Some("gpt-4o".to_string()));
+        assert_eq!(config.permission_mode, Some("manual".to_string()));
+        assert_eq!(config.timeout_minutes, Some(60));
+    }
+
+    #[test]
+    fn test_config_load_partial() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        std::fs::write(mr_dir.join("config.toml"), r#"model = "claude-sonnet-4""#).unwrap();
+
+        let config = Config::load(temp.path()).unwrap().unwrap();
+
+        assert!(config.runner.is_none());
+        assert_eq!(config.model, Some("claude-sonnet-4".to_string()));
+    }
+
+    #[test]
+    fn test_config_load_or_default_missing() {
+        let temp = TempDir::new().unwrap();
+        std::fs::create_dir_all(temp.path().join(".mr")).unwrap();
+
+        let config = Config::load_or_default(temp.path()).unwrap();
+
+        assert!(config.runner.is_none());
+        assert!(config.model.is_none());
+    }
+
+    #[test]
+    fn test_effective_runner_cli_override() {
+        let config = Config {
+            runner: Some("copilot".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(config.effective_runner(Some("mock")), "mock");
+    }
+
+    #[test]
+    fn test_effective_runner_config_value() {
+        let config = Config {
+            runner: Some("mock".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(config.effective_runner(None), "mock");
+    }
+
+    #[test]
+    fn test_effective_runner_default() {
+        let config = Config::default();
+
+        assert_eq!(config.effective_runner(None), "copilot");
+    }
+
+    #[test]
+    fn test_effective_model_cli_override() {
+        let config = Config {
+            model: Some("gpt-4".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            config.effective_model(Some("claude-sonnet-4")),
+            Some("claude-sonnet-4".to_string())
+        );
+    }
+
+    #[test]
+    fn test_effective_model_config_value() {
+        let config = Config {
+            model: Some("gpt-4".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(config.effective_model(None), Some("gpt-4".to_string()));
+    }
+
+    #[test]
+    fn test_effective_model_none() {
+        let config = Config::default();
+
+        assert!(config.effective_model(None).is_none());
+    }
+
+    #[test]
+    fn test_default_config_parses() {
+        let _config: Config = toml::from_str(DEFAULT_CONFIG).unwrap();
+    }
+}

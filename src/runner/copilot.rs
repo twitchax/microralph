@@ -38,6 +38,9 @@ pub struct CopilotConfig {
 
     /// Whether to disable the ask_user tool.
     pub no_ask_user: bool,
+
+    /// The model to use (e.g., "claude-sonnet-4-20250514").
+    pub model: Option<String>,
 }
 
 impl Default for CopilotConfig {
@@ -47,6 +50,7 @@ impl Default for CopilotConfig {
             permission_mode: PermissionMode::Yolo,
             silent: true,
             no_ask_user: true,
+            model: None,
         }
     }
 }
@@ -85,6 +89,12 @@ impl CopilotConfig {
         self.no_ask_user = no_ask_user;
         self
     }
+
+    /// Sets the model to use.
+    pub fn with_model(mut self, model: Option<String>) -> Self {
+        self.model = model;
+        self
+    }
 }
 
 /// A runner that shells out to the GitHub Copilot CLI.
@@ -101,6 +111,13 @@ impl CopilotRunner {
     pub fn new() -> Self {
         Self {
             config: CopilotConfig::default(),
+        }
+    }
+
+    /// Creates a new Copilot runner with the specified model.
+    pub fn with_model(model: Option<String>) -> Self {
+        Self {
+            config: CopilotConfig::default().with_model(model),
         }
     }
 
@@ -143,6 +160,12 @@ impl CopilotRunner {
         // Disable ask_user tool for autonomous operation.
         if self.config.no_ask_user {
             args.push("--no-ask-user".to_string());
+        }
+
+        // Model selection.
+        if let Some(ref model) = self.config.model {
+            args.push("--model".to_string());
+            args.push(model.clone());
         }
 
         args
@@ -300,6 +323,37 @@ mod tests {
     fn test_runner_default() {
         let runner = CopilotRunner::default();
         assert_eq!(runner.name(), "copilot");
+    }
+
+    #[test]
+    fn test_build_args_with_model() {
+        let runner = CopilotRunner::with_model(Some("claude-sonnet-4".to_string()));
+        let args = runner.build_args("test prompt");
+
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"claude-sonnet-4".to_string()));
+    }
+
+    #[test]
+    fn test_build_args_without_model() {
+        let runner = CopilotRunner::new();
+        let args = runner.build_args("test prompt");
+
+        assert!(!args.contains(&"--model".to_string()));
+    }
+
+    #[test]
+    fn test_with_model_constructor() {
+        let runner = CopilotRunner::with_model(Some("gpt-4o".to_string()));
+        let args = runner.build_args("prompt");
+
+        // Should have model flag.
+        let model_idx = args.iter().position(|a| a == "--model").unwrap();
+        assert_eq!(args[model_idx + 1], "gpt-4o");
+
+        // Should still have other default flags.
+        assert!(args.contains(&"--allow-all".to_string()));
+        assert!(args.contains(&"-s".to_string()));
     }
 
     // Note: Integration tests that actually invoke copilot should be

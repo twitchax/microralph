@@ -192,7 +192,7 @@ tasks:
   - id: T-018
     title: "Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)"
     priority: 17
-    status: todo
+    status: done
     notes: "Support a config file for common settings: default runner, default model (e.g., `model = \"claude-sonnet-4-20250514\"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner."
   - id: T-019
     title: "Stream/display runner output during `mr run`"
@@ -604,5 +604,28 @@ Each prompt must define:
   - Documented prompts: run_task, run_task_finalize, prd_new_round1_questions, prd_new_roundN_questions, prd_new_synthesize_prd, prd_edit, bootstrap_plan, bootstrap_generate_prds, update_agents, adapt_language, init
   - Included list iteration field notation (↳) for nested fields in `{{#each}}` blocks
   - All 167 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-018 Completed
+- **Task**: Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `toml` dependency to Cargo.toml for config file parsing
+  - Created `src/config.rs` module with `Config` struct and loading logic
+    - Supports `runner`, `model`, `permission_mode`, and `timeout_minutes` settings
+    - `load()` and `load_or_default()` functions for loading config
+    - `effective_model()` for CLI flag override logic
+  - Updated `CopilotConfig` with `model` field and `with_model()` method
+  - Updated `CopilotRunner::build_args()` to pass `--model <model>` to copilot CLI
+  - Added `CopilotRunner::with_model()` constructor for easy model configuration
+  - Added `--model` flag to all runner-using commands:
+    - `mr init --model <model>` (for language adaptation)
+    - `mr bootstrap --model <model>`
+    - `mr prd new <slug> --model <model>`
+    - `mr prd edit <id> <request> --model <model>`
+    - `mr run --model <model>`
+  - Updated `init()` to create default `config.toml` with commented-out options
+  - Created `.mr/config.toml` in this repo
+  - Added 18 new tests for config loading, CLI parsing, and model handling
+  - All 186 tests pass, clippy clean, UAT passes
 
 ---

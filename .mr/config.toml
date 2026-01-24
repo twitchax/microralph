@@ -1,0 +1,17 @@
+# microralph configuration
+# See README.md for available options.
+
+# Default runner to use for all commands.
+# Options: "copilot", "mock"
+# runner = "copilot"
+
+# Default model to use with the runner.
+# This is passed to the runner CLI (e.g., `copilot --model <model>`).
+# model = "claude-sonnet-4-20250514"
+
+# Permission mode for the runner.
+# Options: "yolo" (--allow-all), "manual" (prompt for each)
+# permission_mode = "yolo"
+
+# Session timeout in minutes.
+# timeout_minutes = 30

@@ -8,6 +8,7 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result};
 
+use crate::config;
 use crate::prompt::PromptKind;
 
 /// Supported programming languages for project initialization.
@@ -911,6 +912,13 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
 
+    // Create default config.toml.
+    create_file_if_missing(
+        &mr_dir.join("config.toml"),
+        config::DEFAULT_CONFIG,
+        &mut result,
+    )?;
+
     // Create AGENTS.md at repo root (if not exists).
     create_file_if_missing(&root.join("AGENTS.md"), STARTER_AGENTS, &mut result)?;
 
@@ -1011,12 +1019,15 @@ mod tests {
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
 
+        // Check config.toml exists.
+        assert!(root.join(".mr/config.toml").exists());
+
         // Check AGENTS.md exists.
         assert!(root.join("AGENTS.md").exists());
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 14); // 1 template + 11 prompts + 1 index + 1 AGENTS.md
+        assert_eq!(result.files_created, 15); // 1 template + 11 prompts + 1 index + 1 config + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1027,13 +1038,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 14);
+        assert_eq!(result1.files_created, 15);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 14);
+        assert_eq!(result2.files_skipped, 15);
         assert_eq!(result2.dirs_created, 0);
     }
 
