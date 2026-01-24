@@ -109,12 +109,14 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Let me check the finalization prompt to understand the complete changelog pattern:
+Let me check the finalization prompt to understand the full workflow:
 
-Now I understand the full scope of T-005. The key addition is the changelog entry generation workflow with Keep a Changelog format. Let me update the auto-managed section:
+Now I have a complete picture. The T-010 completion adds finalization history entries. The auto-managed section already has some content about changelog management, but looking at the current AGENTS.md content and the recent T-010 completion, the section contains incomplete/draft text rather than actual documentation.
+
+Let me update the auto-managed section with proper documentation:
 
 Updated the auto-managed section with:
-- **Changelog Management**: Documents `ensure_changelog_exists()` and `read_changelog()` functions
-- **Finalization Prompt Placeholders**: Lists all 5 placeholders used in `run_task_finalize.md`  
-- **Changelog Entry Format**: Shows the Keep a Changelog format with category options
+- **PRD Finalization Workflow**: Complete 5-step process from T-010 completion
+- **Changelog Entry Format**: Keep a Changelog categories with example
+- **Finalization Prompt Placeholders**: All 5 placeholders documented
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

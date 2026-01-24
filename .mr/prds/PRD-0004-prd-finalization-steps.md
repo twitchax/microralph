@@ -50,7 +50,7 @@ tasks:
   - id: T-011
     title: "Update run_task_finalize.md and init.rs default prompt with comprehensive instructions"
     priority: 2
-    status: todo
+    status: done
 ---
 
 # PRD-0004: PRD Finalization Steps
@@ -285,4 +285,23 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - History entry includes: date header, PRD ID and title, finalization timestamp, tasks completed count/list, status confirmation
   - This task was marked todo but functionality was already complete from T-006
   - No code changes required; task is verified complete
+  - UAT passes: 219/219 tests pass
+
+## 2026-01-24 — T-011 Completed
+- **Task**: Update run_task_finalize.md and init.rs default prompt with comprehensive instructions
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `.mr/prompts/run_task_finalize.md` with comprehensive finalization workflow:
+    - Renamed to "PRD Finalization Prompt" for clarity
+    - Added 6 numbered sections matching Design Notes requirements:
+      1. Verify All Acceptance Tests Pass — with explicit `cargo make uat` command and criteria
+      2. Generate Changelog Entry — with Keep a Changelog format and category guidelines
+      3. Create Summary Report — with detailed format template for stdout and PRD history
+      4. Clean Up Temporary Files and Excessive Comments — with specific examples of what to remove/keep
+      5. Update Inter-PRD Links in Index — with instructions for cross-references and regeneration
+      6. Append Finalization History Entry — with specific format template
+    - Added Final Documentation Check section with README.md, AGENTS.md, and inline docs
+    - Added Constraints section emphasizing no new features, no breaking changes
+    - Added Output section with example format showing expected completion output
+  - Updated `src/init.rs` `PROMPT_RUN_TASK_FINALIZE` constant to match new prompt content
   - UAT passes: 219/219 tests pass

@@ -1,14 +1,14 @@
-# microralph — Run Task Finalize Prompt
+# microralph — PRD Finalization Prompt
 
 ## Objective
 
-Complete the final wrap-up task for a PRD, including changelog entry generation.
+Execute the complete finalization workflow for a PRD: verify acceptance tests, generate changelog entry, create summary report, clean up temporary artifacts, update inter-PRD links, and append finalization history entry.
 
 ## Context
 
-You are executing the wrap-up task for `{{prd_id}}`: **{{prd_title}}**.
+You are finalizing `{{prd_id}}`: **{{prd_title}}**.
 
-All other tasks in this PRD have been completed.
+All tasks in this PRD have been completed. This is the final wrap-up step before marking the PRD as done.
 
 ## PRD Summary
 
@@ -26,40 +26,152 @@ The current `CHANGELOG.md` content is:
 {{changelog_content}}
 ```
 
+---
+
 ## Required Actions
 
-1. Review all changes made during this PRD.
-2. Ensure documentation is up-to-date:
-   - README.md
-   - AGENTS.md
-   - Inline comments
-3. Verify all acceptance tests pass: `cargo make uat`
-4. Clean up any temporary or debug code.
-5. Ensure the codebase is in a releasable state.
-6. **Generate a changelog entry** under `## [Unreleased]` in `CHANGELOG.md`:
-   - Use Keep a Changelog format with appropriate category (`Added`, `Changed`, `Fixed`, `Deprecated`, `Removed`, `Security`)
-   - Include the PRD ID and title
-   - Summarize key changes based on completed tasks
-   - Example format: `- {{prd_id}}: {{prd_title}} — Brief description of key changes`
+Execute the following steps in order:
 
-## Changelog Entry Guidelines
+### 1. Verify All Acceptance Tests Pass
 
-- **Added**: New features or functionality
-- **Changed**: Changes to existing functionality
-- **Fixed**: Bug fixes
-- **Deprecated**: Features marked for removal
-- **Removed**: Removed features
-- **Security**: Security-related changes
+Run the full test suite to ensure nothing is broken:
 
-Choose the most appropriate category based on the PRD's completed tasks.
+```bash
+cargo make uat
+```
+
+**Criteria**:
+- All tests must pass
+- No warnings that indicate broken functionality
+- If tests fail, stop and report the failure — do not proceed with finalization
+
+### 2. Generate Changelog Entry
+
+Add an entry under `## [Unreleased]` in `CHANGELOG.md`:
+
+**Format** (Keep a Changelog):
+```markdown
+### Added
+- {{prd_id}}: {{prd_title}} — Brief description of key changes
+```
+
+**Guidelines**:
+- Choose the appropriate category based on the PRD's work:
+  - **Added**: New features or functionality
+  - **Changed**: Changes to existing functionality
+  - **Fixed**: Bug fixes
+  - **Deprecated**: Features marked for removal
+  - **Removed**: Removed features
+  - **Security**: Security-related changes
+- Include the PRD ID and title
+- Summarize key changes (1-3 bullet points if multiple significant changes)
+- Keep entries concise but informative
+
+### 3. Create Summary Report
+
+Generate a summary report that will be:
+- Printed to stdout (for the user)
+- Appended to the PRD as a finalization history entry
+
+**Report Format**:
+```markdown
+## Finalization Summary — {{prd_id}}
+
+**Date**: YYYY-MM-DD
+**PRD**: {{prd_id}} — {{prd_title}}
+**Tasks Completed**: N tasks
+**Status**: ✅ Finalized
+
+### Completed Tasks
+- [List of completed tasks]
+
+### Changes Made
+- [Brief summary of main changes]
+
+### Changelog Entry Added
+- [Confirm category and brief description]
+```
+
+### 4. Clean Up Temporary Files and Excessive Comments
+
+Search for and remove:
+
+**Temporary files**:
+- Debug scripts or test files created during development
+- Temporary data files (`.tmp`, `.bak`, scratch files)
+- Generated files that shouldn't be committed
+
+**Excessive comments**:
+- TODO comments that are now resolved
+- Debug logging statements (e.g., `println!`, `console.log`, `dbg!`)
+- Commented-out code that is no longer needed
+- Development notes that don't belong in final code
+
+**Do NOT remove**:
+- Legitimate TODOs for future work
+- Documentation comments
+- Necessary inline explanations
+
+### 5. Update Inter-PRD Links in Index
+
+Check `PRDS.md` for any references to this PRD that need updating:
+
+- If this PRD was blocked by another PRD, verify the blocker is resolved
+- If other PRDs reference this PRD, ensure links/references are accurate
+- Update any "See Also" or cross-reference sections
+
+Run to regenerate the index:
+```bash
+cargo run -- prd list
+```
+
+### 6. Append Finalization History Entry
+
+Add a final history entry to the PRD file documenting the finalization:
+
+**Format**:
+```markdown
+## YYYY-MM-DD — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All tasks completed, acceptance tests passed
+- **Changelog**: Entry added under [Unreleased] → [Category]
+- **Cleanup**: [Brief note on any cleanup performed]
+```
+
+---
+
+## Final Documentation Check
+
+Ensure these documents are up-to-date:
+
+- [ ] **README.md** — Reflects any new features or usage changes
+- [ ] **AGENTS.md** — Updated with new conventions or patterns discovered
+- [ ] **Inline documentation** — Code comments and docstrings are accurate
+
+---
 
 ## Constraints
 
-- Do not introduce new features.
-- Focus on polish and documentation.
-- Ensure consistency across the codebase.
-- The changelog entry should be concise but informative.
+- **No new features**: This is finalization only — polish and documentation
+- **No breaking changes**: The codebase should be in a releasable state
+- **Minimal changes**: Only make changes required for finalization
+- **Concise entries**: Changelog and history entries should be brief but complete
+
+---
 
 ## Output
 
-Provide a final summary suitable for closing out the PRD History section, including confirmation that the changelog entry was added.
+After completing all steps, provide:
+
+1. **UAT Result**: Pass/fail with test count
+2. **Changelog Entry**: The exact entry added
+3. **Cleanup Summary**: List of any files/comments cleaned up
+4. **Final Summary**: Brief confirmation that finalization is complete
+
+Example output format:
+```
+✅ UAT: 219/219 tests passed
+✅ Changelog: Added entry under "Added" — {{prd_id}}: {{prd_title}}
+✅ Cleanup: Removed 2 debug println! statements, 1 TODO comment
+✅ Finalization complete for {{prd_id}}
+```
