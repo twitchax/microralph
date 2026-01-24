@@ -153,7 +153,7 @@ tasks:
     title: "Implement `mr run` (one-or-zero tasks per invocation)"
     priority: 9
     status: todo
-    notes: "Pick task; invoke runner; run `cargo make uat`; update task status; append History even on failure."
+    notes: "Supports `--prd <id>` to target a specific PRD. Pick task; invoke runner; run `cargo make uat`; update task status; append History even on failure."
   - id: T-010
     title: "Implement `mr status`"
     priority: 10
@@ -170,6 +170,16 @@ tasks:
     status: todo
     notes: "Scan repo; generate PRD index; generate starter PRDs reflecting current repo reality."
   - id: T-013
+    title: "Remove `allow` flags and make sure clippy lints are clean"
+    priority: 13
+    status: todo
+    notes: "No `allow(dead_code)` or `allow(unused_imports)` in committed code."
+  - id: T-014
+    title: "Implement `mr prd edit` for quick PRD modifications via runner"
+    priority: 14
+    status: todo
+    notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow upq uestion loop if needed."
+  - id: T-015
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
     status: todo
