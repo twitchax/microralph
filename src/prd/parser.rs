@@ -341,7 +341,7 @@ status: {status_str}
 
         assert_eq!(prd.id(), "PRD-0001");
         assert_eq!(prd.title(), "Build microralph MVP");
-        assert_eq!(prd.status(), PrdStatus::Active);
+        assert_eq!(prd.status(), PrdStatus::Done);
 
         // Check tasks exist.
         let tasks = prd.tasks().unwrap();

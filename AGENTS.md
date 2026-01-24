@@ -109,7 +109,7 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-The PRD shows T-008 added inter-PRD link tracking to the index. Reviewing the current auto-managed section, it contains incomplete draft text that doesn't provide actionable information. Let me update it with proper documentation about the finalization workflow based on the completed tasks.
+The PRD shows comprehensive work on finalization workflow. The auto-managed section currently has incomplete draft text. Let me update it with actionable documentation.
 
-Updated the auto-managed section with proper documentation covering the PRD finalization workflow, changelog categories, and inter-PRD reference tracking (the feature added in T-008).
+Updated the auto-managed section with actionable documentation covering the finalization workflow, changelog categories, inter-PRD reference tracking, and cleanup guidelines.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

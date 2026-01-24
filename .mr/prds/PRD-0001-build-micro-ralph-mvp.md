@@ -1,146 +1,140 @@
 ---
 id: PRD-0001
 title: Build microralph MVP
-status: active                 # draft | active | done | parked
+status: done
 owner: Aaron Roney
 created: 2026-01-23
 updated: 2026-01-23
-
 principles:
-  - "No direct API calls: microralph shells out to runner CLIs only."
-  - "State lives in git + Markdown PRDs (YAML frontmatter + History section)."
-  - "One-or-zero tasks per `mr run` invocation."
-  - "Runner can fail; we still append History so the next run has context."
-  - "Avoid XML/JSON state blobs."
-  - "Almost all dev workflows run via `cargo make` (fmt/clippy/test/ci/uat wrappers)."
-
+- 'No direct API calls: microralph shells out to runner CLIs only.'
+- State lives in git + Markdown PRDs (YAML frontmatter + History section).
+- One-or-zero tasks per `mr run` invocation.
+- Runner can fail; we still append History so the next run has context.
+- Avoid XML/JSON state blobs.
+- Almost all dev workflows run via `cargo make` (fmt/clippy/test/ci/uat wrappers).
 references:
-  - name: "kord (style reference for CI + README + repo ergonomics)"
-    url: https://github.com/twitchax/kord
-
+- name: kord (style reference for CI + README + repo ergonomics)
+  url: https://github.com/twitchax/kord
 acceptance_tests:
-  # UATs should be callable via cargo-make; most repos can map uat -> ci.
-  - id: uat-001
-    name: "Repo acceptance gate passes via cargo-make"
-    command: "cargo make uat"
-  - id: uat-002
-    name: "`mr init` is idempotent (via cargo-make test target)"
-    command: "cargo make mr:test init"
-  - id: uat-003
-    name: "`mr prd new` produces valid PRD (frontmatter + tasks + history scaffold)"
-    command: "cargo make mr:test prd_new"
-  - id: uat-004
-    name: "`mr run --runner mock` attempts <=1 task and appends History (success + failure)"
-    command: "cargo make mr:test run_mock"
-  - id: uat-005
-    name: "`mr status` output is stable"
-    command: "cargo make mr:test status"
-  - id: uat-006
-    name: "`mr bootstrap --runner mock` generates PRD index + starter PRDs deterministically"
-    command: "cargo make mr:test bootstrap_mock"
-
+- id: uat-001
+  name: Repo acceptance gate passes via cargo-make
+  command: cargo make uat
+- id: uat-002
+  name: '`mr init` is idempotent (via cargo-make test target)'
+  command: cargo make mr:test init
+- id: uat-003
+  name: '`mr prd new` produces valid PRD (frontmatter + tasks + history scaffold)'
+  command: cargo make mr:test prd_new
+- id: uat-004
+  name: '`mr run --runner mock` attempts <=1 task and appends History (success + failure)'
+  command: cargo make mr:test run_mock
+- id: uat-005
+  name: '`mr status` output is stable'
+  command: cargo make mr:test status
+- id: uat-006
+  name: '`mr bootstrap --runner mock` generates PRD index + starter PRDs deterministically'
+  command: cargo make mr:test bootstrap_mock
 tasks:
-  - id: T-001
-    title: "Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)"
-    priority: 1
-    status: done
-    notes: "Use kord as the reference: CI shape, README tone, cargo-make workflow. :contentReference[oaicite:2]{index=2}"
-  - id: T-002
-    title: "Define PRD file format + parser (YAML frontmatter + Markdown body)"
-    priority: 2
-    status: done
-    notes: "Must round-trip without trashing human Markdown."
-  - id: T-003
-    title: "Implement PRD index generator (`.mr/PRDS.md`)"
-    priority: 3
-    status: done
-    notes: "Index is derived from scanning `.mr/prds/*.md`."
-  - id: T-004
-    title: "Implement `mr init` (new repo setup)"
-    priority: 4
-    status: done
-    notes: "Creates `.mr/` dirs, templates, prompts, starter AGENTS.md, PRD index."
-  - id: T-005
-    title: "Implement static prompt library + placeholder system"
-    priority: 5
-    status: done
-    notes: "All stages use committed prompt files; placeholders expanded by MR."
-  - id: T-006
-    title: "Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)"
-    priority: 6
-    status: done
-    notes: "Round1: runner generates follow-ups; user answers; MR loops runner until 'enough'; final synthesis writes PRD."
-  - id: T-007
-    title: "Runner abstraction + MockRunner (deterministic tests)"
-    priority: 7
-    status: done
-    notes: "Typed adapters; mock runner supports scripted Q/A and task runs."
-  - id: T-008
-    title: "CopilotRunner adapter (programmatic prompts + allow-all perms by default)"
-    priority: 8
-    status: done
-    notes: "No API calls. Always prefer allow-all/yolo; fallback to allow-all-* flags."
-  - id: T-009
-    title: "Implement `mr run` (one-or-zero tasks per invocation)"
-    priority: 9
-    status: done
-    notes: "Supports `--prd <id>` to target a specific PRD. Pick task; invoke runner with prompt instructing it to: implement task, run UAT, update PRD status/history, regenerate index, and commit. Runner handles the full loop."
-  - id: T-010
-    title: "Implement `mr status`"
-    priority: 10
-    status: done
-    notes: "Summarize PRDs + tasks; show next task and last History summary."
-  - id: T-011
-    title: "AGENTS.md updater (safe, bounded patching driven by a prompt stage)"
-    priority: 11
-    status: done
-    notes: "Auto-managed section; updated during prd_new and run."
-  - id: T-012
-    title: "Implement `mr bootstrap` (ingest an existing repo into PRDs)"
-    priority: 12
-    status: done
-    notes: "Scan repo; generate PRD index; generate starter PRDs reflecting current repo reality."
-  - id: T-013
-    title: "Remove `allow` flags and make sure clippy lints are clean"
-    priority: 13
-    status: done
-    notes: "No `allow(dead_code)` or `allow(unused_imports)` in committed code."
-  - id: T-014
-    title: "Implement `mr prd edit` for quick PRD modifications via runner"
-    priority: 14
-    status: done
-    notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow up question loop if needed."
-  - id: T-016
-    title: "Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)"
-    priority: 15
-    status: done
-    notes: "Allow user to specify language (rust, python, node, etc.). If rust or unspecified, use current defaults. Otherwise, invoke runner to 'rewrite the default prompts/templates for the target language' after scaffolding. Bootstrap should auto-detect language from repo (Cargo.toml → rust, package.json → node, pyproject.toml → python, etc.)."
-  - id: T-017
-    title: "Document placeholder variables for each prompt in README"
-    priority: 16
-    status: done
-    notes: "Add tables in README showing available `{{placeholder}}` variables for each prompt type (run_task, prd_new_*, bootstrap_*, etc.). Helps users who want to customize prompts by hand. Include variable name, type (string/list), and description."
-  - id: T-018
-    title: "Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)"
-    priority: 17
-    status: done
-    notes: "Support a config file for common settings: default runner, default model (e.g., `model = \"claude-sonnet-4-20250514\"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner."
-  - id: T-019
-    title: "Stream/display runner output during `mr run`"
-    priority: 18
-    status: done
-    notes: "Currently runner output is captured silently and only a truncated summary is shown at the end. Add real-time streaming of copilot CLI output to stdout so users can watch progress. Consider a `--verbose` or `--stream` flag, or make streaming the default with `--quiet` to suppress. May require switching from `Command::output()` to `Command::spawn()` with piped stdout."
-  - id: T-020
-    title: "Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links."
-    priority: 19
-    status: done
-    notes: "This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it."
-  - id: T-099
-    title: "Wrap-up: docs + example PRDs + end-to-end smoke"
-    priority: 99
-    status: done
-    notes: "README + DEVELOPMENT + example PRDs + end-to-end smoke; `cargo make uat` is the one true gate.  README should describe normal flow.  README should be a little bit funny...something 'small ralph to help you ralph your ralphs' style.  Also, make sure to reference that this whole thing was 'ralph'ed into existence by `microralph` itself.  It should be stylized as `microralph` everywhere.  Also, link out to ralph / resources about PRDs and agent loops, and explain why we want to get rid of context.  Add a comparison table to other projects at the bottom (explain the differences, and why microralph is different)."
-
+- id: T-001
+  title: Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)
+  priority: 1
+  status: done
+  notes: 'Use kord as the reference: CI shape, README tone, cargo-make workflow. :contentReference[oaicite:2]{index=2}'
+- id: T-002
+  title: Define PRD file format + parser (YAML frontmatter + Markdown body)
+  priority: 2
+  status: done
+  notes: Must round-trip without trashing human Markdown.
+- id: T-003
+  title: Implement PRD index generator (`.mr/PRDS.md`)
+  priority: 3
+  status: done
+  notes: Index is derived from scanning `.mr/prds/*.md`.
+- id: T-004
+  title: Implement `mr init` (new repo setup)
+  priority: 4
+  status: done
+  notes: Creates `.mr/` dirs, templates, prompts, starter AGENTS.md, PRD index.
+- id: T-005
+  title: Implement static prompt library + placeholder system
+  priority: 5
+  status: done
+  notes: All stages use committed prompt files; placeholders expanded by MR.
+- id: T-006
+  title: Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)
+  priority: 6
+  status: done
+  notes: 'Round1: runner generates follow-ups; user answers; MR loops runner until ''enough''; final synthesis writes PRD.'
+- id: T-007
+  title: Runner abstraction + MockRunner (deterministic tests)
+  priority: 7
+  status: done
+  notes: Typed adapters; mock runner supports scripted Q/A and task runs.
+- id: T-008
+  title: CopilotRunner adapter (programmatic prompts + allow-all perms by default)
+  priority: 8
+  status: done
+  notes: No API calls. Always prefer allow-all/yolo; fallback to allow-all-* flags.
+- id: T-009
+  title: Implement `mr run` (one-or-zero tasks per invocation)
+  priority: 9
+  status: done
+  notes: 'Supports `--prd <id>` to target a specific PRD. Pick task; invoke runner with prompt instructing it to: implement task, run UAT, update PRD status/history, regenerate index, and commit. Runner handles the full loop.'
+- id: T-010
+  title: Implement `mr status`
+  priority: 10
+  status: done
+  notes: Summarize PRDs + tasks; show next task and last History summary.
+- id: T-011
+  title: AGENTS.md updater (safe, bounded patching driven by a prompt stage)
+  priority: 11
+  status: done
+  notes: Auto-managed section; updated during prd_new and run.
+- id: T-012
+  title: Implement `mr bootstrap` (ingest an existing repo into PRDs)
+  priority: 12
+  status: done
+  notes: Scan repo; generate PRD index; generate starter PRDs reflecting current repo reality.
+- id: T-013
+  title: Remove `allow` flags and make sure clippy lints are clean
+  priority: 13
+  status: done
+  notes: No `allow(dead_code)` or `allow(unused_imports)` in committed code.
+- id: T-014
+  title: Implement `mr prd edit` for quick PRD modifications via runner
+  priority: 14
+  status: done
+  notes: Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow up question loop if needed.
+- id: T-016
+  title: Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)
+  priority: 15
+  status: done
+  notes: Allow user to specify language (rust, python, node, etc.). If rust or unspecified, use current defaults. Otherwise, invoke runner to 'rewrite the default prompts/templates for the target language' after scaffolding. Bootstrap should auto-detect language from repo (Cargo.toml → rust, package.json → node, pyproject.toml → python, etc.).
+- id: T-017
+  title: Document placeholder variables for each prompt in README
+  priority: 16
+  status: done
+  notes: Add tables in README showing available `{{placeholder}}` variables for each prompt type (run_task, prd_new_*, bootstrap_*, etc.). Helps users who want to customize prompts by hand. Include variable name, type (string/list), and description.
+- id: T-018
+  title: Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)
+  priority: 17
+  status: done
+  notes: 'Support a config file for common settings: default runner, default model (e.g., `model = "claude-sonnet-4-20250514"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner.'
+- id: T-019
+  title: Stream/display runner output during `mr run`
+  priority: 18
+  status: done
+  notes: Currently runner output is captured silently and only a truncated summary is shown at the end. Add real-time streaming of copilot CLI output to stdout so users can watch progress. Consider a `--verbose` or `--stream` flag, or make streaming the default with `--quiet` to suppress. May require switching from `Command::output()` to `Command::spawn()` with piped stdout.
+- id: T-020
+  title: Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links.
+  priority: 19
+  status: done
+  notes: This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it.
+- id: T-099
+  title: 'Wrap-up: docs + example PRDs + end-to-end smoke'
+  priority: 99
+  status: done
+  notes: README + DEVELOPMENT + example PRDs + end-to-end smoke; `cargo make uat` is the one true gate.  README should describe normal flow.  README should be a little bit funny...something 'small ralph to help you ralph your ralphs' style.  Also, make sure to reference that this whole thing was 'ralph'ed into existence by `microralph` itself.  It should be stylized as `microralph` everywhere.  Also, link out to ralph / resources about PRDs and agent loops, and explain why we want to get rid of context.  Add a comparison table to other projects at the bottom (explain the differences, and why microralph is different).
 ---
 
 # Summary

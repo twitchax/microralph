@@ -138,6 +138,19 @@ Add a final history entry to the PRD file documenting the finalization:
 - **Cleanup**: [Brief note on any cleanup performed]
 ```
 
+### 7. Commit All Changes
+
+After all finalization steps are complete, commit the changes:
+
+```bash
+git add -A
+git commit -m "prd({{prd_id}})finalize: [brief description]"
+```
+
+**Commit message format**: `prd({{prd_id}})finalize: [brief description]`
+
+Example: `prd(PRD-0001)finalize: Complete MVP build with finalization workflow`
+
 ---
 
 ## Final Documentation Check
@@ -166,12 +179,14 @@ After completing all steps, provide:
 1. **UAT Result**: Pass/fail with test count
 2. **Changelog Entry**: The exact entry added
 3. **Cleanup Summary**: List of any files/comments cleaned up
-4. **Final Summary**: Brief confirmation that finalization is complete
+4. **Commit**: The commit hash and message
+5. **Final Summary**: Brief confirmation that finalization is complete
 
 Example output format:
 ```
 ✅ UAT: 219/219 tests passed
 ✅ Changelog: Added entry under "Added" — {{prd_id}}: {{prd_title}}
 ✅ Cleanup: Removed 2 debug println! statements, 1 TODO comment
+✅ Commit: abc1234 — prd({{prd_id}})finalize: {{prd_title}}
 ✅ Finalization complete for {{prd_id}}
 ```
