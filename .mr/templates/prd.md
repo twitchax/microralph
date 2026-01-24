@@ -6,11 +6,25 @@ owner: "{{owner}}"
 created: {{date}}
 updated: {{date}}
 
-tags: []
+principles:
+- Principle 1 (guiding constraint or design decision)
+- Principle 2
 
-acceptance_tests: []
+references:
+- name: Reference Name
+  url: https://example.com/reference
 
-tasks: []
+acceptance_tests:
+- id: uat-001
+  name: Description of what the test verifies
+  command: cargo make uat # or specific test command
+
+tasks:
+- id: T-001
+  title: First task title
+  priority: 1
+  status: todo
+  notes: Additional context, dependencies, or implementation hints.
 
 ---
 

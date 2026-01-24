@@ -5,31 +5,64 @@ status: draft
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-24
+
+principles:
+- Context should be opt-in (interactive prompt or CLI flag) to avoid mandatory extra steps.
+- Context is ephemeral; used only during PRD creation, not stored in the final PRD.
+- Better context leads to better initial questions from the AI.
+
+references:
+- name: PRD-0001 (prd new implementation)
+  url: ./PRD-0001-build-micro-ralph-mvp.md
+
+acceptance_tests:
+- id: uat-001
+  name: Interactive flow prompts for context
+  command: cargo make mr:test prd_new_context_interactive
+- id: uat-002
+  name: Flag flow uses provided context
+  command: cargo make mr:test prd_new_context_flag
+- id: uat-003
+  name: Context influences question generation
+  command: cargo make mr:test prd_new_context_in_questions
+- id: uat-004
+  name: Context persists through Q/A rounds
+  command: cargo make mr:test prd_new_context_persistence
+- id: uat-005
+  name: Context included in final synthesis
+  command: cargo make mr:test prd_new_context_synthesis
+
 tasks:
-  - id: T-001
-    title: Add --context CLI flag to prd new command
-    priority: 1
-    status: todo
-  - id: T-002
-    title: Add upfront context prompt before question generation
-    priority: 1
-    status: todo
-  - id: T-003
-    title: Pass context to initial question generation prompt
-    priority: 1
-    status: todo
-  - id: T-004
-    title: Persist context through all Q/A rounds
-    priority: 2
-    status: todo
-  - id: T-005
-    title: Include context in final PRD synthesis prompt
-    priority: 2
-    status: todo
-  - id: T-006
-    title: Update help text and documentation
-    priority: 3
-    status: todo
+- id: T-001
+  title: Add --context CLI flag to prd new command
+  priority: 1
+  status: todo
+  notes: Add optional --context argument to the prd new subcommand in main.rs.
+- id: T-002
+  title: Add upfront context prompt before question generation
+  priority: 1
+  status: todo
+  notes: Before invoking round 1 questions, ask the user if they want to add more context.
+- id: T-003
+  title: Pass context to initial question generation prompt
+  priority: 1
+  status: todo
+  notes: Include user_context in the PlaceholderContext for prd_new_round1_questions.md.
+- id: T-004
+  title: Persist context through all Q/A rounds
+  priority: 2
+  status: todo
+  notes: Store context in PrdNewConfig and include it in all roundN prompts.
+- id: T-005
+  title: Include context in final PRD synthesis prompt
+  priority: 2
+  status: todo
+  notes: Add user_context to prd_new_synthesize_prd.md placeholder expansion.
+- id: T-006
+  title: Update help text and documentation
+  priority: 3
+  status: todo
+  notes: Update README placeholder docs and CLI help for the new --context flag.
 ---
 
 ## Summary
@@ -52,14 +85,6 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
 - Automatic file reading (users can paste file contents into context text if desired).
 - Structured context format (context is free-form text).
 - Context stored in PRD frontmatter (context is ephemeral, used only during creation).
-
-## Acceptance Tests
-
-1. **Interactive flow**: Running `mr prd new foo` prompts "Do you want to add more context?" before generating questions. User can type context or skip.
-2. **Flag flow**: Running `mr prd new --context "This is a CLI tool for X" foo` skips the interactive prompt and uses provided context immediately.
-3. **Context in questions**: When context mentions specific technologies or constraints, the generated questions reference them.
-4. **Context persists**: The context is visible/used in subsequent Q/A rounds (not just the first).
-5. **Synthesis includes context**: The final PRD synthesis prompt includes the upfront context alongside Q/A answers.
 
 ## History
 

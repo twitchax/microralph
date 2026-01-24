@@ -5,51 +5,104 @@ status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
+
+principles:
+- Finalization is explicit; no auto-finalization when tasks complete.
+- All tasks must be done before finalization can proceed.
+- Changelog follows Keep a Changelog format with semantic categories.
+- Summary report provides visibility into what was accomplished.
+
+references:
+- name: Keep a Changelog
+  url: https://keepachangelog.com/en/1.0.0/
+- name: Semantic Versioning
+  url: https://semver.org/spec/v2.0.0.html
+
+acceptance_tests:
+- id: uat-001
+  name: Finalization fails if tasks incomplete
+  command: cargo make mr:test finalize_incomplete
+- id: uat-002
+  name: Finalization fails if tasks parked
+  command: cargo make mr:test finalize_parked
+- id: uat-003
+  name: Acceptance criteria verified via prompt
+  command: cargo make uat
+- id: uat-004
+  name: CHANGELOG.md created if missing
+  command: cargo make mr:test finalize_changelog_create
+- id: uat-005
+  name: Changelog entry added under Unreleased
+  command: cargo make mr:test finalize_changelog_entry
+- id: uat-006
+  name: Summary report printed to stdout
+  command: cargo make mr:test finalize_summary_stdout
+- id: uat-007
+  name: Summary report appended to PRD
+  command: cargo make mr:test finalize_summary_prd
+- id: uat-008
+  name: PRD status updated to done
+  command: cargo make mr:test finalize_status
+- id: uat-009
+  name: PRDS.md index refreshed
+  command: cargo make mr:test finalize_index
+
 tasks:
 - id: T-001
   title: Add `mr prd finalize <id>` CLI command
   priority: 1
   status: done
+  notes: Add Finalize subcommand to PrdCommand enum in main.rs, wire up to handler function.
 - id: T-002
   title: Implement task completion validation (all tasks must be done)
   priority: 1
   status: done
+  notes: Create FinalizeError enum with IncompleteTasks variant. Block finalization if any task not done.
 - id: T-003
   title: Run acceptance test verification via finalization prompt
   priority: 2
   status: done
+  notes: Build finalize prompt with prd context, invoke runner to verify acceptance criteria.
 - id: T-004
   title: Create CHANGELOG.md at project root with Keep a Changelog format
   priority: 2
   status: done
+  notes: Create changelog.rs module with ensure_changelog_exists() function and template.
 - id: T-005
   title: Add changelog entry generation to finalization prompt
   priority: 2
   status: done
+  notes: Include completed_tasks and changelog_content in prompt. Runner generates entry.
 - id: T-006
   title: Generate summary report (append to PRD + stdout)
   priority: 2
   status: done
+  notes: Create generate_summary_report() and append_to_prd() functions. Output to both places.
 - id: T-007
   title: Update PRD status to done and refresh PRDS.md index
   priority: 2
   status: done
+  notes: Call update_prd_status_to_done() then generate_index_from_root() to refresh index.
 - id: T-008
   title: Update inter-PRD links in index during finalization
   priority: 3
   status: done
+  notes: Add extract_prd_references() to scan PRDs for cross-references. Generate Cross-References section in index.
 - id: T-009
   title: Add cleanup tasks to finalization prompt (temp files, comments)
   priority: 3
   status: done
+  notes: Finalization prompt includes cleanup guidance for temp files, debug logs, resolved TODOs.
 - id: T-010
   title: Append finalization history entry to PRD
   priority: 2
   status: done
+  notes: generate_summary_report() creates formatted history entry, append_to_prd() writes it.
 - id: T-011
   title: Update run_task_finalize.md and init.rs default prompt with comprehensive instructions
   priority: 2
   status: done
+  notes: Rewrote prompt with 6 numbered sections covering full finalization workflow.
 ---
 
 # PRD-0004: PRD Finalization Steps
@@ -78,21 +131,6 @@ Currently, there is no formal process to finalize a PRD. When all tasks are comp
 - Automatic finalization when all tasks are done (future enhancement).
 - Integration with external notification systems.
 - Rollback or undo of finalization.
-
-## Acceptance Tests
-
-- [ ] `mr prd finalize PRD-XXXX` fails if any task is not `done`.
-- [ ] `mr prd finalize PRD-XXXX` fails if any task is `parked` or `wontfix` (must be explicitly resolved/removed via `mr prd edit`).
-- [ ] Finalization runs acceptance criteria verification via the prompt.
-- [ ] `CHANGELOG.md` is created at project root if it doesn't exist, following Keep a Changelog format.
-- [ ] A changelog entry is appended under `[Unreleased]` with the PRD title and summary of completed tasks.
-- [ ] Summary report is printed to stdout.
-- [ ] Summary report is appended to the PRD as the final history entry.
-- [ ] PRD status is updated to `done`.
-- [ ] `PRDS.md` index is refreshed to show the PRD as done.
-- [ ] Inter-PRD links in the index are updated if applicable.
-- [ ] Cleanup instructions are included in the finalization prompt (temp files, comments).
-- [ ] A history entry is appended documenting finalization timestamp and outcome.
 
 ## Design Notes
 
