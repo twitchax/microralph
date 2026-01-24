@@ -290,36 +290,25 @@ pub const PROMPT_RUN_TASK: &str = r#"# Micro Ralph — Run Task Prompt
 
 ## Objective
 
-Execute a single task from a PRD.
+Execute the next incomplete task from a PRD.
 
 ## Context
 
-You are executing task `{{task_id}}` from `{{prd_id}}`.
+Look at the PRD file at `{{prd_path}}` to understand:
+- The project goals and constraints
+- The task list and their statuses
+- The History section showing previous attempts and outcomes
 
-## PRD Summary
-
-{{prd_summary}}
-
-## Task Details
-
-- **ID**: {{task_id}}
-- **Title**: {{task_title}}
-- **Priority**: {{task_priority}}
-- **Notes**: {{task_notes}}
-
-## Previous History
-
-{{#each recent_history}}
-### {{timestamp}}
-{{summary}}
-{{/each}}
+The suggested next task is `{{next_task_id}}` based on priority, but verify against the PRD.
 
 ## Required Actions
 
-1. Implement the task as described.
-2. Make minimal, focused changes.
-3. Follow existing code patterns and conventions.
-4. Run `cargo make uat` to verify changes.
+1. Read and understand the PRD fully.
+2. Identify the next task to work on.
+3. Implement the task as described.
+4. Make minimal, focused changes.
+5. Follow existing code patterns and conventions.
+6. Run `cargo make uat` to verify changes.
 
 ## Constraints
 
@@ -794,9 +783,8 @@ mod tests {
         // Round 1 questions should have slug placeholder.
         assert!(PROMPT_PRD_NEW_ROUND1.contains("{{slug}}"));
 
-        // Run task should have task placeholders.
-        assert!(PROMPT_RUN_TASK.contains("{{task_id}}"));
-        assert!(PROMPT_RUN_TASK.contains("{{prd_id}}"));
+        // Run task should have prd_path placeholder.
+        assert!(PROMPT_RUN_TASK.contains("{{prd_path}}"));
 
         // Update agents should have content placeholder.
         assert!(PROMPT_UPDATE_AGENTS.contains("{{agents_content}}"));

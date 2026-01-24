@@ -179,6 +179,16 @@ tasks:
     priority: 14
     status: todo
     notes: "Invoke runner with PRD context + user request; runner suggests edits; MR applies changes. Lighter than `prd new`.  Should allow for a follow up question loop if needed."
+  - id: T-016
+    title: "Add `--language` flag to `init` (explicit) and `bootstrap` (auto-detected)"
+    priority: 15
+    status: todo
+    notes: "Allow user to specify language (rust, python, node, etc.). If rust or unspecified, use current defaults. Otherwise, invoke runner to 'rewrite the default prompts/templates for the target language' after scaffolding. Bootstrap should auto-detect language from repo (Cargo.toml → rust, package.json → node, pyproject.toml → python, etc.)."
+  - id: T-017
+    title: "Document placeholder variables for each prompt in README"
+    priority: 16
+    status: todo
+    notes: "Add tables in README showing available `{{placeholder}}` variables for each prompt type (run_task, prd_new_*, bootstrap_*, etc.). Helps users who want to customize prompts by hand. Include variable name, type (string/list), and description."
   - id: T-015
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
