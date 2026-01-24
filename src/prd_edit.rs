@@ -99,6 +99,14 @@ where
         }
 
         let prompt = build_edit_prompt(config, &prd_content, &qa_history);
+
+        tracing::info!(
+            runner = %runner.name(),
+            prd_id = %config.prd_id,
+            round = rounds,
+            "Invoking runner for PRD edit"
+        );
+
         let runner_output = runner
             .execute(&prompt, config.root)
             .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -171,6 +179,13 @@ where
 
     // If we hit max rounds without ready signal, try to get final result
     let final_prompt = build_edit_prompt(config, &prd_content, &qa_history);
+
+    tracing::info!(
+        runner = %runner.name(),
+        prd_id = %config.prd_id,
+        "Invoking runner for final PRD edit attempt"
+    );
+
     let final_output = runner
         .execute(&final_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;

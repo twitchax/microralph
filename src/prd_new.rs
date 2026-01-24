@@ -106,6 +106,13 @@ where
     writeln!(output, "Generating questions...")?;
 
     let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
+
+    tracing::info!(
+        runner = %runner.name(),
+        slug = %config.slug,
+        "Invoking runner for PRD creation round 1"
+    );
+
     let round1_output = runner
         .execute(&round1_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -145,6 +152,14 @@ where
         }
 
         let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
+
+        tracing::info!(
+            runner = %runner.name(),
+            round = rounds,
+            slug = %config.slug,
+            "Invoking runner for PRD creation follow-up round"
+        );
+
         let round_n_output = runner
             .execute(&round_n_prompt, config.root)
             .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -185,6 +200,13 @@ where
 
     let synthesize_prompt =
         build_synthesize_prompt(config, &qa_history, &existing_prds, user_context.as_deref());
+
+    tracing::info!(
+        runner = %runner.name(),
+        slug = %config.slug,
+        "Invoking runner to synthesize PRD"
+    );
+
     let synthesize_output = runner
         .execute(&synthesize_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;

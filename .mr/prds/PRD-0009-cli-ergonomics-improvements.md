@@ -69,7 +69,7 @@ tasks:
 - id: T-004
   title: Add tracing info for commands executed by runner
   priority: 4
-  status: todo
+  status: done
   notes: Add tracing::info! calls when invoking model to log command parameters for debugging.
 - id: T-005
   title: Change LLM output display to show tail instead of beginning
@@ -169,5 +169,20 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Updated `src/init.rs`: Changed auto-managed section comment to use `mr new` instead of `mr prd new`
   - UAT passed: All 262 tests passed successfully
   - All references to old `mr prd <subcommand>` structure updated to new flattened structure
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Add tracing info for commands executed by runner
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `tracing::info!` calls in `src/run.rs` before runner invocations for task execution
+  - Added `tracing::info!` calls in `src/prd_new.rs` for all three PRD creation phases (round 1, follow-up rounds, synthesis)
+  - Added `tracing::info!` calls in `src/prd_edit.rs` for PRD edit rounds and final edit attempt
+  - Added `tracing::info!` calls in `src/bootstrap.rs` for bootstrap plan and PRD generation phases
+  - Added `tracing::info!` calls in `src/prd_finalize.rs` for finalization
+  - Added `tracing::info!` calls in `src/agents.rs` for AGENTS.md updates
+  - Changed existing `tracing::debug!` calls to `tracing::info!` where appropriate
+  - All logging includes relevant context: runner name, PRD ID, task ID, stream mode, etc.
+  - UAT passed: All 262 tests passed successfully
+  - This improves debugging by making runner invocations visible at info level with full command context
 
 ---

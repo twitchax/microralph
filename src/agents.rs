@@ -232,8 +232,10 @@ where
     // Build and execute the prompt.
     let prompt = build_update_agents_prompt(root, &current_content, changes);
 
-    tracing::debug!(
+    tracing::info!(
         prompt_len = prompt.len(),
+        runner = %runner.name(),
+        changes_count = changes.len(),
         "Invoking runner for AGENTS.md update"
     );
 

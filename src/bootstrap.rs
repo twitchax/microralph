@@ -96,6 +96,12 @@ where
 
     let plan_prompt = build_plan_prompt(config);
 
+    tracing::info!(
+        runner = %runner.name(),
+        prd_budget = config.prd_budget,
+        "Invoking runner for bootstrap plan"
+    );
+
     let plan_output = runner
         .execute(&plan_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed during plan: {e}"))?;
@@ -116,6 +122,12 @@ where
     tracing::info!("Generating PRDs...");
 
     let generate_prompt = build_generate_prompt(config, &plan_output.text);
+
+    tracing::info!(
+        runner = %runner.name(),
+        prd_budget = config.prd_budget,
+        "Invoking runner to generate PRDs from bootstrap plan"
+    );
 
     let generate_output = runner
         .execute(&generate_prompt, config.root)

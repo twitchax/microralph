@@ -308,10 +308,12 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     // Build and execute the finalization prompt.
     let prompt = build_finalize_prompt(config.root, &prd);
 
-    tracing::debug!(
+    tracing::info!(
         prompt_len = prompt.len(),
         runner = %runner.name(),
-        "Invoking runner for acceptance test verification"
+        prd_id = %config.prd_id,
+        stream = config.stream,
+        "Invoking runner for finalization"
     );
 
     let output = if config.stream {
