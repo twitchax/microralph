@@ -260,10 +260,13 @@ fn main() -> Result<()> {
         }
         None => {
             println!(
-                "microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents."
+                "{}",
+                colors::info(
+                    "microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents."
+                )
             );
             println!();
-            println!("Run `mr --help` for available commands.");
+            println!("{}", colors::dim("Run `mr --help` for available commands."));
         }
     }
 
@@ -290,8 +293,11 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
     let cwd = std::env::current_dir()?;
 
     if init::is_initialized(&cwd) {
-        println!("microralph is already initialized in this directory.");
-        println!("Run `mr status` to see PRD status.");
+        println!(
+            "{}",
+            colors::info("microralph is already initialized in this directory.")
+        );
+        println!("{}", colors::dim("Run `mr status` to see PRD status."));
         return Ok(());
     }
 
@@ -308,22 +314,28 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
     println!("{}", colors::success("Initialized microralph!"));
     println!();
     println!(
-        "Created {} directories, {} files.",
-        result.dirs_created, result.files_created
+        "{}",
+        colors::info(&format!(
+            "Created {} directories, {} files.",
+            result.dirs_created, result.files_created
+        ))
     );
 
     if !result.created_paths.is_empty() {
         println!();
-        println!("Created files:");
+        println!("{}", colors::header("Created files:"));
         for path in &result.created_paths {
-            println!("  - {path}");
+            println!("  - {}", colors::dim(path));
         }
     }
 
     // Adapt prompts/templates for non-Rust languages.
     if lang != init::Language::Rust {
         println!();
-        println!("Adapting prompts and templates for {}...", lang);
+        println!(
+            "{}",
+            colors::info(&format!("Adapting prompts and templates for {}...", lang))
+        );
 
         // Load config for model (config file was just created).
         let cfg = config::Config::load_or_default(&cwd)?;
@@ -331,14 +343,20 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
 
         adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
-        println!("Prompts adapted for {}.", lang);
+        println!(
+            "{}",
+            colors::info(&format!("Prompts adapted for {}.", lang))
+        );
     }
 
     println!();
-    println!("Next steps:");
-    println!("  1. Review and customize AGENTS.md");
-    println!("  2. Create your first PRD: `mr prd new my-feature`");
-    println!("  3. Run a task: `mr run`");
+    println!("{}", colors::header("Next steps:"));
+    println!("  {}", colors::dim("1. Review and customize AGENTS.md"));
+    println!(
+        "  {}",
+        colors::dim("2. Create your first PRD: `mr prd new my-feature`")
+    );
+    println!("  {}", colors::dim("3. Run a task: `mr run`"));
 
     Ok(())
 }
@@ -455,8 +473,8 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
 
     let config = bootstrap::BootstrapConfig::new(&cwd);
 
-    println!("Bootstrapping repository...");
-    println!("Detected language: {}", lang);
+    println!("{}", colors::info("Bootstrapping repository..."));
+    println!("{}", colors::info(&format!("Detected language: {}", lang)));
     println!();
 
     let result = bootstrap::bootstrap(&config, runner.as_ref())?;
@@ -464,35 +482,50 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     println!();
 
     if result.initialized {
-        println!("Initialized .mr/ structure.");
+        println!("{}", colors::info("Initialized .mr/ structure."));
     }
 
     if result.plan_generated {
-        println!("Bootstrap plan generated.");
+        println!("{}", colors::info("Bootstrap plan generated."));
     }
 
     if result.prds_generated {
-        println!("Generated {} PRD(s).", result.prds_created);
+        println!(
+            "{}",
+            colors::info(&format!("Generated {} PRD(s).", result.prds_created))
+        );
     }
 
     // Adapt prompts/templates for non-Rust languages after bootstrap.
     if lang != init::Language::Rust {
         println!();
-        println!("Adapting prompts and templates for {}...", lang);
+        println!(
+            "{}",
+            colors::info(&format!("Adapting prompts and templates for {}...", lang))
+        );
 
         adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
-        println!("Prompts adapted for {}.", lang);
+        println!(
+            "{}",
+            colors::info(&format!("Prompts adapted for {}.", lang))
+        );
     }
 
     println!();
-    println!("Bootstrap complete!");
+    println!("{}", colors::success("Bootstrap complete!"));
     println!();
-    println!("Next steps:");
-    println!("  1. Review generated PRDs in .mr/prds/");
-    println!("  2. Check .mr/PRDS.md for the index");
-    println!("  3. Run `mr status` to see task summary");
-    println!("  4. Run `mr run` to start executing tasks");
+    println!("{}", colors::header("Next steps:"));
+    println!("  {}", colors::dim("1. Review generated PRDs in .mr/prds/"));
+    println!("  {}", colors::dim("2. Check .mr/PRDS.md for the index"));
+    println!(
+        "  {}",
+        colors::dim("3. Run `mr status` to see task summary")
+    );
+    println!(
+        "  {}",
+        colors::dim("4. Run `mr run` to start executing tasks")
+    );
 
     Ok(())
 }
@@ -549,11 +582,23 @@ fn cmd_prd_new(
 
     println!();
     println!("{}", colors::success("PRD created successfully!"));
-    println!("  ID: {}", result.prd.id());
-    println!("  Title: {}", result.prd.title());
-    println!("  Path: {}", result.path.display());
-    println!("  Q/A Rounds: {}", result.rounds);
-    println!("  Questions answered: {}", result.qa_history.len());
+    println!("  {}", colors::dim(&format!("ID: {}", result.prd.id())));
+    println!(
+        "  {}",
+        colors::dim(&format!("Title: {}", result.prd.title()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Path: {}", result.path.display()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Q/A Rounds: {}", result.rounds))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Questions answered: {}", result.qa_history.len()))
+    );
 
     Ok(())
 }
@@ -609,13 +654,25 @@ fn cmd_prd_edit(
 
     println!();
     println!("{}", colors::success("PRD edited successfully!"));
-    println!("  ID: {}", result.prd.id());
-    println!("  Title: {}", result.prd.title());
-    println!("  Path: {}", result.path.display());
-    println!("  Q/A Rounds: {}", result.rounds);
+    println!("  {}", colors::dim(&format!("ID: {}", result.prd.id())));
+    println!(
+        "  {}",
+        colors::dim(&format!("Title: {}", result.prd.title()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Path: {}", result.path.display()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Q/A Rounds: {}", result.rounds))
+    );
 
     if !result.qa_history.is_empty() {
-        println!("  Questions answered: {}", result.qa_history.len());
+        println!(
+            "  {}",
+            colors::dim(&format!("Questions answered: {}", result.qa_history.len()))
+        );
     }
 
     Ok(())
@@ -635,9 +692,12 @@ fn cmd_prd_list() -> Result<()> {
     let prds = prd::scan_prd_summaries(&cwd)?;
 
     if prds.is_empty() {
-        println!("No PRDs found.");
+        println!("{}", colors::info("No PRDs found."));
         println!();
-        println!("Create your first PRD with: `mr prd new my-feature`");
+        println!(
+            "{}",
+            colors::dim("Create your first PRD with: `mr prd new my-feature`")
+        );
         return Ok(());
     }
 
@@ -662,7 +722,7 @@ fn cmd_prd_list() -> Result<()> {
         .filter(|p| p.status == prd::PrdStatus::Parked)
         .collect();
 
-    println!("PRDs:");
+    println!("{}", colors::header("PRDs:"));
     println!();
 
     let format_prd = |prd_summary: &prd::PrdSummary| {
@@ -712,7 +772,7 @@ fn cmd_prd_list() -> Result<()> {
     };
 
     if !active.is_empty() {
-        println!("  Active:");
+        println!("  {}", colors::header("Active:"));
 
         for prd_summary in active {
             println!("    {}", format_prd(prd_summary));
@@ -722,7 +782,7 @@ fn cmd_prd_list() -> Result<()> {
     }
 
     if !draft.is_empty() {
-        println!("  Draft:");
+        println!("  {}", colors::header("Draft:"));
 
         for prd_summary in draft {
             println!("    {}", format_prd(prd_summary));
@@ -732,7 +792,7 @@ fn cmd_prd_list() -> Result<()> {
     }
 
     if !done.is_empty() {
-        println!("  Done:");
+        println!("  {}", colors::header("Done:"));
 
         for prd_summary in done {
             println!("    {}", format_prd(prd_summary));
@@ -742,7 +802,7 @@ fn cmd_prd_list() -> Result<()> {
     }
 
     if !parked.is_empty() {
-        println!("  Parked:");
+        println!("  {}", colors::header("Parked:"));
 
         for prd_summary in parked {
             println!("    {}", format_prd(prd_summary));
@@ -943,12 +1003,18 @@ fn cmd_run(
                 }
 
                 println!();
-                println!("  PRD: {} ({})", prd_id, prd_path.display());
-                println!("  Task: {} — {}", task_id, task_title);
+                println!(
+                    "  {}",
+                    colors::dim(&format!("PRD: {} ({})", prd_id, prd_path.display()))
+                );
+                println!(
+                    "  {}",
+                    colors::dim(&format!("Task: {} — {}", task_id, task_title))
+                );
                 println!();
 
                 if !output_summary.is_empty() {
-                    println!("Runner output:");
+                    println!("{}", colors::header("Runner output:"));
                     println!("{}", output_summary);
                 }
 
@@ -958,7 +1024,7 @@ fn cmd_run(
                 }
 
                 println!("---");
-                println!("Continuing to next task...");
+                println!("{}", colors::info("Continuing to next task..."));
             }
 
             run::RunResult::NeedsUatVerification {
@@ -974,9 +1040,9 @@ fn cmd_run(
                         prd_id, unverified_count
                     ))
                 );
-                println!("  PRD: {}", prd_path.display());
+                println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
                 println!();
-                println!("Starting UAT verification loop...");
+                println!("{}", colors::info("Starting UAT verification loop..."));
                 println!();
 
                 // Run the UAT verification loop.
@@ -991,22 +1057,43 @@ fn cmd_run(
                 match run::run_uat_verification_loop(&uat_config, runner.as_ref()) {
                     Ok(result) => {
                         println!();
-                        println!("UAT verification loop completed:");
-                        println!("  Verified: {}", result.verified_count);
-                        println!("  Opted out: {}", result.opted_out_count);
-                        println!("  Iterations: {}", result.iterations);
+                        println!("{}", colors::info("UAT verification loop completed:"));
+                        println!(
+                            "  {}",
+                            colors::dim(&format!("Verified: {}", result.verified_count))
+                        );
+                        println!(
+                            "  {}",
+                            colors::dim(&format!("Opted out: {}", result.opted_out_count))
+                        );
+                        println!(
+                            "  {}",
+                            colors::dim(&format!("Iterations: {}", result.iterations))
+                        );
 
                         if result.hit_max_iterations {
-                            println!("  ⚠️  Hit max iterations limit.");
+                            println!("  {}", colors::warning("Hit max iterations limit."));
                         }
 
                         if result.remaining_unverified > 0 {
-                            println!("  Remaining unverified: {}", result.remaining_unverified);
+                            println!(
+                                "  {}",
+                                colors::dim(&format!(
+                                    "Remaining unverified: {}",
+                                    result.remaining_unverified
+                                ))
+                            );
                             println!();
-                            println!("Run `mr run` again to continue verification.");
+                            println!(
+                                "{}",
+                                colors::dim("Run `mr run` again to continue verification.")
+                            );
                         } else {
                             println!();
-                            println!("All UATs verified or opted out. PRD is complete!");
+                            println!(
+                                "{}",
+                                colors::info("All UATs verified or opted out. PRD is complete!")
+                            );
                         }
                     }
                     Err(e) => {
@@ -1027,8 +1114,8 @@ fn cmd_run(
                     "{}",
                     colors::success(&format!("PRD {} is complete!", prd_id))
                 );
-                println!("  All tasks done, all UATs verified.");
-                println!("  PRD: {}", prd_path.display());
+                println!("  {}", colors::dim("All tasks done, all UATs verified."));
+                println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
                 break;
             }
         }
@@ -1036,7 +1123,10 @@ fn cmd_run(
 
     if tasks_completed > 1 {
         println!("---");
-        println!("Completed {} tasks total.", tasks_completed);
+        println!(
+            "{}",
+            colors::info(&format!("Completed {} tasks total.", tasks_completed))
+        );
     }
 
     Ok(())
@@ -1084,10 +1174,19 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
     let result = reindex::reindex(&cwd, runner.as_ref(), stream)?;
 
     println!();
-    println!("Reindex complete!");
-    println!("  PRDs indexed: {}", result.prds_indexed);
-    println!("  Links verified: {}", result.links_verified);
-    println!("  Links fixed: {}", result.links_fixed);
+    println!("{}", colors::success("Reindex complete!"));
+    println!(
+        "  {}",
+        colors::dim(&format!("PRDs indexed: {}", result.prds_indexed))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Links verified: {}", result.links_verified))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Links fixed: {}", result.links_fixed))
+    );
 
     Ok(())
 }

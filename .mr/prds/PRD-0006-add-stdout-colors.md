@@ -25,7 +25,7 @@ tasks:
   - id: T-005
     title: Add color to informational and status messages
     priority: 2
-    status: todo
+    status: done
   - id: T-006
     title: Colorize finalization summary box and separators
     priority: 3
@@ -178,4 +178,16 @@ See frontmatter for UAT definitions.
   - Applied same styling to numbered questions in `collect_answers()` (line 292)
   - Question prompts now display consistently with blue bold text and emoji
   - All 254 tests pass in `cargo make uat`
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Add color to informational and status messages
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/main.rs` to use `colors::info()`, `colors::header()`, and `colors::dim()` for informational and status messages
+  - Applied cyan color to informational messages like "Bootstrapping repository...", "Detected language:", "Continuing to next task...", "All UATs verified or opted out"
+  - Applied bold styling to headers like "PRDs:", "Active:", "Draft:", "Done:", "Parked:", "Next steps:", "Runner output:", "UAT verification loop completed:"
+  - Applied dim styling to secondary/contextual information like file paths, PRD/task details, statistics, and help hints
+  - Colorized messages in init, bootstrap, prd new/edit/list, run, and reindex commands
+  - All 254 tests pass in `cargo make uat`
+
 

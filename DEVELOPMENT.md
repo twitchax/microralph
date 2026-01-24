@@ -279,8 +279,7 @@ Check if tests require specific environment:
 
 - `prd suggest`
 - init / bootstrap should also emit a default constitution that is user editable.  That constitution needs to be respected during runs.  A good example of this would be something like "one off acceptance tests are unacceptable: all acceptance tests must be codified as a runnable test".
-- Rename `master` to `main`.
-- Multiline input / output in run loop.
+- Multiline input / output in new prd questions.
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
 - Possibly also enable a command to generate or regenerate the dev container file.
 - Also update the README to explain that a project that is mostly ralphed should be called a ralph, and the real selling point is on locking time for the artisanal code that you actually want to write. Essentially, Ralph lets you develop small products and tools that you need so you can free up your time for other more valuable work.
