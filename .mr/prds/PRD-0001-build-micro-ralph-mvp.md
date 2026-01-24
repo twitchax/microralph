@@ -172,7 +172,7 @@ tasks:
   - id: T-013
     title: "Remove `allow` flags and make sure clippy lints are clean"
     priority: 13
-    status: todo
+    status: done
     notes: "No `allow(dead_code)` or `allow(unused_imports)` in committed code."
   - id: T-014
     title: "Implement `mr prd edit` for quick PRD modifications via runner"
@@ -203,7 +203,7 @@ tasks:
     title: "Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links."
     priority: 19
     status: todo
-    notes: "This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links."
+    notes: "This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it."
   - id: T-099
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
@@ -525,6 +525,28 @@ Each prompt must define:
   - Implemented `summarize_plan()` and `count_prds_in_output()` helper functions
   - Added `regex` dependency for PRD pattern matching
   - Integrated into `main.rs`: `mr bootstrap --runner <runner>` command fully functional
+  - All 145 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-013 Completed
+- **Task**: Remove `allow` flags and make sure clippy lints are clean
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed all 24 `#[allow(dead_code)]` and `#[allow(unused_imports)]` attributes from codebase
+  - Used `#[cfg(test)]` for test-only code instead of `#[allow(dead_code)]`:
+    - `serialize_prd()`, `incomplete_tasks()`, `PrdSummary::path` field removal
+    - `PlaceholderContext::len/is_empty/from_iter()` methods
+    - `PromptLoader::prompts_dir/exists/all_exist/missing_prompts()` methods
+    - `load_prompt()` function, `RunnerOutput::failure()` method
+    - `MockRunner` test methods: `add_response/add_success/recorded_prompts/remaining_responses`
+    - `CopilotConfig` builder methods and `with_config` constructor
+    - `PermissionMode::AllowAll/Manual` variants
+  - Removed unused code entirely:
+    - `RunnerError::Timeout/ExecutionFailed/Other` variants (never constructed)
+    - `RunnerOutput::exit_code` field (set but never read)
+    - `CopilotConfig::timeout_secs` field (never used)
+    - `PrdSummary::path` field (never read)
+  - Used `Runner::name()` method in logging (`run.rs`, `prd_new.rs`) to make it non-dead
+  - Used `PrdNewResult::qa_history` in output to show questions answered
   - All 145 tests pass, clippy clean, UAT passes
 
 ---

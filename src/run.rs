@@ -154,7 +154,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     // Build and execute the prompt.
     let prompt = build_prompt(config.root, &prd, &prd_path, &task_id);
 
-    tracing::debug!(prompt_len = prompt.len(), "Invoking runner");
+    tracing::debug!(prompt_len = prompt.len(), runner = %runner.name(), "Invoking runner");
 
     let output: RunnerOutput = runner
         .execute(&prompt, config.root)

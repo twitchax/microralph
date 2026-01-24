@@ -30,15 +30,11 @@ pub struct PrdSummary {
 
     /// Relative path to the PRD file from the index file's directory.
     pub relative_path: String,
-
-    /// Absolute path to the PRD file.
-    #[allow(dead_code)]
-    pub path: std::path::PathBuf,
 }
 
 impl PrdSummary {
     /// Creates a new PrdSummary from a Prd and its file path.
-    pub fn from_prd(prd: &Prd, relative_path: String, absolute_path: std::path::PathBuf) -> Self {
+    pub fn from_prd(prd: &Prd, relative_path: String) -> Self {
         let tasks = prd.tasks().unwrap_or_default();
         let completed_tasks = prd.completed_tasks().len();
         let total_tasks = tasks.len();
@@ -50,7 +46,6 @@ impl PrdSummary {
             completed_tasks,
             total_tasks,
             relative_path,
-            path: absolute_path,
         }
     }
 
@@ -130,9 +125,9 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     // Group PRDs by status.
     let mut by_status: HashMap<PrdStatus, Vec<PrdSummary>> = HashMap::new();
 
-    for (filename, prd, abs_path) in prds {
+    for (filename, prd, _abs_path) in prds {
         let relative_path = format!("prds/{}", filename);
-        let summary = PrdSummary::from_prd(prd, relative_path, abs_path.clone());
+        let summary = PrdSummary::from_prd(prd, relative_path);
         by_status.entry(summary.status).or_default().push(summary);
     }
 
@@ -263,9 +258,9 @@ pub fn scan_prd_summaries(root: impl AsRef<Path>) -> Result<Vec<PrdSummary>> {
 
     Ok(prds
         .into_iter()
-        .map(|(filename, prd, abs_path)| {
+        .map(|(filename, prd, _abs_path)| {
             let relative_path = format!("prds/{}", filename);
-            PrdSummary::from_prd(&prd, relative_path, abs_path)
+            PrdSummary::from_prd(&prd, relative_path)
         })
         .collect())
 }
@@ -329,11 +324,7 @@ mod tests {
             ],
         );
 
-        let summary = PrdSummary::from_prd(
-            &prd,
-            "prds/test.md".to_string(),
-            std::path::PathBuf::from("test.md"),
-        );
+        let summary = PrdSummary::from_prd(&prd, "prds/test.md".to_string());
 
         assert_eq!(summary.completed_tasks, 2);
         assert_eq!(summary.total_tasks, 3);
@@ -344,11 +335,7 @@ mod tests {
     fn test_prd_summary_no_tasks() {
         let prd = make_test_prd("PRD-0001", "Test", PrdStatus::Draft, vec![]);
 
-        let summary = PrdSummary::from_prd(
-            &prd,
-            "prds/test.md".to_string(),
-            std::path::PathBuf::from("test.md"),
-        );
+        let summary = PrdSummary::from_prd(&prd, "prds/test.md".to_string());
 
         assert_eq!(summary.completed_tasks, 0);
         assert_eq!(summary.total_tasks, 0);
@@ -365,7 +352,6 @@ mod tests {
                 completed_tasks: 2,
                 total_tasks: 5,
                 relative_path: "prds/PRD-0001.md".to_string(),
-                path: std::path::PathBuf::from("prds/PRD-0001.md"),
             },
             PrdSummary {
                 id: "PRD-0002".to_string(),
@@ -374,7 +360,6 @@ mod tests {
                 completed_tasks: 0,
                 total_tasks: 3,
                 relative_path: "prds/PRD-0002.md".to_string(),
-                path: std::path::PathBuf::from("prds/PRD-0002.md"),
             },
         ];
 

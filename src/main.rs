@@ -280,6 +280,7 @@ fn cmd_prd_new(slug: &str, runner_name: &str) -> Result<()> {
     println!("  Title: {}", result.prd.title());
     println!("  Path: {}", result.path.display());
     println!("  Q/A Rounds: {}", result.rounds);
+    println!("  Questions answered: {}", result.qa_history.len());
 
     Ok(())
 }

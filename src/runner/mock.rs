@@ -10,9 +10,7 @@ use super::types::{Runner, RunnerOutput, RunnerResult};
 ///
 /// The mock runner returns pre-configured responses in sequence.
 /// This allows testing the Q/A flow without invoking a real runner.
-// TODO(T-013): Remove allow(dead_code) when all methods are used.
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct MockRunner {
     /// The name of this runner.
     name: String,
@@ -24,7 +22,6 @@ pub struct MockRunner {
     recorded_prompts: Mutex<Vec<String>>,
 }
 
-#[allow(dead_code)]
 impl MockRunner {
     /// Creates a new mock runner with the given responses.
     ///
@@ -43,21 +40,25 @@ impl MockRunner {
     }
 
     /// Adds a response to the queue.
+    #[cfg(test)]
     pub fn add_response(&self, response: RunnerOutput) {
         self.responses.lock().unwrap().push_back(response);
     }
 
     /// Adds a successful text response to the queue.
+    #[cfg(test)]
     pub fn add_success(&self, text: impl Into<String>) {
         self.add_response(RunnerOutput::success(text));
     }
 
     /// Returns all recorded prompts.
+    #[cfg(test)]
     pub fn recorded_prompts(&self) -> Vec<String> {
         self.recorded_prompts.lock().unwrap().clone()
     }
 
     /// Returns the number of remaining responses.
+    #[cfg(test)]
     pub fn remaining_responses(&self) -> usize {
         self.responses.lock().unwrap().len()
     }

@@ -148,9 +148,9 @@ pub fn get_status(root: &Path) -> Result<StatusReport> {
     // Build summaries.
     let summaries: Vec<PrdSummary> = prds
         .iter()
-        .map(|(filename, prd, abs_path)| {
+        .map(|(filename, prd, _abs_path)| {
             let relative_path = format!("prds/{}", filename);
-            PrdSummary::from_prd(prd, relative_path, abs_path.clone())
+            PrdSummary::from_prd(prd, relative_path)
         })
         .collect();
 
@@ -522,7 +522,6 @@ Test PRD.
                 completed_tasks: 2,
                 total_tasks: 5,
                 relative_path: "prds/PRD-0001.md".to_string(),
-                path: std::path::PathBuf::from("prds/PRD-0001.md"),
             }],
             next_task: Some(NextTaskInfo {
                 prd_id: "PRD-0001".to_string(),

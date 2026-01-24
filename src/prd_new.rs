@@ -43,7 +43,6 @@ pub struct PrdNewResult {
     pub rounds: usize,
 
     /// The Q/A history.
-    #[allow(dead_code)]
     pub qa_history: Vec<QaPair>,
 }
 
@@ -90,7 +89,7 @@ where
 
     // Generate next PRD ID.
     let next_id = generate_next_prd_id(&existing_prds);
-    tracing::debug!(next_id = %next_id, "Generated next PRD ID");
+    tracing::debug!(next_id = %next_id, runner = %runner.name(), "Starting PRD creation");
 
     // Round 1: Get initial questions.
     writeln!(output, "Generating questions...")?;
@@ -462,7 +461,6 @@ mod tests {
                 id: "PRD-0001".to_string(),
                 title: "First".to_string(),
                 status: crate::prd::PrdStatus::Active,
-                path: "test.md".into(),
                 relative_path: "prds/test.md".to_string(),
                 completed_tasks: 0,
                 total_tasks: 0,
@@ -471,7 +469,6 @@ mod tests {
                 id: "PRD-0003".to_string(),
                 title: "Third".to_string(),
                 status: crate::prd::PrdStatus::Done,
-                path: "test2.md".into(),
                 relative_path: "prds/test2.md".to_string(),
                 completed_tasks: 0,
                 total_tasks: 0,

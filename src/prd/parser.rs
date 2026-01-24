@@ -59,7 +59,7 @@ pub fn parse_prd_file(path: impl AsRef<Path>) -> Result<Prd> {
 /// Serializes a PRD back to a string with YAML frontmatter and Markdown body.
 ///
 /// The serialization preserves the original body content exactly as provided.
-#[allow(dead_code)]
+#[cfg(test)]
 pub fn serialize_prd(prd: &Prd) -> Result<String> {
     let frontmatter_yaml = serde_yaml::to_string(&prd.frontmatter)
         .context("Failed to serialize PRD frontmatter to YAML")?;

@@ -9,25 +9,23 @@ use std::process::Command;
 use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult};
 
 /// Permission mode for the Copilot runner.
-// TODO(T-013): Remove allow(dead_code) when all variants/config options are used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[allow(dead_code)]
 pub enum PermissionMode {
     /// Allow all permissions (--allow-all).
     #[default]
     Yolo,
 
     /// Use individual allow flags.
+    #[cfg(test)]
     AllowAll,
 
     /// No special permission flags (will prompt for permissions).
+    #[cfg(test)]
     Manual,
 }
 
 /// Configuration for the Copilot runner.
-// TODO(T-013): Remove allow(dead_code) when config builder is used.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct CopilotConfig {
     /// The path to the copilot CLI binary.
     pub copilot_path: String,
@@ -37,9 +35,6 @@ pub struct CopilotConfig {
 
     /// Whether to use silent mode (-s) for clean output.
     pub silent: bool,
-
-    /// Timeout in seconds (0 = no timeout).
-    pub timeout_secs: u64,
 
     /// Whether to disable the ask_user tool.
     pub no_ask_user: bool,
@@ -51,44 +46,41 @@ impl Default for CopilotConfig {
             copilot_path: "copilot".to_string(),
             permission_mode: PermissionMode::Yolo,
             silent: true,
-            timeout_secs: 0,
             no_ask_user: true,
         }
     }
 }
 
-#[allow(dead_code)]
 impl CopilotConfig {
     /// Creates a new config with the default copilot path.
+    #[cfg(test)]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Sets the path to the copilot binary.
+    #[cfg(test)]
     pub fn with_path(mut self, path: impl Into<String>) -> Self {
         self.copilot_path = path.into();
         self
     }
 
     /// Sets the permission mode.
+    #[cfg(test)]
     pub fn with_permission_mode(mut self, mode: PermissionMode) -> Self {
         self.permission_mode = mode;
         self
     }
 
     /// Sets whether to use silent mode.
+    #[cfg(test)]
     pub fn with_silent(mut self, silent: bool) -> Self {
         self.silent = silent;
         self
     }
 
-    /// Sets the timeout in seconds.
-    pub fn with_timeout(mut self, timeout_secs: u64) -> Self {
-        self.timeout_secs = timeout_secs;
-        self
-    }
-
     /// Sets whether to disable the ask_user tool.
+    #[cfg(test)]
     pub fn with_no_ask_user(mut self, no_ask_user: bool) -> Self {
         self.no_ask_user = no_ask_user;
         self
@@ -113,8 +105,7 @@ impl CopilotRunner {
     }
 
     /// Creates a new Copilot runner with the given configuration.
-    // TODO(T-013): Remove allow(dead_code) when with_config is used.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn with_config(config: CopilotConfig) -> Self {
         Self { config }
     }
@@ -132,11 +123,13 @@ impl CopilotRunner {
             PermissionMode::Yolo => {
                 args.push("--allow-all".to_string());
             }
+            #[cfg(test)]
             PermissionMode::AllowAll => {
                 args.push("--allow-all-tools".to_string());
                 args.push("--allow-all-paths".to_string());
                 args.push("--allow-all-urls".to_string());
             }
+            #[cfg(test)]
             PermissionMode::Manual => {
                 // No permission flags.
             }
@@ -208,11 +201,10 @@ impl Runner for CopilotRunner {
             format!("{}\n{}", stdout, stderr)
         };
 
-        let exit_code = output.status.code();
         let success = output.status.success();
 
         tracing::debug!(
-            exit_code = ?exit_code,
+            exit_code = ?output.status.code(),
             success = success,
             output_len = combined_output.len(),
             "Copilot CLI completed"
@@ -221,7 +213,6 @@ impl Runner for CopilotRunner {
         Ok(RunnerOutput {
             text: combined_output,
             success,
-            exit_code,
         })
     }
 
@@ -241,7 +232,6 @@ mod tests {
         assert_eq!(config.copilot_path, "copilot");
         assert_eq!(config.permission_mode, PermissionMode::Yolo);
         assert!(config.silent);
-        assert_eq!(config.timeout_secs, 0);
         assert!(config.no_ask_user);
     }
 
@@ -251,13 +241,11 @@ mod tests {
             .with_path("/custom/path/copilot")
             .with_permission_mode(PermissionMode::AllowAll)
             .with_silent(false)
-            .with_timeout(300)
             .with_no_ask_user(false);
 
         assert_eq!(config.copilot_path, "/custom/path/copilot");
         assert_eq!(config.permission_mode, PermissionMode::AllowAll);
         assert!(!config.silent);
-        assert_eq!(config.timeout_secs, 300);
         assert!(!config.no_ask_user);
     }
 

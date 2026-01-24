@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+#[cfg(test)]
 use anyhow::{Context, Result, bail};
 
 use super::types::PromptKind;
@@ -31,7 +32,7 @@ impl PromptLoader {
     }
 
     /// Returns the path to the prompts directory.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn prompts_dir(&self) -> &Path {
         &self.prompts_dir
     }
@@ -45,6 +46,7 @@ impl PromptLoader {
     /// # Returns
     ///
     /// The content of the prompt file.
+    #[cfg(test)]
     pub fn load(&self, kind: PromptKind) -> Result<String> {
         let path = self.prompts_dir.join(kind.filename());
 
@@ -64,24 +66,25 @@ impl PromptLoader {
     ///
     /// The content of the prompt file, either from disk or the embedded default.
     pub fn load_with_fallback(&self, kind: PromptKind) -> String {
-        self.load(kind)
-            .unwrap_or_else(|_| get_default_prompt(kind).to_string())
+        let path = self.prompts_dir.join(kind.filename());
+
+        std::fs::read_to_string(&path).unwrap_or_else(|_| get_default_prompt(kind).to_string())
     }
 
     /// Checks if a prompt file exists.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn exists(&self, kind: PromptKind) -> bool {
         self.prompts_dir.join(kind.filename()).exists()
     }
 
     /// Checks if all prompt files exist.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn all_exist(&self) -> bool {
         PromptKind::all().iter().all(|kind| self.exists(*kind))
     }
 
     /// Returns a list of missing prompt files.
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn missing_prompts(&self) -> Vec<PromptKind> {
         PromptKind::all()
             .iter()
@@ -121,18 +124,21 @@ fn get_default_prompt(kind: PromptKind) -> &'static str {
 /// # Returns
 ///
 /// The content of the prompt file.
-#[allow(dead_code)]
+#[cfg(test)]
 pub fn load_prompt(root: impl AsRef<Path>, kind: PromptKind) -> Result<String> {
-    let loader = PromptLoader::new(root);
+    let prompts_dir = root.as_ref().join(".mr").join("prompts");
 
-    if !loader.prompts_dir().exists() {
+    if !prompts_dir.exists() {
         bail!(
             "Prompts directory not found: {}. Run `mr init` first.",
-            loader.prompts_dir().display()
+            prompts_dir.display()
         );
     }
 
-    loader.load(kind)
+    let path = prompts_dir.join(kind.filename());
+
+    std::fs::read_to_string(&path)
+        .with_context(|| format!("Failed to load prompt file: {}", path.display()))
 }
 
 /// Loads a prompt with fallback to embedded defaults.
