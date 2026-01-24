@@ -56,7 +56,7 @@ tasks:
 - id: T-005
   title: Include context in final PRD synthesis prompt
   priority: 2
-  status: todo
+  status: done
   notes: Add user_context to prd_new_synthesize_prd.md placeholder expansion.
 - id: T-006
   title: Update help text and documentation
@@ -126,5 +126,16 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Updated call site in `create_prd` loop to pass `user_context.as_deref()` to `build_round_n_prompt`
   - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_roundN_questions.md`
   - Context now flows through all Q/A rounds (rounds 2+), not just round 1
+  - UAT: All 227 tests passed
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Include context in final PRD synthesis prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `build_synthesize_prompt` in `src/prd_new.rs` to accept `user_context: Option<&str>` parameter
+  - Updated call site in `create_prd` to pass `user_context.as_deref()` to `build_synthesize_prompt`
+  - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_synthesize_prd.md`
+  - Updated README.md placeholder documentation table for `prd_new_synthesize_prd.md`
+  - Context now flows through to final PRD synthesis, completing the context flow chain
   - UAT: All 227 tests passed
 

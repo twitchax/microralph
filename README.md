@@ -237,6 +237,7 @@ Used to synthesize the final PRD from collected Q/A.
 | Placeholder | Type | Description |
 |-------------|------|-------------|
 | `{{slug}}` | string | The slug for the new PRD |
+| `{{user_context}}` | string | Optional upfront context provided by user |
 | `{{#each qa_history}}` | list | All Q/A pairs from the session |
 | ↳ `{{question}}` | string | The question |
 | ↳ `{{answer}}` | string | The answer |

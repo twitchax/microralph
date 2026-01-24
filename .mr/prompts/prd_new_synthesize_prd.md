@@ -8,6 +8,11 @@ Synthesize a complete PRD from the Q/A session.
 
 The user is creating a new PRD with slug: `{{slug}}`
 
+{{#if user_context}}
+User's upfront context:
+> {{user_context}}
+{{/if}}
+
 ## Q/A Session
 
 {{#each qa_history}}

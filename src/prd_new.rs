@@ -183,7 +183,8 @@ where
     writeln!(output)?;
     writeln!(output, "Synthesizing PRD...")?;
 
-    let synthesize_prompt = build_synthesize_prompt(config, &qa_history, &existing_prds);
+    let synthesize_prompt =
+        build_synthesize_prompt(config, &qa_history, &existing_prds, user_context.as_deref());
     let synthesize_output = runner
         .execute(&synthesize_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -329,11 +330,16 @@ fn build_synthesize_prompt(
     config: &PrdNewConfig,
     qa_history: &[QaPair],
     existing_prds: &[PrdSummary],
+    user_context: Option<&str>,
 ) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewSynthesizePrd);
 
     let mut ctx = PlaceholderContext::new();
     ctx.insert("slug", config.slug);
+
+    if let Some(context) = user_context {
+        ctx.insert("user_context", context);
+    }
 
     // Build Q/A history.
     let qa_list: Vec<HashMap<String, String>> = qa_history
