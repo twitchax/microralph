@@ -117,7 +117,7 @@ tasks:
   - id: T-002
     title: "Define PRD file format + parser (YAML frontmatter + Markdown body)"
     priority: 2
-    status: todo
+    status: done
     notes: "Must round-trip without trashing human Markdown."
   - id: T-003
     title: "Implement PRD index generator (`.mr/PRDS.md`)"
@@ -316,5 +316,18 @@ Each prompt must define:
   - All tests pass (8/8), clippy clean, builds successfully
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Define PRD file format + parser (YAML frontmatter + Markdown body)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `serde` and `serde_yaml` dependencies for YAML parsing
+  - Created `src/prd/` module with `mod.rs`, `types.rs`, and `parser.rs`
+  - Defined comprehensive PRD data types: `Prd`, `PrdFrontmatter`, `Task`, `PrdStatus`, `TaskStatus`
+  - Implemented `parse_prd()` and `parse_prd_file()` for parsing PRDs from strings/files
+  - Implemented `serialize_prd()` for round-trip serialization preserving body content
+  - Wrote 16 tests covering parsing, serialization, round-trips, and edge cases
+  - Parser successfully handles the actual PRD-0001 file (complex real-world PRD)
+  - All 24 tests pass (including 16 new prd module tests), clippy clean, CI green
 
 ---

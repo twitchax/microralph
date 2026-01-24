@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
+mod prd;
+
 /// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
