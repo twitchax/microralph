@@ -5,16 +5,53 @@
 
 # microralph
 
-A tiny CLI that helps you **create PRDs** and **execute PRDs** by repeatedly invoking an underlying coding-agent CLI (starting with GitHub Copilot CLI) and updating PRD state (tasks + History) after every run.
+> *A small ralph to help you ralph your ralphs.* 🦙
 
-## MVP Promise
+**microralph** is a tiny CLI that wraps your favorite AI coding agent (starting with [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.
 
-Minimal ceremony. You can:
+Oh, and yes: **microralph was entirely `ralph`'d into existence by microralph itself**. Dogfooding at its finest. 🐕
 
-- Bootstrap or init a repo
-- Write PRDs via a guided Q/A
-- Run an iterative "try → verify → log" loop
-- Watch tasks flip to done when `cargo make uat` passes
+## Why microralph?
+
+AI coding agents are powerful, but they have a fatal flaw: **context windows**. The more context an agent accumulates, the slower and more expensive it gets—and eventually it forgets what it was doing.
+
+microralph solves this by:
+
+1. **Breaking work into discrete tasks** via PRDs
+2. **Running one task per invocation** so context never bloats
+3. **Persisting state in git-tracked Markdown** so the agent can pick up where it left off
+4. **Logging History** so failed attempts inform future runs
+
+No more 200k-token conversations that go off the rails. Just focused, atomic task execution.
+
+## The Normal Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. mr init / mr bootstrap     ← Set up .mr/ structure     │
+│  2. mr prd new my-feature      ← Create PRD via guided Q/A │
+│  3. mr run                     ← Execute one task          │
+│  4. Agent implements, runs UAT, updates PRD, commits       │
+│  5. Repeat step 3 until all tasks are done                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Each `mr run` invocation:
+- Picks the highest-priority incomplete task
+- Invokes the underlying agent with a focused prompt
+- Expects the agent to: implement, verify with UAT, update PRD status/history, commit
+- Exits—keeping context minimal for the next run
+
+## Features
+
+- **PRD-driven development**: Structure your work as markdown PRDs with YAML frontmatter
+- **One-task-per-run loop**: Context stays small, agents stay focused
+- **Guided PRD creation**: `mr prd new` runs an interactive Q/A to generate PRDs
+- **Bootstrap existing repos**: `mr bootstrap` scans your repo and generates starter PRDs
+- **Multi-language support**: Works with Rust, Python, Node.js, Go, Java (auto-detected)
+- **Streaming output**: `mr run --stream` shows agent output in real-time
+- **Git-native state**: PRDs are versioned markdown; no databases or JSON blobs
+- **Runner abstraction**: Pluggable adapters (Copilot, mock for testing, more to come)
 
 ## Installation
 
@@ -56,22 +93,42 @@ mr status
 
 ### Commands
 
-| Command             | Description                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `mr init`           | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
-| `mr bootstrap`      | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
-| `mr prd new <slug>` | Create a new PRD via guided Q/A                                                        |
-| `mr prd list`       | List all PRDs                                                                          |
-| `mr run`            | Run the next task from the active PRD                                                  |
-| `mr status`         | Show status of PRDs and tasks                                                          |
+| Command                        | Description                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `mr init`                      | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
+| `mr init --language <lang>`    | Initialize for a specific language (rust, python, node, go, java)                      |
+| `mr bootstrap`                 | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
+| `mr prd new <slug>`            | Create a new PRD via guided Q/A                                                        |
+| `mr prd edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |
+| `mr prd list`                  | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
+| `mr run`                       | Run the next task from the highest-priority active PRD                                 |
+| `mr run --prd <id>`            | Run the next task from a specific PRD                                                  |
+| `mr run --stream`              | Run with real-time streaming output                                                    |
+| `mr reindex`                   | Regenerate index and verify/fix PRD interlinks                                         |
+| `mr status`                    | Show status of PRDs and tasks                                                          |
 
 ### Flags
 
-| Flag                | Description                         |
-| ------------------- | ----------------------------------- |
-| `-v, --verbose`     | Enable verbose output               |
-| `-q, --quiet`       | Suppress non-essential output       |
-| `--runner <runner>` | Specify runner (default: `copilot`) |
+| Flag                | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `-v, --verbose`     | Enable verbose output                              |
+| `-q, --quiet`       | Suppress non-essential output                      |
+| `--runner <runner>` | Specify runner (default: `copilot`)                |
+| `--model <model>`   | Specify model (passed through to runner)           |
+| `--stream`          | Stream runner output in real-time (for `mr run`)   |
+
+### Configuration
+
+Settings can be persisted in `.mr/config.toml`:
+
+```toml
+runner = "copilot"
+model = "claude-sonnet-4-20250514"
+permission_mode = "yolo"
+timeout_minutes = 30
+```
+
+CLI flags override config file settings.
 
 ## Development
 
@@ -274,6 +331,56 @@ What this PRD is about...
 
 (Entries appended by `mr run` will go below this line.)
 ```
+
+## Learn More
+
+### What's a PRD?
+
+A **Product Requirements Document** (PRD) defines what you want to build. In microralph, PRDs are enhanced with:
+- **Tasks**: Atomic units of work with priority and status
+- **History**: A log of what the agent attempted and what happened
+
+See [Writing Good PRDs](https://www.atlassian.com/agile/product-management/requirements) for general guidance.
+
+### Agent Loops & Context Limits
+
+Modern AI agents suffer from the **context window problem**: as conversations grow, agents slow down, get expensive, and eventually "forget" earlier context.
+
+microralph implements an **agentic loop** pattern:
+1. Load minimal context (just the current task + PRD)
+2. Execute the task
+3. Persist results to disk (git-tracked markdown)
+4. Exit—freeing context for the next task
+
+This pattern is inspired by work on:
+- [Agentic Design Patterns](https://www.deeplearning.ai/the-batch/agentic-design-patterns-part-1/) by Andrew Ng
+- [ReAct: Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
+- [LangChain Agent Loops](https://python.langchain.com/docs/modules/agents/)
+
+## Comparison with Other Tools
+
+| Feature                          | microralph         | Claude Code       | Cursor             | Aider              | Cline              |
+|----------------------------------|:------------------:|:-----------------:|:------------------:|:------------------:|:------------------:|
+| **PRD-driven task breakdown**    | ✅                  | ❌                | ❌                 | ❌                 | ❌                 |
+| **One-task-per-run (no bloat)**  | ✅                  | ❌                | ❌                 | ❌                 | ❌                 |
+| **Git-native state**             | ✅                  | ❌                | ❌                 | ✅                 | ❌                 |
+| **History/retry logging**        | ✅                  | ❌                | ❌                 | ⚠️ (partial)      | ❌                 |
+| **Multi-runner abstraction**     | ✅                  | ❌ (Claude only)  | ❌ (Cursor only)   | ⚠️ (multi-model)  | ❌ (VSCode only)   |
+| **Works in terminal**            | ✅                  | ✅                | ❌ (IDE only)      | ✅                 | ❌ (IDE only)      |
+| **No API keys required**         | ✅ (uses CLI auth)  | ✅                | ✅                 | ❌                 | ✅                 |
+| **Customizable prompts**         | ✅                  | ❌                | ❌                 | ⚠️                | ❌                 |
+
+### Why microralph is Different
+
+Most AI coding tools are **session-based**: you start a conversation, describe what you want, and the agent tries to do everything in one go. This works for small tasks but breaks down for larger projects:
+
+- **Context bloat**: Long sessions accumulate context until the agent gets confused
+- **No persistence**: If you close the session, you start over
+- **No structure**: There's no clear definition of "done" or progress tracking
+
+microralph is **task-based**: you define discrete tasks upfront, and each `mr run` tackles exactly one task with fresh context. Progress is tracked in git, so you can close your terminal, reboot your machine, or come back weeks later—microralph picks up where it left off.
+
+Think of it as the difference between "do everything in one meeting" vs. "complete one ticket per sprint" — the latter scales.
 
 ## License
 

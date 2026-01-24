@@ -109,13 +109,11 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-T-019 adds a `--stream` flag to `mr run` that enables real-time output streaming. This is relevant for agents to know about. Let me update the auto-managed section.
+Now I understand T-020 added a `reindex` command. Let me update the auto-managed section with the new command documentation.
 
-The current auto-managed section contains stale notes from a previous update rather than properly formatted content. I'll replace it with proper content including the streaming feature from T-019.
-
-Updated the auto-managed section with properly formatted content including the new `--stream` flag from T-019. The section now documents:
-- **Clippy Policy** - `#[allow(...)]` requires reason comments
-- **Multi-Language Support** - `--language` flag
-- **Configuration File** - `.mr/config.toml` settings
-- **Streaming Output** - new `mr run --stream` flag for real-time output
+Updated the auto-managed section with properly formatted content:
+- **Streaming Output** — `mr run --stream` for real-time output
+- **Reindex Command** — `mr reindex` to regenerate index and fix links
+- **Clippy Policy** — `#[allow(...)]` requires reason comments
+- **Configuration** — `.mr/config.toml` settings and `--language` flag
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
