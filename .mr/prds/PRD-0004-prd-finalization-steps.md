@@ -5,52 +5,51 @@ status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
-
 tasks:
-  - id: T-001
-    title: "Add `mr prd finalize <id>` CLI command"
-    priority: 1
-    status: done
-  - id: T-002
-    title: "Implement task completion validation (all tasks must be done)"
-    priority: 1
-    status: done
-  - id: T-003
-    title: "Run acceptance test verification via finalization prompt"
-    priority: 2
-    status: done
-  - id: T-004
-    title: "Create CHANGELOG.md at project root with Keep a Changelog format"
-    priority: 2
-    status: done
-  - id: T-005
-    title: "Add changelog entry generation to finalization prompt"
-    priority: 2
-    status: done
-  - id: T-006
-    title: "Generate summary report (append to PRD + stdout)"
-    priority: 2
-    status: done
-  - id: T-007
-    title: "Update PRD status to done and refresh PRDS.md index"
-    priority: 2
-    status: done
-  - id: T-008
-    title: "Update inter-PRD links in index during finalization"
-    priority: 3
-    status: done
-  - id: T-009
-    title: "Add cleanup tasks to finalization prompt (temp files, comments)"
-    priority: 3
-    status: done
-  - id: T-010
-    title: "Append finalization history entry to PRD"
-    priority: 2
-    status: done
-  - id: T-011
-    title: "Update run_task_finalize.md and init.rs default prompt with comprehensive instructions"
-    priority: 2
-    status: done
+- id: T-001
+  title: Add `mr prd finalize <id>` CLI command
+  priority: 1
+  status: done
+- id: T-002
+  title: Implement task completion validation (all tasks must be done)
+  priority: 1
+  status: done
+- id: T-003
+  title: Run acceptance test verification via finalization prompt
+  priority: 2
+  status: done
+- id: T-004
+  title: Create CHANGELOG.md at project root with Keep a Changelog format
+  priority: 2
+  status: done
+- id: T-005
+  title: Add changelog entry generation to finalization prompt
+  priority: 2
+  status: done
+- id: T-006
+  title: Generate summary report (append to PRD + stdout)
+  priority: 2
+  status: done
+- id: T-007
+  title: Update PRD status to done and refresh PRDS.md index
+  priority: 2
+  status: done
+- id: T-008
+  title: Update inter-PRD links in index during finalization
+  priority: 3
+  status: done
+- id: T-009
+  title: Add cleanup tasks to finalization prompt (temp files, comments)
+  priority: 3
+  status: done
+- id: T-010
+  title: Append finalization history entry to PRD
+  priority: 2
+  status: done
+- id: T-011
+  title: Update run_task_finalize.md and init.rs default prompt with comprehensive instructions
+  priority: 2
+  status: done
 ---
 
 # PRD-0004: PRD Finalization Steps
@@ -332,9 +331,3 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
   - Same instructions exist in `src/init.rs` `PROMPT_RUN_TASK_FINALIZE` constant
   - No additional code changes required; acceptance test already satisfied
   - UAT passes: 227/227 tests pass
-
-## 2026-01-24 — PRD Finalized
-- **Status**: ✅ Finalized
-- **Outcome**: All 11 tasks completed, all 227 acceptance tests passed
-- **Changelog**: Entry added under [Unreleased] → Added
-- **Cleanup**: No cleanup required — no debug statements or temp files found
