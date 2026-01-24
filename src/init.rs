@@ -339,12 +339,15 @@ User's upfront context:
 ## Required Actions
 
 1. Review the existing PRDs to understand context.
-2. Generate 3-5 clarifying questions to understand:
+2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
+3. Generate 3-5 clarifying questions to understand:
    - What problem does this PRD solve?
    - What are the success criteria?
    - What are the acceptance tests?
    - What are the dependencies or blockers?
    - What is the scope (MVP vs full feature)?
+   - Are there specific sections in existing PRDs that are relevant (e.g., patterns, lessons learned)?
+   - Are there existing code files or modules that should be referenced?
 
 ## Output Format
 
@@ -428,25 +431,34 @@ User's upfront context:
 ## Required Actions
 
 1. Generate the next PRD ID (e.g., PRD-0002 if PRD-0001 exists).
-2. Create a complete PRD file with:
+2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
+3. Review existing PRDs for relevant sections (e.g., patterns, lessons learned, related features).
+4. Create a complete PRD file with:
    - YAML frontmatter (id, title, status, owner, created, updated, tasks)
    - Summary section
    - Problem section
    - Goals section
    - Non-Goals section (if applicable)
+   - Relevant References section (links to specific sections in other PRDs and code files)
    - Acceptance Tests section
    - Empty History section
 
-3. Tasks should:
+5. Tasks should:
    - Have unique IDs (T-001, T-002, etc.)
    - Have clear, actionable titles
    - Be prioritized (1 = highest)
    - Start with status: todo
+   - Include code file links where relevant (e.g., `See src/module.rs` for entry point)
 
-4. Acceptance tests should:
+6. Acceptance tests should:
    - Have unique IDs (uat-001, uat-002, etc.)
    - Include a `uat_status` field: `unverified` (default, no real test exists yet) or `verified` (a real test exists)
    - New acceptance tests should start as `unverified` unless you create the actual test
+
+7. Relevant References section should:
+   - Link to specific sections in other PRDs that inform this work (e.g., `See PRD-0001 ## Lessons Learned`)
+   - Link to relevant code files that bootstrap tasks (e.g., `src/main.rs` for CLI entry points)
+   - Only include genuinely useful references, not exhaustive lists
 
 ## Output
 

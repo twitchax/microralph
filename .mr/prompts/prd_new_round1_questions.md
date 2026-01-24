@@ -27,12 +27,15 @@ User's upfront context:
 ## Required Actions
 
 1. Review the existing PRDs to understand context.
-2. Generate 3-5 clarifying questions to understand:
+2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
+3. Generate 3-5 clarifying questions to understand:
    - What problem does this PRD solve?
    - What are the success criteria?
    - What are the acceptance tests?
    - What are the dependencies or blockers?
    - What is the scope (MVP vs full feature)?
+   - Are there specific sections in existing PRDs that are relevant (e.g., patterns, lessons learned)?
+   - Are there existing code files or modules that should be referenced?
 
 ## Output Format
 

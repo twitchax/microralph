@@ -629,7 +629,7 @@ fn cmd_prd_list() -> Result<()> {
     // Regenerate the index file.
     prd::generate_index_from_root(&cwd)?;
 
-    let mut prds = prd::scan_prd_summaries(&cwd)?;
+    let prds = prd::scan_prd_summaries(&cwd)?;
 
     if prds.is_empty() {
         println!("No PRDs found.");
@@ -638,13 +638,31 @@ fn cmd_prd_list() -> Result<()> {
         return Ok(());
     }
 
-    // Sort by status: active, draft, done, parked.
-    prds.sort_by_key(|p| p.status.sort_order());
+    // Group by status.
+    let active: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == prd::PrdStatus::Active)
+        .collect();
+
+    let draft: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == prd::PrdStatus::Draft)
+        .collect();
+
+    let done: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == prd::PrdStatus::Done)
+        .collect();
+
+    let parked: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == prd::PrdStatus::Parked)
+        .collect();
 
     println!("PRDs:");
     println!();
 
-    for prd_summary in &prds {
+    let format_prd = |prd_summary: &prd::PrdSummary| {
         let progress = if prd_summary.total_tasks > 0 {
             format!(
                 " [{}/{}]",
@@ -654,10 +672,47 @@ fn cmd_prd_list() -> Result<()> {
             String::new()
         };
 
-        println!(
-            "  {} - {} ({}){}",
-            prd_summary.id, prd_summary.title, prd_summary.status, progress
-        );
+        format!("{} - {}{}", prd_summary.id, prd_summary.title, progress)
+    };
+
+    if !active.is_empty() {
+        println!("  Active:");
+
+        for prd_summary in active {
+            println!("    {}", format_prd(prd_summary));
+        }
+
+        println!();
+    }
+
+    if !draft.is_empty() {
+        println!("  Draft:");
+
+        for prd_summary in draft {
+            println!("    {}", format_prd(prd_summary));
+        }
+
+        println!();
+    }
+
+    if !done.is_empty() {
+        println!("  Done:");
+
+        for prd_summary in done {
+            println!("    {}", format_prd(prd_summary));
+        }
+
+        println!();
+    }
+
+    if !parked.is_empty() {
+        println!("  Parked:");
+
+        for prd_summary in parked {
+            println!("    {}", format_prd(prd_summary));
+        }
+
+        println!();
     }
 
     Ok(())

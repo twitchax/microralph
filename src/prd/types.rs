@@ -31,20 +31,6 @@ impl std::fmt::Display for PrdStatus {
     }
 }
 
-impl PrdStatus {
-    /// Returns a sort order for display purposes.
-    ///
-    /// Order: Active (0), Draft (1), Done (2), Parked (3).
-    pub fn sort_order(&self) -> u8 {
-        match self {
-            Self::Active => 0,
-            Self::Draft => 1,
-            Self::Done => 2,
-            Self::Parked => 3,
-        }
-    }
-}
-
 /// Status of a task within a PRD.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
