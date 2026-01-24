@@ -13,6 +13,11 @@ User's initial description:
 > {{user_description}}
 {{/if}}
 
+{{#if user_context}}
+User's upfront context:
+> {{user_context}}
+{{/if}}
+
 ## Existing PRDs
 
 {{#each existing_prds}}

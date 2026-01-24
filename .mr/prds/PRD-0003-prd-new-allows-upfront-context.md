@@ -46,7 +46,7 @@ tasks:
 - id: T-003
   title: Pass context to initial question generation prompt
   priority: 1
-  status: todo
+  status: done
   notes: Include user_context in the PlaceholderContext for prd_new_round1_questions.md.
 - id: T-004
   title: Persist context through all Q/A rounds
@@ -107,5 +107,14 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Modified `create_prd` function to call `prompt_for_context` when no `--context` flag is provided
   - Updated `build_round1_prompt` to accept and include `user_context` in placeholder expansion
   - Removed `#[allow(dead_code)]` attribute from `context` field in `PrdNewConfig`
+  - UAT: All 227 tests passed
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Pass context to initial question generation prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `{{#if user_context}}` conditional block to `.mr/prompts/prd_new_round1_questions.md`
+  - The template now includes user's upfront context in the prompt when provided
+  - Context flows from CLI flag or interactive prompt → `build_round1_prompt` → template expansion
   - UAT: All 227 tests passed
 
