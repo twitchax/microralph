@@ -31,6 +31,9 @@ pub enum PromptKind {
     /// Final wrap-up task prompt for `mr run`.
     RunTaskFinalize,
 
+    /// UAT verification prompt for verifying a single acceptance test.
+    RunUatVerify,
+
     /// AGENTS.md update prompt.
     UpdateAgents,
 
@@ -61,6 +64,7 @@ impl PromptKind {
             Self::PrdNewSynthesizePrd => "prd_new_synthesize_prd.md",
             Self::RunTask => "run_task.md",
             Self::RunTaskFinalize => "run_task_finalize.md",
+            Self::RunUatVerify => "run_uat_verify.md",
             Self::UpdateAgents => "update_agents.md",
             Self::PrdEdit => "prd_edit.md",
             Self::AdaptLanguage => "adapt_language.md",
@@ -80,6 +84,7 @@ impl PromptKind {
             Self::PrdNewSynthesizePrd,
             Self::RunTask,
             Self::RunTaskFinalize,
+            Self::RunUatVerify,
             Self::UpdateAgents,
             Self::PrdEdit,
             Self::AdaptLanguage,
@@ -112,13 +117,14 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 13);
+        assert_eq!(all.len(), 14);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));
         assert!(all.contains(&PromptKind::Reindex));
         assert!(all.contains(&PromptKind::PickPrd));
+        assert!(all.contains(&PromptKind::RunUatVerify));
     }
 
     #[test]

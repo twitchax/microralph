@@ -762,6 +762,114 @@ Example output format:
 ```
 "#;
 
+/// Default content for the run UAT verification prompt.
+pub const PROMPT_RUN_UAT_VERIFY: &str = r#"# microralph — UAT Verification Prompt
+
+## Objective
+
+Verify a single unverified acceptance test (UAT) from a PRD by creating a test, running an existing test, or documenting why verification isn't feasible.
+
+## Context
+
+You are verifying acceptance test `{{uat_id}}` from PRD `{{prd_id}}`.
+
+**PRD Path**: `{{prd_path}}`
+
+**Acceptance Test Details**:
+- **ID**: `{{uat_id}}`
+- **Name**: `{{uat_name}}`
+- **Command**: `{{uat_command}}`
+- **Current Status**: unverified
+
+All tasks in this PRD are complete. You are now in the UAT verification phase to ensure acceptance criteria are covered by real tests.
+
+## Required Actions
+
+Choose ONE of the following verification approaches:
+
+### Option A: Verify Existing Test
+
+If a test already exists that covers this acceptance criterion:
+1. Identify the test (file path and test name).
+2. Run the test to confirm it passes: `{{uat_command}}`
+3. If it passes, update the PRD to mark `uat_status: verified` for `{{uat_id}}`.
+4. Append a History entry documenting the verification.
+
+### Option B: Create New Test
+
+If no test exists but one can feasibly be created:
+1. Create a minimal test that covers the acceptance criterion.
+2. Run `cargo make uat` to verify the test passes.
+3. Update the PRD to mark `uat_status: verified` for `{{uat_id}}`.
+4. Append a History entry documenting the new test.
+
+### Option C: Opt-Out with Explanation
+
+If verification is not feasible (e.g., requires manual testing, external dependencies, or is covered implicitly by other tests), you may opt out:
+1. Do NOT update `uat_status` (leave as `unverified`).
+2. Append a History entry explaining why verification isn't feasible.
+3. Respond with `OPT-OUT:` followed by your explanation on a single line.
+
+## Updating the PRD
+
+### Update UAT Status in Frontmatter
+
+If verification succeeds (Option A or B), update the acceptance test entry:
+
+```yaml
+acceptance_tests:
+  - id: {{uat_id}}
+    name: "{{uat_name}}"
+    command: {{uat_command}}
+    uat_status: verified  # <-- Change from 'unverified' to 'verified'
+```
+
+### Append to History Section
+
+Add a History entry documenting your verification attempt:
+
+```markdown
+## YYYY-MM-DD — {{uat_id}} Verification
+- **UAT**: {{uat_name}}
+- **Status**: ✅ Verified (or ⏭️ Opted-out)
+- **Method**: [Existing test / New test / Opt-out]
+- **Details**:
+  - [Test file and name if applicable]
+  - [Explanation if opted out]
+```
+
+## Constraints
+
+- Focus on this single UAT (`{{uat_id}}`). Do not verify other UATs in this invocation.
+- Keep test code minimal — just enough to cover the acceptance criterion.
+- Do not modify unrelated code.
+- Always update the PRD even if opting out (document your reasoning).
+
+## On Success
+
+If verification succeeds:
+1. Update `uat_status: verified` in the PRD frontmatter.
+2. Append a verification History entry.
+3. Regenerate `.mr/PRDS.md` by running: `cargo run -- prd list`
+4. Commit with message: `prd({{prd_id}})uat({{uat_id}}): [brief description]`
+
+## On Opt-Out
+
+If opting out:
+1. Leave `uat_status: unverified` unchanged.
+2. Append an opt-out History entry with clear explanation.
+3. Respond with `OPT-OUT: [your explanation]` so the run loop knows to proceed.
+4. Do NOT commit (opt-outs don't change UAT status).
+
+## Output
+
+Report what happened:
+- Whether verification succeeded or opted out
+- What approach was used (existing test, new test, or opt-out)
+- Test details or opt-out explanation
+- What was committed (if anything)
+"#;
+
 /// Default content for the update agents prompt.
 pub const PROMPT_UPDATE_AGENTS: &str = r#"# microralph — Update Agents Prompt
 
@@ -1265,6 +1373,11 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         &mut result,
     )?;
     create_file_if_missing(
+        &prompts_dir.join("run_uat_verify.md"),
+        PROMPT_RUN_UAT_VERIFY,
+        &mut result,
+    )?;
+    create_file_if_missing(
         &prompts_dir.join("update_agents.md"),
         PROMPT_UPDATE_AGENTS,
         &mut result,
@@ -1390,6 +1503,7 @@ mod tests {
         assert!(root.join(".mr/prompts/prd_new_synthesize_prd.md").exists());
         assert!(root.join(".mr/prompts/run_task.md").exists());
         assert!(root.join(".mr/prompts/run_task_finalize.md").exists());
+        assert!(root.join(".mr/prompts/run_uat_verify.md").exists());
         assert!(root.join(".mr/prompts/update_agents.md").exists());
         assert!(root.join(".mr/prompts/adapt_language.md").exists());
         assert!(root.join(".mr/prompts/reindex.md").exists());
@@ -1406,7 +1520,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 17); // 1 template + 13 prompts + 1 index + 1 config + 1 AGENTS.md
+        assert_eq!(result.files_created, 18); // 1 template + 14 prompts + 1 index + 1 config + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1417,13 +1531,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 17);
+        assert_eq!(result1.files_created, 18);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 17);
+        assert_eq!(result2.files_skipped, 18);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -1478,6 +1592,11 @@ mod tests {
 
         // Run task should have prd_path placeholder.
         assert!(PROMPT_RUN_TASK.contains("{{prd_path}}"));
+
+        // Run UAT verify should have uat_id and prd_id placeholders.
+        assert!(PROMPT_RUN_UAT_VERIFY.contains("{{uat_id}}"));
+        assert!(PROMPT_RUN_UAT_VERIFY.contains("{{prd_id}}"));
+        assert!(PROMPT_RUN_UAT_VERIFY.contains("{{prd_path}}"));
 
         // Update agents should have content placeholder.
         assert!(PROMPT_UPDATE_AGENTS.contains("{{agents_content}}"));

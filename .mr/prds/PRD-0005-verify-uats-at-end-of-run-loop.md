@@ -51,7 +51,7 @@ tasks:
 - id: T-002
   title: Create UAT verification prompt template
   priority: 1
-  status: todo
+  status: done
   notes: Create .mr/prompts/run_uat_verify.md with instructions for verifying a single UAT (create test, run test, or document why not feasible).
 - id: T-003
   title: Implement UAT verification loop in run.rs
@@ -135,4 +135,17 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Updated `run_task()` in `src/run.rs` to detect when all tasks are done and check for unverified UATs, returning appropriate result variant
   - Updated `main.rs` run loop to handle new `RunResult` variants with appropriate user messages
   - Added 3 new unit tests: `test_run_task_all_done_with_unverified_uats`, `test_run_task_all_done_and_verified`, `test_run_task_all_done_no_uats`
+  - UAT passed: 230 tests, all passed
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Create UAT verification prompt template
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `.mr/prompts/run_uat_verify.md` with comprehensive instructions for verifying a single UAT
+  - Added `PromptKind::RunUatVerify` variant to `src/prompt/types.rs`
+  - Added `PROMPT_RUN_UAT_VERIFY` constant to `src/init.rs` with embedded prompt content
+  - Wired up the new prompt in `init()` function and `get_default_prompt()` in `src/prompt/loader.rs`
+  - Updated test counts in `test_prompt_kind_all()`, `test_init_creates_structure()`, `test_init_is_idempotent()`, and `test_prompt_loader_missing_prompts()`
+  - Prompt includes placeholders: `{{uat_id}}`, `{{uat_name}}`, `{{uat_command}}`, `{{prd_id}}`, `{{prd_path}}`
+  - Supports three verification approaches: Option A (verify existing test), Option B (create new test), Option C (opt-out with explanation)
   - UAT passed: 230 tests, all passed
