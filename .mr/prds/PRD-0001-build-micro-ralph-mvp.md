@@ -187,7 +187,7 @@ tasks:
   - id: T-017
     title: "Document placeholder variables for each prompt in README"
     priority: 16
-    status: todo
+    status: done
     notes: "Add tables in README showing available `{{placeholder}}` variables for each prompt type (run_task, prd_new_*, bootstrap_*, etc.). Helps users who want to customize prompts by hand. Include variable name, type (string/list), and description."
   - id: T-018
     title: "Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)"
@@ -589,6 +589,20 @@ Each prompt must define:
   - Created `.mr/prompts/adapt_language.md` prompt file
   - Added 14 new tests for Language enum and detection logic
   - Updated test counts (14 files, 11 prompt kinds, 167 total tests)
+  - All 167 tests pass, clippy clean, UAT passes
+
+## 2026-01-24 — T-017 Completed
+- **Task**: Document placeholder variables for each prompt in README
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive "Prompt Placeholders" section to README.md
+  - Documented placeholder syntax: `{{variable}}`, `{{#if}}`, `{{#each}}`
+  - Created tables for all 11 prompt types showing:
+    - Variable name
+    - Type (string/list)
+    - Description
+  - Documented prompts: run_task, run_task_finalize, prd_new_round1_questions, prd_new_roundN_questions, prd_new_synthesize_prd, prd_edit, bootstrap_plan, bootstrap_generate_prds, update_agents, adapt_language, init
+  - Included list iteration field notation (↳) for nested fields in `{{#each}}` blocks
   - All 167 tests pass, clippy clean, UAT passes
 
 ---
