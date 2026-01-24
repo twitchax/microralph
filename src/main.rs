@@ -79,8 +79,7 @@ enum Command {
 
     /// Run the next task from the active PRD.
     Run {
-        /// Explicitly specify a PRD to run.
-        #[arg(long)]
+        /// Optional PRD ID to run (e.g., "PRD-0001"). If omitted, runs the highest-priority active PRD.
         prd: Option<String>,
 
         /// The runner to use for task execution.

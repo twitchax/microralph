@@ -1,7 +1,7 @@
 ---
 id: PRD-0009
 title: "CLI Ergonomics Improvements"
-status: draft
+status: active
 owner: "microralph"
 created: 2026-01-24
 updated: 2026-01-24
@@ -54,7 +54,7 @@ tasks:
 - id: T-001
   title: Remove --prd flag and add optional positional PRD argument to run command
   priority: 1
-  status: todo
+  status: done
   notes: Change Run command to accept optional positional prd argument. Remove --prd long flag.
 - id: T-002
   title: Remove Prd subcommand enum and flatten subcommands to top level
@@ -128,5 +128,16 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-24 — T-001 Completed
+- **Task**: Remove --prd flag and add optional positional PRD argument to run command
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/main.rs`: Changed the `Run` command's `prd` field from `#[arg(long)]` to a positional optional argument
+  - Removed the `--prd` long flag requirement
+  - Updated documentation comment to clarify the positional argument usage
+  - UAT passed: All 262 tests passed successfully
+  - The CLI now accepts `mr run PRD-0001` instead of `mr run --prd PRD-0001`
+  - `mr run` without arguments still works (interactive mode)
 
 ---
