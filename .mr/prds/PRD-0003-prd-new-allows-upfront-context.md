@@ -18,19 +18,19 @@ references:
 acceptance_tests:
 - id: uat-001
   name: Interactive flow prompts for context
-  command: cargo make mr:test prd_new_context_interactive
+  command: cargo make uat prd_new_context_interactive
 - id: uat-002
   name: Flag flow uses provided context
-  command: cargo make mr:test prd_new_context_flag
+  command: cargo make uat prd_new_context_flag
 - id: uat-003
   name: Context influences question generation
-  command: cargo make mr:test prd_new_context_in_questions
+  command: cargo make uat prd_new_context_in_questions
 - id: uat-004
   name: Context persists through Q/A rounds
-  command: cargo make mr:test prd_new_context_persistence
+  command: cargo make uat prd_new_context_persistence
 - id: uat-005
   name: Context included in final synthesis
-  command: cargo make mr:test prd_new_context_synthesis
+  command: cargo make uat prd_new_context_synthesis
 
 tasks:
 - id: T-001

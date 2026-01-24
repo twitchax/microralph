@@ -89,8 +89,18 @@ args = ["test"]
 
 [tasks.uat]
 # The one true gate for this repo.
+# Usage: cargo make uat [filter]
+# Examples:
+#   cargo make uat              - Run full CI pipeline
+#   cargo make uat prd_new      - Run CI then tests matching "prd_new"
 workspace = false
-dependencies = ["ci"]
+script_runner = "@shell"
+script = '''
+cargo make ci
+if [ -n "${1:-}" ]; then
+    cargo nextest run "$1"
+fi
+'''
 
 # =============================================================================
 # microralph Integration Tests

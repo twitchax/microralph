@@ -21,19 +21,19 @@ acceptance_tests:
   command: cargo make uat
 - id: uat-002
   name: '`mr init` is idempotent (via cargo-make test target)'
-  command: cargo make mr:test init
+  command: cargo make uat init
 - id: uat-003
   name: '`mr prd new` produces valid PRD (frontmatter + tasks + history scaffold)'
-  command: cargo make mr:test prd_new
+  command: cargo make uat prd_new
 - id: uat-004
   name: '`mr run --runner mock` attempts <=1 task and appends History (success + failure)'
-  command: cargo make mr:test run_mock
+  command: cargo make uat run_mock
 - id: uat-005
   name: '`mr status` output is stable'
-  command: cargo make mr:test status
+  command: cargo make uat status
 - id: uat-006
   name: '`mr bootstrap --runner mock` generates PRD index + starter PRDs deterministically'
-  command: cargo make mr:test bootstrap_mock
+  command: cargo make uat bootstrap_mock
 tasks:
 - id: T-001
   title: Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)

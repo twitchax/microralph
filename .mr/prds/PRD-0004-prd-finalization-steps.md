@@ -21,31 +21,31 @@ references:
 acceptance_tests:
 - id: uat-001
   name: Finalization fails if tasks incomplete
-  command: cargo make mr:test finalize_incomplete
+  command: cargo make uat finalize_incomplete
 - id: uat-002
   name: Finalization fails if tasks parked
-  command: cargo make mr:test finalize_parked
+  command: cargo make uat finalize_parked
 - id: uat-003
   name: Acceptance criteria verified via prompt
   command: cargo make uat
 - id: uat-004
   name: CHANGELOG.md created if missing
-  command: cargo make mr:test finalize_changelog_create
+  command: cargo make uat finalize_changelog_create
 - id: uat-005
   name: Changelog entry added under Unreleased
-  command: cargo make mr:test finalize_changelog_entry
+  command: cargo make uat finalize_changelog_entry
 - id: uat-006
   name: Summary report printed to stdout
-  command: cargo make mr:test finalize_summary_stdout
+  command: cargo make uat finalize_summary_stdout
 - id: uat-007
   name: Summary report appended to PRD
-  command: cargo make mr:test finalize_summary_prd
+  command: cargo make uat finalize_summary_prd
 - id: uat-008
   name: PRD status updated to done
-  command: cargo make mr:test finalize_status
+  command: cargo make uat finalize_status
 - id: uat-009
   name: PRDS.md index refreshed
-  command: cargo make mr:test finalize_index
+  command: cargo make uat finalize_index
 
 tasks:
 - id: T-001

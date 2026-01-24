@@ -270,6 +270,10 @@ Generate starter PRDs based on the bootstrap plan.
 
 You have analyzed the repository and created a bootstrap plan. Now generate the actual PRD files.
 
+## Plan
+
+{{plan}}
+
 ## Required Actions
 
 For each PRD in the plan:
