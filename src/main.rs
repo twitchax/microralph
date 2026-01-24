@@ -8,6 +8,7 @@ mod config;
 mod init;
 mod prd;
 mod prd_edit;
+mod prd_finalize;
 mod prd_new;
 mod prompt;
 mod reindex;
@@ -149,6 +150,24 @@ enum PrdCommand {
         model: Option<String>,
     },
 
+    /// Finalize a PRD after all tasks are complete.
+    Finalize {
+        /// The PRD ID to finalize (e.g., "PRD-0001").
+        prd_id: String,
+
+        /// The runner to use for finalization.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
+    },
+
     /// List all PRDs.
     List,
 }
@@ -196,6 +215,15 @@ fn main() -> Result<()> {
             PrdCommand::List => {
                 tracing::info!("Listing PRDs...");
                 cmd_prd_list()?;
+            }
+            PrdCommand::Finalize {
+                prd_id,
+                runner,
+                model,
+                stream,
+            } => {
+                tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Finalizing PRD...");
+                cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream)?;
             }
         },
         Some(Command::Run {
@@ -619,6 +647,65 @@ fn cmd_prd_list() -> Result<()> {
     Ok(())
 }
 
+/// Runs the `mr prd finalize` command.
+fn cmd_prd_finalize(
+    prd_id: &str,
+    runner_name: &str,
+    cli_model: Option<&str>,
+    stream: bool,
+) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::with_model(model);
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = prd_finalize::PrdFinalizeConfig {
+        root: &cwd,
+        prd_id,
+        stream,
+    };
+
+    let result = prd_finalize::finalize_prd(&config, runner.as_ref())?;
+
+    println!();
+    println!("PRD finalization complete!");
+    println!("  ID: {}", result.prd_id);
+    println!("  Title: {}", result.prd_title);
+    println!("  Path: {}", result.path.display());
+
+    if result.all_tasks_done {
+        println!("  Status: All tasks completed");
+    } else {
+        println!("  Status: Some tasks incomplete (finalization blocked)");
+    }
+
+    Ok(())
+}
+
 /// Runs the `mr run` command.
 fn cmd_run(
     prd_id: Option<&str>,
@@ -969,5 +1056,53 @@ mod tests {
         let args = Args::try_parse_from(["mr", "-q", "init"]).unwrap();
         assert!(args.quiet);
         assert!(!args.verbose);
+    }
+
+    #[test]
+    fn test_args_parse_prd_finalize() {
+        let args = Args::try_parse_from(["mr", "prd", "finalize", "PRD-0001"]).unwrap();
+        if let Some(Command::Prd {
+            prd_command:
+                PrdCommand::Finalize {
+                    prd_id,
+                    runner,
+                    model,
+                    stream,
+                },
+        }) = args.command
+        {
+            assert_eq!(prd_id, "PRD-0001");
+            assert_eq!(runner, "copilot");
+            assert!(model.is_none());
+            assert!(!stream);
+        } else {
+            panic!("Expected Prd Finalize command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_prd_finalize_with_options() {
+        let args = Args::try_parse_from([
+            "mr", "prd", "finalize", "PRD-0002", "--runner", "mock", "--model", "gpt-4o",
+            "--stream",
+        ])
+        .unwrap();
+        if let Some(Command::Prd {
+            prd_command:
+                PrdCommand::Finalize {
+                    prd_id,
+                    runner,
+                    model,
+                    stream,
+                },
+        }) = args.command
+        {
+            assert_eq!(prd_id, "PRD-0002");
+            assert_eq!(runner, "mock");
+            assert_eq!(model, Some("gpt-4o".to_string()));
+            assert!(stream);
+        } else {
+            panic!("Expected Prd Finalize command");
+        }
     }
 }
