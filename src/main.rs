@@ -6,6 +6,7 @@ mod init;
 mod prd;
 mod prd_new;
 mod prompt;
+mod run;
 mod runner;
 
 use runner::Runner;
@@ -101,7 +102,7 @@ fn main() -> Result<()> {
         },
         Some(Command::Run { prd, runner }) => {
             tracing::info!(prd = ?prd, runner = %runner, "Running next task...");
-            println!("mr run: not yet implemented");
+            cmd_run(prd.as_deref(), &runner)?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -254,6 +255,58 @@ fn cmd_prd_list() -> Result<()> {
             "  {} - {} ({}){}",
             prd_summary.id, prd_summary.title, prd_summary.status, progress
         );
+    }
+
+    Ok(())
+}
+
+/// Runs the `mr run` command.
+fn cmd_run(prd_id: Option<&str>, runner_name: &str) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("Micro Ralph is not initialized. Run `mr init` first.");
+    }
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::new();
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = run::RunConfig { root: &cwd, prd_id };
+
+    let result = run::run_task(&config, runner.as_ref())?;
+
+    println!();
+
+    if result.runner_success {
+        println!("Task {} completed successfully!", result.task_id);
+    } else {
+        println!("Task {} did not complete successfully.", result.task_id);
+    }
+
+    println!();
+    println!("  PRD: {} ({})", result.prd_id, result.prd_path.display());
+    println!("  Task: {} — {}", result.task_id, result.task_title);
+    println!();
+
+    if !result.output_summary.is_empty() {
+        println!("Runner output:");
+        println!("{}", result.output_summary);
     }
 
     Ok(())

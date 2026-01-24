@@ -6,8 +6,14 @@
 
 mod index;
 mod parser;
-mod types;
+pub mod types;
 
-pub use index::{PrdSummary, generate_index_from_root, scan_prd_summaries};
+pub use index::{PrdSummary, generate_index_from_root, scan_prd_summaries, scan_prds};
 pub use parser::{parse_prd, parse_prd_file};
-pub use types::{Prd, PrdStatus};
+pub use types::{Prd, PrdStatus, TaskStatus};
+
+// Re-exports used only in tests.
+#[cfg(test)]
+pub use parser::serialize_prd;
+#[cfg(test)]
+pub use types::{PrdFrontmatter, Task};
