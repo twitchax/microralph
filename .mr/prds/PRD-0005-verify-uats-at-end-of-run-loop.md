@@ -28,7 +28,7 @@ acceptance_tests:
 - id: uat-004
   name: Loop respects max_iterations config
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: Unverified UATs block PRD finalization
   command: cargo make uat finalize_unverified_blocks
@@ -255,5 +255,16 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Tests covering this UAT:
     - `test_append_opt_out_history` (line 1204): Tests the `append_opt_out_history()` function that appends opt-out History entries to PRD files
     - `test_uat_verification_loop_opt_out` (line 1356): Integration test that verifies the full opt-out flow - runner returns "OPT-OUT: Requires manual testing", History entry is appended with correct format
+  - Test command: `cargo make uat`
+  - Result: All 247 tests passed
+## 2026-01-24 — uat-004 Verification
+- **UAT**: Loop respects max_iterations config
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`
+  - Tests covering this UAT:
+    - `test_uat_verification_loop_max_iterations` (line 1424): Tests that the loop completes all UATs when max_iterations allows (2 UATs verified in 2 iterations, doesn't hit limit)
+    - `test_uat_verification_integration_flow` (line 1592): Integration test that verifies the loop stops when max_iterations is reached (2 iterations with 3 UATs, asserts `hit_max_iterations` is true)
   - Test command: `cargo make uat`
   - Result: All 247 tests passed
