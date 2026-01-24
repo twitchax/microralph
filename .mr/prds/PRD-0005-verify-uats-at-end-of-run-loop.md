@@ -20,7 +20,7 @@ acceptance_tests:
 - id: uat-002
   name: Loop addresses unverified UATs (create tests, run tests, or document)
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Model can opt-out with explanation appended to History
   command: cargo make uat
@@ -230,5 +230,19 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Tests covering this UAT:
     - `test_run_task_all_done_with_unverified_uats` (line 1026): Verifies that when all tasks are done but UATs are unverified, `run_task()` returns `RunResult::NeedsUatVerification`
     - `test_uat_verification_integration_flow` (line 1592): Integration test covering the full flow from task completion through the UAT verification loop
+  - Test command: `cargo make uat`
+  - Result: All 247 tests passed
+## 2026-01-24 — uat-002 Verification
+- **UAT**: Loop addresses unverified UATs (create tests, run tests, or document)
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`
+  - Test name: `test_uat_verification_integration_flow` (line 1592)
+  - This integration test comprehensively covers the loop's ability to:
+    1. Verify a UAT when runner succeeds (uat-001 verified)
+    2. Handle opt-out with explanation appended to History (uat-002 opts out)
+    3. Respect max_iterations config (loop stops after 2 iterations)
+  - Additional supporting tests: `test_uat_verification_loop_all_verified_by_runner`, `test_uat_verification_loop_opt_out`, `test_uat_verification_loop_max_iterations`
   - Test command: `cargo make uat`
   - Result: All 247 tests passed
