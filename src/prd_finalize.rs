@@ -6,9 +6,29 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use thiserror::Error;
 
+use crate::prd::types::Task;
 use crate::prd::{self, Prd, TaskStatus};
 use crate::runner::Runner;
+
+/// Errors that can occur during PRD finalization.
+#[derive(Debug, Error)]
+pub enum FinalizeError {
+    /// Some tasks are not complete.
+    #[error("Cannot finalize PRD: {incomplete_count} task(s) are not done")]
+    IncompleteTasks {
+        /// Number of incomplete tasks.
+        incomplete_count: usize,
+
+        /// Details about the incomplete tasks.
+        task_details: Vec<(String, TaskStatus)>,
+    },
+
+    /// The PRD was not found.
+    #[error("PRD not found: {0}")]
+    PrdNotFound(String),
+}
 
 /// Configuration for PRD finalization.
 pub struct PrdFinalizeConfig<'a> {
@@ -32,15 +52,13 @@ pub struct PrdFinalizeResult {
 
     /// Path to the PRD file.
     pub path: PathBuf,
-
-    /// Whether all tasks are done.
-    pub all_tasks_done: bool,
 }
 
 /// Finds a PRD by ID from the scanned PRDs.
-fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<(Prd, PathBuf)> {
+fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<(Prd, PathBuf), FinalizeError> {
     let prds_dir = root.join(".mr").join("prds");
-    let prds = prd::scan_prds(&prds_dir)?;
+    let prds =
+        prd::scan_prds(&prds_dir).map_err(|_| FinalizeError::PrdNotFound(prd_id.to_string()))?;
 
     for (_filename, prd, path) in prds {
         if prd.id() == prd_id {
@@ -48,14 +66,35 @@ fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<(Prd, PathBuf)> {
         }
     }
 
-    anyhow::bail!("PRD not found: {}", prd_id)
+    Err(FinalizeError::PrdNotFound(prd_id.to_string()))
 }
 
-/// Checks if all tasks in a PRD are done.
-fn all_tasks_done(prd: &Prd) -> bool {
+/// Gets all incomplete tasks from a PRD.
+fn get_incomplete_tasks(prd: &Prd) -> Vec<(&Task, TaskStatus)> {
     match prd.tasks() {
-        Some(tasks) => tasks.iter().all(|t| t.status == TaskStatus::Done),
-        None => true, // No tasks means nothing to do
+        Some(tasks) => tasks
+            .iter()
+            .filter(|t| t.status != TaskStatus::Done)
+            .map(|t| (t, t.status))
+            .collect(),
+        None => vec![],
+    }
+}
+
+/// Validates that all tasks in the PRD are done.
+fn validate_all_tasks_done(prd: &Prd) -> Result<(), FinalizeError> {
+    let incomplete = get_incomplete_tasks(prd);
+
+    if incomplete.is_empty() {
+        Ok(())
+    } else {
+        Err(FinalizeError::IncompleteTasks {
+            incomplete_count: incomplete.len(),
+            task_details: incomplete
+                .into_iter()
+                .map(|(t, status)| (t.id.clone(), status))
+                .collect(),
+        })
     }
 }
 
@@ -63,7 +102,7 @@ fn all_tasks_done(prd: &Prd) -> bool {
 ///
 /// This function:
 /// 1. Finds the PRD by ID
-/// 2. Validates all tasks are done
+/// 2. Validates all tasks are done (returns error if not)
 /// 3. (Future: runs acceptance tests via runner)
 /// 4. (Future: generates changelog entry)
 /// 5. (Future: updates PRD status to done)
@@ -77,6 +116,11 @@ fn all_tasks_done(prd: &Prd) -> bool {
 /// # Returns
 ///
 /// A `PrdFinalizeResult` with the outcome of finalization.
+///
+/// # Errors
+///
+/// Returns `FinalizeError::IncompleteTasks` if any task is not done.
+/// Returns `FinalizeError::PrdNotFound` if the PRD doesn't exist.
 pub fn finalize_prd(config: &PrdFinalizeConfig, _runner: &dyn Runner) -> Result<PrdFinalizeResult> {
     tracing::debug!(
         prd_id = config.prd_id,
@@ -87,22 +131,23 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, _runner: &dyn Runner) -> Result<
     let (prd, path) = find_prd_by_id(config.root, config.prd_id)
         .with_context(|| format!("Failed to find PRD: {}", config.prd_id))?;
 
-    let tasks_done = all_tasks_done(&prd);
+    // Validate all tasks are done - this returns an error if any are incomplete.
+    validate_all_tasks_done(&prd).with_context(|| {
+        format!(
+            "PRD {} cannot be finalized: incomplete tasks remain",
+            config.prd_id
+        )
+    })?;
 
-    // For now, just validate and report. Actual finalization logic will be
-    // added in subsequent tasks (T-002 through T-011).
-    if !tasks_done {
-        tracing::warn!(
-            prd_id = config.prd_id,
-            "Cannot finalize PRD: not all tasks are done"
-        );
-    }
+    tracing::info!(
+        prd_id = config.prd_id,
+        "All tasks done, PRD ready for finalization"
+    );
 
     Ok(PrdFinalizeResult {
         prd_id: prd.id().to_string(),
         prd_title: prd.title().to_string(),
         path,
-        all_tasks_done: tasks_done,
     })
 }
 
@@ -133,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_tasks_done_with_all_done() {
+    fn test_validate_all_tasks_done_with_all_done() {
         let prd = make_test_prd(
             "PRD-0001",
             vec![
@@ -142,11 +187,11 @@ mod tests {
             ],
         );
 
-        assert!(all_tasks_done(&prd));
+        assert!(validate_all_tasks_done(&prd).is_ok());
     }
 
     #[test]
-    fn test_all_tasks_done_with_incomplete() {
+    fn test_validate_all_tasks_done_with_incomplete() {
         let prd = make_test_prd(
             "PRD-0001",
             vec![
@@ -155,11 +200,25 @@ mod tests {
             ],
         );
 
-        assert!(!all_tasks_done(&prd));
+        let result = validate_all_tasks_done(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::IncompleteTasks {
+            incomplete_count,
+            task_details,
+        }) = result
+        {
+            assert_eq!(incomplete_count, 1);
+            assert_eq!(task_details.len(), 1);
+            assert_eq!(task_details[0].0, "T-002");
+            assert_eq!(task_details[0].1, TaskStatus::Todo);
+        } else {
+            panic!("Expected IncompleteTasks error");
+        }
     }
 
     #[test]
-    fn test_all_tasks_done_with_in_progress() {
+    fn test_validate_all_tasks_done_with_in_progress() {
         let prd = make_test_prd(
             "PRD-0001",
             vec![
@@ -168,18 +227,30 @@ mod tests {
             ],
         );
 
-        assert!(!all_tasks_done(&prd));
+        let result = validate_all_tasks_done(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::IncompleteTasks {
+            incomplete_count,
+            task_details,
+        }) = result
+        {
+            assert_eq!(incomplete_count, 1);
+            assert_eq!(task_details[0].1, TaskStatus::InProgress);
+        } else {
+            panic!("Expected IncompleteTasks error");
+        }
     }
 
     #[test]
-    fn test_all_tasks_done_with_no_tasks() {
+    fn test_validate_all_tasks_done_with_no_tasks() {
         let prd = make_test_prd("PRD-0001", vec![]);
 
-        assert!(all_tasks_done(&prd));
+        assert!(validate_all_tasks_done(&prd).is_ok());
     }
 
     #[test]
-    fn test_all_tasks_done_with_parked() {
+    fn test_validate_all_tasks_done_with_parked() {
         let prd = make_test_prd(
             "PRD-0001",
             vec![
@@ -188,11 +259,23 @@ mod tests {
             ],
         );
 
-        assert!(!all_tasks_done(&prd));
+        let result = validate_all_tasks_done(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::IncompleteTasks {
+            incomplete_count,
+            task_details,
+        }) = result
+        {
+            assert_eq!(incomplete_count, 1);
+            assert_eq!(task_details[0].1, TaskStatus::Parked);
+        } else {
+            panic!("Expected IncompleteTasks error");
+        }
     }
 
     #[test]
-    fn test_all_tasks_done_with_blocked() {
+    fn test_validate_all_tasks_done_with_blocked() {
         let prd = make_test_prd(
             "PRD-0001",
             vec![
@@ -201,6 +284,45 @@ mod tests {
             ],
         );
 
-        assert!(!all_tasks_done(&prd));
+        let result = validate_all_tasks_done(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::IncompleteTasks {
+            incomplete_count,
+            task_details,
+        }) = result
+        {
+            assert_eq!(incomplete_count, 1);
+            assert_eq!(task_details[0].1, TaskStatus::Blocked);
+        } else {
+            panic!("Expected IncompleteTasks error");
+        }
+    }
+
+    #[test]
+    fn test_validate_multiple_incomplete_tasks() {
+        let prd = make_test_prd(
+            "PRD-0001",
+            vec![
+                make_task("T-001", TaskStatus::Done),
+                make_task("T-002", TaskStatus::Todo),
+                make_task("T-003", TaskStatus::InProgress),
+                make_task("T-004", TaskStatus::Parked),
+            ],
+        );
+
+        let result = validate_all_tasks_done(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::IncompleteTasks {
+            incomplete_count,
+            task_details,
+        }) = result
+        {
+            assert_eq!(incomplete_count, 3);
+            assert_eq!(task_details.len(), 3);
+        } else {
+            panic!("Expected IncompleteTasks error");
+        }
     }
 }

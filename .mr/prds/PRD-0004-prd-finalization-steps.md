@@ -14,7 +14,7 @@ tasks:
   - id: T-002
     title: "Implement task completion validation (all tasks must be done)"
     priority: 1
-    status: todo
+    status: done
   - id: T-003
     title: "Run acceptance test verification via finalization prompt"
     priority: 2
@@ -146,3 +146,19 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
   - Added `cmd_prd_finalize` handler function in `src/main.rs`
   - Added CLI argument parsing tests for the new command
   - UAT passes: 203/203 tests pass
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Implement task completion validation (all tasks must be done)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `thiserror` dependency to `Cargo.toml` for structured error handling
+  - Created `FinalizeError` enum in `src/prd_finalize.rs`:
+    - `IncompleteTasks` variant with count and task details
+    - `PrdNotFound` variant for missing PRDs
+  - Replaced `all_tasks_done()` with `validate_all_tasks_done()` that returns `Result<(), FinalizeError>`
+  - Added `get_incomplete_tasks()` helper function
+  - Updated `finalize_prd()` to return an error (fail the command) when tasks are incomplete
+  - Updated tests to verify error details (count, task IDs, statuses)
+  - Added test for multiple incomplete tasks
+  - Updated `cmd_prd_finalize` in `src/main.rs` to remove conditional output (now errors propagate)
+  - UAT passes: 204/204 tests pass

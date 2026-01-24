@@ -696,12 +696,7 @@ fn cmd_prd_finalize(
     println!("  ID: {}", result.prd_id);
     println!("  Title: {}", result.prd_title);
     println!("  Path: {}", result.path.display());
-
-    if result.all_tasks_done {
-        println!("  Status: All tasks completed");
-    } else {
-        println!("  Status: Some tasks incomplete (finalization blocked)");
-    }
+    println!("  Status: All tasks completed");
 
     Ok(())
 }
