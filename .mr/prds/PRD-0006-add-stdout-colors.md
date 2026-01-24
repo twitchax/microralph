@@ -29,7 +29,7 @@ tasks:
   - id: T-006
     title: Colorize finalization summary box and separators
     priority: 3
-    status: todo
+    status: done
 
 acceptance_tests:
   - id: uat-001
@@ -188,6 +188,17 @@ See frontmatter for UAT definitions.
   - Applied bold styling to headers like "PRDs:", "Active:", "Draft:", "Done:", "Parked:", "Next steps:", "Runner output:", "UAT verification loop completed:"
   - Applied dim styling to secondary/contextual information like file paths, PRD/task details, statistics, and help hints
   - Colorized messages in init, bootstrap, prd new/edit/list, run, and reindex commands
+  - All 254 tests pass in `cargo make uat`
+
+## 2026-01-24 — T-006 Completed
+- **Task**: Colorize finalization summary box and separators
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/main.rs` finalization summary box (lines 863-891) to use color utilities
+  - Applied cyan color to separator lines (═══ and ───) using `colors::info()`
+  - Applied bold styling to "FINALIZATION SUMMARY" header using `colors::header()`
+  - Applied dim styling to detail lines (PRD Path, Changelog, Summary Report, etc.) using `colors::dim()`
+  - Finalization summary now displays with consistent visual hierarchy matching the rest of the CLI
   - All 254 tests pass in `cargo make uat`
 
 

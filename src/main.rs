@@ -860,28 +860,52 @@ fn cmd_prd_finalize(
 
     // Output summary report to stdout.
     println!();
-    println!("═══════════════════════════════════════════════════════════════");
-    println!("                    FINALIZATION SUMMARY");
-    println!("═══════════════════════════════════════════════════════════════");
+    println!(
+        "{}",
+        colors::info("═══════════════════════════════════════════════════════════════")
+    );
+    println!(
+        "                    {}",
+        colors::header("FINALIZATION SUMMARY")
+    );
+    println!(
+        "{}",
+        colors::info("═══════════════════════════════════════════════════════════════")
+    );
     println!();
     print!("{}", result.summary_report);
     println!();
-    println!("───────────────────────────────────────────────────────────────");
-    println!("  PRD Path: {}", result.path.display());
+    println!(
+        "{}",
+        colors::info("───────────────────────────────────────────────────────────────")
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("PRD Path: {}", result.path.display()))
+    );
 
     if result.changelog_created {
         println!(
-            "  Changelog: Created at {}",
-            result.changelog_path.display()
+            "  {}",
+            colors::dim(&format!(
+                "Changelog: Created at {}",
+                result.changelog_path.display()
+            ))
         );
     } else {
-        println!("  Changelog: {}", result.changelog_path.display());
+        println!(
+            "  {}",
+            colors::dim(&format!("Changelog: {}", result.changelog_path.display()))
+        );
     }
 
-    println!("  Summary Report: Appended to PRD");
-    println!("  PRD Status: Updated to done");
-    println!("  Index: PRDS.md regenerated");
-    println!("═══════════════════════════════════════════════════════════════");
+    println!("  {}", colors::dim("Summary Report: Appended to PRD"));
+    println!("  {}", colors::dim("PRD Status: Updated to done"));
+    println!("  {}", colors::dim("Index: PRDS.md regenerated"));
+    println!(
+        "{}",
+        colors::info("═══════════════════════════════════════════════════════════════")
+    );
 
     Ok(())
 }
