@@ -71,7 +71,7 @@ tasks:
 - id: T-006
   title: Update run_task.md prompt to reference UAT verification phase
   priority: 2
-  status: todo
+  status: done
   notes: Update the When All Tasks Are Done section to indicate UAT verification loop will handle unverified UATs, not the single-task runner.
 - id: T-007
   title: Add UAT status update logic to write verified status back to PRD
@@ -187,4 +187,15 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Updated doc comment to document `FinalizeError::UnverifiedUats` error case
   - Added 5 unit tests: `test_validate_all_uats_verified_with_all_verified`, `test_validate_all_uats_verified_with_unverified`, `test_validate_all_uats_verified_with_no_uats`, `test_validate_multiple_unverified_uats`, `test_validate_all_unverified_uats`
   - Added `make_test_prd_with_uats()` and `make_uat()` helper functions for testing
+  - UAT passed: 244 tests, all passed
+
+## 2026-01-24 — T-006 Completed
+- **Task**: Update run_task.md prompt to reference UAT verification phase
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated "When All Tasks Are Done" section in `.mr/prompts/run_task.md` to indicate UAT verification happens automatically via the dedicated loop
+  - Removed instructions for single-task runner to verify UATs manually
+  - Updated "On Success" section to remove reference to verifying acceptance tests
+  - Updated embedded `PROMPT_RUN_TASK` constant in `src/init.rs` to match the prompt file changes
+  - Added clarifying note that unverified UATs will block PRD finalization
   - UAT passed: 244 tests, all passed

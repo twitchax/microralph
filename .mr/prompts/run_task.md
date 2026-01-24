@@ -73,22 +73,19 @@ Add a new History entry at the bottom of the PRD file with this format:
 ## When All Tasks Are Done
 
 If completing this task means all tasks in the PRD are now `done`:
-1. **Review the Acceptance Tests section** in the PRD for any tests with `uat_status: unverified`.
-2. **Attempt to verify** each unverified acceptance test:
-   - Check if a real test exists in the codebase that covers this criterion.
-   - If a test exists and passes, update `uat_status` to `verified` in the PRD.
-   - If no test exists but you can feasibly create one, do so and mark it `verified`.
-   - If verification is not feasible (e.g., requires manual testing, external dependencies), leave as `unverified` and note why in History.
-3. **Document** which acceptance tests were verified in the History entry.
+1. **Complete and commit this task** as normal (update status, append History, commit).
+2. **UAT verification happens automatically**: microralph will detect unverified acceptance tests and enter a dedicated UAT verification loop in subsequent `mr run` invocations.
+3. **Do NOT attempt to verify UATs yourself** in this task — the verification loop handles each UAT individually with focused prompts.
+
+Note: Unverified UATs will block PRD finalization. The UAT verification loop allows you to verify tests, create new tests, or opt-out with an explanation for each UAT.
 
 ## On Success
 
 If `cargo make uat` passes:
 1. Update task status to `done` in the PRD frontmatter.
-2. If all tasks are now done, verify unverified acceptance tests (see above).
-3. Append a success History entry (include UAT verification results if applicable).
-4. Regenerate `.mr/PRDS.md` to reflect new progress.
-5. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
+2. Append a success History entry.
+3. Regenerate `.mr/PRDS.md` to reflect new progress.
+4. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
 
 ## On Failure
 

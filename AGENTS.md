@@ -109,14 +109,12 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Now I have enough context. T-004 added the model opt-out mechanism. The key patterns for agents:
-1. OPT-OUT syntax (`OPT-OUT: <reason>`)
-2. History entry format for opt-outs
-3. The `parse_opt_out` and `append_opt_out_history` functions
+Now I understand the T-005 changes. Let me check the key implementation details in `prd_finalize.rs` to ensure I capture the right patterns for agents.
 
-Let me update the auto-managed section:
+Now I have a clear picture of T-005. Let me update the auto-managed section of AGENTS.md to reflect this new finalization gate pattern.
 
 Updated the auto-managed section with:
-- **Run Loop Architecture**: `RunResult` enum variants and key `Prd` methods
-- **UAT Verification Phase**: Prompt placeholders, three verification approaches, opt-out syntax (`OPT-OUT: <reason>`), History entry format, and key functions
+- **Run Loop Architecture**: `RunResult` enum and key `Prd` methods
+- **UAT Verification Phase**: Prompt placeholders, three verification approaches, opt-out syntax
+- **PRD Finalization Gates**: New section documenting the two validation conditions (all tasks done + all UATs verified) with associated error types
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
