@@ -964,6 +964,56 @@ Report what was done:
 - List of files modified (if any)
 "#;
 
+/// Default content for the pick PRD prompt.
+pub const PROMPT_PICK_PRD: &str = r#"# microralph — Pick PRD Prompt
+
+## Objective
+
+Analyze the available PRDs and determine which one should be worked on next.
+
+## Context
+
+The user has invoked `mr run` without specifying a PRD ID. Your job is to study the available PRDs and recommend the best one to work on next.
+
+## Available PRDs
+
+{{#each prds}}
+### {{id}}: {{title}}
+
+- **Status**: {{status}}
+- **Progress**: {{completed}}/{{total}} tasks complete
+- **Incomplete Tasks**:
+{{#each incomplete_tasks}}
+  - {{id}}: {{title}} (priority: {{priority}})
+{{/each}}
+
+{{/each}}
+
+## Required Analysis
+
+Consider the following when choosing:
+
+1. **PRD Status**: Active PRDs should generally be prioritized over Draft PRDs.
+2. **Progress**: PRDs that are closer to completion may be worth finishing first.
+3. **Task Priority**: Look at the priorities of remaining tasks.
+4. **Dependencies**: Check if any PRD references or depends on another.
+5. **Momentum**: Consider which PRD would provide the most value if completed next.
+
+## Output Format
+
+Respond with ONLY the PRD ID that should be worked on next, on a single line. No explanation, no markdown, just the ID.
+
+Example:
+```
+PRD-0002
+```
+
+If there are no valid PRDs to work on (no active/draft PRDs with incomplete tasks), respond with:
+```
+NONE
+```
+"#;
+
 /// Default content for the empty PRDS.md index.
 pub const EMPTY_INDEX: &str = r#"# microralph — PRD Index
 
@@ -1166,6 +1216,11 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         &mut result,
     )?;
     create_file_if_missing(&prompts_dir.join("reindex.md"), PROMPT_REINDEX, &mut result)?;
+    create_file_if_missing(
+        &prompts_dir.join("pick_prd.md"),
+        PROMPT_PICK_PRD,
+        &mut result,
+    )?;
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
@@ -1274,6 +1329,7 @@ mod tests {
         assert!(root.join(".mr/prompts/update_agents.md").exists());
         assert!(root.join(".mr/prompts/adapt_language.md").exists());
         assert!(root.join(".mr/prompts/reindex.md").exists());
+        assert!(root.join(".mr/prompts/pick_prd.md").exists());
 
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
@@ -1286,7 +1342,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 16); // 1 template + 12 prompts + 1 index + 1 config + 1 AGENTS.md
+        assert_eq!(result.files_created, 17); // 1 template + 13 prompts + 1 index + 1 config + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1297,13 +1353,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 16);
+        assert_eq!(result1.files_created, 17);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 16);
+        assert_eq!(result2.files_skipped, 17);
         assert_eq!(result2.dirs_created, 0);
     }
 

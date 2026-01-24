@@ -42,6 +42,9 @@ pub enum PromptKind {
 
     /// Reindex prompt for regenerating index and fixing links.
     Reindex,
+
+    /// Pick PRD prompt for determining which PRD to work on next.
+    PickPrd,
 }
 
 impl PromptKind {
@@ -62,6 +65,7 @@ impl PromptKind {
             Self::PrdEdit => "prd_edit.md",
             Self::AdaptLanguage => "adapt_language.md",
             Self::Reindex => "reindex.md",
+            Self::PickPrd => "pick_prd.md",
         }
     }
 
@@ -80,6 +84,7 @@ impl PromptKind {
             Self::PrdEdit,
             Self::AdaptLanguage,
             Self::Reindex,
+            Self::PickPrd,
         ]
     }
 }
@@ -107,12 +112,13 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 12);
+        assert_eq!(all.len(), 13);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));
         assert!(all.contains(&PromptKind::Reindex));
+        assert!(all.contains(&PromptKind::PickPrd));
     }
 
     #[test]
