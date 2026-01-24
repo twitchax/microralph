@@ -3,7 +3,10 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod init;
+#[allow(dead_code)]
 mod prd;
+#[allow(dead_code)]
+mod prompt;
 
 /// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 #[derive(Parser, Debug)]

@@ -132,7 +132,7 @@ tasks:
   - id: T-005
     title: "Implement static prompt library + placeholder system"
     priority: 5
-    status: todo
+    status: done
     notes: "All stages use committed prompt files; placeholders expanded by MR."
   - id: T-006
     title: "Implement `mr prd new` as a guided Q/A (MR mediates runner+user in one session)"
@@ -362,5 +362,21 @@ Each prompt must define:
   - Integrated with CLI: `mr init` command now fully functional
   - Wrote 8 tests covering structure creation, idempotency, and content validation
   - All 39 tests pass, clippy clean, CI green
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Implement static prompt library + placeholder system
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/prompt/` module with `mod.rs`, `types.rs`, `loader.rs`, and `expand.rs`
+  - Implemented `PromptKind` enum with all 9 prompt types and filename mapping
+  - Implemented `PromptLoader` for loading prompts from `.mr/prompts/` with fallback to embedded defaults
+  - Implemented `PlaceholderContext` and `PlaceholderValue` types for template expansion
+  - Implemented `expand_placeholders()` supporting:
+    - Simple `{{variable}}` substitution
+    - Conditional `{{#if variable}}...{{/if}}` blocks
+    - List iteration `{{#each variable}}...{{/each}}` with `{{@index}}` support
+  - Added convenience functions: `load_prompt()`, `load_prompt_with_fallback()`
+  - Wrote 36 tests covering prompt loading, placeholder expansion, conditionals, and loops
+  - All 75 tests pass, clippy clean, CI green
 
 ---

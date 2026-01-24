@@ -4,8 +4,7 @@
 //! tasks, status, and other structured information. The parser preserves
 //! human-written Markdown content during round-trips.
 
-// Allow warnings since this module is newly added and not yet fully integrated.
-#![allow(dead_code, unused_imports)]
+#![allow(unused)]
 
 mod index;
 mod parser;
