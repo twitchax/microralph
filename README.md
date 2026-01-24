@@ -11,6 +11,28 @@
 
 Oh, and yes: **microralph was entirely `ralph`'d into existence by microralph itself**. Dogfooding at its finest. 🐕
 
+## What is a Ralph?
+
+A project that is mostly **ralph'd into existence** by AI agents is itself called a **ralph**. microralph is a ralph—it was built almost entirely by running `mr run` in a loop, with a human steering via PRDs.
+
+The name comes from [Ralph Wiggum](https://en.wikipedia.org/wiki/Ralph_Wiggum): loveable, earnest, occasionally brilliant, but needs guidance. AI agents are the same way.
+
+### The Real Value: Locking Time for Artisanal Code
+
+Here's the thing: you don't want to ralph *everything*. Some code deserves your full attention—the elegant algorithm, the nuanced architecture, the domain-specific logic that only you understand. That's **artisanal code**.
+
+But most projects need a lot of *other* code: CLI scaffolding, config parsing, test harnesses, CI pipelines, documentation. Important, but not where you want to spend your creative energy.
+
+**microralph lets you ralph the boring parts so you can lock time for the good stuff.**
+
+Use it to:
+- Build internal tools and utilities you need but don't want to hand-craft
+- Scaffold new projects with all the boilerplate handled
+- Implement features that are well-defined but tedious
+- Free up your time for higher-value work
+
+The goal isn't to replace you—it's to *give you time back*.
+
 ## Why microralph?
 
 AI coding agents are powerful, but they have a fatal flaw: **context windows**. The more context an agent accumulates, the slower and more expensive it gets—and eventually it forgets what it was doing.
@@ -338,9 +360,11 @@ What this PRD is about...
 
 ## Learn More
 
-### What is Ralph?
+### The Ralph Pattern
 
-**Ralph** (named after [Ralph Wiggum from The Simpsons](https://en.wikipedia.org/wiki/Ralph_Wiggum)) is a pattern where you repeatedly invoke an AI coding agent in a loop until a task is complete. The original concept emerged in the AI coding community as a way to overcome context window limitations by running fresh agent sessions iteratively.
+**Ralph** is a pattern where you repeatedly invoke an AI coding agent in a loop until a task is complete. The original concept emerged in the AI coding community as a way to overcome context window limitations by running fresh agent sessions iteratively.
+
+A project that is predominantly built this way—a **ralph**—becomes a testament to the pattern's power: AI does the heavy lifting while you steer with PRDs and review results.
 
 Popular Ralph implementations include:
 - [soderlind/ralph](https://github.com/soderlind/ralph) — Shell script wrapper for GitHub Copilot CLI
