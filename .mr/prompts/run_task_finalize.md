@@ -122,7 +122,7 @@ Check `PRDS.md` for any references to this PRD that need updating:
 
 Run to regenerate the index:
 ```bash
-cargo run -- prd list
+cargo run -- list
 ```
 
 ### 6. Append Finalization History Entry

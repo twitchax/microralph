@@ -22,7 +22,7 @@ The suggested next task is `{{next_task_id}}` based on priority, but verify agai
 5. **Follow existing patterns** and conventions in the codebase.
 6. **Run `cargo make uat`** to verify all acceptance tests pass.
 7. **Update the PRD file** (see below for details).
-8. **Regenerate the index** by running: `cargo run -- prd list` (or manually update `.mr/PRDS.md`).
+8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
 9. **Commit your work** with a descriptive commit message.
 
 ## Updating the PRD
