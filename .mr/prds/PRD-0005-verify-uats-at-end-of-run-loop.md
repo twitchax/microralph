@@ -16,7 +16,7 @@ acceptance_tests:
 - id: uat-001
   name: UAT verification loop triggers after all tasks done
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Loop addresses unverified UATs (create tests, run tests, or document)
   command: cargo make uat
@@ -221,3 +221,14 @@ This leads to PRDs being finalized without proper acceptance test coverage.
   - Verifies first UAT gets verified, second UAT opts out with History entry
   - Asserts PRD frontmatter is correctly updated
   - UAT passed: 247 tests, all passed
+## 2026-01-24 — uat-001 Verification
+- **UAT**: UAT verification loop triggers after all tasks done
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`
+  - Tests covering this UAT:
+    - `test_run_task_all_done_with_unverified_uats` (line 1026): Verifies that when all tasks are done but UATs are unverified, `run_task()` returns `RunResult::NeedsUatVerification`
+    - `test_uat_verification_integration_flow` (line 1592): Integration test covering the full flow from task completion through the UAT verification loop
+  - Test command: `cargo make uat`
+  - Result: All 247 tests passed
