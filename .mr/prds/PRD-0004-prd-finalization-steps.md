@@ -22,7 +22,7 @@ tasks:
   - id: T-004
     title: "Create CHANGELOG.md at project root with Keep a Changelog format"
     priority: 2
-    status: todo
+    status: done
   - id: T-005
     title: "Add changelog entry generation to finalization prompt"
     priority: 2
@@ -178,3 +178,21 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - Added tracing for acceptance test verification step
   - Added test `test_build_finalize_prompt()` to verify placeholder expansion
   - UAT passes: 205/205 tests pass
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Create CHANGELOG.md at project root with Keep a Changelog format
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new `src/changelog.rs` module with:
+    - `CHANGELOG_TEMPLATE` constant following Keep a Changelog format
+    - `EnsureChangelogResult` struct to track creation result
+    - `ensure_changelog_exists()` function that creates CHANGELOG.md if absent
+    - `read_changelog()` function for future changelog entry generation (T-005)
+    - Comprehensive unit tests for creation, preservation, and format validation
+  - Added `mod changelog` to `src/main.rs`
+  - Updated `src/prd_finalize.rs`:
+    - Added import for `ensure_changelog_exists`
+    - Extended `PrdFinalizeResult` with `changelog_path` and `changelog_created` fields
+    - Called `ensure_changelog_exists()` after acceptance test verification
+  - Updated `cmd_prd_finalize` in `src/main.rs` to report changelog creation
+  - UAT passes: 210/210 tests pass

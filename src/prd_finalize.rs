@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use thiserror::Error;
 
+use crate::changelog::ensure_changelog_exists;
 use crate::prd::types::Task;
 use crate::prd::{self, Prd, TaskStatus};
 use crate::prompt::{
@@ -55,6 +56,12 @@ pub struct PrdFinalizeResult {
 
     /// Path to the PRD file.
     pub path: PathBuf,
+
+    /// Path to the CHANGELOG.md file.
+    pub changelog_path: PathBuf,
+
+    /// Whether the changelog was newly created.
+    pub changelog_created: bool,
 }
 
 /// Finds a PRD by ID from the scanned PRDs.
@@ -194,10 +201,28 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         "Finalization verification completed successfully"
     );
 
+    // Ensure CHANGELOG.md exists at the project root.
+    let changelog_result = ensure_changelog_exists(config.root)
+        .with_context(|| format!("Failed to ensure CHANGELOG.md for {}", config.prd_id))?;
+
+    if changelog_result.created {
+        tracing::info!(
+            path = %changelog_result.path.display(),
+            "Created CHANGELOG.md"
+        );
+    } else {
+        tracing::debug!(
+            path = %changelog_result.path.display(),
+            "CHANGELOG.md already exists"
+        );
+    }
+
     Ok(PrdFinalizeResult {
         prd_id: prd.id().to_string(),
         prd_title: prd.title().to_string(),
         path,
+        changelog_path: changelog_result.path,
+        changelog_created: changelog_result.created,
     })
 }
 

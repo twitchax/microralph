@@ -4,6 +4,7 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod agents;
 mod bootstrap;
+mod changelog;
 mod config;
 mod init;
 mod prd;
@@ -697,6 +698,15 @@ fn cmd_prd_finalize(
     println!("  Title: {}", result.prd_title);
     println!("  Path: {}", result.path.display());
     println!("  Status: All tasks completed");
+
+    if result.changelog_created {
+        println!(
+            "  Changelog: Created at {}",
+            result.changelog_path.display()
+        );
+    } else {
+        println!("  Changelog: {}", result.changelog_path.display());
+    }
 
     Ok(())
 }

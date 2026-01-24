@@ -6,16 +6,6 @@ owner: Aaron Roney
 created: 2026-01-23
 updated: 2026-01-23
 
-product_name: microralph
-binary_name: mr
-
-state_dir: .mr
-prds_dir: .mr/prds
-index_file: .mr/PRDS.md
-templates_dir: .mr/templates
-prompts_dir: .mr/prompts
-agents_file: AGENTS.md
-
 principles:
   - "No direct API calls: microralph shells out to runner CLIs only."
   - "State lives in git + Markdown PRDs (YAML frontmatter + History section)."
@@ -26,66 +16,7 @@ principles:
 
 references:
   - name: "kord (style reference for CI + README + repo ergonomics)"
-    url: https://github.com/twitchax/kord            # use as reference patterns :contentReference[oaicite:1]{index=1}
-
-runner:
-  default: copilot
-  allow_runners: [copilot, mock]     # typed adapters; more later
-  permissions_mode: yolo             # yolo | allow_all | manual
-  fallback_flags:
-    - "--allow-all-tools"
-    - "--allow-all-paths"
-    - "--allow-all-urls"
-
-git:
-  branch_mode: current               # current | feature
-  feature_branch_prefix: mr/
-  commit_policy: auto_clean          # never | auto_clean | always
-
-loop:
-  prd_pick: first_incomplete         # first_incomplete | by_priority | explicit
-  task_pick: highest_priority        # highest_priority | oldest_incomplete
-  max_iterations: 1                  # `mr run` attempts one task max
-  max_task_attempts: 8               # ergonomic limit across history entries per task
-  max_session_minutes: 30            # per runner invocation (timeout)
-  max_transcript_kb: 128             # stored into PRD history (truncate beyond)
-
-bootstrap:
-  generate_index: true
-  generate_prds: true
-  prd_budget: 6
-  heuristics:
-    - "Detect cargo-make entrypoints and required tasks"
-    - "Detect crates/modules and responsibilities"
-    - "Detect CI workflows and required checks"
-    - "Detect docs that imply features (README/DEVELOPMENT/etc.)"
-    - "Detect TODO/FIXME hotspots"
-
-prompts:
-  # Static prompt files are committed and versioned. They are the “system prompt” layer for each stage.
-  # microralph fills placeholders and passes to the runner CLI.
-  init: ".mr/prompts/init.md"
-  bootstrap_plan: ".mr/prompts/bootstrap_plan.md"
-  bootstrap_generate_prds: ".mr/prompts/bootstrap_generate_prds.md"
-  prd_new_round1_questions: ".mr/prompts/prd_new_round1_questions.md"
-  prd_new_roundN_questions: ".mr/prompts/prd_new_roundN_questions.md"
-  prd_new_synthesize_prd: ".mr/prompts/prd_new_synthesize_prd.md"
-  run_task: ".mr/prompts/run_task.md"
-  run_task_finalize: ".mr/prompts/run_task_finalize.md"
-  update_agents: ".mr/prompts/update_agents.md"
-
-dev:
-  command_router: "cargo make"       # make is the default entrypoint for dev actions
-  make_tasks_required:
-    - "ci"
-    - "fmt"
-    - "clippy"
-    - "test"
-    - "uat"                          # alias for whatever this repo considers acceptance gate
-    - "mr:test"                      # integration tests for MR itself
-    - "mr:uat"                       # MR end-to-end (mock runner) acceptance tests
-
-tags: [mvp, cli, prd, loop, copilot, cargo-make]
+    url: https://github.com/twitchax/kord
 
 acceptance_tests:
   # UATs should be callable via cargo-make; most repos can map uat -> ci.

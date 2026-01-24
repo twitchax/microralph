@@ -67,7 +67,7 @@ If `cargo make uat` passes:
 1. Update task status to `done` in the PRD frontmatter.
 2. Append a success History entry.
 3. Regenerate `.mr/PRDS.md` to reflect new progress.
-4. Commit all changes with message: `feat({{next_task_id}}): [brief description]`
+4. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
 
 ## On Failure
 
