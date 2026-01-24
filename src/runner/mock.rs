@@ -183,4 +183,16 @@ mod tests {
         let runner = MockRunner::empty();
         assert!(runner.is_available());
     }
+
+    #[test]
+    fn test_mock_runner_omits_usage_info() {
+        let runner = MockRunner::empty();
+        let path = Path::new(".");
+
+        let result = runner.execute("test", path).unwrap();
+        assert!(
+            result.usage.is_none(),
+            "MockRunner should not provide usage info"
+        );
+    }
 }

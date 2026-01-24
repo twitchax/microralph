@@ -24,7 +24,7 @@ acceptance_tests:
 - id: uat-002
   name: Token usage is omitted when runner does not provide metrics
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -45,7 +45,7 @@ tasks:
 - id: T-004
   title: Ensure runners without usage info omit the usage display
   priority: 4
-  status: todo
+  status: done
   notes: Default behavior should be to omit usage output when UsageInfo is None.
 
 ---
@@ -126,5 +126,16 @@ When running `mr run`, users see truncated LLM output but have no visibility int
   - Gracefully degrades when no usage info is available (nothing displayed)
   - UAT passes: All 261 tests pass, CI pipeline (fmt, clippy, test) passes
   - **UAT Verified**: uat-001 (CopilotRunner displays token usage) - verified via implementation review and test suite
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Ensure runners without usage info omit the usage display
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that `RunnerOutput::success()` already sets `usage: None` by default
+  - Confirmed display logic in `src/main.rs` (lines 1047-1076) properly checks for `Some(usage_info) && usage_info.has_data()` before displaying
+  - MockRunner already uses `RunnerOutput::success()` exclusively, ensuring no usage info is emitted
+  - Added explicit test `test_mock_runner_omits_usage_info` in `src/runner/mock.rs` to document this behavior
+  - UAT passes: All 262 tests pass (including new test), CI pipeline (fmt, clippy, test) passes
+  - **UAT Verified**: uat-002 (Token usage omitted when runner lacks metrics) - verified via new unit test and implementation review
 
 ---
