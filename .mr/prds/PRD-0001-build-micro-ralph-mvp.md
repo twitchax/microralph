@@ -194,6 +194,11 @@ tasks:
     priority: 17
     status: todo
     notes: "Support a config file for common settings: default runner, default model (e.g., `model = \"claude-sonnet-4-20250514\"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner."
+  - id: T-019
+    title: "Stream/display runner output during `mr run`"
+    priority: 18
+    status: todo
+    notes: "Currently runner output is captured silently and only a truncated summary is shown at the end. Add real-time streaming of copilot CLI output to stdout so users can watch progress. Consider a `--verbose` or `--stream` flag, or make streaming the default with `--quiet` to suppress. May require switching from `Command::output()` to `Command::spawn()` with piped stdout."
   - id: T-015
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
