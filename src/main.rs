@@ -342,7 +342,7 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
     println!("  {}", colors::dim("1. Review and customize AGENTS.md"));
     println!(
         "  {}",
-        colors::dim("2. Create your first PRD: `mr prd new my-feature`")
+        colors::dim("2. Create your first PRD: `mr new my-feature`")
     );
     println!("  {}", colors::dim("3. Run a task: `mr run`"));
 
@@ -518,7 +518,7 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     Ok(())
 }
 
-/// Runs the `mr prd new` command.
+/// Runs the `mr new` command.
 fn cmd_prd_new(
     slug: &str,
     runner_name: &str,
@@ -591,7 +591,7 @@ fn cmd_prd_new(
     Ok(())
 }
 
-/// Runs the `mr prd edit` command.
+/// Runs the `mr edit` command.
 fn cmd_prd_edit(
     prd_id: &str,
     request: &str,
@@ -666,7 +666,7 @@ fn cmd_prd_edit(
     Ok(())
 }
 
-/// Runs the `mr prd list` command.
+/// Runs the `mr list` command.
 fn cmd_prd_list() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -684,7 +684,7 @@ fn cmd_prd_list() -> Result<()> {
         println!();
         println!(
             "{}",
-            colors::dim("Create your first PRD with: `mr prd new my-feature`")
+            colors::dim("Create your first PRD with: `mr new my-feature`")
         );
         return Ok(());
     }
@@ -802,7 +802,7 @@ fn cmd_prd_list() -> Result<()> {
     Ok(())
 }
 
-/// Runs the `mr prd finalize` command.
+/// Runs the `mr finalize` command.
 fn cmd_prd_finalize(
     prd_id: &str,
     runner_name: &str,

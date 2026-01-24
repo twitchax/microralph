@@ -223,7 +223,7 @@ pub fn format_status(report: &StatusReport) -> String {
     output.push_str("## PRDs\n\n");
 
     if report.prds.is_empty() {
-        output.push_str("  No PRDs found. Create one with `mr prd new <slug>`.\n");
+        output.push_str("  No PRDs found. Create one with `mr new <slug>`.\n");
     } else {
         // Group by status.
         let active: Vec<_> = report

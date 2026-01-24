@@ -64,7 +64,7 @@ tasks:
 - id: T-003
   title: Update all code references from prd subcommands to top-level commands
   priority: 3
-  status: todo
+  status: done
   notes: Update main.rs match statements and any helper code that references PrdCommand variants.
 - id: T-004
   title: Add tracing info for commands executed by runner
@@ -153,5 +153,21 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
     - Changed `mr prd finalize` to `mr finalize` in tests
   - UAT passed: All 262 tests passed successfully
   - The CLI now uses `mr new <slug>`, `mr edit <id>`, `mr list`, `mr finalize <id>` instead of `mr prd new`, etc.
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Update all code references from prd subcommands to top-level commands
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/main.rs`: Changed function documentation comments from `mr prd new`, `mr prd edit`, `mr prd list`, `mr prd finalize` to `mr new`, `mr edit`, `mr list`, `mr finalize`
+  - Updated help text in `cmd_init` to use `mr new` instead of `mr prd new`
+  - Updated help text in `cmd_prd_list` to use `mr new` instead of `mr prd new`
+  - Updated `src/run.rs`: Changed error message to suggest `mr new` instead of `mr prd new`
+  - Updated `src/status.rs`: Changed help text to use `mr new` instead of `mr prd new`
+  - Updated `src/prompt/types.rs`: Changed documentation comments to use `mr new` instead of `mr prd new`
+  - Updated `src/prd_new.rs`: Changed module documentation to use `mr new` instead of `mr prd new`
+  - Updated `src/prd_edit.rs`: Changed module documentation to use `mr edit` instead of `mr prd edit`
+  - Updated `src/init.rs`: Changed auto-managed section comment to use `mr new` instead of `mr prd new`
+  - UAT passed: All 262 tests passed successfully
+  - All references to old `mr prd <subcommand>` structure updated to new flattened structure
 
 ---

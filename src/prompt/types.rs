@@ -16,13 +16,13 @@ pub enum PromptKind {
     /// Bootstrap PRD generation prompt.
     BootstrapGeneratePrds,
 
-    /// First round of questions for `mr prd new`.
+    /// First round of questions for `mr new`.
     PrdNewRound1Questions,
 
-    /// Subsequent rounds of questions for `mr prd new`.
+    /// Subsequent rounds of questions for `mr new`.
     PrdNewRoundNQuestions,
 
-    /// Final PRD synthesis prompt for `mr prd new`.
+    /// Final PRD synthesis prompt for `mr new`.
     PrdNewSynthesizePrd,
 
     /// Task execution prompt for `mr run`.

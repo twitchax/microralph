@@ -1,6 +1,6 @@
 //! PRD editing via runner-assisted modifications.
 //!
-//! This module implements `mr prd edit` which allows quick modifications to
+//! This module implements `mr edit` which allows quick modifications to
 //! existing PRDs via a runner Q/A session.
 
 use std::collections::HashMap;

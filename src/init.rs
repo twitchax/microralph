@@ -1328,7 +1328,7 @@ History entries are appended by `mr run` at the bottom of the PRD.
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-<!-- This section is auto-updated by `mr prd new` and `mr run`. -->
+<!-- This section is auto-updated by `mr new` and `mr run`. -->
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
 "#;
 

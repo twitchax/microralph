@@ -326,7 +326,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         let picked_id =
             pick_prd_via_runner(config.root, runner, config.stream)?.ok_or_else(|| {
                 anyhow::anyhow!(
-                    "No active PRD with incomplete tasks found. Create a PRD with `mr prd new`."
+                    "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
                 )
             })?;
 

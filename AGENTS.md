@@ -109,7 +109,7 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Based on the PRD review, I'll update the auto-managed section with actionable CLI command conventions:
+Now I can see the changes clearly. The CLI has been flattened - commands like `list`, `new`, `edit`, and `finalize` are now top-level commands (no longer under a `prd` subcommand), and the `run` command now accepts an optional positional PRD ID instead of requiring `--prd`. This is important information for agents to know.
 
-Updated AGENTS.md with CLI command pattern showing the new `mr run [PRD-ID]` positional argument syntax and deprecated `--prd` flag. Kept existing token usage tracking conventions.
+Updated the auto-managed section with the new flattened CLI command structure. Key changes documented: positional PRD ID for `run` command and PRD management commands moved to top-level.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

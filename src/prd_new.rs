@@ -1,6 +1,6 @@
 //! PRD creation via guided Q/A flow.
 //!
-//! This module implements `mr prd new` which mediates a Q/A session between
+//! This module implements `mr new` which mediates a Q/A session between
 //! the runner (coding agent) and the user to create a new PRD.
 
 use std::collections::HashMap;
