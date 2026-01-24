@@ -109,14 +109,10 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Let me check the finalization prompt to understand the full workflow:
-
-Now I have a complete picture. The T-010 completion adds finalization history entries. The auto-managed section already has some content about changelog management, but looking at the current AGENTS.md content and the recent T-010 completion, the section contains incomplete/draft text rather than actual documentation.
-
-Let me update the auto-managed section with proper documentation:
+Based on my review, T-011 completed the finalization prompt with comprehensive instructions. The auto-managed section currently contains incomplete draft text. I should update it with proper documentation about the finalization workflow.
 
 Updated the auto-managed section with:
-- **PRD Finalization Workflow**: Complete 5-step process from T-010 completion
-- **Changelog Entry Format**: Keep a Changelog categories with example
-- **Finalization Prompt Placeholders**: All 5 placeholders documented
+- **PRD Finalization Workflow**: 6-step process from T-011's comprehensive prompt
+- **Changelog Categories**: Keep a Changelog format reference
+- **Finalization Prompt Placeholders**: Table of all 5 placeholders used in the finalization prompt
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

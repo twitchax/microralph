@@ -3,10 +3,11 @@
 //! Scans the `.mr/prds/` directory for PRD files and generates an index
 //! in `.mr/PRDS.md` with a table listing all PRDs.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use anyhow::{Context, Result};
+use regex::Regex;
 
 use super::{Prd, PrdStatus, parse_prd_file};
 
@@ -30,6 +31,9 @@ pub struct PrdSummary {
 
     /// Relative path to the PRD file from the index file's directory.
     pub relative_path: String,
+
+    /// IDs of other PRDs referenced in this PRD's body.
+    pub references: Vec<String>,
 }
 
 impl PrdSummary {
@@ -39,6 +43,18 @@ impl PrdSummary {
         let completed_tasks = prd.completed_tasks().len();
         let total_tasks = tasks.len();
 
+        // Build searchable text from body and task notes.
+        let mut searchable_text = prd.body.clone();
+
+        for task in tasks {
+            if let Some(notes) = &task.notes {
+                searchable_text.push('\n');
+                searchable_text.push_str(notes);
+            }
+        }
+
+        let references = extract_prd_references(&searchable_text, prd.id());
+
         Self {
             id: prd.id().to_string(),
             title: prd.title().to_string(),
@@ -46,6 +62,7 @@ impl PrdSummary {
             completed_tasks,
             total_tasks,
             relative_path,
+            references,
         }
     }
 
@@ -53,6 +70,37 @@ impl PrdSummary {
     pub fn progress(&self) -> String {
         format!("{}/{}", self.completed_tasks, self.total_tasks)
     }
+}
+
+/// Extracts references to other PRDs from a PRD's body text.
+///
+/// Searches for patterns like "PRD-0001", "PRD-0002", etc. and returns
+/// a deduplicated, sorted list of referenced PRD IDs. Excludes self-references.
+///
+/// # Arguments
+///
+/// * `body` - The PRD body text to search
+/// * `self_id` - The ID of the current PRD (to exclude self-references)
+///
+/// # Returns
+///
+/// A sorted vector of unique PRD IDs found in the body.
+fn extract_prd_references(body: &str, self_id: &str) -> Vec<String> {
+    let re = Regex::new(r"PRD-\d{4}").expect("Invalid regex pattern");
+
+    let mut refs: HashSet<String> = HashSet::new();
+
+    for cap in re.find_iter(body) {
+        let prd_id = cap.as_str().to_string();
+
+        if prd_id != self_id {
+            refs.insert(prd_id);
+        }
+    }
+
+    let mut sorted: Vec<String> = refs.into_iter().collect();
+    sorted.sort();
+    sorted
 }
 
 /// Scans a directory for PRD files and returns parsed PRDs.
@@ -167,6 +215,10 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     }
     output.push('\n');
 
+    // Cross-References section.
+    let all_summaries: Vec<&PrdSummary> = by_status.values().flat_map(|v| v.iter()).collect();
+    output.push_str(&generate_cross_references_section(&all_summaries));
+
     // Statistics.
     let total = prds.len();
     let active = by_status.get(&PrdStatus::Active).map_or(0, |v| v.len());
@@ -211,6 +263,55 @@ fn generate_prd_table(summaries: &[PrdSummary]) -> String {
             summary.progress()
         ));
     }
+
+    output
+}
+
+/// Generates the Cross-References section showing inter-PRD links.
+///
+/// Lists which PRDs reference other PRDs in their body text.
+fn generate_cross_references_section(summaries: &[&PrdSummary]) -> String {
+    let mut output = String::new();
+
+    output.push_str("## Cross-References\n\n");
+
+    // Collect all PRDs that have references.
+    let with_refs: Vec<_> = summaries
+        .iter()
+        .filter(|s| !s.references.is_empty())
+        .collect();
+
+    if with_refs.is_empty() {
+        output.push_str("*No cross-references between PRDs.*\n");
+    } else {
+        // Create a lookup map for relative paths.
+        let path_map: HashMap<&str, &str> = summaries
+            .iter()
+            .map(|s| (s.id.as_str(), s.relative_path.as_str()))
+            .collect();
+
+        for summary in with_refs {
+            let refs_formatted: Vec<String> = summary
+                .references
+                .iter()
+                .map(|ref_id| {
+                    if let Some(path) = path_map.get(ref_id.as_str()) {
+                        format!("[{}]({})", ref_id, path)
+                    } else {
+                        ref_id.clone()
+                    }
+                })
+                .collect();
+
+            output.push_str(&format!(
+                "- [{}]({}) → {}\n",
+                summary.id,
+                summary.relative_path,
+                refs_formatted.join(", ")
+            ));
+        }
+    }
+    output.push('\n');
 
     output
 }
@@ -352,6 +453,7 @@ mod tests {
                 completed_tasks: 2,
                 total_tasks: 5,
                 relative_path: "prds/PRD-0001.md".to_string(),
+                references: vec![],
             },
             PrdSummary {
                 id: "PRD-0002".to_string(),
@@ -360,6 +462,7 @@ mod tests {
                 completed_tasks: 0,
                 total_tasks: 3,
                 relative_path: "prds/PRD-0002.md".to_string(),
+                references: vec![],
             },
         ];
 
@@ -465,5 +568,104 @@ mod tests {
         let prds = scan_prds("/nonexistent/path/to/prds").unwrap();
 
         assert!(prds.is_empty());
+    }
+
+    #[test]
+    fn test_extract_prd_references_none() {
+        let body = "# Summary\n\nNo references here.";
+        let refs = extract_prd_references(body, "PRD-0001");
+
+        assert!(refs.is_empty());
+    }
+
+    #[test]
+    fn test_extract_prd_references_single() {
+        let body = "# Summary\n\nThis depends on PRD-0002.";
+        let refs = extract_prd_references(body, "PRD-0001");
+
+        assert_eq!(refs, vec!["PRD-0002"]);
+    }
+
+    #[test]
+    fn test_extract_prd_references_multiple() {
+        let body = "# Summary\n\nSee PRD-0002 and PRD-0003 for context. Also PRD-0005.";
+        let refs = extract_prd_references(body, "PRD-0001");
+
+        assert_eq!(refs, vec!["PRD-0002", "PRD-0003", "PRD-0005"]);
+    }
+
+    #[test]
+    fn test_extract_prd_references_excludes_self() {
+        let body = "# Summary\n\nPRD-0001 references PRD-0002 and itself.";
+        let refs = extract_prd_references(body, "PRD-0001");
+
+        assert_eq!(refs, vec!["PRD-0002"]);
+    }
+
+    #[test]
+    fn test_extract_prd_references_deduplicates() {
+        let body = "# Summary\n\nPRD-0002 appears twice. See PRD-0002 again.";
+        let refs = extract_prd_references(body, "PRD-0001");
+
+        assert_eq!(refs, vec!["PRD-0002"]);
+    }
+
+    #[test]
+    fn test_generate_cross_references_no_refs() {
+        let summary = PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 0,
+            relative_path: "prds/PRD-0001.md".to_string(),
+            references: vec![],
+        };
+
+        let section = generate_cross_references_section(&[&summary]);
+
+        assert!(section.contains("## Cross-References"));
+        assert!(section.contains("*No cross-references between PRDs.*"));
+    }
+
+    #[test]
+    fn test_generate_cross_references_with_refs() {
+        let summary1 = PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "First PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 0,
+            relative_path: "prds/PRD-0001.md".to_string(),
+            references: vec!["PRD-0002".to_string()],
+        };
+        let summary2 = PrdSummary {
+            id: "PRD-0002".to_string(),
+            title: "Second PRD".to_string(),
+            status: PrdStatus::Done,
+            completed_tasks: 1,
+            total_tasks: 1,
+            relative_path: "prds/PRD-0002.md".to_string(),
+            references: vec![],
+        };
+
+        let section = generate_cross_references_section(&[&summary1, &summary2]);
+
+        assert!(section.contains("## Cross-References"));
+        assert!(section.contains("[PRD-0001](prds/PRD-0001.md) → [PRD-0002](prds/PRD-0002.md)"));
+        assert!(!section.contains("*No cross-references"));
+    }
+
+    #[test]
+    fn test_prd_summary_extracts_references() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            ..Default::default()
+        };
+        let prd = Prd::new(frontmatter, "This depends on PRD-0002.".to_string());
+        let summary = PrdSummary::from_prd(&prd, "prds/PRD-0001.md".to_string());
+
+        assert_eq!(summary.references, vec!["PRD-0002"]);
     }
 }

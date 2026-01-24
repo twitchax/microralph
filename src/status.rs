@@ -522,6 +522,7 @@ Test PRD.
                 completed_tasks: 2,
                 total_tasks: 5,
                 relative_path: "prds/PRD-0001.md".to_string(),
+                references: vec![],
             }],
             next_task: Some(NextTaskInfo {
                 prd_id: "PRD-0001".to_string(),

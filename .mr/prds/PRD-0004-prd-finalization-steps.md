@@ -38,7 +38,7 @@ tasks:
   - id: T-008
     title: "Update inter-PRD links in index during finalization"
     priority: 3
-    status: todo
+    status: done
   - id: T-009
     title: "Add cleanup tasks to finalization prompt (temp files, comments)"
     priority: 3
@@ -305,3 +305,17 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - Added Output section with example format showing expected completion output
   - Updated `src/init.rs` `PROMPT_RUN_TASK_FINALIZE` constant to match new prompt content
   - UAT passes: 219/219 tests pass
+
+## 2026-01-24 — T-008 Completed
+- **Task**: Update inter-PRD links in index during finalization
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `extract_prd_references()` function in `src/prd/index.rs` to scan PRD body and task notes for `PRD-XXXX` patterns
+  - Added `references: Vec<String>` field to `PrdSummary` struct
+  - Updated `PrdSummary::from_prd()` to extract references from both body and task notes
+  - Added `generate_cross_references_section()` function to render the Cross-References section
+  - Updated `generate_index()` to include the new Cross-References section between Parked PRDs and Statistics
+  - Added 7 new unit tests for reference extraction and cross-references rendering
+  - Updated existing tests in `prd_new.rs` and `status.rs` to include new `references` field
+  - The index now shows inter-PRD links (e.g., `PRD-0001 → PRD-0002`)
+  - UAT passes: 227/227 tests pass
