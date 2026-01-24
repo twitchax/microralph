@@ -24,7 +24,7 @@ acceptance_tests:
 - id: uat-003
   name: Model can opt-out with explanation appended to History
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: Loop respects max_iterations config
   command: cargo make uat
@@ -244,5 +244,16 @@ This leads to PRDs being finalized without proper acceptance test coverage.
     2. Handle opt-out with explanation appended to History (uat-002 opts out)
     3. Respect max_iterations config (loop stops after 2 iterations)
   - Additional supporting tests: `test_uat_verification_loop_all_verified_by_runner`, `test_uat_verification_loop_opt_out`, `test_uat_verification_loop_max_iterations`
+  - Test command: `cargo make uat`
+  - Result: All 247 tests passed
+## 2026-01-24 — uat-003 Verification
+- **UAT**: Model can opt-out with explanation appended to History
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`
+  - Tests covering this UAT:
+    - `test_append_opt_out_history` (line 1204): Tests the `append_opt_out_history()` function that appends opt-out History entries to PRD files
+    - `test_uat_verification_loop_opt_out` (line 1356): Integration test that verifies the full opt-out flow - runner returns "OPT-OUT: Requires manual testing", History entry is appended with correct format
   - Test command: `cargo make uat`
   - Result: All 247 tests passed
