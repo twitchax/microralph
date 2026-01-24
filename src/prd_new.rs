@@ -1031,4 +1031,71 @@ tasks: []
         // Should have hit max rounds.
         assert!(result.rounds > 1);
     }
+
+    #[test]
+    fn test_prd_new_context_interactive() {
+        // UAT: uat-001 — Interactive flow prompts for context
+        // This test verifies that when no --context flag is provided,
+        // the create_prd flow prompts the user interactively for optional context.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create minimal prompt files.
+        std::fs::write(
+            prompts_dir.join("prd_new_round1_questions.md"),
+            "Generate questions for {{slug}}{{#if user_context}} with context: {{user_context}}{{/if}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_roundN_questions.md"),
+            "Continue Q/A",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD",
+        )
+        .unwrap();
+
+        let prd_content = r#"---
+id: PRD-0001
+title: Test Feature
+status: draft
+tasks: []
+---
+# Summary
+"#;
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("1. What is the goal?"),
+            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
+            crate::runner::RunnerOutput::success(prd_content),
+        ]);
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "test-feature",
+            description: None,
+            context: None, // No context flag provided
+        };
+
+        // Simulate user input: provide context, then answer the question
+        let input = "This is a test context for the feature\nThe goal is to test\n";
+        let mut input = input.as_bytes();
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0001");
+
+        // Verify output contains the context prompt
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("Would you like to provide additional context"));
+
+        // Verify the first prompt includes the user context
+        let recorded = runner.recorded_prompts();
+        assert!(recorded[0].contains("This is a test context for the feature"));
+    }
 }

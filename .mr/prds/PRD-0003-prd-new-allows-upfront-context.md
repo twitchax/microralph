@@ -19,7 +19,7 @@ acceptance_tests:
 - id: uat-001
   name: Interactive flow prompts for context
   command: cargo make uat prd_new_context_interactive
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Flag flow uses provided context
   command: cargo make uat prd_new_context_flag
@@ -153,4 +153,14 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Added `{{user_context}}` placeholder to `prd_new_roundN_questions.md` documentation table
   - CLI help was already updated in T-001
   - UAT: All 227 tests passed
+
+## 2026-01-24 — uat-001 Verification
+- **UAT**: Interactive flow prompts for context
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_prd_new_context_interactive` in `src/prd_new.rs`
+  - Test verifies that when no `--context` flag is provided, the interactive flow prompts the user for optional context
+  - Test confirms the prompt is displayed and user-provided context is passed to the AI runner
+  - UAT: Test passed (1/1 tests run, 1 passed)
 
