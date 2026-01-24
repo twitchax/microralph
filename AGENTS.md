@@ -109,7 +109,29 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Now I can see the changes clearly. The CLI has been flattened - commands like `list`, `new`, `edit`, and `finalize` are now top-level commands (no longer under a `prd` subcommand), and the `run` command now accepts an optional positional PRD ID instead of requiring `--prd`. This is important information for agents to know.
+## CLI Command Structure
 
-Updated the auto-managed section with the new flattened CLI command structure. Key changes documented: positional PRD ID for `run` command and PRD management commands moved to top-level.
+As of PRD-0009, the CLI has been streamlined for better ergonomics:
+
+### PRD Management Commands (Top-Level)
+- `mr new <slug>` — Create new PRD (formerly `mr prd new`)
+- `mr list` — List all PRDs (formerly `mr prd list`)
+- `mr edit <id> "<request>"` — Edit PRD (formerly `mr prd edit`)
+- `mr finalize <id>` — Finalize PRD (formerly `mr prd finalize`)
+
+### Run Command
+- `mr run` — Execute next task from active PRD
+- `mr run <id>` — Execute next task from specific PRD (formerly `mr run --prd <id>`)
+- `mr run --stream` — Stream output in real-time
+
+### Other Commands
+- `mr init` — Initialize .mr/ structure
+- `mr bootstrap` — Generate PRDs from existing repo
+- `mr status` — Show PRD/task status
+- `mr reindex` — Regenerate index
+
+### Output Behavior
+- LLM output now shows **tail** (last 500 chars) instead of beginning
+- Applies to both task execution and UAT verification loops
+- Improves debugging by surfacing errors and completion status
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

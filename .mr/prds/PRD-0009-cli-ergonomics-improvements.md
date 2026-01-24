@@ -84,7 +84,7 @@ tasks:
 - id: T-007
   title: Update documentation for new CLI structure
   priority: 7
-  status: todo
+  status: done
   notes: Update README.md, AGENTS.md, and any other docs that reference old command structure.
 - id: T-008
   title: Run full test suite to verify changes
@@ -207,5 +207,21 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Streaming mode skips summary display (output already shown in real-time)
   - UAT passed: All 263 tests passed successfully
   - This ensures consistency between task execution and UAT verification output behavior, improving debugging experience
+
+## 2026-01-24 — T-007 Completed
+- **Task**: Update documentation for new CLI structure
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `README.md`: Changed all command examples from old structure to new flattened structure
+    - Changed `mr prd new/list/edit` to `mr new/list/edit`
+    - Changed `mr run --prd <id>` to `mr run <id>` (positional argument)
+    - Updated commands table to include `mr finalize` command
+    - Updated all references throughout the document (flow diagram, features list, prompt placeholders section)
+  - Updated `AGENTS.md`: Replaced auto-managed section with comprehensive CLI command reference
+    - Documented all top-level commands with old vs. new syntax
+    - Added section on output behavior (tail truncation)
+    - Organized commands by category (PRD management, run, other)
+  - UAT passed: All 263 tests passed successfully
+  - Documentation now accurately reflects the flattened CLI structure implemented in T-001 through T-006
 
 ---

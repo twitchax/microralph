@@ -51,7 +51,7 @@ No more 200k-token conversations that go off the rails. Just focused, atomic tas
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  1. mr init / mr bootstrap     ← Set up .mr/ structure     │
-│  2. mr prd new my-feature      ← Create PRD via guided Q/A │
+│  2. mr new my-feature          ← Create PRD via guided Q/A │
 │  3. mr run                     ← Execute one task          │
 │  4. Agent implements, runs UAT, updates PRD, commits       │
 │  5. Repeat step 3 until all tasks are done                 │
@@ -68,7 +68,7 @@ Each `mr run` invocation:
 
 - **PRD-driven development**: Structure your work as markdown PRDs with YAML frontmatter
 - **One-task-per-run loop**: Context stays small, agents stay focused
-- **Guided PRD creation**: `mr prd new` runs an interactive Q/A to generate PRDs
+- **Guided PRD creation**: `mr new` runs an interactive Q/A to generate PRDs
 - **Bootstrap existing repos**: `mr bootstrap` scans your repo and generates starter PRDs
 - **Multi-language support**: Works with Rust, Python, Node.js, Go, Java (auto-detected)
 - **Streaming output**: `mr run --stream` shows agent output in real-time
@@ -101,10 +101,10 @@ mr init
 mr bootstrap
 
 # Create a new PRD via guided Q/A
-mr prd new my-feature
+mr new my-feature
 
 # List all PRDs
-mr prd list
+mr list
 
 # Run the next task from the active PRD
 mr run
@@ -115,20 +115,21 @@ mr status
 
 ### Commands
 
-| Command                        | Description                                                                            |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| `mr init`                      | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
-| `mr init --language <lang>`    | Initialize for a specific language (rust, python, node, go, java)                      |
-| `mr bootstrap`                 | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
-| `mr prd new <slug>`            | Create a new PRD via guided Q/A                                                        |
-| `mr prd new <slug> --context`  | Create a new PRD with upfront context to guide initial questions                       |
-| `mr prd edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |
-| `mr prd list`                  | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
-| `mr run`                       | Run the next task from the highest-priority active PRD                                 |
-| `mr run --prd <id>`            | Run the next task from a specific PRD                                                  |
-| `mr run --stream`              | Run with real-time streaming output                                                    |
-| `mr reindex`                   | Regenerate index and verify/fix PRD interlinks                                         |
-| `mr status`                    | Show status of PRDs and tasks                                                          |
+| Command                    | Description                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| `mr init`                  | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
+| `mr init --language <lang>`| Initialize for a specific language (rust, python, node, go, java)                      |
+| `mr bootstrap`             | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
+| `mr new <slug>`            | Create a new PRD via guided Q/A                                                        |
+| `mr new <slug> --context`  | Create a new PRD with upfront context to guide initial questions                       |
+| `mr edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |
+| `mr list`                  | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
+| `mr finalize <id>`         | Finalize a PRD (mark as done and close out)                                            |
+| `mr run`                   | Run the next task from the highest-priority active PRD                                 |
+| `mr run <id>`              | Run the next task from a specific PRD                                                  |
+| `mr run --stream`          | Run with real-time streaming output                                                    |
+| `mr reindex`               | Regenerate index and verify/fix PRD interlinks                                         |
+| `mr status`                | Show status of PRDs and tasks                                                          |
 
 ### Flags
 
@@ -272,7 +273,7 @@ Used to synthesize the final PRD from collected Q/A.
 
 ### prd_edit.md
 
-Used when editing an existing PRD via `mr prd edit`.
+Used when editing an existing PRD via `mr edit`.
 
 | Placeholder | Type | Description |
 |-------------|------|-------------|
@@ -387,7 +388,7 @@ Traditional Ralph implementations are simple loop scripts: run the agent → che
 2. **One-task-per-run**: Each `mr run` completes exactly one task (no bloat)
 3. **Git-native state**: PRDs are markdown files that track progress and history
 4. **Multi-task orchestration**: Automatically picks the next task from active PRDs
-5. **Guided workflows**: `mr prd new` and `mr bootstrap` help structure work
+5. **Guided workflows**: `mr new` and `mr bootstrap` help structure work
 6. **Runner abstraction**: Pluggable backends (Copilot, others to come)
 
 Think of microralph as "Ralph with a project management system built in."
