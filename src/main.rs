@@ -216,6 +216,7 @@ fn main() -> Result<()> {
                 runner,
                 model,
             } => {
+                let prd_id = normalize_prd_id(&prd_id);
                 tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
                 cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
             }
@@ -229,6 +230,7 @@ fn main() -> Result<()> {
                 model,
                 stream,
             } => {
+                let prd_id = normalize_prd_id(&prd_id);
                 tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Finalizing PRD...");
                 cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream)?;
             }
