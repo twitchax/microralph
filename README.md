@@ -334,6 +334,36 @@ What this PRD is about...
 
 ## Learn More
 
+### What is Ralph?
+
+**Ralph** (named after [Ralph Wiggum from The Simpsons](https://en.wikipedia.org/wiki/Ralph_Wiggum)) is a pattern where you repeatedly invoke an AI coding agent in a loop until a task is complete. The original concept emerged in the AI coding community as a way to overcome context window limitations by running fresh agent sessions iteratively.
+
+Popular Ralph implementations include:
+- [soderlind/ralph](https://github.com/soderlind/ralph) — Shell script wrapper for GitHub Copilot CLI
+- [Ralph TUI](https://ralph-tui.com/) — Terminal UI for Ralph loops
+- [Ralph Loop blog post](https://benjamin-abt.com/blog/2026/01/19/ralph-loop-github-copilot-cli-dotnet/) — Deep dive on the Ralph pattern
+- [The Ralph Wiggum Approach](https://dev.to/sivarampg/the-ralph-wiggum-approach-running-ai-coding-agents-for-hours-not-minutes-57c1) — Long-form article on autonomous coding
+
+### How microralph Differs from Basic Ralph
+
+Traditional Ralph implementations are simple loop scripts: run the agent → check if done → repeat. They work well for small tasks but have limitations:
+
+- **No structure**: They don't enforce task breakdown or planning upfront
+- **No persistence**: Progress isn't tracked in a human-readable way
+- **No history**: Failed attempts aren't logged for future context
+- **One-shot scope**: Typically run until a single condition is met, not across multiple tasks
+
+**microralph** takes the Ralph pattern and adds:
+
+1. **PRD-driven structure**: Define all tasks upfront with priorities
+2. **One-task-per-run**: Each `mr run` completes exactly one task (no bloat)
+3. **Git-native state**: PRDs are markdown files that track progress and history
+4. **Multi-task orchestration**: Automatically picks the next task from active PRDs
+5. **Guided workflows**: `mr prd new` and `mr bootstrap` help structure work
+6. **Runner abstraction**: Pluggable backends (Copilot, others to come)
+
+Think of microralph as "Ralph with a project management system built in."
+
 ### What's a PRD?
 
 A **Product Requirements Document** (PRD) defines what you want to build. In microralph, PRDs are enhanced with:
