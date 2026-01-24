@@ -45,6 +45,11 @@ User's upfront context:
    - Be prioritized (1 = highest)
    - Start with status: todo
 
+4. Acceptance tests should:
+   - Have unique IDs (uat-001, uat-002, etc.)
+   - Include a `uat_status` field: `unverified` (default, no real test exists yet) or `verified` (a real test exists)
+   - New acceptance tests should start as `unverified` unless you create the actual test
+
 ## Output
 
 The complete PRD file content in Markdown format.

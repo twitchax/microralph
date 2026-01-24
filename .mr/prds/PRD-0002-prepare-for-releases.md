@@ -23,27 +23,35 @@ acceptance_tests:
 - id: uat-001
   name: Code coverage runs successfully
   command: cargo make codecov
+  uat_status: verified
 - id: uat-002
   name: Linux binary builds
   command: cargo make build-linux
+  uat_status: verified
 - id: uat-003
   name: macOS binary builds
   command: cargo make build-macos
+  uat_status: verified
 - id: uat-004
   name: Windows binary builds
   command: cargo make build-windows
+  uat_status: verified
 - id: uat-005
   name: WASM binary builds
   command: cargo make build-wasm
+  uat_status: unverified
 - id: uat-006
   name: Changelog generation works
   command: cargo make changelog
+  uat_status: unverified
 - id: uat-007
   name: Release version bump works
   command: cargo make release --dry-run
+  uat_status: unverified
 - id: uat-008
   name: crates.io publish works (dry-run)
   command: cargo make publish-crates --dry-run
+  uat_status: unverified
 
 tasks:
 - id: T-001

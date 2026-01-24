@@ -99,6 +99,27 @@ pub struct Task {
     pub notes: Option<String>,
 }
 
+/// UAT verification status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UatStatus {
+    /// UAT has not been verified to exist as a real test.
+    #[default]
+    Unverified,
+
+    /// UAT has been verified to exist (a real test exists or has been manually verified).
+    Verified,
+}
+
+impl std::fmt::Display for UatStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unverified => write!(f, "unverified"),
+            Self::Verified => write!(f, "verified"),
+        }
+    }
+}
+
 /// An acceptance test for a PRD.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AcceptanceTest {
@@ -110,6 +131,10 @@ pub struct AcceptanceTest {
 
     /// Command to run the test.
     pub command: String,
+
+    /// Whether this UAT has been verified to exist as a real test.
+    #[serde(default)]
+    pub uat_status: UatStatus,
 }
 
 /// Git configuration for the PRD.

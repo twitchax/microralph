@@ -18,6 +18,7 @@ acceptance_tests:
 - id: uat-001
   name: Description of what the test verifies
   command: cargo make uat # or specific test command
+  uat_status: unverified  # unverified | verified (verified = a real UAT test exists)
 
 tasks:
 - id: T-001

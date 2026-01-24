@@ -19,18 +19,23 @@ acceptance_tests:
 - id: uat-001
   name: Interactive flow prompts for context
   command: cargo make uat prd_new_context_interactive
+  uat_status: unverified
 - id: uat-002
   name: Flag flow uses provided context
   command: cargo make uat prd_new_context_flag
+  uat_status: unverified
 - id: uat-003
   name: Context influences question generation
   command: cargo make uat prd_new_context_in_questions
+  uat_status: unverified
 - id: uat-004
   name: Context persists through Q/A rounds
   command: cargo make uat prd_new_context_persistence
+  uat_status: unverified
 - id: uat-005
   name: Context included in final synthesis
   command: cargo make uat prd_new_context_synthesis
+  uat_status: unverified
 
 tasks:
 - id: T-001
