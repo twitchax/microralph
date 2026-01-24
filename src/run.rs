@@ -372,10 +372,21 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     let task_title = task.title.clone();
     let prd_id = prd.id().to_string();
 
+    // Calculate task progress.
+    let tasks = prd.tasks().unwrap_or(&[]);
+    let total_tasks = tasks.len();
+    let completed_tasks = tasks
+        .iter()
+        .filter(|t| t.status == TaskStatus::Done)
+        .count();
+    let current_task_num = completed_tasks + 1; // This is the task we're working on.
+
     tracing::info!(
         prd_id = %prd_id,
         task_id = %task_id,
         task_title = %task_title,
+        current_task = current_task_num,
+        total_tasks = total_tasks,
         "Running task"
     );
 
@@ -703,10 +714,21 @@ pub fn run_uat_verification_loop(
         // Get the next unverified UAT.
         let uat = unverified[0];
 
+        // Calculate UAT progress.
+        let all_uats = current_prd
+            .frontmatter
+            .acceptance_tests
+            .as_ref()
+            .map(|tests| tests.len())
+            .unwrap_or(0);
+        let current_uat_num = all_uats - unverified.len() + 1; // 1-indexed position.
+
         tracing::info!(
             prd_id = %config.prd_id,
             uat_id = %uat.id,
             uat_name = %uat.name,
+            current_uat = current_uat_num,
+            total_uats = all_uats,
             iteration = iterations + 1,
             max_iterations = max_iterations,
             "Verifying UAT"

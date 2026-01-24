@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **PRD-0009: CLI Ergonomics Improvements** — Simplified command structure and improved output readability
+  - PRD argument now optional and positional on `run` command: `mr run PRD-0001` or `mr run`
+  - Flattened command hierarchy: `mr new/list/edit/finalize` instead of `mr prd new/list/edit/finalize`
+  - LLM output now shows tail (last 500 chars) instead of beginning for better debugging
+  - Added command tracing for model invocations
+
 ### Added
 
 - **PRD-0007: Output Underlying Agent Usage** — Token usage tracking and display for CopilotRunner
