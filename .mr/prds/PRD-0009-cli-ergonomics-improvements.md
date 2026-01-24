@@ -20,7 +20,7 @@ acceptance_tests:
 - id: uat-001
   name: Run command accepts optional positional PRD argument
   command: cargo run -- run PRD-0001
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Run command works without arguments (interactive mode)
   command: cargo run -- run
@@ -237,5 +237,16 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - No regressions detected from CLI ergonomics improvements (T-001 through T-007)
   - All changes from this PRD are verified and working correctly
 - **UAT Status**: ✅ All tests passed with zero failures
+
+## 2026-01-24 — uat-001 Verification
+- **UAT**: Run command accepts optional positional PRD argument
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_args_parse_run_with_positional_prd` in src/main.rs
+  - Created companion test `test_args_parse_run_without_positional_prd` to verify interactive mode
+  - Both tests pass successfully
+  - Verified command manually: `cargo run -- run PRD-0001` works correctly
+  - Full test suite passes: 265 tests (2 new tests added)
 
 ---

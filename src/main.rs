@@ -1494,4 +1494,26 @@ mod tests {
         assert_eq!(normalize_prd_id("my-feature"), "my-feature");
         assert_eq!(normalize_prd_id("abc"), "abc");
     }
+
+    #[test]
+    fn test_args_parse_run_with_positional_prd() {
+        // UAT-001: Verify run command accepts optional positional PRD argument
+        let args = Args::try_parse_from(["mr", "run", "PRD-0001"]).unwrap();
+        if let Some(Command::Run { prd, .. }) = args.command {
+            assert_eq!(prd, Some("PRD-0001".to_string()));
+        } else {
+            panic!("Expected Run command with positional PRD argument");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_without_positional_prd() {
+        // Verify run command works without positional PRD argument (interactive mode)
+        let args = Args::try_parse_from(["mr", "run"]).unwrap();
+        if let Some(Command::Run { prd, .. }) = args.command {
+            assert!(prd.is_none());
+        } else {
+            panic!("Expected Run command without positional PRD argument");
+        }
+    }
 }
