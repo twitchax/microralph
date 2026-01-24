@@ -112,7 +112,7 @@ tasks:
   - id: T-001
     title: "Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)"
     priority: 1
-    status: todo
+    status: done
     notes: "Use kord as the reference: CI shape, README tone, cargo-make workflow. :contentReference[oaicite:2]{index=2}"
   - id: T-002
     title: "Define PRD file format + parser (YAML frontmatter + Markdown body)"
@@ -299,6 +299,21 @@ Each prompt must define:
 - Updated PRD: added static prompt library for every stage.
 - Updated PRD: `mr prd new` becomes MR-mediated runner↔user Q/A in one session.
 - Updated PRD: use `kord` repo as reference for CI/README/workflow norms. :contentReference[oaicite:5]{index=5}
+
+## 2026-01-23 — T-001 Completed
+- **Task**: Scaffold repo + CLI skeleton (`mr`), cargo-make, CI (kord-style)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created CLI skeleton with clap (init, bootstrap, prd new/list, run, status commands)
+  - Added anyhow for error handling, tracing for diagnostics
+  - Created Makefile.toml with cargo-make tasks (fmt, clippy, test, ci, uat, build-linux/windows/macos)
+  - Created GitHub Actions CI workflow (.github/workflows/build.yml) following kord patterns
+  - Created README.md with badges, usage, and development instructions
+  - Created AGENTS.md with workspace overview and conventions
+  - Created .mr/ directory structure with prompts, templates, and PRDS.md index
+  - Created rust-toolchain.toml pinning nightly-2025-12-22
+  - Created LICENSE (MIT)
+  - All tests pass (8/8), clippy clean, builds successfully
 
 (Entries appended by `mr run` will go below this line.)
 

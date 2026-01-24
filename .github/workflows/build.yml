@@ -1,0 +1,116 @@
+on: [push]
+
+name: Build and Test
+
+env:
+    RUST_TOOLCHAIN: nightly-2025-12-22
+
+jobs:
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  components: rustfmt, clippy
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make ci
+
+    codecov:
+        needs: test
+        name: Code Coverage
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make codecov
+            - uses: codecov/codecov-action@v5
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  slug: twitchax/microralph
+
+    build_linux:
+        needs: test
+        name: Build Linux
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            - name: Install mold linker
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y clang mold
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make build-linux
+              env:
+                  RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold"
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: mr_x86_64-unknown-linux-gnu
+                  path: target/x86_64-unknown-linux-gnu/release/mr
+
+    build_windows:
+        needs: test
+        name: Build Windows
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install windows dependencies
+              run: sudo apt-get install mingw-w64
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  targets: x86_64-pc-windows-gnu
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make build-windows
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: mr_x86_64-pc-windows-gnu
+                  path: target/x86_64-pc-windows-gnu/release/mr.exe
+
+    build_macos:
+        needs: test
+        name: Build MacOS
+        runs-on: macos-14
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  targets: aarch64-apple-darwin
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make build-macos
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: mr_aarch64-apple-darwin
+                  path: target/aarch64-apple-darwin/release/mr

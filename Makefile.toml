@@ -1,0 +1,212 @@
+# Micro Ralph — cargo-make configuration
+# Reference: https://github.com/twitchax/kord/blob/main/Makefile.toml
+
+# =============================================================================
+# Tool Installation
+# =============================================================================
+
+[tasks.install-cargo-binstall]
+# In CI, this is installed by the cargo-bins/cargo-binstall@main action.
+# Locally, users should install manually: https://github.com/cargo-bins/cargo-binstall
+script = "echo 'Checking cargo-binstall availability...'"
+
+[tasks.install-nextest]
+dependencies = ["install-cargo-binstall"]
+command = "cargo"
+args = ["binstall", "cargo-nextest", "--no-confirm"]
+
+[tasks.install-llvm-cov]
+dependencies = ["install-cargo-binstall"]
+command = "cargo"
+args = ["binstall", "cargo-llvm-cov", "--no-confirm"]
+
+[tasks.tools]
+dependencies = ["install-nextest", "install-llvm-cov"]
+
+# =============================================================================
+# Formatting
+# =============================================================================
+
+[tasks.fmt]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["fmt"]
+
+[tasks.fmt-check]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["fmt", "--check"]
+
+# =============================================================================
+# Linting
+# =============================================================================
+
+[tasks.clippy]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+# =============================================================================
+# Build
+# =============================================================================
+
+[tasks.build]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build"]
+
+[tasks.build-release]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build", "--release"]
+
+# =============================================================================
+# Testing
+# =============================================================================
+
+[tasks.test]
+cwd = "."
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run"]
+
+[tasks.test-cargo]
+# Fallback for environments without nextest.
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["test"]
+
+# =============================================================================
+# UAT (User Acceptance Tests)
+# =============================================================================
+
+[tasks.uat]
+# The one true gate for this repo.
+workspace = false
+dependencies = ["ci"]
+
+# =============================================================================
+# Micro Ralph Integration Tests
+# =============================================================================
+
+[tasks.mr-test]
+# Integration tests for MR itself (stub for now).
+cwd = "."
+workspace = false
+dependencies = ["test"]
+
+[tasks.mr-uat]
+# MR end-to-end acceptance tests (stub for now).
+cwd = "."
+workspace = false
+dependencies = ["test"]
+
+# =============================================================================
+# CI Pipeline
+# =============================================================================
+
+[tasks.ci]
+# The full CI pipeline: fmt, clippy, test.
+workspace = false
+dependencies = ["fmt-check", "clippy", "test"]
+
+[tasks.check-all]
+workspace = false
+dependencies = ["fmt", "test"]
+
+# =============================================================================
+# Code Coverage
+# =============================================================================
+
+[tasks.codecov]
+cwd = "."
+workspace = false
+clear = true
+dependencies = ["tools"]
+command = "cargo"
+args = ["llvm-cov", "nextest", "--lcov", "--output-path", "coverage.lcov"]
+
+[tasks.codecov-html]
+cwd = "."
+workspace = false
+clear = true
+dependencies = ["tools"]
+command = "cargo"
+args = ["llvm-cov", "nextest", "--html"]
+
+# =============================================================================
+# Platform Builds (for CI artifact generation)
+# =============================================================================
+
+[tasks.build-linux]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build", "--target", "x86_64-unknown-linux-gnu", "--release"]
+
+[tasks.build-windows]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build", "--target", "x86_64-pc-windows-gnu", "--release"]
+
+[tasks.build-macos]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build", "--target", "aarch64-apple-darwin", "--release"]
+
+# =============================================================================
+# Publishing
+# =============================================================================
+
+[tasks.release]
+cwd = "."
+workspace = false
+dependencies = ["install-cargo-binstall"]
+script = '''
+cargo binstall cargo-release --no-confirm
+cargo release --workspace --no-publish --execute
+'''
+
+[tasks.publish-crates]
+cwd = "."
+workspace = false
+script = '''
+echo "Publishing microralph crate to crates.io..."
+cargo publish --no-verify
+'''
+
+# =============================================================================
+# Development Helpers
+# =============================================================================
+
+[tasks.run]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["run", "--", "${@}"]
+
+[tasks.watch]
+cwd = "."
+workspace = false
+script = '''
+cargo watch -x "run -- status"
+'''
+
+# =============================================================================
+# Clean
+# =============================================================================
+
+[tasks.clean]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["clean"]

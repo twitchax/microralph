@@ -2,9 +2,22 @@
 name = "microralph"
 version = "0.1.0"
 edition = "2024"
+description = "A tiny CLI for creating and executing PRDs with coding agents"
+license = "MIT"
+repository = "https://github.com/twitchax/microralph"
+readme = "README.md"
+keywords = ["cli", "prd", "agent", "copilot", "automation"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "mr"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3"
