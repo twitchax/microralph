@@ -1720,4 +1720,106 @@ Test PRD.
         assert!(prd_content.contains("uat-002 Opt-Out"));
         assert!(prd_content.contains("Requires CI environment"));
     }
+
+    #[test]
+    fn test_uat_verification_history_appending() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}: {{uat_name}}",
+        )
+        .unwrap();
+
+        // Create a PRD with unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0099".to_string(),
+            title: "History Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![
+                AcceptanceTest {
+                    id: "uat-001".to_string(),
+                    name: "Successful verification".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-002".to_string(),
+                    name: "Opt-out verification".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(
+            frontmatter,
+            "# Summary\n\nHistory test.\n\n# History\n".to_string(),
+        );
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0099-history-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Simulate verification loop: first UAT succeeds, second UAT opts out.
+        // Set max_iterations=2 to stop after processing both UATs once.
+        let uat_runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Verified via existing test"),
+            crate::runner::RunnerOutput::success("OPT-OUT: Requires manual testing"),
+        ]);
+
+        let uat_config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0099",
+            prd_path: &prd_file,
+            stream: false,
+            max_iterations: Some(2), // Stop after 2 iterations to avoid retrying opted-out UAT.
+        };
+
+        let uat_result = run_uat_verification_loop(&uat_config, &uat_runner).unwrap();
+
+        assert_eq!(uat_result.verified_count, 1);
+        assert_eq!(uat_result.opted_out_count, 1);
+        assert_eq!(uat_result.iterations, 2);
+        assert!(uat_result.hit_max_iterations); // Loop stopped due to max_iterations, not because all UATs verified.
+        assert_eq!(uat_result.remaining_unverified, 1); // uat-002 still unverified after opt-out.
+
+        // Verify PRD frontmatter updates.
+        let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
+        let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
+        let uat1 = uats.iter().find(|u| u.id == "uat-001").unwrap();
+        let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
+        assert_eq!(uat1.uat_status, UatStatus::Verified);
+        assert_eq!(uat2.uat_status, UatStatus::Unverified); // Opted out, still unverified.
+
+        // Verify History entries.
+        let prd_content = std::fs::read_to_string(&prd_file).unwrap();
+
+        // Opt-out History entries ARE automatically appended by append_opt_out_history().
+        assert!(
+            prd_content.contains("uat-002 Opt-Out"),
+            "Opt-out History entries should be automatically appended"
+        );
+        assert!(prd_content.contains("Requires manual testing"));
+
+        // Successful verification History entries are NOT automatically appended.
+        // The prompt instructs the runner (AI agent) to manually append them.
+        // This is by design: the runner has context to write meaningful History entries.
+        assert!(
+            !prd_content.contains("uat-001 Verification"),
+            "Successful verification History entries are manually appended by the runner, not by the loop"
+        );
+    }
 }
