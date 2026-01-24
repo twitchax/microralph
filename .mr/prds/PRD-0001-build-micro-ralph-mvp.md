@@ -122,7 +122,7 @@ tasks:
   - id: T-003
     title: "Implement PRD index generator (`.mr/PRDS.md`)"
     priority: 3
-    status: todo
+    status: done
     notes: "Index is derived from scanning `.mr/prds/*.md`."
   - id: T-004
     title: "Implement `mr init` (new repo setup)"
@@ -329,5 +329,19 @@ Each prompt must define:
   - Wrote 16 tests covering parsing, serialization, round-trips, and edge cases
   - Parser successfully handles the actual PRD-0001 file (complex real-world PRD)
   - All 24 tests pass (including 16 new prd module tests), clippy clean, CI green
+
+## 2026-01-24 — T-003 Completed
+- **Task**: Implement PRD index generator (`.mr/PRDS.md`)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `chrono` dependency for date formatting
+  - Created `src/prd/index.rs` module with PRD scanning and index generation
+  - Implemented `scan_prds()` to scan `.mr/prds/` directory for PRD files
+  - Implemented `generate_index()` to create PRDS.md content with tables grouped by status
+  - Implemented `generate_index_file()` to write the index to disk
+  - Added `PrdSummary` struct with progress tracking (completed/total tasks)
+  - Added `Hash` derive to `PrdStatus` for HashMap usage
+  - Wrote 7 tests covering index generation, PRD scanning, and edge cases
+  - All 31 tests pass, clippy clean, CI green
 
 ---

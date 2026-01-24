@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Status of a PRD document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PrdStatus {
     /// PRD is in draft state, not yet active.
