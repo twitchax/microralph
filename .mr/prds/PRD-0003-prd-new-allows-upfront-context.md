@@ -41,7 +41,7 @@ tasks:
 - id: T-002
   title: Add upfront context prompt before question generation
   priority: 1
-  status: todo
+  status: done
   notes: Before invoking round 1 questions, ask the user if they want to add more context.
 - id: T-003
   title: Pass context to initial question generation prompt
@@ -98,4 +98,14 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Updated all tests to include the new `context` field
   - UAT: All 227 tests passed
   - CLI help now shows: `--context <CONTEXT>  Upfront context to provide before question generation`
+
+## 2026-01-24 — T-002 Completed
+- **Task**: Add upfront context prompt before question generation
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `prompt_for_context` function in `src/prd_new.rs` to interactively prompt users for optional context
+  - Modified `create_prd` function to call `prompt_for_context` when no `--context` flag is provided
+  - Updated `build_round1_prompt` to accept and include `user_context` in placeholder expansion
+  - Removed `#[allow(dead_code)]` attribute from `context` field in `PrdNewConfig`
+  - UAT: All 227 tests passed
 

@@ -60,7 +60,6 @@ pub struct PrdNewConfig<'a> {
 
     /// Optional upfront context from the user (via --context flag).
     /// Used by `build_round1_prompt` and subsequent rounds.
-    #[allow(dead_code)]
     pub context: Option<&'a str>,
 }
 
@@ -89,6 +88,13 @@ where
     writeln!(output, "Creating new PRD: {}", config.slug)?;
     writeln!(output)?;
 
+    // Determine user context: use CLI-provided context, or prompt interactively.
+    let user_context: Option<String> = if config.context.is_some() {
+        config.context.map(|s| s.to_string())
+    } else {
+        prompt_for_context(input, output)?
+    };
+
     // Scan existing PRDs for context.
     let existing_prds = scan_prd_summaries(config.root)?;
 
@@ -99,7 +105,7 @@ where
     // Round 1: Get initial questions.
     writeln!(output, "Generating questions...")?;
 
-    let round1_prompt = build_round1_prompt(config, &existing_prds);
+    let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
     let round1_output = runner
         .execute(&round1_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
@@ -248,7 +254,11 @@ fn generate_next_prd_id(existing: &[PrdSummary]) -> String {
 }
 
 /// Builds the round 1 prompt with context.
-fn build_round1_prompt(config: &PrdNewConfig, existing_prds: &[PrdSummary]) -> String {
+fn build_round1_prompt(
+    config: &PrdNewConfig,
+    existing_prds: &[PrdSummary],
+    user_context: Option<&str>,
+) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewRound1Questions);
 
     let mut ctx = PlaceholderContext::new();
@@ -256,6 +266,10 @@ fn build_round1_prompt(config: &PrdNewConfig, existing_prds: &[PrdSummary]) -> S
 
     if let Some(desc) = config.description {
         ctx.insert("user_description", desc);
+    }
+
+    if let Some(context) = user_context {
+        ctx.insert("user_context", context);
     }
 
     // Build existing PRDs list.
@@ -376,6 +390,38 @@ fn parse_questions(output: &str) -> Vec<String> {
     }
 
     questions
+}
+
+/// Prompts the user for optional upfront context.
+///
+/// Returns `Some(context)` if the user provides context, or `None` if they skip.
+fn prompt_for_context<I, O>(input: &mut I, output: &mut O) -> Result<Option<String>>
+where
+    I: BufRead,
+    O: Write,
+{
+    writeln!(
+        output,
+        "Would you like to provide additional context for the AI? (optional)"
+    )?;
+    writeln!(
+        output,
+        "This helps generate more relevant questions. Press Enter to skip, or type your context:"
+    )?;
+    write!(output, "> ")?;
+    output.flush()?;
+
+    let mut context = String::new();
+    input.read_line(&mut context)?;
+
+    let trimmed = context.trim();
+
+    if trimmed.is_empty() {
+        Ok(None)
+    } else {
+        writeln!(output)?;
+        Ok(Some(trimmed.to_string()))
+    }
 }
 
 /// Collects answers from the user for each question.
