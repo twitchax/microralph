@@ -23,7 +23,7 @@ acceptance_tests:
 - id: uat-002
   name: Flag flow uses provided context
   command: cargo make uat prd_new_context_flag
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Context influences question generation
   command: cargo make uat prd_new_context_in_questions
@@ -162,5 +162,15 @@ Currently, `mr prd new <slug>` generates initial questions based only on the PRD
   - Created `test_prd_new_context_interactive` in `src/prd_new.rs`
   - Test verifies that when no `--context` flag is provided, the interactive flow prompts the user for optional context
   - Test confirms the prompt is displayed and user-provided context is passed to the AI runner
+  - UAT: Test passed (1/1 tests run, 1 passed)
+
+## 2026-01-24 — uat-002 Verification
+- **UAT**: Flag flow uses provided context
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_prd_new_context_flag` in `src/prd_new.rs`
+  - Test verifies that when `--context` flag is provided, the context is used directly without an interactive prompt
+  - Test confirms the output does NOT contain the context prompt and the flag-provided context is included in the AI runner prompt
   - UAT: Test passed (1/1 tests run, 1 passed)
 
