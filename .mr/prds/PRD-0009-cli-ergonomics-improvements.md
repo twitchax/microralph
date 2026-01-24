@@ -36,7 +36,7 @@ acceptance_tests:
 - id: uat-005
   name: Top-level edit command works
   command: cargo run -- edit PRD-0001 "test edit"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: Top-level finalize command works
   command: cargo run -- finalize PRD-0001
@@ -278,5 +278,15 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - Test verifies `mr new test-slug` parses correctly with slug argument
   - Full test suite passes: 267 tests
   - Manual verification confirms command works (starts PRD creation flow correctly)
+
+## 2026-01-24 — uat-005 Verification
+- **UAT**: Top-level edit command works
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_args_parse_edit` in src/main.rs (line 1538)
+  - Test verifies `mr edit PRD-0001 "test edit"` parses correctly with prd_id and request arguments
+  - Full test suite passes: 270 tests
+  - Manual verification confirms command works (starts PRD edit flow with interactive prompts)
 
 ---

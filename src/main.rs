@@ -1534,4 +1534,19 @@ mod tests {
             panic!("Expected New command with slug 'test-slug'");
         }
     }
+
+    #[test]
+    fn test_args_parse_edit() {
+        // Verify edit command works at top level with prd_id and request arguments
+        let args = Args::try_parse_from(["mr", "edit", "PRD-0001", "test edit"]).unwrap();
+        if let Some(Command::Edit {
+            prd_id, request, ..
+        }) = args.command
+        {
+            assert_eq!(prd_id, "PRD-0001");
+            assert_eq!(request, "test edit");
+        } else {
+            panic!("Expected Edit command with prd_id 'PRD-0001' and request 'test edit'");
+        }
+    }
 }
