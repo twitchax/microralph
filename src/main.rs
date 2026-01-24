@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
+mod init;
 mod prd;
 
 /// Micro Ralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
@@ -77,7 +78,7 @@ fn main() -> Result<()> {
     match args.command {
         Some(Command::Init) => {
             tracing::info!("Initializing Micro Ralph...");
-            println!("mr init: not yet implemented");
+            cmd_init()?;
         }
         Some(Command::Bootstrap { runner }) => {
             tracing::info!(runner = %runner, "Bootstrapping repo...");
@@ -126,6 +127,42 @@ fn init_tracing(verbose: bool, quiet: bool) {
         .with(fmt::layer())
         .with(filter)
         .init();
+}
+
+/// Runs the `mr init` command.
+fn cmd_init() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if init::is_initialized(&cwd) {
+        println!("Micro Ralph is already initialized in this directory.");
+        println!("Run `mr status` to see PRD status.");
+        return Ok(());
+    }
+
+    let result = init::init(&cwd)?;
+
+    println!("Initialized Micro Ralph!");
+    println!();
+    println!(
+        "Created {} directories, {} files.",
+        result.dirs_created, result.files_created
+    );
+
+    if !result.created_paths.is_empty() {
+        println!();
+        println!("Created files:");
+        for path in &result.created_paths {
+            println!("  - {path}");
+        }
+    }
+
+    println!();
+    println!("Next steps:");
+    println!("  1. Review and customize AGENTS.md");
+    println!("  2. Create your first PRD: `mr prd new my-feature`");
+    println!("  3. Run a task: `mr run`");
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -127,7 +127,7 @@ tasks:
   - id: T-004
     title: "Implement `mr init` (new repo setup)"
     priority: 4
-    status: todo
+    status: done
     notes: "Creates `.mr/` dirs, templates, prompts, starter AGENTS.md, PRD index."
   - id: T-005
     title: "Implement static prompt library + placeholder system"
@@ -343,5 +343,24 @@ Each prompt must define:
   - Added `Hash` derive to `PrdStatus` for HashMap usage
   - Wrote 7 tests covering index generation, PRD scanning, and edge cases
   - All 31 tests pass, clippy clean, CI green
+
+## 2026-01-24 — T-004 Completed
+- **Task**: Implement `mr init` (new repo setup)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/init.rs` module with all initialization logic
+  - Defined default content constants for all templates and prompts (PRD template, 9 prompt files)
+  - Implemented `init()` function that creates `.mr/` directory structure:
+    - `.mr/prds/` for PRD files
+    - `.mr/templates/` with `prd.md` template
+    - `.mr/prompts/` with all 9 prompt files
+    - `.mr/PRDS.md` empty index
+    - `AGENTS.md` starter file at repo root
+  - Added `is_initialized()` helper to check if a repo has been initialized
+  - Added `InitResult` struct with counts and paths of created/skipped items
+  - Init is idempotent: re-running skips existing files without overwriting
+  - Integrated with CLI: `mr init` command now fully functional
+  - Wrote 8 tests covering structure creation, idempotency, and content validation
+  - All 39 tests pass, clippy clean, CI green
 
 ---
