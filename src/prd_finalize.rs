@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::Task;
-use crate::prd::{self, Prd, TaskStatus};
+use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
@@ -192,6 +192,26 @@ fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
     Ok(())
 }
 
+/// Updates the PRD status to done and saves the file.
+///
+/// This re-serializes the PRD with the updated status and writes it back.
+fn update_prd_status_to_done(prd: &Prd, prd_path: &Path) -> Result<()> {
+    // Clone the PRD and update the status.
+    let mut updated_prd = prd.clone();
+    updated_prd.frontmatter.status = PrdStatus::Done;
+
+    // Serialize and write.
+    let content = serialize_prd(&updated_prd)
+        .with_context(|| format!("Failed to serialize PRD: {}", prd.id()))?;
+
+    fs::write(prd_path, &content)
+        .with_context(|| format!("Failed to write updated PRD file: {}", prd_path.display()))?;
+
+    tracing::info!(prd_id = prd.id(), "Updated PRD status to done");
+
+    Ok(())
+}
+
 /// Finalizes a PRD.
 ///
 /// This function:
@@ -200,8 +220,8 @@ fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
 /// 3. Runs acceptance tests via the finalization prompt
 /// 4. Provides changelog entry generation instructions to the runner
 /// 5. Generates summary report and appends to PRD
-/// 6. (Future: updates PRD status to done)
-/// 7. (Future: refreshes the index)
+/// 6. Updates PRD status to done
+/// 7. Refreshes the PRDS.md index
 ///
 /// # Arguments
 ///
@@ -297,6 +317,16 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         .with_context(|| format!("Failed to append summary report to PRD: {}", path.display()))?;
 
     tracing::info!(prd_id = config.prd_id, "Summary report appended to PRD");
+
+    // Update PRD status to done.
+    update_prd_status_to_done(&prd, &path)
+        .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
+
+    // Refresh the PRDS.md index.
+    let prds_indexed = generate_index_from_root(config.root)
+        .with_context(|| "Failed to regenerate PRDS.md index")?;
+
+    tracing::info!(prds_indexed, "Regenerated PRDS.md index");
 
     Ok(PrdFinalizeResult {
         prd_id: prd.id().to_string(),
@@ -680,5 +710,77 @@ mod tests {
         // New content appended.
         assert!(content.contains("## 2026-01-24 — Finalization Complete"));
         assert!(content.contains("- Second entry"));
+    }
+
+    #[test]
+    fn test_update_prd_status_to_done() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let prd_path = temp.path().join("test.md");
+
+        // Create a PRD file with draft status.
+        let original = "---\nid: PRD-0001\ntitle: Test PRD\nstatus: draft\n---\n\n# Body\n\nSome content here.\n";
+        std::fs::write(&prd_path, original).unwrap();
+
+        // Create a Prd struct (with draft status).
+        let prd = make_test_prd("PRD-0001", vec![make_task("T-001", TaskStatus::Done)]);
+
+        // Update the status.
+        update_prd_status_to_done(&prd, &prd_path).unwrap();
+
+        // Read the updated file.
+        let content = std::fs::read_to_string(&prd_path).unwrap();
+
+        // Status should be updated to done.
+        assert!(content.contains("status: done"), "Status should be 'done'");
+        assert!(
+            !content.contains("status: draft"),
+            "Status should not be 'draft'"
+        );
+
+        // PRD ID and title should be preserved.
+        assert!(content.contains("id: PRD-0001"));
+        assert!(content.contains("title: Test PRD PRD-0001"));
+    }
+
+    #[test]
+    fn test_update_prd_status_preserves_tasks() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let prd_path = temp.path().join("test.md");
+
+        // Create a PRD with tasks.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0002".to_string(),
+            title: "Task Test".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![
+                make_task("T-001", TaskStatus::Done),
+                make_task("T-002", TaskStatus::Done),
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n\nTest content.\n".to_string());
+
+        // Serialize and write the original.
+        let original = serialize_prd(&prd).unwrap();
+        std::fs::write(&prd_path, &original).unwrap();
+
+        // Update the status.
+        update_prd_status_to_done(&prd, &prd_path).unwrap();
+
+        // Parse the updated file.
+        let updated = prd::parse_prd_file(&prd_path).unwrap();
+
+        // Status should be done.
+        assert_eq!(updated.status(), PrdStatus::Done);
+
+        // Tasks should be preserved.
+        let tasks = updated.tasks().unwrap();
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].id, "T-001");
+        assert_eq!(tasks[1].id, "T-002");
+
+        // Body should be preserved.
+        assert!(updated.body.contains("Test content."));
     }
 }

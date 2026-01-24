@@ -713,6 +713,8 @@ fn cmd_prd_finalize(
     }
 
     println!("  Summary Report: Appended to PRD");
+    println!("  PRD Status: Updated to done");
+    println!("  Index: PRDS.md regenerated");
     println!("═══════════════════════════════════════════════════════════════");
 
     Ok(())

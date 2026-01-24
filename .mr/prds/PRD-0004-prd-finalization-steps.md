@@ -34,7 +34,7 @@ tasks:
   - id: T-007
     title: "Update PRD status to done and refresh PRDS.md index"
     priority: 2
-    status: todo
+    status: done
   - id: T-008
     title: "Update inter-PRD links in index during finalization"
     priority: 3
@@ -249,3 +249,28 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
     - Enhanced `cmd_prd_finalize` to output formatted summary report to stdout
     - Added visual separators and clear sections for finalization output
   - UAT passes: 217/217 tests pass
+
+## 2026-01-24 — T-007 Completed
+- **Task**: Update PRD status to done and refresh PRDS.md index
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd/parser.rs`:
+    - Made `serialize_prd()` public (removed `#[cfg(test)]`)
+  - Updated `src/prd/mod.rs`:
+    - Exported `serialize_prd` as a public function
+  - Updated `src/prd_finalize.rs`:
+    - Added imports for `PrdStatus`, `generate_index_from_root`, `serialize_prd`
+    - Added `update_prd_status_to_done()` function that:
+      - Clones PRD and sets status to `PrdStatus::Done`
+      - Serializes and writes the updated PRD file
+      - Logs the status update
+    - Updated `finalize_prd()` to:
+      - Call `update_prd_status_to_done()` after appending summary report
+      - Call `generate_index_from_root()` to refresh PRDS.md
+    - Updated doc comment to reflect T-007 implementation (removed "Future:")
+    - Added unit tests:
+      - `test_update_prd_status_to_done()`: Verifies status update
+      - `test_update_prd_status_preserves_tasks()`: Verifies tasks and body preserved
+  - Updated `src/main.rs`:
+    - Added output lines for "PRD Status: Updated to done" and "Index: PRDS.md regenerated"
+  - UAT passes: 219/219 tests pass
