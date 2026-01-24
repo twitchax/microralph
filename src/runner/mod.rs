@@ -14,4 +14,4 @@ pub use mock::MockRunner;
 pub use types::Runner;
 
 // Re-export for internal crate use (tests, other modules).
-pub(crate) use types::RunnerOutput;
+pub(crate) use types::{RunnerOutput, UsageInfo};

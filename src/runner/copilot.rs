@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult};
+use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
 
 /// Permission mode for the Copilot runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -180,6 +180,66 @@ impl CopilotRunner {
             .map(|output| output.status.success())
             .unwrap_or(false)
     }
+
+    /// Attempts to parse token usage information from Copilot CLI output.
+    ///
+    /// Copilot CLI may emit usage information in various formats:
+    /// - "Token usage: input=123, output=456"
+    /// - "Input tokens: 123, Output tokens: 456"
+    /// - JSON format with usage field
+    ///
+    /// This function looks for common patterns and extracts what's available.
+    fn parse_usage(text: &str) -> Option<UsageInfo> {
+        let mut input_tokens = None;
+        let mut output_tokens = None;
+        let mut total_tokens = None;
+
+        // Pattern 1: "Token usage: input=123, output=456"
+        if let Some(caps) =
+            regex::Regex::new(r"[Tt]oken usage:\s*input[=:\s]+(\d+)[,\s]*output[=:\s]+(\d+)")
+                .ok()
+                .and_then(|re| re.captures(text))
+        {
+            input_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+            output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
+        }
+
+        // Pattern 2: "Input tokens: 123" and "Output tokens: 456" (separate lines)
+        if input_tokens.is_none()
+            && let Some(caps) = regex::Regex::new(r"[Ii]nput tokens[=:\s]+(\d+)")
+                .ok()
+                .and_then(|re| re.captures(text))
+        {
+            input_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+        }
+
+        if output_tokens.is_none()
+            && let Some(caps) = regex::Regex::new(r"[Oo]utput tokens[=:\s]+(\d+)")
+                .ok()
+                .and_then(|re| re.captures(text))
+        {
+            output_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+        }
+
+        // Pattern 3: "Total tokens: 123"
+        if let Some(caps) = regex::Regex::new(r"[Tt]otal tokens[=:\s]+(\d+)")
+            .ok()
+            .and_then(|re| re.captures(text))
+        {
+            total_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+        }
+
+        // Only return UsageInfo if we found at least one piece of information.
+        if input_tokens.is_some() || output_tokens.is_some() || total_tokens.is_some() {
+            Some(UsageInfo {
+                input_tokens,
+                output_tokens,
+                total_tokens,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl Default for CopilotRunner {
@@ -217,6 +277,9 @@ impl Runner for CopilotRunner {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
+        // Try to parse usage information from stderr (where Copilot CLI typically logs it).
+        let usage = Self::parse_usage(&stderr);
+
         let combined_output = if stderr.is_empty() {
             stdout
         } else if stdout.is_empty() {
@@ -231,13 +294,21 @@ impl Runner for CopilotRunner {
             exit_code = ?output.status.code(),
             success = success,
             output_len = combined_output.len(),
+            usage_present = usage.is_some(),
             "Copilot CLI completed"
         );
 
-        Ok(RunnerOutput {
+        let mut runner_output = RunnerOutput {
             text: combined_output,
             success,
-        })
+            usage: None,
+        };
+
+        if let Some(usage_info) = usage {
+            runner_output = runner_output.with_usage(usage_info);
+        }
+
+        Ok(runner_output)
     }
 
     fn execute_streaming(
@@ -330,17 +401,28 @@ impl Runner for CopilotRunner {
 
         let success = status.success();
 
+        // Try to parse usage information from captured output.
+        let usage = Self::parse_usage(&captured_output);
+
         tracing::debug!(
             exit_code = ?status.code(),
             success = success,
             output_len = captured_output.len(),
+            usage_present = usage.is_some(),
             "Copilot CLI completed (streaming)"
         );
 
-        Ok(RunnerOutput {
+        let mut runner_output = RunnerOutput {
             text: captured_output,
             success,
-        })
+            usage: None,
+        };
+
+        if let Some(usage_info) = usage {
+            runner_output = runner_output.with_usage(usage_info);
+        }
+
+        Ok(runner_output)
     }
 
     fn is_available(&self) -> bool {

@@ -1008,6 +1008,7 @@ fn cmd_run(
                 prd_path,
                 runner_success,
                 output_summary,
+                usage,
             } => {
                 tasks_completed += 1;
 
@@ -1040,6 +1041,38 @@ fn cmd_run(
                 if !output_summary.is_empty() {
                     println!("{}", colors::header("Runner output:"));
                     println!("{}", output_summary);
+                }
+
+                // Display usage information if available.
+                if let Some(usage_info) = usage
+                    && usage_info.has_data()
+                {
+                    println!();
+                    println!("{}", colors::dim("Token usage:"));
+
+                    if let Some(input) = usage_info.input_tokens {
+                        print!("{}", colors::dim(&format!("  Input: {}", input)));
+                    }
+
+                    if let Some(output) = usage_info.output_tokens {
+                        if usage_info.input_tokens.is_some() {
+                            print!("{}", colors::dim(", "));
+                        } else {
+                            print!("{}", colors::dim("  "));
+                        }
+                        print!("{}", colors::dim(&format!("Output: {}", output)));
+                    }
+
+                    if let Some(total) = usage_info.total_tokens {
+                        if usage_info.input_tokens.is_some() || usage_info.output_tokens.is_some() {
+                            print!("{}", colors::dim(", "));
+                        } else {
+                            print!("{}", colors::dim("  "));
+                        }
+                        print!("{}", colors::dim(&format!("Total: {}", total)));
+                    }
+
+                    println!(); // Newline after usage info.
                 }
 
                 // Exit if --one flag is set or if the task failed.

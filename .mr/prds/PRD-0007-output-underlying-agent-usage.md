@@ -1,7 +1,7 @@
 ---
 id: PRD-0007
 title: "Output Underlying Agent Usage"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-24
 updated: 2026-01-24
@@ -30,7 +30,7 @@ tasks:
 - id: T-001
   title: Extend RunnerOutput to include optional usage metadata
   priority: 1
-  status: todo
+  status: done
   notes: Add a struct like `UsageInfo` with optional fields for input_tokens, output_tokens, total_tokens, etc.
 - id: T-002
   title: Parse token usage from Copilot CLI output in CopilotRunner
@@ -84,5 +84,20 @@ When running `mr run`, users see truncated LLM output but have no visibility int
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-24 — T-001 Completed
+- **Task**: Extend RunnerOutput to include optional usage metadata
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `UsageInfo` struct in `src/runner/types.rs` with optional fields for `input_tokens`, `output_tokens`, and `total_tokens`
+  - Extended `RunnerOutput` to include optional `usage: Option<UsageInfo>` field
+  - Added `with_usage()` builder method to `RunnerOutput`
+  - Added `has_data()` method to `UsageInfo` to check if any usage information is present
+  - Updated `CopilotRunner` to parse token usage from CLI output using regex patterns
+  - Added `parse_usage()` method to `CopilotRunner` that supports multiple common token usage output formats
+  - Extended `RunResult::TaskExecuted` to include `usage: Option<UsageInfo>` field
+  - Updated display logic in `main.rs` to show token usage in dim color after runner output
+  - Usage info is displayed inline (e.g., "Token usage: Input: 123, Output: 456, Total: 579") when available
+  - UAT passes: All 256 tests pass, CI pipeline (fmt, clippy, test) passes
 
 ---

@@ -33,6 +33,26 @@ impl From<std::io::Error> for RunnerError {
 /// Result type for runner operations.
 pub type RunnerResult<T> = Result<T, RunnerError>;
 
+/// Token usage information from the underlying agent.
+#[derive(Debug, Clone)]
+pub struct UsageInfo {
+    /// Number of input tokens consumed.
+    pub input_tokens: Option<u64>,
+
+    /// Number of output tokens generated.
+    pub output_tokens: Option<u64>,
+
+    /// Total tokens (input + output), if available separately.
+    pub total_tokens: Option<u64>,
+}
+
+impl UsageInfo {
+    /// Returns true if any usage information is present.
+    pub fn has_data(&self) -> bool {
+        self.input_tokens.is_some() || self.output_tokens.is_some() || self.total_tokens.is_some()
+    }
+}
+
 /// Output from a runner invocation.
 #[derive(Debug, Clone)]
 pub struct RunnerOutput {
@@ -41,6 +61,9 @@ pub struct RunnerOutput {
 
     /// Whether the runner completed successfully.
     pub success: bool,
+
+    /// Optional usage information from the underlying agent.
+    pub usage: Option<UsageInfo>,
 }
 
 impl RunnerOutput {
@@ -49,6 +72,7 @@ impl RunnerOutput {
         Self {
             text: text.into(),
             success: true,
+            usage: None,
         }
     }
 
@@ -58,7 +82,14 @@ impl RunnerOutput {
         Self {
             text: text.into(),
             success: false,
+            usage: None,
         }
+    }
+
+    /// Adds usage information to this output.
+    pub fn with_usage(mut self, usage: UsageInfo) -> Self {
+        self.usage = Some(usage);
+        self
     }
 }
 
