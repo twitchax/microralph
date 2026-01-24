@@ -189,6 +189,11 @@ tasks:
     priority: 16
     status: todo
     notes: "Add tables in README showing available `{{placeholder}}` variables for each prompt type (run_task, prd_new_*, bootstrap_*, etc.). Helps users who want to customize prompts by hand. Include variable name, type (string/list), and description."
+  - id: T-018
+    title: "Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)"
+    priority: 17
+    status: todo
+    notes: "Support a config file for common settings: default runner, default model (e.g., `model = \"claude-sonnet-4-20250514\"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner."
   - id: T-015
     title: "Wrap-up: docs + example PRDs + end-to-end smoke"
     priority: 99
