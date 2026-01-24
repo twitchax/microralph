@@ -27,7 +27,15 @@ The suggested next task is `{{next_task_id}}` based on priority, but verify agai
 
 ## Updating the PRD
 
-After completing the task, you MUST update the PRD file at `{{prd_path}}`:
+You MUST update the PRD file at `{{prd_path}}` as you work:
+
+### Update PRD Status to Active (if currently draft)
+
+When starting work on a PRD, change its status from `draft` to `active`:
+
+```yaml
+status: active  # <-- Change from 'draft' to 'active' when starting work
+```
 
 ### Update Task Status in Frontmatter
 
