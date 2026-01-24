@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0007: Output Underlying Agent Usage** — Token usage tracking and display for CopilotRunner
+  - Added `UsageInfo` struct to capture input/output/total token metrics from runners
+  - CopilotRunner parses token usage from Copilot CLI output (format: "18.3k in, 38 out")
+  - Token usage displayed after runner output during `mr run` iterations
+  - Graceful degradation when runners don't provide usage metrics
+  - Support for k/M suffixes in token counts
+
 - **PRD-0006: Add Stdout Colors** — Terminal colorization and emoji enhancements for CLI output
   - Added `owo-colors` dependency with automatic TTY detection
   - Color utilities module with success (green), error (red), warning (yellow), info (cyan), question (blue bold), header (bold), and dim styling

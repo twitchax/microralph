@@ -1,7 +1,7 @@
 ---
 id: PRD-0007
 title: "Output Underlying Agent Usage"
-status: active
+status: done
 owner: "twitchax"
 created: 2026-01-24
 updated: 2026-01-24
@@ -137,5 +137,12 @@ When running `mr run`, users see truncated LLM output but have no visibility int
   - Added explicit test `test_mock_runner_omits_usage_info` in `src/runner/mock.rs` to document this behavior
   - UAT passes: All 262 tests pass (including new test), CI pipeline (fmt, clippy, test) passes
   - **UAT Verified**: uat-002 (Token usage omitted when runner lacks metrics) - verified via new unit test and implementation review
+
+## 2026-01-24 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All 4 tasks completed, 2 acceptance tests verified
+- **Tests**: 262/262 tests passed (cargo make uat)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Cleanup**: No temporary files or debug statements found
 
 ---
