@@ -118,11 +118,11 @@ This leads to PRDs being finalized without proper acceptance test coverage.
 
 ## Relevant References
 
-- See `src/run.rs` for current run loop implementation and task execution flow.
-- See `src/prd/types.rs:88-107` for `UatStatus` enum and `AcceptanceTest` struct.
-- See `.mr/prompts/run_task.md:65-74` for current UAT verification instructions.
-- See `src/prd_finalize.rs:102-116` for task validation pattern to follow for UAT validation.
-- See PRD-0004 ## Design Notes for finalization workflow patterns.
+- See [src/run.rs](../../src/run.rs) for current run loop implementation and task execution flow.
+- See [src/prd/types.rs](../../src/prd/types.rs#L88-L107) for `UatStatus` enum and `AcceptanceTest` struct.
+- See [.mr/prompts/run_task.md](../prompts/run_task.md#L65-L74) for current UAT verification instructions.
+- See [src/prd_finalize.rs](../../src/prd_finalize.rs#L102-L116) for task validation pattern to follow for UAT validation.
+- See [PRD-0004](./PRD-0004-prd-finalization-steps.md) ## Design Notes for finalization workflow patterns.
 
 ## History
 

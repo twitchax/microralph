@@ -135,7 +135,7 @@ tasks:
   title: Add a `reindex` command to regenerate `.mr/PRDS.md` and edit PRD interlinks / code links.
   priority: 19
   status: done
-  notes: This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see PRD-0002 for...') and code links (e.g., 'in src/module.rs line 42...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it.
+  notes: This will allow users to force a new set of indexing to make sure everything is up to date. Also, during reindexing, MR can scan PRDs for inter-PRD links (e.g., 'see [PRD-0002](./PRD-0002-prepare-for-releases.md) for...') and code links (e.g., 'in [src/module.rs](../../src/module.rs#L42)...') and verify/fix them.  These should all use _real_ markdown links.  This will likely require a new default prompt in init, and please make sure there is one in this repo, so we can dogfood it.
 - id: T-099
   title: 'Wrap-up: docs + example PRDs + end-to-end smoke'
   priority: 99

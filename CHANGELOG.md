@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0006: Add Stdout Colors** — Terminal colorization and emoji enhancements for CLI output
+  - Added `owo-colors` dependency with automatic TTY detection
+  - Color utilities module with success (green), error (red), warning (yellow), info (cyan), question (blue bold), header (bold), and dim styling
+  - Colorized success, error, warning, informational, and question messages throughout CLI
+  - Automatic color degradation for piped output and `NO_COLOR` environment variable support
+  - Enhanced finalization summary box with styled separators and headers
+
 - **PRD-0003: PRD New Allows Upfront Context** — Enhanced `mr prd new` with optional upfront context
   - `--context` CLI flag to provide context directly, skipping interactive prompt
   - Interactive context prompt before question generation ("Do you want to add more context?")
