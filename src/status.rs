@@ -107,9 +107,10 @@ fn extract_last_history(body: &str) -> Option<String> {
 
     // Return the last entry (most recent).
     entries.last().map(|s| {
-        // Trim and limit to first few lines for summary.
-        let lines: Vec<&str> = s.lines().take(6).collect();
-        lines.join("\n")
+        // Trim and limit to last few lines for summary.
+        let lines: Vec<&str> = s.lines().collect();
+        let start = lines.len().saturating_sub(6);
+        lines[start..].join("\n")
     })
 }
 

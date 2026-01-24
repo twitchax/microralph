@@ -403,7 +403,8 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     let output_summary = if config.stream {
         "(output was streamed above)".to_string()
     } else if output.text.len() > 500 {
-        format!("{}... (truncated)", &output.text[..500])
+        let start = output.text.len() - 500;
+        format!("... (truncated)\n{}", &output.text[start..])
     } else {
         output.text.clone()
     };
@@ -420,7 +421,13 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
                 let summary = result
                     .new_content
                     .as_ref()
-                    .map(|c| if c.len() > 100 { &c[..100] } else { c.as_str() })
+                    .map(|c| {
+                        if c.len() > 100 {
+                            &c[c.len() - 100..]
+                        } else {
+                            c.as_str()
+                        }
+                    })
                     .unwrap_or("(empty)");
                 tracing::info!(summary = %summary, "Updated AGENTS.md auto-managed section");
             }

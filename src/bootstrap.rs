@@ -235,12 +235,15 @@ fn build_generate_prompt(config: &BootstrapConfig, plan: &str) -> String {
 
 /// Summarizes the bootstrap plan output.
 fn summarize_plan(plan: &str) -> String {
-    // Take first 500 chars or first few lines as summary.
-    let lines: Vec<&str> = plan.lines().take(10).collect();
+    // Take last 500 chars or last few lines as summary.
+    let all_lines: Vec<&str> = plan.lines().collect();
+    let start_line = all_lines.len().saturating_sub(10);
+    let lines = &all_lines[start_line..];
     let summary = lines.join("\n");
 
     if summary.len() > 500 {
-        format!("{}...", &summary[..500])
+        let start = summary.len() - 500;
+        format!("...\n{}", &summary[start..])
     } else {
         summary
     }

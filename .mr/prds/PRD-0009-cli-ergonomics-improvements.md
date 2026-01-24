@@ -74,7 +74,7 @@ tasks:
 - id: T-005
   title: Change LLM output display to show tail instead of beginning
   priority: 5
-  status: todo
+  status: done
   notes: Update all places that truncate/display model output to show last N chars/lines instead of first N.
 - id: T-006
   title: Apply tail output behavior to UAT verification loop
@@ -184,5 +184,17 @@ The current CLI requires excessive typing for common operations (`mr prd list`, 
   - All logging includes relevant context: runner name, PRD ID, task ID, stream mode, etc.
   - UAT passed: All 262 tests passed successfully
   - This improves debugging by making runner invocations visible at info level with full command context
+
+## 2026-01-24 — T-005 Completed
+- **Task**: Change LLM output display to show tail instead of beginning
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/run.rs` line 406: Changed output truncation from first 500 chars to last 500 chars
+  - Modified `src/run.rs` line 423: Changed AGENTS.md summary truncation from first 100 chars to last 100 chars
+  - Modified `src/status.rs` line 111: Changed history summary from first 6 lines to last 6 lines
+  - Modified `src/bootstrap.rs` line 239: Changed plan summary from first 10 lines/500 chars to last 10 lines/500 chars
+  - All truncations now show tail with "... (truncated)" prefix instead of "... (truncated)" suffix
+  - UAT passed: All 263 tests passed successfully
+  - This improves debugging by showing the most recent/relevant output (errors, completion status) instead of preamble
 
 ---

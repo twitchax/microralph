@@ -221,69 +221,76 @@ where
     let prds_dir = config.root.join(".mr").join("prds");
 
     // Look for the newly created PRD file matching our slug.
-    let (prd, prd_path, prd_content) =
-        if let Some((path, content)) = find_created_prd_file(&prds_dir, config.slug, &next_id)? {
-            tracing::debug!(path = %path.display(), "Found PRD file created by runner");
+    let (prd, prd_path, prd_content) = if let Some((path, content)) =
+        find_created_prd_file(&prds_dir, config.slug, &next_id)?
+    {
+        tracing::debug!(path = %path.display(), "Found PRD file created by runner");
 
-            let parsed = match parse_prd(&content) {
-                Ok(p) => p,
-                Err(e) => {
-                    tracing::warn!(
-                        path = %path.display(),
-                        error = %e,
-                        "Failed to parse PRD file created by runner, using expected values for operations"
-                    );
-                    writeln!(output, "⚠️  Warning: Failed to parse runner-created PRD, leaving file as-is")?;
-                    
-                    // Construct minimal Prd for return using expected values
-                    // The file already contains the runner's actual output
-                    let frontmatter = crate::prd::types::PrdFrontmatter {
-                        id: next_id.clone(),
-                        title: format!("PRD for {}", config.slug),
-                        status: crate::prd::PrdStatus::Draft,
-                        ..Default::default()
-                    };
-                    crate::prd::Prd::new(frontmatter, String::new())
-                }
-            };
+        let parsed = match parse_prd(&content) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!(
+                    path = %path.display(),
+                    error = %e,
+                    "Failed to parse PRD file created by runner, using expected values for operations"
+                );
+                writeln!(
+                    output,
+                    "⚠️  Warning: Failed to parse runner-created PRD, leaving file as-is"
+                )?;
 
-            (parsed, path, content)
-        } else {
-            // Fall back to parsing the response (for tests or if runner didn't create file).
-            tracing::debug!("No PRD file found, parsing response content");
-
-            let prd_content = extract_prd_content(&synthesize_output.text);
-
-            let prd = match parse_prd(&prd_content) {
-                Ok(p) => p,
-                Err(e) => {
-                    tracing::warn!(
-                        error = %e,
-                        content_preview = ?prd_content.chars().take(200).collect::<String>(),
-                        "Failed to parse synthesized PRD content, using expected values for operations"
-                    );
-                    writeln!(output, "⚠️  Warning: Failed to parse synthesized PRD content, leaving file as-is")?;
-                    
-                    // Construct minimal Prd for return using expected values
-                    // The file will contain the runner's actual output
-                    let frontmatter = crate::prd::types::PrdFrontmatter {
-                        id: next_id.clone(),
-                        title: format!("PRD for {}", config.slug),
-                        status: crate::prd::PrdStatus::Draft,
-                        ..Default::default()
-                    };
-                    crate::prd::Prd::new(frontmatter, String::new())
-                }
-            };
-
-            // Write the PRD to disk.
-            let filename = format!("{}-{}.md", prd.id(), config.slug);
-            let prd_path = prds_dir.join(&filename);
-
-            std::fs::write(&prd_path, &prd_content).context("Failed to write PRD file")?;
-
-            (prd, prd_path, prd_content)
+                // Construct minimal Prd for return using expected values
+                // The file already contains the runner's actual output
+                let frontmatter = crate::prd::types::PrdFrontmatter {
+                    id: next_id.clone(),
+                    title: format!("PRD for {}", config.slug),
+                    status: crate::prd::PrdStatus::Draft,
+                    ..Default::default()
+                };
+                crate::prd::Prd::new(frontmatter, String::new())
+            }
         };
+
+        (parsed, path, content)
+    } else {
+        // Fall back to parsing the response (for tests or if runner didn't create file).
+        tracing::debug!("No PRD file found, parsing response content");
+
+        let prd_content = extract_prd_content(&synthesize_output.text);
+
+        let prd = match parse_prd(&prd_content) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    content_preview = ?prd_content.chars().take(200).collect::<String>(),
+                    "Failed to parse synthesized PRD content, using expected values for operations"
+                );
+                writeln!(
+                    output,
+                    "⚠️  Warning: Failed to parse synthesized PRD content, leaving file as-is"
+                )?;
+
+                // Construct minimal Prd for return using expected values
+                // The file will contain the runner's actual output
+                let frontmatter = crate::prd::types::PrdFrontmatter {
+                    id: next_id.clone(),
+                    title: format!("PRD for {}", config.slug),
+                    status: crate::prd::PrdStatus::Draft,
+                    ..Default::default()
+                };
+                crate::prd::Prd::new(frontmatter, String::new())
+            }
+        };
+
+        // Write the PRD to disk.
+        let filename = format!("{}-{}.md", prd.id(), config.slug);
+        let prd_path = prds_dir.join(&filename);
+
+        std::fs::write(&prd_path, &prd_content).context("Failed to write PRD file")?;
+
+        (prd, prd_path, prd_content)
+    };
 
     // Verify the PRD file is valid (it should be, since we just parsed it).
     if prd.id().is_empty() || prd.title().is_empty() {
@@ -291,7 +298,10 @@ where
             content_preview = ?prd_content.chars().take(200).collect::<String>(),
             "PRD file is missing required fields (id or title)"
         );
-        writeln!(output, "⚠️  Warning: PRD is missing required fields (id or title)")?;
+        writeln!(
+            output,
+            "⚠️  Warning: PRD is missing required fields (id or title)"
+        )?;
     }
 
     writeln!(output)?;
@@ -1489,10 +1499,13 @@ Just some random text."#;
         // This should NOT fail, even though the content is unparseable
         let result = create_prd(&config, &runner, &mut input, &mut output);
 
-        assert!(result.is_ok(), "PRD creation should succeed despite parse failure");
-        
+        assert!(
+            result.is_ok(),
+            "PRD creation should succeed despite parse failure"
+        );
+
         let result = result.unwrap();
-        
+
         // Verify we got a fallback PRD
         assert_eq!(result.prd.id(), "PRD-0001");
         assert!(result.prd.title().contains("parse-fail-test"));
@@ -1500,6 +1513,9 @@ Just some random text."#;
 
         // Verify warning was emitted to output
         let output_str = String::from_utf8(output).unwrap();
-        assert!(output_str.contains("Warning"), "Output should contain warning message");
+        assert!(
+            output_str.contains("Warning"),
+            "Output should contain warning message"
+        );
     }
 }
