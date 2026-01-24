@@ -378,3 +378,9 @@ Update `.mr/prompts/run_task_finalize.md` to instruct the LLM to:
   - Same instructions exist in `src/init.rs` `PROMPT_RUN_TASK_FINALIZE` constant
   - No additional code changes required; acceptance test already satisfied
   - UAT passes: 227/227 tests pass
+
+## 2026-01-24 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All 11 tasks completed, acceptance tests passed (227/227)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Cleanup**: No cleanup required — all `println!` statements are legitimate CLI output
