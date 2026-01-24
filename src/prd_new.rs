@@ -200,21 +200,55 @@ where
         "Received synthesize output from runner"
     );
 
-    // Parse the PRD content.
-    let prd_content = extract_prd_content(&synthesize_output.text);
+    // Strategy: The runner may have created the PRD file directly on disk,
+    // or it may have returned the PRD content in its response.
+    // First, check if a new PRD file was created. If so, use that.
+    // Otherwise, try to parse the response.
 
-    let prd = parse_prd(&prd_content).with_context(|| {
-        format!(
-            "Failed to parse synthesized PRD. First 200 chars of extracted content: {:?}",
+    let prds_dir = config.root.join(".mr").join("prds");
+
+    // Look for a newly created PRD file matching our slug.
+    let (prd, prd_path, prd_content) =
+        if let Some((path, content)) = find_created_prd_file(&prds_dir, config.slug, &next_id)? {
+            tracing::debug!(path = %path.display(), "Found PRD file created by runner");
+
+            let parsed = parse_prd(&content).with_context(|| {
+                format!(
+                    "Failed to parse PRD file created by runner at {}",
+                    path.display()
+                )
+            })?;
+
+            (parsed, path, content)
+        } else {
+            // Fall back to parsing the response.
+            tracing::debug!("No PRD file found, parsing response content");
+
+            let prd_content = extract_prd_content(&synthesize_output.text);
+
+            let prd = parse_prd(&prd_content).with_context(|| {
+                format!(
+                    "Failed to parse synthesized PRD. First 200 chars of extracted content: {:?}",
+                    prd_content.chars().take(200).collect::<String>()
+                )
+            })?;
+
+            // Write the PRD to disk.
+            let filename = format!("{}-{}.md", prd.id(), config.slug);
+            let prd_path = prds_dir.join(&filename);
+
+            std::fs::write(&prd_path, &prd_content).context("Failed to write PRD file")?;
+
+            (prd, prd_path, prd_content)
+        };
+
+    // Verify the PRD file is valid (it should be, since we just parsed it).
+    if prd.id().is_empty() || prd.title().is_empty() {
+        bail!(
+            "PRD file is missing required fields (id or title). Content: {:?}",
             prd_content.chars().take(200).collect::<String>()
-        )
-    })?;
-
-    // Write the PRD to disk.
-    let filename = format!("{}-{}.md", prd.id(), config.slug);
-    let prd_path = config.root.join(".mr").join("prds").join(&filename);
-
-    std::fs::write(&prd_path, &prd_content).context("Failed to write PRD file")?;
+        );
+    }
 
     writeln!(output)?;
     writeln!(output, "Created PRD: {}", prd_path.display())?;
@@ -251,6 +285,61 @@ where
         rounds,
         qa_history,
     })
+}
+
+/// Searches for a PRD file that was created by the runner.
+///
+/// The runner may create the file directly, so we need to check
+/// for files matching our expected patterns.
+fn find_created_prd_file(
+    prds_dir: &Path,
+    slug: &str,
+    expected_id: &str,
+) -> Result<Option<(std::path::PathBuf, String)>> {
+    if !prds_dir.exists() {
+        return Ok(None);
+    }
+
+    // Look for files matching the pattern: PRD-XXXX-<slug>.md
+    // or just containing the slug.
+    let entries = std::fs::read_dir(prds_dir).context("Failed to read prds directory")?;
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+
+        let filename = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+
+        // Check if this file matches our slug.
+        // Could be PRD-XXXX-slug.md or variations.
+        let slug_normalized = slug.to_lowercase().replace('_', "-");
+
+        if filename.to_lowercase().contains(&slug_normalized) {
+            // Found a potential match - read and validate it.
+            let content = std::fs::read_to_string(&path).with_context(|| {
+                format!("Failed to read potential PRD file: {}", path.display())
+            })?;
+
+            // Quick validation: must have frontmatter.
+            if content.trim().starts_with("---") {
+                tracing::debug!(
+                    path = %path.display(),
+                    expected_id = %expected_id,
+                    "Found matching PRD file"
+                );
+
+                return Ok(Some((path, content)));
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 /// Generates the next PRD ID based on existing PRDs.

@@ -109,7 +109,11 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-The PRD shows that a new `--context` flag was added to `mr prd new` command, allowing users to provide upfront context. This is a new CLI feature that would be useful for agents to know about. Let me update the auto-managed section in AGENTS.md.
+Let me also check the new prompt template to understand the verification workflow:
 
-Updated AGENTS.md auto-managed section with information about the new `--context` flag for `mr prd new`, which helps agents provide upfront context when creating PRDs.
+Now I have enough context. T-002 added a new prompt template for UAT verification with specific placeholders and output conventions. Let me update the auto-managed section:
+
+Updated the auto-managed section with:
+- Documented `RunResult` enum variants and key `Prd` methods for the run loop
+- Added new **UAT Verification Phase** section with prompt placeholders, three verification approaches, and the opt-out mechanism (`OPT-OUT: [explanation]`)
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
