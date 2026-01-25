@@ -219,6 +219,12 @@ workspace = false
 command = "cargo"
 args = ["build", "--target", "aarch64-apple-darwin", "--release"]
 
+[tasks.build-wasm]
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["build", "--target", "wasm32-wasip2", "--release"]
+
 # =============================================================================
 # Publishing
 # =============================================================================

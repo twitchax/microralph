@@ -119,3 +119,26 @@ jobs:
               with:
                   name: mr_aarch64-apple-darwin
                   path: target/aarch64-apple-darwin/release/mr
+
+    build_wasm:
+        needs: test
+        name: Build WASM
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+                  targets: wasm32-wasip2
+            - uses: cargo-bins/cargo-binstall@main
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+                  cache-bin: "false"
+            - run: cargo binstall cargo-make --no-confirm
+            - run: cargo make build-wasm
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: mr_wasm32-wasip2
+                  path: target/wasm32-wasip2/release/mr.wasm
