@@ -239,12 +239,74 @@ args = ["build", "--target", "wasm32-wasip2", "--release"]
 # Publishing
 # =============================================================================
 
-[tasks.release]
+[tasks.release-bump]
 cwd = "."
 workspace = false
 dependencies = ["install-cargo-release"]
 command = "cargo"
 args = ["release", "--workspace", "--no-publish", "--execute"]
+
+[tasks.release-builds]
+cwd = "."
+workspace = false
+run_task = { name = [
+    "changelog",
+    "build-linux",
+    "build-macos",
+    "build-windows",
+    "build-wasm",
+], fork = false }
+
+[tasks.release]
+cwd = "."
+workspace = false
+dependencies = ["ci", "release-builds"]
+script_runner = "@shell"
+script = '''
+echo ""
+echo "✅ Release build complete!"
+echo ""
+echo "Next steps:"
+echo "  1. Review CHANGELOG.md"
+echo "  2. Bump version: cargo make release-bump"
+echo "  3. Commit changes: git add . && git commit -m \"chore: prepare release\""
+echo "  4. Push to trigger CI: git push"
+echo "  5. Download artifacts: gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
+echo "  6. Publish: cargo make publish-all <version-tag>"
+'''
+
+[tasks.publish-all]
+cwd = "."
+workspace = false
+script_runner = "@shell"
+script = '''#!/bin/bash
+set -e
+
+TAG=${1:-}
+if [ -z "$TAG" ]; then
+    echo "❌ Error: Version tag required"
+    echo "Usage: cargo make publish-all <tag>"
+    echo "Example: cargo make publish-all v0.1.0"
+    exit 1
+fi
+
+echo "🚀 Starting full release pipeline for $TAG..."
+echo ""
+
+# Step 1: Publish to crates.io
+echo "📦 Step 1/2: Publishing to crates.io..."
+cargo make publish-crates
+
+# Step 2: Create GitHub release with artifacts
+echo ""
+echo "📦 Step 2/2: Creating GitHub release..."
+cargo make github-release "$TAG" "${@:2}"
+
+echo ""
+echo "✅ Full release pipeline complete!"
+echo "   Published to crates.io: https://crates.io/crates/microralph"
+echo "   GitHub release: https://github.com/twitchax/microralph/releases/tag/$TAG"
+'''
 
 [tasks.changelog]
 cwd = "."

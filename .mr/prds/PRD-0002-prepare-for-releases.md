@@ -92,7 +92,7 @@ tasks:
 - id: T-008
   title: Add unified release task orchestrating full pipeline
   priority: 8
-  status: todo
+  status: done
   notes: "Add 'release' and 'publish-all' tasks that orchestrate: version bump, changelog generation, build, publish to crates.io, create GitHub release."
 - id: T-009
   title: Update README with installation instructions for downloading/unpacking releases
@@ -259,3 +259,33 @@ microralph currently has no release infrastructure. To distribute the tool to us
   - No UATs can be verified at this time - UAT-009 and beyond are not defined yet
   - Manual testing confirms task works correctly (validates args, prepares notes, calls gh CLI)
 - **UAT Results**: ✅ All UATs pass - github-release task implemented and functional
+
+## 2026-01-25 — T-008 Completed
+- **Task**: Add unified release task orchestrating full pipeline
+- **Status**: ✅ Done
+- **Changes**:
+  - Renamed original `release` task to `release-bump` (lines 242-247) to preserve version bumping functionality
+  - Created `release-builds` helper task (lines 249-256) that runs changelog and all platform builds in sequence
+  - Created new unified `release` task (lines 258-272) that:
+    - Runs full CI pipeline first (dependency on `ci`)
+    - Runs changelog generation and all platform builds (dependency on `release-builds`)
+    - Provides clear next-steps instructions for completing the release workflow
+  - Created `publish-all` task (lines 274-303) that:
+    - Accepts version tag as required first argument
+    - Publishes to crates.io via `cargo make publish-crates`
+    - Creates GitHub release with artifacts via `cargo make github-release`
+    - Supports passing `--draft` flag through to github-release
+    - Provides helpful success message with links
+  - Updated AGENTS.md "Release Workflow" section with comprehensive guidance on:
+    - Unified release workflow (recommended 4-step process)
+    - Manual release workflow (individual task control)
+    - Release tasks reference table
+  - All tasks follow cargo-make best practices and kord reference patterns
+  - Tested task error handling: `publish-all` correctly validates required tag argument
+  - Tested orchestration flow: `release` runs CI → changelog → builds in sequence
+  - Tested version bump: `release-bump` correctly detects uncommitted changes
+  - Ran `cargo make uat` - all 304 tests pass
+- **Opportunistic UAT Verification**:
+  - No additional UATs can be verified at this time
+  - All previously verified UATs (UAT-001 through UAT-008) remain passing
+- **UAT Results**: ✅ All UATs pass - unified release pipeline implemented and functional

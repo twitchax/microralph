@@ -431,6 +431,26 @@ This commit updates the PRD to reflect the actual completion status.
 - Changed from script-based to command-based implementation
 - Verified UAT-007: cargo release dry-run works successfully
 - All 304 tests pass
+- Prd(PRD-0002)feat(T-005): add changelog generation with git-cliff
+
+- Created cliff.toml with conventional commit support and Keep a Changelog format
+- Added install-git-cliff task to Makefile.toml
+- Added changelog task to Makefile.toml for generating CHANGELOG.md
+- Verified UAT-006: cargo make changelog generates proper changelog output
+- All 304 tests pass
+- Prd(PRD-0002)feat(T-006): add publish-crates task for crates.io publishing
+- Prd(PRD-0002)feat(T-007): Add GitHub Release creation task
+
+- Added github-release cargo-make task that uses gh CLI
+- Task accepts version tag and optional --draft flag
+- Uses CHANGELOG.md for release notes
+- Supports attaching binaries from release-artifacts/ directory
+- Includes helpful instructions for downloading CI artifacts
+- All 304 tests pass
+
+### 📚 Documentation
+
+- Add release workflow section to AGENTS.md
 
 ### ⚙️ Miscellaneous Tasks
 

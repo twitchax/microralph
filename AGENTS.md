@@ -123,16 +123,39 @@ cargo make uat
 
 ## Release Workflow
 
-microralph uses a multi-step release process powered by cargo-make tasks:
+microralph uses a multi-step release process powered by cargo-make tasks. There are two main workflows: **unified** (recommended) and **manual** (for advanced scenarios).
 
-### Release Tasks
+### Unified Release Workflow (Recommended)
+
+```bash
+# Step 1: Prepare release (runs CI, builds all targets, generates changelog)
+cargo make release
+
+# Step 2: Review CHANGELOG.md, bump version, commit and push
+cargo make release-bump   # Bumps version with cargo-release
+git add .
+git commit -m "chore: prepare release vX.Y.Z"
+git push
+
+# Step 3: Wait for CI to complete, then download artifacts
+gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | \
+  xargs -I {} gh run download {} --dir release-artifacts
+
+# Step 4: Publish to crates.io and create GitHub release in one command
+cargo make publish-all vX.Y.Z
+# Or create draft: cargo make publish-all vX.Y.Z --draft
+```
+
+### Manual Release Workflow (Advanced)
+
+For more control, run individual tasks:
 
 ```bash
 # Generate/update changelog from conventional commits
 cargo make changelog
 
 # Version bump with cargo-release (dry-run to preview)
-cargo make release --dry-run
+cargo make release-bump
 
 # Build platform-specific binaries (done automatically by CI on main)
 cargo make build-linux
@@ -145,25 +168,24 @@ cargo make publish-crates -- --dry-run
 cargo make publish-crates
 
 # Create GitHub release with binaries
-# First download CI artifacts (requires gh CLI auth):
-gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | \
-  xargs -I {} gh run download {} --dir release-artifacts
-
-# Then create the release:
 cargo make github-release v0.1.0
 cargo make github-release v0.1.0 --draft  # Create as draft
 ```
 
-### Release Checklist
+### Release Tasks Reference
 
-1. Ensure all PRD tasks are complete and committed
-2. Generate changelog: `cargo make changelog`
-3. Review and commit CHANGELOG.md updates
-4. Bump version: `cargo make release` (or manually edit Cargo.toml)
-5. Push changes and wait for CI to build artifacts on main
-6. Download CI artifacts with gh CLI (see command above)
-7. Publish to crates.io: `cargo make publish-crates`
-8. Create GitHub release: `cargo make github-release vX.Y.Z`
+| Task | Description |
+|------|-------------|
+| `release` | Unified task: runs CI, builds all targets, generates changelog |
+| `release-bump` | Bumps version using cargo-release (formerly just `release`) |
+| `publish-all <tag>` | Publishes to crates.io and creates GitHub release in one go |
+| `changelog` | Generates CHANGELOG.md from conventional commits |
+| `publish-crates` | Publishes to crates.io with pre-publish checks |
+| `github-release <tag>` | Creates GitHub release with artifacts |
+| `build-linux` | Builds Linux x86_64 binary |
+| `build-macos` | Builds macOS ARM binary |
+| `build-windows` | Builds Windows x86_64 binary |
+| `build-wasm` | Builds WASM32-WASIP2 binary |
 
 ## Troubleshooting
 
