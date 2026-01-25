@@ -194,14 +194,22 @@ pub fn format_status(report: &StatusReport) -> String {
     // Next task (most important info).
     if let Some(next) = &report.next_task {
         output.push_str("## Next Task\n\n");
-        output.push_str(&format!("  PRD: {} — {}\n", next.prd_id, next.prd_title));
-        output.push_str(&format!(
-            "  Task: {} — {} (priority {})\n",
-            next.task_id, next.task_title, next.priority
-        ));
+        output.push_str("  PRD: ");
+        output.push_str(&next.prd_id);
+        output.push_str(" — ");
+        output.push_str(&next.prd_title);
+        output.push_str("\n  Task: ");
+        output.push_str(&next.task_id);
+        output.push_str(" — ");
+        output.push_str(&next.task_title);
+        output.push_str(" (priority ");
+        output.push_str(&next.priority.to_string());
+        output.push_str(")\n");
 
         if let Some(notes) = &next.notes {
-            output.push_str(&format!("  Notes: {}\n", notes));
+            output.push_str("  Notes: ");
+            output.push_str(notes);
+            output.push('\n');
         }
 
         output.push('\n');
@@ -210,7 +218,9 @@ pub fn format_status(report: &StatusReport) -> String {
             output.push_str("## Last History Entry\n\n");
 
             for line in history.lines() {
-                output.push_str(&format!("  {}\n", line));
+                output.push_str("  ");
+                output.push_str(line);
+                output.push('\n');
             }
 
             output.push('\n');
@@ -255,10 +265,15 @@ pub fn format_status(report: &StatusReport) -> String {
             output.push_str("  Active:\n");
 
             for prd in active {
-                output.push_str(&format!(
-                    "    {} — {} [{}/{}]\n",
-                    prd.id, prd.title, prd.completed_tasks, prd.total_tasks
-                ));
+                output.push_str("    ");
+                output.push_str(&prd.id);
+                output.push_str(" — ");
+                output.push_str(&prd.title);
+                output.push_str(" [");
+                output.push_str(&prd.completed_tasks.to_string());
+                output.push('/');
+                output.push_str(&prd.total_tasks.to_string());
+                output.push_str("]\n");
             }
         }
 
@@ -266,10 +281,15 @@ pub fn format_status(report: &StatusReport) -> String {
             output.push_str("  Draft:\n");
 
             for prd in draft {
-                output.push_str(&format!(
-                    "    {} — {} [{}/{}]\n",
-                    prd.id, prd.title, prd.completed_tasks, prd.total_tasks
-                ));
+                output.push_str("    ");
+                output.push_str(&prd.id);
+                output.push_str(" — ");
+                output.push_str(&prd.title);
+                output.push_str(" [");
+                output.push_str(&prd.completed_tasks.to_string());
+                output.push('/');
+                output.push_str(&prd.total_tasks.to_string());
+                output.push_str("]\n");
             }
         }
 
@@ -277,10 +297,15 @@ pub fn format_status(report: &StatusReport) -> String {
             output.push_str("  Done:\n");
 
             for prd in done {
-                output.push_str(&format!(
-                    "    {} — {} [{}/{}]\n",
-                    prd.id, prd.title, prd.completed_tasks, prd.total_tasks
-                ));
+                output.push_str("    ");
+                output.push_str(&prd.id);
+                output.push_str(" — ");
+                output.push_str(&prd.title);
+                output.push_str(" [");
+                output.push_str(&prd.completed_tasks.to_string());
+                output.push('/');
+                output.push_str(&prd.total_tasks.to_string());
+                output.push_str("]\n");
             }
         }
 
@@ -288,10 +313,15 @@ pub fn format_status(report: &StatusReport) -> String {
             output.push_str("  Parked:\n");
 
             for prd in parked {
-                output.push_str(&format!(
-                    "    {} — {} [{}/{}]\n",
-                    prd.id, prd.title, prd.completed_tasks, prd.total_tasks
-                ));
+                output.push_str("    ");
+                output.push_str(&prd.id);
+                output.push_str(" — ");
+                output.push_str(&prd.title);
+                output.push_str(" [");
+                output.push_str(&prd.completed_tasks.to_string());
+                output.push('/');
+                output.push_str(&prd.total_tasks.to_string());
+                output.push_str("]\n");
             }
         }
     }
@@ -300,28 +330,35 @@ pub fn format_status(report: &StatusReport) -> String {
 
     // Statistics.
     output.push_str("## Statistics\n\n");
-    output.push_str(&format!("  PRDs: {} total", report.stats.total_prds));
+    output.push_str("  PRDs: ");
+    output.push_str(&report.stats.total_prds.to_string());
+    output.push_str(" total");
 
     if report.stats.total_prds > 0 {
-        output.push_str(&format!(
-            " ({} active, {} draft, {} done, {} parked)",
-            report.stats.active_prds,
-            report.stats.draft_prds,
-            report.stats.done_prds,
-            report.stats.parked_prds
-        ));
+        output.push_str(" (");
+        output.push_str(&report.stats.active_prds.to_string());
+        output.push_str(" active, ");
+        output.push_str(&report.stats.draft_prds.to_string());
+        output.push_str(" draft, ");
+        output.push_str(&report.stats.done_prds.to_string());
+        output.push_str(" done, ");
+        output.push_str(&report.stats.parked_prds.to_string());
+        output.push_str(" parked)");
     }
 
     output.push('\n');
 
-    output.push_str(&format!(
-        "  Tasks: {}/{} completed",
-        report.stats.completed_tasks, report.stats.total_tasks
-    ));
+    output.push_str("  Tasks: ");
+    output.push_str(&report.stats.completed_tasks.to_string());
+    output.push('/');
+    output.push_str(&report.stats.total_tasks.to_string());
+    output.push_str(" completed");
 
     if report.stats.total_tasks > 0 {
         let pct = (report.stats.completed_tasks as f64 / report.stats.total_tasks as f64) * 100.0;
-        output.push_str(&format!(" ({:.0}%)", pct));
+        output.push_str(" (");
+        output.push_str(&format!("{:.0}", pct));
+        output.push_str("%)");
     }
 
     output.push('\n');

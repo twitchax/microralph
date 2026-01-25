@@ -151,7 +151,7 @@ pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd, std::pa
 
         // Only process .md files.
         if path.extension().is_some_and(|ext| ext == "md") {
-            let filename = entry.file_name().to_string_lossy().to_string();
+            let filename = entry.file_name().to_string_lossy().into_owned();
 
             match parse_prd_file(&path) {
                 Ok(prd) => {

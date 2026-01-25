@@ -313,13 +313,13 @@ impl Runner for ClaudeRunner {
             ))
         })?;
 
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
 
         let raw_output = if stderr.is_empty() {
-            stdout.clone()
+            stdout.to_string()
         } else if stdout.is_empty() {
-            stderr.clone()
+            stderr.to_string()
         } else {
             format!("{}\n{}", stdout, stderr)
         };

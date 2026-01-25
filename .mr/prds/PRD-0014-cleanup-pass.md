@@ -47,7 +47,7 @@ tasks:
   - id: T-006
     title: Identify and fix obvious performance issues
     priority: 4
-    status: todo
+    status: done
     notes: Spot checks during refactoring. Don't do deep profiling.
 ---
 
@@ -162,3 +162,20 @@ The codebase has grown organically and now contains:
   - Changed `vec![]` to array `[]` in `main.rs` line 1392 per clippy suggestion (useless_vec lint)
   - Verified no risky explicit error handling patterns that should use `?` operator - all existing `match` statements have necessary fallback logic or context-specific error handling
   - UAT passed: All 312 tests pass after refactoring
+
+## 2026-01-25 — T-006 Completed
+- **Task**: Identify and fix obvious performance issues
+- **Status**: ✅ Done
+- **Changes**:
+  - Optimized runner output handling in `src/runner/claude.rs` and `src/runner/copilot.rs`:
+    - Removed unnecessary `.clone()` calls when combining stdout/stderr (lines 320, 322, 384, 386)
+    - Avoided redundant `.to_string()` after `String::from_utf8_lossy()` by keeping `Cow<str>` until final allocation needed
+    - Reduces allocations in runner execution path
+  - Optimized string building in `src/status.rs`:
+    - Replaced `format!() + push_str()` pattern with direct `push_str()` calls in loop over PRD summaries (lines 197-324)
+    - Eliminates intermediate format allocations in status report generation
+    - Affects 4 loops (active, draft, done, parked PRDs) and statistics section
+  - Fixed double string conversion in `src/prd/index.rs` line 154:
+    - Changed `.to_string_lossy().to_string()` to `.to_string_lossy().into_owned()`
+    - Avoids unnecessary intermediate allocation during PRD filename processing
+  - UAT passed: All 312 tests pass after performance optimizations
