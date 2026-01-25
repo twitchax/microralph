@@ -54,7 +54,7 @@ tasks:
 - id: T-002
   title: Emit constitution during bootstrap
   priority: 1
-  status: todo
+  status: done
   notes: Update bootstrap.rs to create .mr/constitution.md from template. Constitution should be placed alongside configs in .mr/ directory.
 - id: T-003
   title: Add constitution edit subcommand
@@ -139,3 +139,15 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Updated test expectations from 18 to 19 files created
   - Verified that `mr init` creates constitution.md alongside other `.mr/` files
   - UAT pass: All 274 tests passed
+
+---
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Emit constitution during bootstrap
+- **Status**: ✅ Done
+- **Changes**:
+  - Constitution already emitted via existing `init()` call in `bootstrap()` (lines 86-92 of bootstrap.rs)
+  - Added test `test_bootstrap_creates_constitution` in `src/bootstrap.rs` to explicitly verify constitution creation
+  - Test confirms constitution.md is created when bootstrap initializes .mr/ structure
+  - Test validates constitution content includes "# Constitution", "## Purpose", and "## Rules" sections
+  - UAT pass: All 275 tests passed (1 new test added)

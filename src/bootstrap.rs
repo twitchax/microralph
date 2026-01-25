@@ -480,4 +480,35 @@ mod tests {
         assert!(temp.path().join(".mr/PRDS.md").exists());
         assert!(temp.path().join("AGENTS.md").exists());
     }
+
+    #[test]
+    fn test_bootstrap_creates_constitution() {
+        let temp = setup_test_repo();
+
+        // Verify constitution doesn't exist yet.
+        assert!(!temp.path().join(".mr/constitution.md").exists());
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Plan: Generate 1 PRD..."),
+            crate::runner::RunnerOutput::success("Created PRD-0001."),
+            crate::runner::RunnerOutput::success("NO_CHANGES"),
+        ]);
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Verify bootstrap initialized (and thus created constitution).
+        assert!(result.initialized);
+
+        // Verify constitution.md was created.
+        assert!(temp.path().join(".mr/constitution.md").exists());
+
+        // Verify constitution contains expected content.
+        let constitution_content =
+            std::fs::read_to_string(temp.path().join(".mr/constitution.md")).unwrap();
+        assert!(constitution_content.contains("# Constitution"));
+        assert!(constitution_content.contains("## Purpose"));
+        assert!(constitution_content.contains("## Rules"));
+    }
 }
