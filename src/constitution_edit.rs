@@ -14,13 +14,13 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::qa_workflow::QaPair;
-use crate::runner::{CopilotRunner, Runner};
+use crate::runner::Runner;
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;
 
-/// The ready signal from the runner.
-const READY_SIGNAL: &str = "READY_TO_APPLY";
+/// The signal indicating the runner has completed its edits.
+const EDIT_COMPLETE_SIGNAL: &str = "EDIT_COMPLETE";
 
 /// Result of the constitution edit process.
 #[derive(Debug)]
@@ -113,22 +113,8 @@ where
 
         tracing::debug!(round = %rounds, response_len = %runner_response.len(), "Received runner response");
 
-        // Check if runner is ready to apply or has questions.
-        if runner_response.contains(READY_SIGNAL) {
-            writeln!(output, "Constitution changes ready to apply.")?;
-            writeln!(output)?;
-
-            // Extract the updated constitution content.
-            let updated_content = extract_constitution_content(&runner_response)?;
-
-            // Write the updated constitution.
-            std::fs::write(&constitution_path, updated_content).with_context(|| {
-                format!(
-                    "Failed to write constitution to {}",
-                    constitution_path.display()
-                )
-            })?;
-
+        // Check if runner has completed edits or has questions.
+        if runner_response.contains(EDIT_COMPLETE_SIGNAL) {
             writeln!(output, "Constitution updated successfully.")?;
 
             return Ok(ConstitutionEditResult {
@@ -143,7 +129,7 @@ where
             if questions.is_empty() {
                 bail!(
                     "Runner response did not contain '{}' signal or questions",
-                    READY_SIGNAL
+                    EDIT_COMPLETE_SIGNAL
                 );
             }
 
@@ -232,35 +218,6 @@ fn build_constitution_edit_prompt(
     expand_placeholders(&prompt_template, &context)
 }
 
-/// Extracts the updated constitution content from the runner response.
-fn extract_constitution_content(response: &str) -> Result<String> {
-    // Strip usage statistics before processing
-    let response = CopilotRunner::strip_usage_stats(response);
-
-    // Look for markdown code block after READY_TO_APPLY.
-    let after_signal = response
-        .split(READY_SIGNAL)
-        .nth(1)
-        .ok_or_else(|| anyhow::anyhow!("No content found after {} signal", READY_SIGNAL))?;
-
-    let start = after_signal
-        .find("```markdown")
-        .or_else(|| after_signal.find("```"))
-        .ok_or_else(|| anyhow::anyhow!("No markdown code block found in runner response"))?;
-
-    let content_start = after_signal[start..]
-        .find('\n')
-        .map(|i| start + i + 1)
-        .ok_or_else(|| anyhow::anyhow!("Malformed code block"))?;
-
-    let content_end = after_signal[content_start..]
-        .find("```")
-        .ok_or_else(|| anyhow::anyhow!("Unclosed code block"))?;
-
-    let constitution_content = &after_signal[content_start..content_start + content_end];
-    Ok(constitution_content.trim().to_string())
-}
-
 /// Extracts questions from the runner response.
 fn extract_questions(response: &str) -> Result<Vec<String>> {
     let mut questions = Vec::new();
@@ -284,28 +241,6 @@ mod tests {
     use crate::runner::MockRunner;
 
     #[test]
-    fn test_extract_constitution_content() {
-        let response = r#"
-READY_TO_APPLY
-
-```markdown
-# Constitution
-
-## Purpose
-Test constitution
-
-## Rules
-1. **Rule one**: Description
-```
-"#;
-
-        let result = extract_constitution_content(response).unwrap();
-        assert!(result.contains("# Constitution"));
-        assert!(result.contains("## Rules"));
-        assert!(result.contains("1. **Rule one**"));
-    }
-
-    #[test]
     fn test_extract_questions() {
         let response = r#"
 I need more information:
@@ -326,7 +261,7 @@ I need more information:
     fn test_constitution_edit() {
         // UAT: constitution_edit — Verify constitution edit command updates via LLM
         // This test verifies that the constitution edit command can successfully
-        // update the constitution file based on a user request through the runner.
+        // coordinate with the runner to edit the constitution file.
 
         let temp = tempfile::TempDir::new().unwrap();
         let mr_dir = temp.path().join(".mr");
@@ -353,17 +288,10 @@ Project governance rules
         )
         .unwrap();
 
-        // Mock runner that returns an updated constitution
-        use crate::runner::RunnerOutput;
-        let mock_runner = MockRunner::new(vec![RunnerOutput {
-            success: true,
-            text: r#"
-READY_TO_APPLY
-
-Here's the updated constitution:
-
-```markdown
-# Constitution
+        // Simulate what a real runner would do: edit the file, then signal completion.
+        // In a real scenario, the runner (Copilot/Claude) would use its file editing
+        // tools to modify the constitution file directly.
+        let updated_constitution = r#"# Constitution
 
 ## Purpose
 Project governance rules
@@ -371,9 +299,14 @@ Project governance rules
 ## Rules
 1. **Rule one**: Updated rule via LLM
 2. **Rule two**: New rule added by edit
-```
-"#
-            .to_string(),
+"#;
+        std::fs::write(&constitution_path, updated_constitution).unwrap();
+
+        // Mock runner that signals edits are complete (runner already edited the file)
+        use crate::runner::RunnerOutput;
+        let mock_runner = MockRunner::new(vec![RunnerOutput {
+            success: true,
+            text: "I've updated the constitution as requested.\n\nEDIT_COMPLETE".to_string(),
             usage: None,
         }]);
 
@@ -391,7 +324,7 @@ Project governance rules
         assert_eq!(result.rounds, 1);
         assert_eq!(result.path, constitution_path);
 
-        // Verify the constitution file was updated
+        // Verify the constitution file was updated (by the runner, simulated above)
         let updated_content = std::fs::read_to_string(&constitution_path).unwrap();
         assert!(updated_content.contains("Updated rule via LLM"));
         assert!(updated_content.contains("New rule added by edit"));

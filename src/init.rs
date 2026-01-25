@@ -1153,17 +1153,7 @@ If you need more information, respond with a numbered list of questions (1-3 max
 2. Question two?
 ```
 
-If you have enough information, respond with exactly `READY_TO_APPLY` on its own line, followed by the complete updated constitution content in a markdown code block:
-```
-READY_TO_APPLY
-
-```markdown
-# Constitution
-...
-```
-```
-
-Ensure the output is the complete constitution file, not just the changed sections.
+If you have enough information, **directly edit the `.mr/constitution.md` file** using your file editing tools to apply the changes. After making the edits, respond with exactly `EDIT_COMPLETE` on its own line to signal that the changes have been applied.
 "#;
 
 /// Default content for the language adaptation prompt.
