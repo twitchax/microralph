@@ -33,9 +33,10 @@ This project has a constitution that defines governance rules and constraints. Y
 4. **Implement the task** as described, making minimal and focused changes.
 5. **Follow existing patterns** and conventions in the codebase.
 6. **Run `cargo make uat`** to verify all acceptance tests pass.
-7. **Update the PRD file** (see below for details).
-8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
-9. **Commit your work** with a descriptive commit message.
+7. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
+8. **Update the PRD file** (see below for details).
+9. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
+10. **Commit your work** with a descriptive commit message.
 
 ## Updating the PRD
 

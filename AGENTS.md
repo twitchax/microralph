@@ -109,7 +109,9 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-Based on the recent changes from PRD-0016, the automatic `update_agents_md()` step has been removed from the workflow. The current auto-managed section contains outdated placeholder text from a previous update. I need to replace it with relevant information about AGENTS.md maintenance.
+I'll review the PRD file to understand what changes were made and determine if the auto-managed section needs updating.
 
-Updated AGENTS.md auto-managed section with key changes: added notice that automatic updates were removed (PRD-0016), included manual update guidelines, and documented constitution feature comprehensively.
+Now I understand. The PRD shows that automatic AGENTS.md updates have been removed, and the auto-managed section should be replaced with useful information for agents about how to maintain AGENTS.md manually. Let me update it with concise, actionable guidance:
+
+Updated the auto-managed section with concise guidelines for when and what agents should document. The new content explains that automatic updates were removed and provides clear criteria for manual updates.
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

@@ -53,7 +53,7 @@ tasks:
   - id: T-007
     title: Add AGENTS.md update reminder to run_task.md prompt
     priority: 1
-    status: todo
+    status: done
     notes: Add to numbered task list - "Update AGENTS.md if needed based on changes made"
   - id: T-008
     title: Add AGENTS.md update reminder to run_new_prd.md prompt in init.rs
@@ -131,4 +131,11 @@ The current implementation automatically calls `update_agents_md()` after three 
   - Added `#![allow(dead_code)]` to entire src/agents.rs module since all functions are now unused (will be deleted in T-004)
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
+## 2026-01-25 — T-007 Completed
+- **Task**: Add AGENTS.md update reminder to run_task.md prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Added step 7 to "Required Actions" section in `.mr/prompts/run_task.md`: "Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about"
+  - This gives agents explicit guidance to update AGENTS.md when appropriate, replacing the removed automatic update mechanism
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
