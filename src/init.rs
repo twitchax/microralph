@@ -1689,17 +1689,20 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     // Create .mr directory structure.
     let mr_dir = root.join(".mr");
     let prds_dir = mr_dir.join("prds");
-    let templates_dir = mr_dir.join("templates");
-    let prompts_dir = mr_dir.join("prompts");
 
     create_dir_if_missing(&prds_dir, &mut result)?;
-    create_dir_if_missing(&templates_dir, &mut result)?;
+
+    // Initialize prompts and templates (skips existing files).
+    let prompts_templates_dir = mr_dir.join("templates");
+    create_dir_if_missing(&prompts_templates_dir, &mut result)?;
+    create_file_if_missing(
+        &prompts_templates_dir.join("prd.md"),
+        PRD_TEMPLATE,
+        &mut result,
+    )?;
+
+    let prompts_dir = mr_dir.join("prompts");
     create_dir_if_missing(&prompts_dir, &mut result)?;
-
-    // Create template file.
-    create_file_if_missing(&templates_dir.join("prd.md"), PRD_TEMPLATE, &mut result)?;
-
-    // Create prompt files.
     create_file_if_missing(&prompts_dir.join("init.md"), PROMPT_INIT, &mut result)?;
     create_file_if_missing(
         &prompts_dir.join("bootstrap_plan.md"),
@@ -1792,6 +1795,95 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     Ok(result)
 }
 
+/// Recreates prompts and templates directories with built-in defaults.
+///
+/// This function:
+/// 1. Creates the prompts and templates directories (if they don't exist)
+/// 2. Writes all built-in prompt and template files, overwriting existing ones
+///
+/// Used by both `init()` (initial setup) and `cmd_restore()` (restoration).
+pub fn init_prompts_and_templates(root: impl AsRef<Path>) -> Result<InitResult> {
+    let root = root.as_ref();
+    let mut result = InitResult::default();
+
+    let mr_dir = root.join(".mr");
+    let templates_dir = mr_dir.join("templates");
+    let prompts_dir = mr_dir.join("prompts");
+
+    // Ensure directories exist.
+    create_dir_if_missing(&templates_dir, &mut result)?;
+    create_dir_if_missing(&prompts_dir, &mut result)?;
+
+    // Write template file (always overwrite).
+    create_file_always(&templates_dir.join("prd.md"), PRD_TEMPLATE, &mut result)?;
+
+    // Write all prompt files (always overwrite).
+    create_file_always(&prompts_dir.join("init.md"), PROMPT_INIT, &mut result)?;
+    create_file_always(
+        &prompts_dir.join("bootstrap_plan.md"),
+        PROMPT_BOOTSTRAP_PLAN,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("bootstrap_generate_prds.md"),
+        PROMPT_BOOTSTRAP_GENERATE_PRDS,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("prd_new_round1_questions.md"),
+        PROMPT_PRD_NEW_ROUND1,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("prd_new_roundN_questions.md"),
+        PROMPT_PRD_NEW_ROUNDN,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("prd_new_synthesize_prd.md"),
+        PROMPT_PRD_NEW_SYNTHESIZE,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("run_task.md"),
+        PROMPT_RUN_TASK,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("run_task_finalize.md"),
+        PROMPT_RUN_TASK_FINALIZE,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("run_uat_verify.md"),
+        PROMPT_RUN_UAT_VERIFY,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("prd_edit.md"),
+        PROMPT_PRD_EDIT,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("adapt_language.md"),
+        PROMPT_ADAPT_LANGUAGE,
+        &mut result,
+    )?;
+    create_file_always(&prompts_dir.join("reindex.md"), PROMPT_REINDEX, &mut result)?;
+    create_file_always(
+        &prompts_dir.join("pick_prd.md"),
+        PROMPT_PICK_PRD,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("suggest_generate.md"),
+        PROMPT_SUGGEST_GENERATE,
+        &mut result,
+    )?;
+
+    Ok(result)
+}
+
 /// Creates a directory if it doesn't exist.
 fn create_dir_if_missing(path: &Path, result: &mut InitResult) -> Result<()> {
     if !path.exists() {
@@ -1823,6 +1915,22 @@ fn create_file_if_missing(path: &Path, content: &str, result: &mut InitResult) -
         result.created_paths.push(relative);
         tracing::debug!(path = %path.display(), "Created file");
     }
+
+    Ok(())
+}
+
+/// Creates a file, always overwriting if it exists.
+fn create_file_always(path: &Path, content: &str, result: &mut InitResult) -> Result<()> {
+    let relative = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.display().to_string());
+
+    std::fs::write(path, content)
+        .with_context(|| format!("Failed to create file: {}", path.display()))?;
+    result.files_created += 1;
+    result.created_paths.push(relative);
+    tracing::debug!(path = %path.display(), "Created file");
 
     Ok(())
 }

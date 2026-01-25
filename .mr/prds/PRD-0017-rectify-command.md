@@ -44,7 +44,7 @@ tasks:
 - id: T-003
   title: Refactor init logic to support reinitialization of prompts/templates
   priority: 3
-  status: todo
+  status: done
   notes: Extract file-writing logic from init::init() to allow reuse; ensure it doesn't fail when .mr/ structure exists
 - id: T-004
   title: Update documentation (README, AGENTS.md) with restore command usage
@@ -123,5 +123,18 @@ Currently, there's no way to restore built-in files without manually deleting di
   - Added debug-level tracing for each directory removal
   - UAT passed: All existing tests continue to pass (cargo make uat succeeded)
   - Next: T-003 will implement the reinitialization logic to recreate directories with built-in defaults
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Refactor init logic to support reinitialization of prompts/templates
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new public function `init_prompts_and_templates()` in `src/init.rs` that recreates prompts and templates directories with built-in defaults
+  - Added new helper function `create_file_always()` that writes files, always overwriting if they exist (unlike `create_file_if_missing()` which skips existing files)
+  - Function creates directories if they don't exist, then writes all 13 prompt files and 1 template file
+  - Updated `cmd_restore()` in `src/main.rs` to call `init_prompts_and_templates()` after deleting directories
+  - Added user feedback showing number of files restored
+  - Maintained DRY principle: Both `init()` and `restore` now share the same file-writing logic for prompts/templates
+  - UAT passed: All 312 tests passed, including existing init and restore tests
+  - Note: The original `init()` function still works correctly for first-time setup, using `create_file_if_missing()` to skip existing files
 
 ---

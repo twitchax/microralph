@@ -660,6 +660,17 @@ fn cmd_restore() -> Result<()> {
         colors::success("✓ Deleted existing prompts and templates")
     );
 
+    // Recreate prompts and templates with built-in defaults.
+    let result = init::init_prompts_and_templates(&cwd)?;
+
+    println!(
+        "{}",
+        colors::success(&format!(
+            "✓ Restored {} prompt and template files",
+            result.files_created
+        ))
+    );
+
     Ok(())
 }
 
