@@ -18,7 +18,7 @@ acceptance_tests:
   - id: uat-002
     name: Task execution completes without calling update_agents_md
     command: cargo run -- run PRD-0001 --task T-001
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: Remove update_agents_md() call from src/run.rs
@@ -215,3 +215,14 @@ The current implementation automatically calls `update_agents_md()` after three 
   - All tests passed successfully (exit code 0)
   - Confirms that removal of automatic AGENTS.md update mechanism does not break any existing functionality
 
+## 2026-01-25 — uat-002 Verification
+- **UAT**: Task execution completes without calling update_agents_md
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/run.rs`, specifically `test_run_task_success()` (lines 928-973)
+  - The test verifies that MockRunner receives exactly 2 calls: one for `pick_prd` and one for `run_task`
+  - No third call exists for `update_agents_md` (previously this would have been a third call)
+  - T-003 history explicitly documents: "Updated all MockRunner test fixtures to expect 2 runner calls instead of 3"
+  - All 267 tests pass with `cargo make uat` (exit code 0)
+  - Grep search confirms zero occurrences of `update_agents_md` in the codebase
