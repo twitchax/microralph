@@ -368,6 +368,16 @@ User's upfront context:
 > {{user_context}}
 {{/if}}
 
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: Your questions and the resulting PRD should respect these constitutional rules.
+{{/if}}
+
 ## Existing PRDs
 
 {{#each existing_prds}}
@@ -414,6 +424,16 @@ The user is creating a new PRD with slug: `{{slug}}`
 {{user_context}}
 
 {{/if}}
+{{#if constitution}}
+### Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: Your questions and the resulting PRD should respect these constitutional rules.
+
+{{/if}}
 ## Previous Q/A
 
 {{#each qa_history}}
@@ -450,6 +470,16 @@ The user is creating a new PRD with slug: `{{slug}}`
 {{#if user_context}}
 User's upfront context:
 > {{user_context}}
+{{/if}}
+
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**CRITICAL**: The PRD you synthesize MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
 {{/if}}
 
 ## Q/A Session

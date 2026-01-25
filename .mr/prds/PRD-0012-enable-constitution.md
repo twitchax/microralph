@@ -69,7 +69,7 @@ tasks:
 - id: T-005
   title: Include constitution in prd new prompts
   priority: 2
-  status: todo
+  status: done
   notes: Update prd_new_round1_questions.md and prd_new_roundN_questions.md to include constitution content in prompt context.
 - id: T-006
   title: Include constitution in prd finalize prompts
@@ -199,3 +199,28 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Constitution is loaded opportunistically (doesn't fail if missing)
   - Constitution is now available in the runner context for all task execution prompts
   - Subsequent tasks (T-005, T-006) will update prompt templates to actually use the `{{constitution}}` placeholder
+
+---
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Include constitution in prd new prompts
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd_new.rs` to import `load_constitution` from `crate::config`
+  - Modified `build_round1_prompt()` to load constitution and add to placeholder context
+  - Modified `build_round_n_prompt()` to load constitution and add to placeholder context
+  - Modified `build_synthesize_prompt()` to load constitution and add to placeholder context
+  - All three functions use `if let Ok(Some(constitution)) = load_constitution(config.root)` to handle Result wrapping
+  - Updated `PROMPT_PRD_NEW_ROUND1` constant in `src/init.rs` to include constitution section with `{{#if constitution}}` conditional
+  - Updated `PROMPT_PRD_NEW_ROUNDN` constant in `src/init.rs` to include constitution section with `{{#if constitution}}` conditional
+  - Updated `PROMPT_PRD_NEW_SYNTHESIZE` constant in `src/init.rs` to include constitution section with critical note about respecting rules
+  - Updated `.mr/prompts/prd_new_round1_questions.md` to match new template with constitution section
+  - Updated `.mr/prompts/prd_new_roundN_questions.md` to match new template with constitution section
+  - Updated `.mr/prompts/prd_new_synthesize_prd.md` to match new template with constitution section
+  - All 279 tests passed
+  - UAT pass: `cargo make uat` succeeded
+- **Implementation Notes**:
+  - Constitution is now available in all PRD creation prompts (round1, roundN, synthesize)
+  - Prompts include clear messaging that questions and PRDs should respect constitutional rules
+  - Synthesize prompt includes **CRITICAL** note that PRD must respect constitution
+  - Constitution is loaded opportunistically (prompts work fine without it)

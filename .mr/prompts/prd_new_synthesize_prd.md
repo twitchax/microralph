@@ -13,6 +13,16 @@ User's upfront context:
 > {{user_context}}
 {{/if}}
 
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**CRITICAL**: The PRD you synthesize MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
+{{/if}}
+
 ## Q/A Session
 
 {{#each qa_history}}

@@ -10,6 +10,7 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 
 use crate::agents::{RecentChange, update_agents_md};
+use crate::config::load_constitution;
 use crate::prd::{Prd, PrdSummary, generate_index_from_root, parse_prd, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
@@ -429,6 +430,11 @@ fn build_round1_prompt(
         ctx.insert("user_context", context);
     }
 
+    // Load constitution if available.
+    if let Ok(Some(constitution)) = load_constitution(config.root) {
+        ctx.insert("constitution", constitution);
+    }
+
     // Build existing PRDs list.
     let prd_list: Vec<HashMap<String, String>> = existing_prds
         .iter()
@@ -463,6 +469,11 @@ fn build_round_n_prompt(
         ctx.insert("user_context", context);
     }
 
+    // Load constitution if available.
+    if let Ok(Some(constitution)) = load_constitution(config.root) {
+        ctx.insert("constitution", constitution);
+    }
+
     // Build Q/A history.
     let qa_list: Vec<HashMap<String, String>> = qa_history
         .iter()
@@ -495,6 +506,11 @@ fn build_synthesize_prompt(
 
     if let Some(context) = user_context {
         ctx.insert("user_context", context);
+    }
+
+    // Load constitution if available.
+    if let Ok(Some(constitution)) = load_constitution(config.root) {
+        ctx.insert("constitution", constitution);
     }
 
     // Build Q/A history.

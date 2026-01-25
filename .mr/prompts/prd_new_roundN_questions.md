@@ -14,6 +14,16 @@ The user is creating a new PRD with slug: `{{slug}}`
 {{user_context}}
 
 {{/if}}
+{{#if constitution}}
+### Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: Your questions and the resulting PRD should respect these constitutional rules.
+
+{{/if}}
 ## Previous Q/A
 
 {{#each qa_history}}

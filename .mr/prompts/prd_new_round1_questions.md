@@ -18,6 +18,16 @@ User's upfront context:
 > {{user_context}}
 {{/if}}
 
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: Your questions and the resulting PRD should respect these constitutional rules.
+{{/if}}
+
 ## Existing PRDs
 
 {{#each existing_prds}}
