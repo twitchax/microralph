@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- PRD-0002: Complete release infrastructure with multi-platform builds (Linux, macOS, Windows, WASM), code coverage via Codecov, cargo-release for versioning, git-cliff for changelog generation, crates.io publishing, and GitHub Releases with binary artifacts
+
 ### 🚀 Features
 
 - Implement static prompt library + placeholder system (T-005)
