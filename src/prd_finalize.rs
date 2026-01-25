@@ -1017,4 +1017,55 @@ mod tests {
             "Finalization should proceed when all UATs are verified"
         );
     }
+
+    #[test]
+    fn test_constitution_prd_finalize() {
+        // UAT: constitution_prd_finalize — Verify prd finalize reads and respects constitution
+        // This test verifies that when a constitution file exists, its content
+        // is loaded and included in the finalization prompt.
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        let prompts_dir = mr_dir.join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create constitution file
+        let constitution_content = r#"# Constitution
+
+## Purpose
+Project governance rules.
+
+## Rules
+1. **Acceptance tests must be codified** — No one-off manual tests.
+2. **Use semantic versioning** — All releases follow semver.
+"#;
+        std::fs::write(mr_dir.join("constitution.md"), constitution_content).unwrap();
+
+        // Create a minimal finalize prompt template that includes constitution placeholder
+        std::fs::write(
+            prompts_dir.join("run_task_finalize.md"),
+            "Finalize PRD {{prd_id}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+        )
+        .unwrap();
+
+        // Create a test PRD with all tasks done
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![make_uat("uat-001", UatStatus::Verified)],
+        );
+
+        // Build the finalization prompt
+        let prompt = build_finalize_prompt(temp.path(), &prd);
+
+        // Verify constitution was loaded and included in the prompt
+        assert!(
+            prompt.contains("Acceptance tests must be codified"),
+            "Finalize prompt should contain constitution content"
+        );
+        assert!(
+            prompt.contains("Use semantic versioning"),
+            "Finalize prompt should contain full constitution content"
+        );
+    }
 }

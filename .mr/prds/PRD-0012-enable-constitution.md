@@ -35,7 +35,7 @@ acceptance_tests:
 - id: uat-004
   name: prd finalize reads and respects constitution
   command: cargo make uat constitution_prd_finalize
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: constitution edit command updates via LLM
   command: cargo make uat constitution_edit
@@ -301,5 +301,18 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Command: `cargo make uat constitution_prd_new` (runs via nextest filter)
   - Verification: Test confirms that when constitution.md exists, its content is loaded and included in all prd new prompts (round1, roundN, and synthesis)
   - Test verifies constitution content appears in all three prompt types by checking for presence of "Acceptance tests must be codified" rule
+  - Result: Test passed successfully
+
+---
+
+## 2026-01-25 — uat-004 Verification
+- **UAT**: prd finalize reads and respects constitution
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Test: `src/prd_finalize.rs::test_constitution_prd_finalize`
+  - Command: `cargo make uat constitution_prd_finalize` (runs via nextest filter)
+  - Verification: Test confirms that when constitution.md exists, its content is loaded and included in the PRD finalization prompt
+  - Test verifies constitution content appears in finalize prompt by checking for presence of "Acceptance tests must be codified" and "Use semantic versioning" rules
   - Result: Test passed successfully
 
