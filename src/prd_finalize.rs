@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::{AcceptanceTest, Task};
-use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
+use crate::prd::{self, Prd, PrdStatus, TaskStatus, serialize_prd};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
@@ -258,11 +258,9 @@ fn update_prd_status_to_done(prd_path: &Path) -> Result<()> {
 /// This function:
 /// 1. Finds the PRD by ID
 /// 2. Validates all tasks are done (returns error if not)
-/// 3. Runs acceptance tests via the finalization prompt
-/// 4. Provides changelog entry generation instructions to the runner
-/// 5. Generates summary report and appends to PRD
-/// 6. Updates PRD status to done
-/// 7. Refreshes the PRDS.md index
+/// 3. Validates all UATs are verified (returns error if not)
+/// 4. Updates PRD status to done
+/// 5. Runs finalization prompt (runner appends history, updates changelog, regenerates PRDS.md, commits)
 ///
 /// # Arguments
 ///
@@ -309,6 +307,15 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         prd_id = config.prd_id,
         "All tasks done and UATs verified, running acceptance test verification"
     );
+
+    // Update PRD status to done BEFORE running the finalization prompt.
+    // This ensures when the runner executes `cargo run -- list`, it sees the correct status.
+    update_prd_status_to_done(&path)
+        .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
+
+    // Re-read the PRD after status update for the prompt context.
+    let prd = prd::parse_prd_file(&path)
+        .with_context(|| format!("Failed to re-read PRD after status update: {}", path.display()))?;
 
     // Build and execute the finalization prompt.
     let prompt = build_finalize_prompt(config.root, &prd);
@@ -362,23 +369,11 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         );
     }
 
-    // Generate summary report and append to PRD.
-    let summary_report = generate_summary_report(&prd);
-
-    append_to_prd(&path, &summary_report)
-        .with_context(|| format!("Failed to append summary report to PRD: {}", path.display()))?;
-
-    tracing::info!(prd_id = config.prd_id, "Summary report appended to PRD");
-
-    // Update PRD status to done (re-reads from disk to preserve runner changes).
-    update_prd_status_to_done(&path)
-        .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
-
-    // Refresh the PRDS.md index.
-    let prds_indexed = generate_index_from_root(config.root)
-        .with_context(|| "Failed to regenerate PRDS.md index")?;
-
-    tracing::info!(prds_indexed, "Regenerated PRDS.md index");
+    // The runner has already:
+    // - Appended finalization history entry to PRD
+    // - Updated CHANGELOG.md  
+    // - Regenerated PRDS.md via `cargo run -- list`
+    // - Committed all changes via git
 
     Ok(PrdFinalizeResult {
         prd_id: prd.id().to_string(),
@@ -386,7 +381,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         path,
         changelog_path: changelog_result.path,
         changelog_created: changelog_result.created,
-        summary_report,
+        summary_report: String::new(), // Runner handles reporting via prompt
     })
 }
 

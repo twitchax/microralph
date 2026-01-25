@@ -277,6 +277,7 @@ Check if tests require specific environment:
 
 ## Upcoming PRD / Change Ideas
 
+- Change the edit commands.  Something like `mr edit prd <prd-id>` to edit a specific PRD, and `mr edit constitution` to edit the constitution.
 - Add a "rectify" command or something that overwrites the editable prompts / templates with the built in ones.  Should _not_ commit automatically, just overwrite the files so the user can see what changed.
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
 
