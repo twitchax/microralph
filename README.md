@@ -187,6 +187,7 @@ mr status
 | `mr init`                          | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
 | `mr init --language <lang>`        | Initialize for a specific language (rust, python, node, go, java)                      |
 | `mr bootstrap`                     | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
+| `mr restore`                       | Restore `.mr/prompts/` and `.mr/templates/` to built-in defaults (destructive)         |
 | `mr suggest`                       | Generate 5 AI-powered PRD suggestions based on codebase analysis and research          |
 | `mr new <slug>`                    | Create a new PRD via guided Q/A                                                        |
 | `mr new <slug> --context`          | Create a new PRD with upfront context to guide initial questions                       |
@@ -292,6 +293,72 @@ This is especially useful after:
 - Adding new dependencies or tools
 - Switching to a different language or framework
 - Major architectural changes documented in PRDs
+
+### Restoring Prompts and Templates
+
+The `mr restore` command overwrites `.mr/prompts/` and `.mr/templates/` with built-in defaults. This is useful when you want to:
+
+1. **Reset customizations**: Revert custom prompts/templates back to microralph's defaults
+2. **Update to latest built-ins**: Pull in updated prompts/templates after upgrading microralph
+3. **Compare customizations**: Use Git diff to review your changes against the latest defaults
+
+#### How It Works
+
+```bash
+mr restore
+```
+
+The command:
+1. Deletes `.mr/prompts/` and `.mr/templates/` directories
+2. Recreates them with built-in defaults (same logic as `mr init`)
+3. Leaves changes **uncommitted** so you can review via Git
+
+#### Reviewing Changes
+
+After running `mr restore`, use Git to see what changed:
+
+```bash
+# See all changes
+git diff
+
+# Review specific file
+git diff .mr/prompts/run_task.md
+
+# Decide whether to keep or discard
+git add .mr/            # Keep the restored defaults
+git restore .mr/        # Discard and keep your customizations
+```
+
+#### Important Notes
+
+- **Destructive operation**: This overwrites customizations with no backup
+- **No auto-commit**: Changes remain uncommitted for your review
+- **Git is your safety net**: Committed customizations can always be recovered via `git log` and `git checkout`
+- **Scope**: Only affects `.mr/prompts/` and `.mr/templates/` (not `.mr/constitution.md` or `.mr/config.toml`)
+
+#### Use Cases
+
+**Scenario 1: You customized prompts but want to start fresh**
+```bash
+mr restore
+git diff             # Review what changed
+git add .mr/         # Commit to accept defaults
+```
+
+**Scenario 2: You upgraded microralph and want new prompt features**
+```bash
+mr restore
+git diff             # See new features in built-in prompts
+git add .mr/prompts/ # Keep new prompts
+git restore .mr/templates/  # Keep your template customizations
+```
+
+**Scenario 3: You're curious what's different between your customizations and defaults**
+```bash
+mr restore
+git diff             # Review differences
+git restore .mr/     # Discard restore and keep customizations
+```
 
 ### Constitution
 

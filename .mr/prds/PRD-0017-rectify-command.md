@@ -49,7 +49,7 @@ tasks:
 - id: T-004
   title: Update documentation (README, AGENTS.md) with restore command usage
   priority: 4
-  status: todo
+  status: done
   notes: Emphasize that restore shows diffs via Git and doesn't auto-commit; explain use case for updating to latest built-ins
 - id: T-005
   title: Add integration tests for restore command
@@ -136,5 +136,23 @@ Currently, there's no way to restore built-in files without manually deleting di
   - Maintained DRY principle: Both `init()` and `restore` now share the same file-writing logic for prompts/templates
   - UAT passed: All 312 tests passed, including existing init and restore tests
   - Note: The original `init()` function still works correctly for first-time setup, using `create_file_if_missing()` to skip existing files
+
+## 2026-01-25 — T-004 Completed
+- **Task**: Update documentation (README, AGENTS.md) with restore command usage
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated README.md: Added `mr restore` to Commands table with description "Restore `.mr/prompts/` and `.mr/templates/` to built-in defaults (destructive)"
+  - Added comprehensive "Restoring Prompts and Templates" section in README.md with:
+    - How It Works explanation (3-step process: delete, recreate, leave uncommitted)
+    - Git workflow examples for reviewing changes
+    - Important notes about destructive nature, no auto-commit, Git safety net, and limited scope
+    - Three detailed use case scenarios with command examples
+  - Updated AGENTS.md: Added "Restore Command Workflow" section with:
+    - 4-step workflow description (pre-flight check, deletion, recreation, no auto-commit)
+    - Use cases for agents (reset customizations, update after upgrade, compare customizations)
+    - Important notes section emphasizing destructive nature, Git workflow, limited scope, and idempotency
+    - Implementation pattern note explaining DRY principle and code reuse
+  - UAT passed: All 312 tests passed (cargo make uat succeeded)
+  - Documentation clearly emphasizes Git workflow for reviewing changes and non-auto-commit behavior
 
 ---

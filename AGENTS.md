@@ -41,6 +41,32 @@ The `mr suggest` command uses AI to analyze the codebase and generate PRD sugges
 
 Suggestions balance strategic features with quick wins. The command follows existing CLI patterns from PRD-0009.
 
+## Restore Command Workflow
+
+The `mr restore` command overwrites `.mr/prompts/` and `.mr/templates/` with built-in defaults:
+
+1. **Pre-flight check**: Verifies that `mr init` has been run (`.mr/` directory exists)
+2. **Deletion phase**: Removes `.mr/prompts/` and `.mr/templates/` directories using `std::fs::remove_dir_all`
+3. **Recreation phase**: Calls `init::init_prompts_and_templates()` to recreate directories with built-in defaults
+4. **No auto-commit**: Leaves changes uncommitted so users can review via Git workflow
+
+### Use Cases
+
+- **Reset customizations**: Agents who have modified prompts/templates can restore defaults to test baseline behavior
+- **Update after upgrade**: After microralph version upgrades, restore to get latest built-in prompts/templates
+- **Compare customizations**: Use Git diff to see differences between custom and default prompts
+
+### Important Notes
+
+- **Destructive**: Overwrites existing files with no backup (Git is the safety net)
+- **Git workflow**: Always use `git diff` to review changes before committing
+- **Scope limited**: Only affects `.mr/prompts/` and `.mr/templates/` (not constitution or config)
+- **Idempotent**: Running multiple times produces the same result (all files overwritten with built-in defaults)
+
+### Implementation Pattern
+
+The restore command follows the DRY principle by reusing `init::init_prompts_and_templates()`, which is also used by `mr init`. This ensures consistent file-writing logic and reduces code duplication.
+
 ## Build & Test
 
 ### Prerequisites
