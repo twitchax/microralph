@@ -337,6 +337,36 @@ fn init_tracing(verbose: bool, quiet: bool) {
         .init();
 }
 
+/// Creates a runner based on the runner name and model.
+fn create_runner(runner_name: &str, model: Option<String>) -> Result<Box<dyn runner::Runner>> {
+    match runner_name {
+        "mock" => Ok(Box::new(runner::MockRunner::empty())),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::with_model(model);
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner copilot` for testing."
+                );
+            }
+
+            Ok(Box::new(copilot))
+        }
+        "claude" => {
+            let claude = runner::ClaudeRunner::with_model(model);
+
+            if !claude.is_available() {
+                anyhow::bail!(
+                    "Claude CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Ok(Box::new(claude))
+        }
+        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, claude, mock"),
+    }
+}
+
 /// Runs the `mr init` command.
 fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
@@ -417,27 +447,14 @@ fn adapt_language(
     runner_name: &str,
     model: Option<&str>,
 ) -> Result<()> {
+    // Special case for mock runner - skip adaptation
+    if runner_name == "mock" {
+        tracing::warn!("Using mock runner for language adaptation - no changes will be made");
+        return Ok(());
+    }
+
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => {
-            tracing::warn!("Using mock runner for language adaptation - no changes will be made");
-            return Ok(());
-        }
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model.map(|s| s.to_string()));
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model.map(|s| s.to_string()))?;
 
     // Build the language adaptation prompt.
     let template = prompt::load_prompt_with_fallback(root, prompt::PromptKind::AdaptLanguage);
@@ -505,23 +522,7 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     tracing::info!(language = %lang, "Detected/specified language");
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model.clone());
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model.clone())?;
 
     let config = bootstrap::BootstrapConfig::new(&cwd);
 
@@ -603,23 +604,7 @@ fn cmd_prd_new(
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it with `npm install -g @anthropic-ai/copilot-cli` or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model)?;
 
     let config = prd_new::PrdNewConfig {
         root: &cwd,
@@ -676,23 +661,7 @@ fn cmd_prd_edit(
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model)?;
 
     let config = prd_edit::PrdEditConfig {
         root: &cwd,
@@ -746,23 +715,7 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model)?;
 
     let config = constitution_edit::ConstitutionEditConfig {
         root: &cwd,
@@ -956,23 +909,7 @@ fn cmd_prd_finalize(
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model)?;
 
     let config = prd_finalize::PrdFinalizeConfig {
         root: &cwd,
@@ -1080,23 +1017,7 @@ fn cmd_run(
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model)?;
 
     let config = run::RunConfig {
         root: &cwd,
@@ -1332,23 +1253,7 @@ fn cmd_devcontainer_generate(runner_name: &str, cli_model: Option<&str>) -> Resu
     tracing::info!(language = %lang, "Detected language");
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model.clone());
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Box::new(copilot)
-        }
-        other => {
-            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
-        }
-    };
+    let runner = create_runner(runner_name, model.clone())?;
 
     println!("{}", colors::info("Analyzing repository..."));
     println!("{}", colors::info(&format!("Detected language: {}", lang)));
@@ -1570,14 +1475,7 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let runner: Box<dyn runner::Runner> = match runner_name {
-        "mock" => Box::new(runner::MockRunner::empty()),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-            Box::new(copilot)
-        }
-        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, mock"),
-    };
+    let runner = create_runner(runner_name, model)?;
 
     // Run reindex.
     let result = reindex::reindex(&cwd, runner.as_ref(), stream)?;

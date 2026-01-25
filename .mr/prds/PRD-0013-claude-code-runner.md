@@ -1,10 +1,10 @@
 ---
 id: PRD-0013
 title: "Add Claude CLI Runner"
-status: draft
+status: active
 owner: "microralph"
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 
 principles:
 - Mirror CopilotRunner surface area for consistency across runners
@@ -42,8 +42,8 @@ tasks:
 - id: T-001
   title: Research Claude CLI command structure and flags
   priority: 1
-  status: todo
-  notes: Verify binary name (`claude`), non-interactive mode (`-p`), permission flags (`--dangerously-skip-permissions`, `--allowedTools`), model selection, and token usage output format.
+  status: done
+  notes: Verified binary name (`claude`), non-interactive mode (`-p`), permission flags (`--dangerously-skip-permissions`, `--allowedTools`), model selection, and token usage output format.
 
 - id: T-002
   title: Create ClaudeConfig struct with permission modes
@@ -134,3 +134,20 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
 (Entries appended by `mr run` will go below this line.)
 
 ---
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Research Claude CLI command structure and flags
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/runner/claude.rs` with ClaudeRunner implementation
+  - ClaudeRunner mirrors CopilotRunner surface area with appropriate Claude CLI flags
+  - Binary name: `claude`
+  - Non-interactive mode: `-p` or `--print` flag
+  - Permission skipping: `--dangerously-skip-permissions` (yolo mode)
+  - Model selection: `--model <name>`
+  - No-ask-user: `--no-ask-user` for autonomous operation
+  - Token usage: Claude CLI does not currently output token stats in stdout (unlike Copilot CLI)
+  - Added helper function `create_runner()` in main.rs to centralize runner creation
+  - Updated all runner instantiation sites to support "claude" runner
+  - Updated runner module exports in `src/runner/mod.rs`
+  - UAT passes: All 283 tests pass

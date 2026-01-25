@@ -4,11 +4,14 @@
 //! - A trait for runners that can execute prompts
 //! - Mock runner for testing
 //! - Copilot CLI runner (shell-based)
+//! - Claude CLI runner (shell-based)
 
+mod claude;
 mod copilot;
 mod mock;
 mod types;
 
+pub use claude::ClaudeRunner;
 pub use copilot::CopilotRunner;
 pub use mock::MockRunner;
 pub use types::Runner;
