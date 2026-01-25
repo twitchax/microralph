@@ -26,7 +26,7 @@ acceptance_tests:
 - id: uat-002
   name: User can select a suggestion by number
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Selected suggestion flows into mr new with pre-filled context
   command: cargo make uat
@@ -220,3 +220,21 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Verifies `parse_suggestions()` extracts exactly 5 suggestions with correct structure
   - Asserts `suggestions.len() == 5` and validates first and last suggestion fields
   - Test passed in full UAT run: 300/300 tests passing
+
+---
+
+## 2026-01-25 — uat-002 Verification
+- **UAT**: User can select a suggestion by number
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `validate_selection()` helper function in `src/suggest.rs` to extract selection validation logic
+  - Function validates user input (1-5 or 'q'), converts to 0-based index, and handles errors
+  - Added comprehensive test `test_validate_selection()` covering:
+    - Valid selections (1-5) with correct 0-based index conversion
+    - Whitespace trimming
+    - Quit with 'q' or 'Q' (case-insensitive)
+    - Out of range errors (0, 6)
+    - Invalid input (non-numeric, empty)
+  - Refactored `suggest()` function to use `validate_selection()` helper
+  - Test passed: 301/301 tests passing (up from 300)

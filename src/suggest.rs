@@ -118,29 +118,20 @@ where
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let input = input.trim();
 
-    if input.eq_ignore_ascii_case("q") {
-        println!("{}", colors::dim("Cancelled."));
-        return Ok(());
-    }
+    // Validate and parse selection.
+    let selection_index = match validate_selection(&input, suggestions.len())? {
+        Some(idx) => idx,
+        None => {
+            println!("{}", colors::dim("Cancelled."));
+            return Ok(());
+        }
+    };
 
-    // Parse selection.
-    let selection: usize = input
-        .parse()
-        .context("Invalid selection. Please enter a number between 1 and 5.")?;
-
-    if selection < 1 || selection > suggestions.len() {
-        bail!(
-            "Selection out of range. Please enter a number between 1 and {}.",
-            suggestions.len()
-        );
-    }
-
-    let selected = &suggestions[selection - 1];
+    let selected = &suggestions[selection_index];
 
     tracing::info!(
-        selection = selection,
+        selection = selection_index + 1,
         title = %selected.title,
         "User selected suggestion"
     );
@@ -397,6 +388,33 @@ fn parse_suggestions(text: &str) -> Result<Vec<Suggestion>> {
     Ok(suggestions)
 }
 
+/// Validates and parses user selection input.
+///
+/// Returns `Ok(Some(index))` for valid selection (1-based to 0-based conversion),
+/// `Ok(None)` if user quit with 'q',
+/// or `Err` if input is invalid or out of range.
+fn validate_selection(input: &str, max_suggestions: usize) -> Result<Option<usize>> {
+    let input = input.trim();
+
+    if input.eq_ignore_ascii_case("q") {
+        return Ok(None);
+    }
+
+    let selection: usize = input
+        .parse()
+        .context("Invalid selection. Please enter a number between 1 and 5.")?;
+
+    if selection < 1 || selection > max_suggestions {
+        bail!(
+            "Selection out of range. Please enter a number between 1 and {}.",
+            max_suggestions
+        );
+    }
+
+    // Convert to 0-based index
+    Ok(Some(selection - 1))
+}
+
 /// Generates a URL-friendly slug from a title.
 ///
 /// Converts to lowercase, replaces spaces/punctuation with hyphens,
@@ -514,6 +532,69 @@ Based on my analysis, here are 5 PRD suggestions:
         // Missing fields should be empty strings, not cause failure.
         assert_eq!(suggestions[0].effort, "");
         assert_eq!(suggestions[0].rationale, "");
+    }
+
+    /// UAT-002: User can select a suggestion by number.
+    #[test]
+    fn test_validate_selection() {
+        // Valid selections (1-5)
+        assert_eq!(
+            validate_selection("1", 5).unwrap(),
+            Some(0),
+            "Selection '1' should map to index 0"
+        );
+        assert_eq!(
+            validate_selection("3", 5).unwrap(),
+            Some(2),
+            "Selection '3' should map to index 2"
+        );
+        assert_eq!(
+            validate_selection("5", 5).unwrap(),
+            Some(4),
+            "Selection '5' should map to index 4"
+        );
+
+        // Valid selection with whitespace
+        assert_eq!(
+            validate_selection("  2  ", 5).unwrap(),
+            Some(1),
+            "Whitespace should be trimmed"
+        );
+
+        // Quit with 'q' or 'Q'
+        assert_eq!(
+            validate_selection("q", 5).unwrap(),
+            None,
+            "Lowercase 'q' should return None (quit)"
+        );
+        assert_eq!(
+            validate_selection("Q", 5).unwrap(),
+            None,
+            "Uppercase 'Q' should return None (quit)"
+        );
+
+        // Invalid: Out of range
+        let result = validate_selection("0", 5);
+        assert!(result.is_err(), "Selection '0' should be out of range");
+        assert!(result.unwrap_err().to_string().contains("out of range"));
+
+        let result = validate_selection("6", 5);
+        assert!(result.is_err(), "Selection '6' should be out of range");
+        assert!(result.unwrap_err().to_string().contains("out of range"));
+
+        // Invalid: Non-numeric
+        let result = validate_selection("abc", 5);
+        assert!(result.is_err(), "Non-numeric input should fail");
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid selection")
+        );
+
+        // Invalid: Empty
+        let result = validate_selection("", 5);
+        assert!(result.is_err(), "Empty input should fail");
     }
 
     /// UAT-003: Generate slug converts titles to URL-friendly format.
