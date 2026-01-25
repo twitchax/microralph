@@ -1717,6 +1717,16 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         &mut result,
     )?;
     create_file_if_missing(
+        &prompts_dir.join("constitution_edit.md"),
+        PROMPT_CONSTITUTION_EDIT,
+        &mut result,
+    )?;
+    create_file_if_missing(
+        &prompts_dir.join("devcontainer_generate.md"),
+        PROMPT_DEVCONTAINER_GENERATE,
+        &mut result,
+    )?;
+    create_file_if_missing(
         &prompts_dir.join("adapt_language.md"),
         PROMPT_ADAPT_LANGUAGE,
         &mut result,
@@ -1829,6 +1839,16 @@ pub fn init_prompts_and_templates(root: impl AsRef<Path>) -> Result<InitResult> 
     create_file_always(
         &prompts_dir.join("prd_edit.md"),
         PROMPT_PRD_EDIT,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("constitution_edit.md"),
+        PROMPT_CONSTITUTION_EDIT,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("devcontainer_generate.md"),
+        PROMPT_DEVCONTAINER_GENERATE,
         &mut result,
     )?;
     create_file_always(
@@ -1969,7 +1989,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 19); // 1 template + 14 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 21); // 1 template + 16 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1980,13 +2000,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 19);
+        assert_eq!(result1.files_created, 21);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 19);
+        assert_eq!(result2.files_skipped, 21);
         assert_eq!(result2.dirs_created, 0);
     }
 

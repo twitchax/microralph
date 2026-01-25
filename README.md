@@ -8,7 +8,7 @@
 
 > *A small ralph to help you ralph your ralphs.* 🦙
 
-**microralph** is a tiny CLI that wraps your favorite AI coding agent (starting with [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.
+**microralph** is a tiny CLI that wraps your favorite AI coding agent (including [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide) and [Claude Code CLI](https://docs.anthropic.com/en/docs/build-with-claude/claude-for-command-line)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.
 
 Oh, and yes: **microralph was entirely `ralph`'d into existence by microralph itself**. Dogfooding at its finest. 🐕
 
@@ -203,13 +203,13 @@ mr status
 
 ### Flags
 
-| Flag                | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `-v, --verbose`     | Enable verbose output                            |
-| `-q, --quiet`       | Suppress non-essential output                    |
-| `--runner <runner>` | Specify runner (default: `copilot`)              |
-| `--model <model>`   | Specify model (passed through to runner)         |
-| `--stream`          | Stream runner output in real-time (for `mr run`) |
+| Flag                | Description                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| `-v, --verbose`     | Enable verbose output                                            |
+| `-q, --quiet`       | Suppress non-essential output                                    |
+| `--runner <runner>` | Specify runner: `copilot`, `claude`, `mock` (default: `copilot`) |
+| `--model <model>`   | Specify model (passed through to runner)                         |
+| `--stream`          | Stream runner output in real-time (for `mr run`)                 |
 
 ### Configuration
 
@@ -545,23 +545,27 @@ Don't like the defaults? Tweak them:
 
 ```bash
 # Global CLI flags (override everything)
-mr run --runner copilot --model claude-sonnet-4-20250514 --stream
+mr run --runner copilot --model claude-sonnet-4.5 --stream
+
+# Or use Claude Code CLI instead
+mr run --runner claude --model claude-sonnet-4.5 --stream
 
 # Persistent config (set once, forget)
 cat > .mr/config.toml <<EOF
-runner = "copilot"
-model = "gpt-5-mini"
+runner = "claude"                 # Use Claude Code CLI
+model = "claude-sonnet-4.5"
 permission_mode = "yolo"          # Auto-approve all permissions (YOLO mode)
 timeout_minutes = 60
 EOF
 
 # Now `mr run` uses your config
-mr run                           # Uses gpt-5-mini, auto-approves, times out after 60min
+mr run                           # Uses claude-sonnet-4.5, auto-approves, times out after 60min
 ```
 
 **Available runners**:
 - `copilot` (default) — Uses `gh copilot` CLI (requires `gh` and Copilot subscription)
-- More runners coming soon (Claude, Gemini, etc.)
+- `claude` — Uses Claude Code CLI (requires `claude` CLI and Anthropic API key)
+- More runners coming soon (Gemini, OpenAI, etc.)
 
 **Permission modes**:
 - `manual` (default) — Agent asks before dangerous operations
