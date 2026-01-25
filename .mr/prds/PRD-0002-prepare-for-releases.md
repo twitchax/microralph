@@ -43,7 +43,7 @@ acceptance_tests:
 - id: uat-006
   name: Changelog generation works
   command: cargo make changelog
-  uat_status: unverified
+  uat_status: verified
 - id: uat-007
   name: Release version bump works
   command: cargo make release --dry-run
@@ -77,7 +77,7 @@ tasks:
 - id: T-005
   title: Add changelog generation with git-cliff
   priority: 5
-  status: todo
+  status: done
   notes: Install git-cliff, add cliff.toml config, add changelog task to Makefile.toml.
 - id: T-006
   title: Add publish-crates task for crates.io publishing
@@ -208,3 +208,20 @@ microralph currently has no release infrastructure. To distribute the tool to us
   - ✅ UAT-005 re-verified - `cargo make build-wasm` completes successfully
   - ⏭ UAT-003, UAT-004 already verified in T-002 (CI environment handles cross-compilation)
 - **UAT Results**: ✅ All UATs pass - build tasks are present and functional
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Add changelog generation with git-cliff
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `cliff.toml` configuration file with conventional commit support
+    - Configured commit parsers for feat, fix, doc, perf, refactor, style, test, chore, security, revert, and PRD tasks
+    - Added Keep a Changelog format with semantic versioning
+    - Enabled conventional commits with grouped categorization
+  - Added `install-git-cliff` task to Makefile.toml (lines 28-31) using cargo-binstall
+  - Added `changelog` task to Makefile.toml (lines 244-248) that runs `git-cliff --output CHANGELOG.md`
+  - Verified git-cliff installs successfully via `cargo make install-git-cliff`
+  - Tested changelog generation: `cargo make changelog` produces CHANGELOG.md (25KB)
+  - Ran `cargo make uat` - all 304 tests pass
+- **Opportunistic UAT Verification**:
+  - ✅ UAT-006 verified - `cargo make changelog` runs successfully and generates CHANGELOG.md with proper formatting
+- **UAT Results**: ✅ All UATs pass - changelog generation functional and integrated
