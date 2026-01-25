@@ -90,10 +90,10 @@ Download pre-built binaries from [GitHub Releases](https://github.com/twitchax/m
 #### Linux / macOS
 
 ```bash
-# Download the latest release binary (replace VERSION with actual version, e.g., v0.1.0)
-curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr-linux -o mr
+# Download the latest release binary
+curl -L https://github.com/twitchax/microralph/releases/latest/download/mr-linux -o mr
 # or for macOS ARM:
-# curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr-macos -o mr
+# curl -L https://github.com/twitchax/microralph/releases/latest/download/mr-macos -o mr
 
 # Make it executable
 chmod +x mr
@@ -112,14 +112,27 @@ mr --version
 3. Move to a directory in your PATH (e.g., `C:\Program Files\microralph\`)
 4. Open a new terminal and verify with `mr --version`
 
-#### WASM (with wasmtime)
+#### WebAssembly (via OCI Registry)
+
+Run directly from GitHub Container Registry using any WASI-compatible runtime. This works well for sandboxed or cross-platform use cases.
+
+With Wasmtime:
 
 ```bash
-# Install wasmtime if not present
-curl https://wasmtime.dev/install.sh -sSf | bash
+$ wasmtime run ghcr.io/twitchax/microralph:latest -- --version
+```
 
+With wkg (WebAssembly Package Manager):
+
+```bash
+$ wkg get ghcr.io/twitchax/microralph:latest
+```
+
+Or download and run manually:
+
+```bash
 # Download the WASM binary
-curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr.wasm -o mr.wasm
+curl -L https://github.com/twitchax/microralph/releases/latest/download/mr.wasm -o mr.wasm
 
 # Run with wasmtime
 wasmtime mr.wasm -- --version

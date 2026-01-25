@@ -142,3 +142,23 @@ jobs:
               with:
                   name: mr_wasm32-wasip2
                   path: target/wasm32-wasip2/release/mr.wasm
+
+    publish_oci:
+        needs: build_wasm
+        name: Publish OCI
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main'
+        permissions:
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+            - uses: cargo-bins/cargo-binstall@main
+            - run: cargo binstall wkg --no-confirm
+            - uses: actions/download-artifact@v4
+              with:
+                  name: mr_wasm32-wasip2
+                  path: target/wasm32-wasip2/release
+            - name: Login to GitHub Container Registry
+              run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            - name: Publish to GHCR
+              run: wkg oci push ghcr.io/twitchax/microralph:latest --file target/wasm32-wasip2/release/mr.wasm

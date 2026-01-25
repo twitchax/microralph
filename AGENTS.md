@@ -192,6 +192,8 @@ cargo make github-release v0.1.0 --draft  # Create as draft
 | `build-macos`          | Builds macOS ARM binary                                        |
 | `build-windows`        | Builds Windows x86_64 binary                                   |
 | `build-wasm`           | Builds WASM32-WASIP2 binary                                    |
+| `build-oci`            | Alias for build-wasm (for OCI publishing)                      |
+| `publish-oci`          | Publishes WASM binary to GitHub Container Registry             |
 
 ## Dev Container Workflow
 

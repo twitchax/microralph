@@ -30,6 +30,11 @@ dependencies = ["install-cargo-binstall"]
 command = "cargo"
 args = ["binstall", "git-cliff", "--no-confirm"]
 
+[tasks.install-wkg]
+dependencies = ["install-cargo-binstall"]
+command = "cargo"
+args = ["binstall", "wkg", "--no-confirm"]
+
 [tasks.tools]
 dependencies = ["install-nextest", "install-llvm-cov"]
 
@@ -234,6 +239,30 @@ cwd = "."
 workspace = false
 command = "cargo"
 args = ["build", "--target", "wasm32-wasip2", "--release"]
+
+[tasks.build-oci]
+# Alias for build-wasm (OCI publishing uses the same WASM binary)
+cwd = "."
+workspace = false
+dependencies = ["build-wasm"]
+
+[tasks.publish-oci]
+# Publish WASM binary to GitHub Container Registry
+# Prerequisites:
+#   - Install wkg: cargo binstall wkg
+#   - Authenticate: docker login ghcr.io -u USERNAME
+#   - Build: cargo make build-oci
+dependencies = ["build-oci", "install-wkg"]
+cwd = "."
+workspace = false
+command = "wkg"
+args = [
+    "oci",
+    "push",
+    "ghcr.io/twitchax/microralph:latest",
+    "--file",
+    "target/wasm32-wasip2/release/mr.wasm",
+]
 
 # =============================================================================
 # Publishing
