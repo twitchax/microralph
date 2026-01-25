@@ -256,9 +256,20 @@ args = ["--output", "CHANGELOG.md"]
 [tasks.publish-crates]
 cwd = "."
 workspace = false
+dependencies = ["ci"]
+script_runner = "@shell"
 script = '''
-echo "Publishing microralph crate to crates.io..."
-cargo publish --no-verify
+echo "Running pre-publish checks..."
+cargo package --no-verify --list
+
+echo ""
+echo "Publishing microralph to crates.io..."
+cargo publish --no-verify ${@}
+
+if [ "${1:-}" != "--dry-run" ]; then
+    echo ""
+    echo "✅ Published successfully!"
+fi
 '''
 
 # =============================================================================
