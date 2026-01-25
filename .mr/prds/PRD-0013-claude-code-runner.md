@@ -54,7 +54,7 @@ tasks:
 - id: T-003
   title: Implement ClaudeRunner struct with Runner trait
   priority: 3
-  status: todo
+  status: done
   notes: Implement `name()`, `execute()`, `execute_streaming()`, and `is_available()` methods following CopilotRunner pattern.
 
 - id: T-004
@@ -165,4 +165,21 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
     - Default implementation with yolo mode and no_ask_user enabled
     - Builder methods: `with_path()`, `with_permission_mode()`, `with_no_ask_user()`, `with_model()`
   - Mirrors CopilotConfig structure as specified
+  - UAT passes: All 283 tests pass
+
+---
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Implement ClaudeRunner struct with Runner trait
+- **Status**: ✅ Done
+- **Changes**:
+  - No additional changes required; T-001 implementation already included full ClaudeRunner implementation
+  - Verified ClaudeRunner struct in `src/runner/claude.rs` (lines 86-391) implements all Runner trait methods:
+    - `name()` returns "claude" (lines 180-182)
+    - `format_command_display()` formats command with flags for display (lines 184-214)
+    - `execute()` runs Claude CLI non-streaming (lines 216-272)
+    - `execute_streaming()` runs Claude CLI with real-time output (lines 274-386)
+    - `is_available()` checks if Claude CLI is installed (lines 388-390)
+  - Implementation follows CopilotRunner pattern exactly
+  - Includes comprehensive unit tests (lines 393-532) covering all functionality
   - UAT passes: All 283 tests pass
