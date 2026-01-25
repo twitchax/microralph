@@ -1,28 +1,24 @@
 ---
 id: PRD-0008
-title: "Fix CI cargo-make Not Found Error"
-status: active
-owner: "twitchax"
+title: Fix CI cargo-make Not Found Error
+status: done
+owner: twitchax
 created: 2026-01-24
 updated: 2026-01-25
-
 principles:
 - Fix must be simple and targeted; avoid over-engineering
 - CI should work reliably on cache hit and cache miss scenarios
 - Prefer adjusting existing configuration over adding new steps
-
 references:
 - name: Failed GitHub Actions Run
   url: https://github.com/twitchax/microralph/actions/runs/21312622613/job/61352818340
 - name: Swatinem/rust-cache Documentation
   url: https://github.com/Swatinem/rust-cache
-
 acceptance_tests:
 - id: uat-001
   name: CI passes on push with cache hit
   command: cargo make ci
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Investigate rust-cache bin caching interaction with binstall
@@ -34,7 +30,6 @@ tasks:
   priority: 2
   status: done
   notes: Options include forcing reinstall with --force, disabling cache-bin in rust-cache, or reordering steps. Try the simplest fix first.
-
 ---
 
 # Summary
@@ -101,5 +96,16 @@ The root cause is likely that the cached cargo-make binary or its metadata is st
   - All 271 tests passed in 3.01 seconds
   - Confirmed that the fix from T-001 (disabling rust-cache bin caching) allows CI to complete successfully
   - The CI command itself serves as the acceptance test
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 2 tasks (T-001 through T-002)
+- **Outcome**: All tasks completed, acceptance tests passed (271/271 tests)
+- **Changelog**: Entry added under [Unreleased] → Fixed
+- **Cleanup**: No temporary files or excessive comments found
+- **Summary**:
+  - Disabled cargo bin caching in rust-cache configuration to prevent stale binary issues
+  - Applied fix across all 5 CI jobs (test, codecov, build_linux, build_windows, build_macos)
+  - Resolved CI failures where binstall detected tools as installed but cargo couldn't use them
 
 ---

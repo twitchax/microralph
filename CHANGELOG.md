@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **PRD-0008: Fix CI cargo-make Not Found Error** — Resolved CI failures when rust-cache restored stale binaries
+  - Disabled cargo bin caching (`cache-bin: "false"`) in rust-cache configuration across all CI jobs
+  - Forces fresh reinstalls of binstalled tools, ensuring they're properly available to cargo
+
 ### Changed
 
 - **PRD-0016: Remove Automatic AGENTS.md Update Step** — Simplified agent workflow by removing automatic documentation updates
