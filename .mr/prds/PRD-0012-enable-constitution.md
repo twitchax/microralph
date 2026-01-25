@@ -74,7 +74,7 @@ tasks:
 - id: T-006
   title: Include constitution in prd finalize prompts
   priority: 2
-  status: todo
+  status: done
   notes: Update prd_finalize prompts to include constitution content, enabling finalization to respect project governance rules.
 - id: T-007
   title: Update runner prompts to log constitution violations
@@ -224,3 +224,23 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Prompts include clear messaging that questions and PRDs should respect constitutional rules
   - Synthesize prompt includes **CRITICAL** note that PRD must respect constitution
   - Constitution is loaded opportunistically (prompts work fine without it)
+
+---
+
+## 2026-01-25 — T-006 Completed
+- **Task**: Include constitution in prd finalize prompts
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `build_finalize_prompt()` in `src/prd_finalize.rs` to load constitution and add to placeholder context
+  - Constitution is loaded using `crate::config::load_constitution(root)` and inserted with key `"constitution"`
+  - Updated `PROMPT_RUN_TASK_FINALIZE` constant in `src/init.rs` to include constitution section with `{{#if constitution}}` conditional
+  - Added constitution section after "Current Changelog" and before "Required Actions"
+  - Updated `.mr/prompts/run_task_finalize.md` to match template with constitution section
+  - Constitution section includes note: "Your finalization work (changelog entries, documentation updates, cleanup decisions) should respect these constitutional rules."
+  - All 279 tests passed
+  - UAT pass: `cargo make uat` succeeded
+- **Implementation Notes**:
+  - Constitution is now available in PRD finalization prompts
+  - Follows same pattern as T-005 (prd new prompts)
+  - Constitution is loaded opportunistically (prompt works fine without it)
+  - Enables LLM to respect project governance rules during finalization tasks

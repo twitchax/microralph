@@ -178,6 +178,11 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
         read_changelog(root).unwrap_or_else(|| "(Changelog not found)".to_string());
     ctx.insert("changelog_content", changelog_content);
 
+    // Load constitution if it exists.
+    if let Ok(Some(constitution)) = crate::config::load_constitution(root) {
+        ctx.insert("constitution", constitution);
+    }
+
     expand_placeholders(&template, &ctx)
 }
 

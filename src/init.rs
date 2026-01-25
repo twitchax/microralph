@@ -713,6 +713,16 @@ The current `CHANGELOG.md` content is:
 {{changelog_content}}
 ```
 
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: Your finalization work (changelog entries, documentation updates, cleanup decisions) should respect these constitutional rules.
+{{/if}}
+
 ---
 
 ## Required Actions
