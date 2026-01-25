@@ -60,7 +60,7 @@ tasks:
 - id: T-004
   title: Implement build_args method for Claude CLI flags
   priority: 4
-  status: todo
+  status: done
   notes: Support `-p` for prompt, `--dangerously-skip-permissions` for yolo mode, model selection, and other relevant flags.
 
 - id: T-005
@@ -182,4 +182,20 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
     - `is_available()` checks if Claude CLI is installed (lines 388-390)
   - Implementation follows CopilotRunner pattern exactly
   - Includes comprehensive unit tests (lines 393-532) covering all functionality
+  - UAT passes: All 283 tests pass
+
+---
+
+## 2026-01-25 — T-004 Completed
+- **Task**: Implement build_args method for Claude CLI flags
+- **Status**: ✅ Done
+- **Changes**:
+  - No new changes required; T-004 implementation was already complete from T-001
+  - Verified build_args method in `src/runner/claude.rs` (lines 116-147):
+    - Supports `-p` flag for non-interactive prompt mode
+    - Supports `--dangerously-skip-permissions` for yolo permission mode
+    - Supports `--no-ask-user` flag for autonomous operation
+    - Supports `--model` flag for model selection
+    - Properly handles Manual permission mode (no special flags)
+  - Comprehensive unit tests verify all flags and modes (lines 419-483)
   - UAT passes: All 283 tests pass
