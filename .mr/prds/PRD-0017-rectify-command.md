@@ -1,21 +1,18 @@
 ---
 id: PRD-0017
-title: "Add Restore Command to Reset Prompts and Templates"
-status: active
-owner: "microralph"
+title: Add Restore Command to Reset Prompts and Templates
+status: done
+owner: microralph
 created: 2026-01-25
 updated: 2026-01-25
-
 principles:
 - Leverage existing `mr init` logic to avoid code duplication
 - Don't auto-commit—let users review changes via Git workflow
-- "All-or-nothing approach: restore all editable files, no selective options"
+- 'All-or-nothing approach: restore all editable files, no selective options'
 - Clear documentation prevents user confusion about destructive nature
-
 references:
 - name: PRD-0001 (mr init implementation)
   url: .mr/prds/PRD-0001-build-micro-ralph-mvp.md
-
 acceptance_tests:
 - id: uat-001
   name: mr restore command overwrites .mr/prompts/ and .mr/templates/ with built-in defaults
@@ -29,7 +26,6 @@ acceptance_tests:
   name: Command succeeds when .mr/ directories already exist
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Add `restore` subcommand to CLI enum and parser
@@ -56,7 +52,6 @@ tasks:
   priority: 5
   status: done
   notes: Test scenarios - fresh restore, restore after customization, idempotency
-
 ---
 
 # Summary
@@ -173,5 +168,20 @@ Currently, there's no way to restore built-in files without manually deleting di
     - uat-001 ✅: Integration test `test_restore_after_customization` verifies files are overwritten with built-in defaults
     - uat-002 ✅: Code inspection confirms no git commit logic in `cmd_restore()` function
     - uat-003 ✅: Integration test `test_restore_idempotency` verifies restore succeeds multiple times on existing directories
+
+---
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 5 tasks (T-001 through T-005)
+- **Outcome**: All tasks completed, acceptance tests passed (318/318 tests)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Cleanup**: No temporary files or excessive comments found
+- **Summary**:
+  - Added `mr restore` command to CLI with proper error handling and user feedback
+  - Implemented directory deletion and recreation using DRY principle (reuses `init_prompts_and_templates()`)
+  - All 3 UATs verified: files overwritten with defaults, no auto-commit, idempotent restoration
+  - Comprehensive documentation added to README.md and AGENTS.md emphasizing Git workflow
+  - 4 integration tests added covering fresh restore, customization override, idempotency, and error handling
 
 ---
