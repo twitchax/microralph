@@ -114,31 +114,28 @@ mr --version
 
 #### WebAssembly (via OCI Registry)
 
-Run directly from GitHub Container Registry using any WASI-compatible runtime. This works well for sandboxed or cross-platform use cases.
-
-With Wasmtime:
+The WASM binary is published to GitHub Container Registry. Download and run with any WASI-compatible runtime. This works well for sandboxed or cross-platform use cases.
 
 ```bash
-$ wasmtime run ghcr.io/twitchax/microralph:latest -- --version
+# Download from OCI registry using wkg (WebAssembly Package Manager)
+cargo binstall wkg --no-confirm
+wkg oci pull ghcr.io/twitchax/microralph:latest -o mr.wasm
+
+# Run with wasmtime
+wasmtime mr.wasm -h
+
+# Optional: Create an alias
+echo 'alias mr="wasmtime /path/to/mr.wasm"' >> ~/.bashrc
 ```
 
-With wkg (WebAssembly Package Manager):
-
-```bash
-$ wkg get ghcr.io/twitchax/microralph:latest
-```
-
-Or download and run manually:
+Or download from GitHub Releases:
 
 ```bash
 # Download the WASM binary
 curl -L https://github.com/twitchax/microralph/releases/latest/download/mr.wasm -o mr.wasm
 
 # Run with wasmtime
-wasmtime mr.wasm -- --version
-
-# Optional: Create an alias
-echo 'alias mr="wasmtime /path/to/mr.wasm --"' >> ~/.bashrc
+wasmtime mr.wasm -h
 ```
 
 ### Cargo
