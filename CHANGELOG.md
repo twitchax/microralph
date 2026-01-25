@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0011: Dev Container Support and Generation** — Dev container tooling for sandboxed development
+  - Added README documentation for dev container setup (VSCode, Codespaces, CLI workflows)
+  - Implemented `mr devcontainer generate` command for autonomous `.devcontainer/devcontainer.json` generation
+  - Repository analysis detects languages, tools, and dependencies from git history and PRD content
+  - Non-blocking warnings when running model-invoking commands outside dev containers
+  - Supports regeneration workflow for keeping container config up-to-date
+
 - **PRD-0012: Enable Constitution** — Project governance via `.mr/constitution.md` with LLM-assisted editing
   - Constitution file created during `mr bootstrap` with numbered example rules
   - `mr constitution edit "<request>"` command for intelligent constitution updates via LLM
