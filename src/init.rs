@@ -1015,53 +1015,6 @@ Report what happened:
 - What was committed (if anything)
 "#;
 
-/// Default content for the update agents prompt.
-pub const PROMPT_UPDATE_AGENTS: &str = r#"# microralph — Update Agents Prompt
-
-## Objective
-
-Update the AGENTS.md file with relevant conventions and patterns.
-
-## Context
-
-A PRD has been created or a task has been completed.
-
-## Current AGENTS.md Content
-
-{{agents_content}}
-
-## Recent Changes
-
-{{#each recent_changes}}
-- {{file}}: {{description}}
-{{/each}}
-
-## Required Actions
-
-1. Review the recent changes.
-2. Identify any new conventions, patterns, or important notes.
-3. Update the auto-managed section of AGENTS.md if needed.
-
-## Auto-Managed Section
-
-Only modify content between these markers:
-```
-<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-...
-<!-- END MICRORALPH AUTO-MANAGED SECTION -->
-```
-
-## Constraints
-
-- Do not modify content outside the auto-managed section.
-- Keep additions concise and actionable.
-- Only add information that helps future coding agents.
-
-## Output
-
-The updated content for the auto-managed section, or "NO_CHANGES" if no updates are needed.
-"#;
-
 /// Default content for the PRD edit prompt.
 pub const PROMPT_PRD_EDIT: &str = r#"# microralph — PRD Edit Prompt
 
@@ -1494,9 +1447,16 @@ History entries are appended by `mr run` at the bottom of the PRD.
 
 ---
 
-<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-<!-- This section is auto-updated by `mr new` and `mr run`. -->
-<!-- END MICRORALPH AUTO-MANAGED SECTION -->
+## Manual Updates by Agents
+
+Automatic AGENTS.md updates have been removed to give agents more flexibility. Agents should update AGENTS.md manually when:
+
+- Discovering new build/test commands or troubleshooting steps
+- Identifying code patterns or conventions not already documented
+- Adding new tools or dependencies that affect the workflow
+- Finding solutions to common issues during implementation
+
+Update any relevant section, not just this one. Keep additions concise and actionable.
 "#;
 
 /// Result of initialization, containing counts and paths of created items.
@@ -1592,11 +1552,6 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     create_file_if_missing(
         &prompts_dir.join("run_uat_verify.md"),
         PROMPT_RUN_UAT_VERIFY,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("update_agents.md"),
-        PROMPT_UPDATE_AGENTS,
         &mut result,
     )?;
     create_file_if_missing(
@@ -1728,7 +1683,6 @@ mod tests {
         assert!(root.join(".mr/prompts/run_task.md").exists());
         assert!(root.join(".mr/prompts/run_task_finalize.md").exists());
         assert!(root.join(".mr/prompts/run_uat_verify.md").exists());
-        assert!(root.join(".mr/prompts/update_agents.md").exists());
         assert!(root.join(".mr/prompts/adapt_language.md").exists());
         assert!(root.join(".mr/prompts/reindex.md").exists());
         assert!(root.join(".mr/prompts/pick_prd.md").exists());
@@ -1747,7 +1701,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 19); // 1 template + 14 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 18); // 1 template + 13 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1758,13 +1712,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 19);
+        assert_eq!(result1.files_created, 18);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 19);
+        assert_eq!(result2.files_skipped, 18);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -1834,15 +1788,6 @@ mod tests {
         assert!(PROMPT_RUN_UAT_VERIFY.contains("{{uat_id}}"));
         assert!(PROMPT_RUN_UAT_VERIFY.contains("{{prd_id}}"));
         assert!(PROMPT_RUN_UAT_VERIFY.contains("{{prd_path}}"));
-
-        // Update agents should have content placeholder.
-        assert!(PROMPT_UPDATE_AGENTS.contains("{{agents_content}}"));
-    }
-
-    #[test]
-    fn test_starter_agents_has_auto_managed_section() {
-        assert!(STARTER_AGENTS.contains("<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->"));
-        assert!(STARTER_AGENTS.contains("<!-- END MICRORALPH AUTO-MANAGED SECTION -->"));
     }
 
     #[test]

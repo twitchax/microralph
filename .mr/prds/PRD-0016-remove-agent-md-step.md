@@ -43,7 +43,7 @@ tasks:
   - id: T-005
     title: Remove update_agents.md prompt creation from init.rs
     priority: 2
-    status: todo
+    status: done
     notes: Line 1469 in init.rs creates this prompt - remove it
   - id: T-006
     title: Delete .mr/prompts/update_agents.md file
@@ -164,4 +164,21 @@ The current implementation automatically calls `update_agents_md()` after three 
   - The module was completely unused after T-001, T-002, and T-003 removed all calls to `update_agents_md()`
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Remove update_agents.md prompt creation from init.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `PROMPT_UPDATE_AGENTS` constant definition from `src/init.rs` (lines 1018-1063)
+  - Removed `create_file_if_missing()` call for `update_agents.md` from `src/init.rs` (lines 1597-1601)
+  - Removed `PromptKind::UpdateAgents` enum variant from `src/prompt/types.rs`
+  - Removed `UpdateAgents` references from `PromptKind::filename()`, `PromptKind::all()`, and loader mapping
+  - Updated `STARTER_AGENTS` constant to replace auto-managed section markers with a "Manual Updates by Agents" section that explains when agents should update AGENTS.md
+  - Removed `test_starter_agents_has_auto_managed_section` test from `src/init.rs`
+  - Removed test assertion checking `PROMPT_UPDATE_AGENTS` placeholder from `src/init.rs`
+  - Removed test assertion checking for `update_agents.md` file existence from `src/init.rs`
+  - Updated `test_init_creates_structure` test: changed expected file count from 19 to 18 (13 prompts instead of 14)
+  - Updated `test_init_is_idempotent` test: changed expected file counts from 19 to 18
+  - Updated `test_prompt_loader_missing_prompts` test: changed expected prompt counts from 15 to 14 (initially) and 14 to 13 (after creating one)
+  - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
 
