@@ -59,17 +59,17 @@ tasks:
 - id: T-004
   title: Create suggest module with analysis logic
   priority: 4
-  status: todo
+  status: done
   notes: Create src/suggest.rs that reads PRDs, analyzes codebase patterns, and invokes runner
 - id: T-005
   title: Implement interactive numbered picker
   priority: 5
-  status: todo
+  status: done
   notes: Parse runner output for 5 suggestions, display numbered list, read user input
 - id: T-006
   title: Integrate suggestion selection with mr new flow
   priority: 6
-  status: todo
+  status: done
   notes: Pass selected suggestion context to prd_new module using existing context mechanism
 - id: T-007
   title: Add comprehensive UAT tests
@@ -160,6 +160,23 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Implemented `cmd_suggest()` function that initializes runner and calls `suggest::suggest()`
   - Created `src/suggest.rs` with placeholder `suggest()` function (implementation deferred to T-004)
   - Verified command is accessible via `mr suggest --help`
+  - UAT passed: All 293 tests passing
+
+---
+
+## 2026-01-25 — T-004, T-005, T-006 Completed
+- **Tasks**: Create suggest module with analysis logic, Implement interactive numbered picker, Integrate suggestion selection with mr new flow
+- **Status**: ✅ Done
+- **Changes**:
+  - Implemented complete `suggest()` function in `src/suggest.rs` with full flow from analysis to PRD creation
+  - Added `Suggestion` struct to represent parsed suggestions with number, title, description, category, effort, and rationale
+  - Implemented `analyze_codebase()` to gather repository structure, tools/dependencies, recent git commits, and TODO comments
+  - Created `build_suggestion_prompt()` to expand placeholders with existing PRDs and codebase snapshot
+  - Implemented `parse_suggestions()` to extract exactly 5 suggestions from runner output with structured fields
+  - Added interactive numbered picker that displays suggestions with formatting and prompts user for selection (1-5 or 'q')
+  - Implemented `generate_slug()` utility to create URL-friendly slugs from suggestion titles
+  - Integrated with `prd_new::create_prd()` to flow selected suggestion into PRD creation with pre-filled context
+  - All three tasks (T-004, T-005, T-006) completed as single cohesive implementation
   - UAT passed: All 293 tests passing
 
 ---
