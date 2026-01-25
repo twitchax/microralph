@@ -24,7 +24,7 @@ pub const DEFAULT_CONFIG: &str = r#"# microralph configuration
 
 # Default model to use with the runner.
 # This is passed to the runner CLI (e.g., `copilot --model <model>`).
-# model = "claude-sonnet-4-20250514"
+# model = "claude-sonnet-4.5"
 
 # Permission mode for the runner.
 # Options: "yolo" (--allow-all), "manual" (prompt for each)

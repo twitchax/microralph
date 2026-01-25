@@ -33,7 +33,7 @@ pub struct ClaudeConfig {
     /// Whether to disable the ask_user tool.
     pub no_ask_user: bool,
 
-    /// The model to use (e.g., "claude-sonnet-4-20250514").
+    /// The model to use (e.g., "claude-sonnet-4.5").
     pub model: Option<String>,
 }
 
@@ -388,11 +388,11 @@ mod tests {
 
     #[test]
     fn test_build_args_with_model() {
-        let runner = ClaudeRunner::with_model(Some("claude-sonnet-4-20250514".to_string()));
+        let runner = ClaudeRunner::with_model(Some("claude-sonnet-4.5".to_string()));
         let args = runner.build_args("test prompt");
 
         assert!(args.contains(&"--model".to_string()));
-        assert!(args.contains(&"claude-sonnet-4-20250514".to_string()));
+        assert!(args.contains(&"claude-sonnet-4.5".to_string()));
     }
 
     #[test]

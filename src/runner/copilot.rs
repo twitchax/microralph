@@ -41,7 +41,7 @@ pub struct CopilotConfig {
     /// Whether to disable the ask_user tool.
     pub no_ask_user: bool,
 
-    /// The model to use (e.g., "claude-sonnet-4-20250514").
+    /// The model to use (e.g., "claude-sonnet-4.5").
     pub model: Option<String>,
 }
 

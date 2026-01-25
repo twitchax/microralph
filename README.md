@@ -214,7 +214,7 @@ Settings can be persisted in `.mr/config.toml`:
 
 ```toml
 runner = "copilot"
-model = "claude-sonnet-4-20250514"
+model = "claude-sonnet-4.5"
 permission_mode = "yolo"
 timeout_minutes = 30
 ```

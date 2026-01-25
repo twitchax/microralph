@@ -125,7 +125,7 @@ tasks:
   title: Add `.mr/config.toml` for persistent settings (model, runner, permissions, etc.)
   priority: 17
   status: done
-  notes: 'Support a config file for common settings: default runner, default model (e.g., `model = "claude-sonnet-4-20250514"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner.'
+  notes: 'Support a config file for common settings: default runner, default model (e.g., `model = "claude-sonnet-4.5"`), permission_mode, timeout, etc. CLI flags should override config. Also add `--model` flag to `run`, `prd new`, and `bootstrap` commands that passes through to the runner.'
 - id: T-019
   title: Stream/display runner output during `mr run`
   priority: 18

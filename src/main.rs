@@ -63,7 +63,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -80,7 +80,7 @@ enum Command {
         #[arg(long)]
         language: Option<String>,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -99,7 +99,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
 
@@ -122,7 +122,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -141,7 +141,7 @@ enum Command {
         #[arg(long)]
         one: bool,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
 
@@ -160,7 +160,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
 
@@ -184,7 +184,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -203,7 +203,7 @@ enum Command {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
 
@@ -228,7 +228,7 @@ enum DevcontainerCommand {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -245,7 +245,7 @@ enum ConstitutionCommand {
         #[arg(long, default_value = "copilot")]
         runner: String,
 
-        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
     },
@@ -1633,11 +1633,10 @@ mod tests {
 
     #[test]
     fn test_args_parse_run_with_model() {
-        let args =
-            Args::try_parse_from(["mr", "run", "--model", "claude-sonnet-4-20250514"]).unwrap();
+        let args = Args::try_parse_from(["mr", "run", "--model", "claude-sonnet-4.5"]).unwrap();
         if let Some(Command::Run { runner, model, .. }) = args.command {
             assert_eq!(runner, "copilot");
-            assert_eq!(model, Some("claude-sonnet-4-20250514".to_string()));
+            assert_eq!(model, Some("claude-sonnet-4.5".to_string()));
         } else {
             panic!("Expected Run command");
         }
