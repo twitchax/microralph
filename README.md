@@ -70,6 +70,7 @@ Each `mr run` invocation:
 - **One-task-per-run loop**: Context stays small, agents stay focused
 - **Guided PRD creation**: `mr new` runs an interactive Q/A to generate PRDs
 - **Bootstrap existing repos**: `mr bootstrap` scans your repo and generates starter PRDs
+- **Constitution-based governance**: Define project rules in `.mr/constitution.md` to guide PRD workflows
 - **Multi-language support**: Works with Rust, Python, Node.js, Go, Java (auto-detected)
 - **Streaming output**: `mr run --stream` shows agent output in real-time
 - **Git-native state**: PRDs are versioned markdown; no databases or JSON blobs
@@ -123,6 +124,7 @@ mr status
 | `mr new <slug>`            | Create a new PRD via guided Q/A                                                        |
 | `mr new <slug> --context`  | Create a new PRD with upfront context to guide initial questions                       |
 | `mr edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |
+| `mr constitution edit "<request>"` | Edit the constitution via LLM assistance                                       |
 | `mr list`                  | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
 | `mr finalize <id>`         | Finalize a PRD (mark as done and close out)                                            |
 | `mr run`                   | Run the next task from the highest-priority active PRD                                 |
@@ -153,6 +155,60 @@ timeout_minutes = 30
 ```
 
 CLI flags override config file settings.
+
+### Constitution
+
+microralph supports project-specific governance rules via a **Constitution** file (`.mr/constitution.md`). The constitution defines constraints, best practices, and architectural rules that influence PRD creation and execution.
+
+#### What's the Constitution For?
+
+The constitution provides a single source of truth for project governance:
+- Define acceptance test requirements (e.g., "All UATs must be codified in Makefile.toml")
+- Enforce architectural patterns (e.g., "Use anyhow::Result for all fallible functions")
+- Set coding standards (e.g., "Avoid XML/JSON state blobs; use human-readable Markdown")
+- Document project-specific constraints
+
+#### How It Works
+
+1. **Bootstrap creates it**: When you run `mr init` or `mr bootstrap`, microralph creates `.mr/constitution.md` with commented-out example rules.
+2. **Version controlled**: The constitution is committed to git alongside your PRDs.
+3. **Influences workflows**: Commands like `mr new` and `mr finalize` read the constitution and pass it to the LLM, which respects the rules when creating or finalizing PRDs.
+4. **Intelligent editing**: Use `mr constitution edit "<request>"` to update the constitution via natural language (e.g., "Add a rule that all tests must use nextest").
+5. **Violation logging**: When executing tasks, the runner logs any constitution violations in the PRD History section with reasoning—but violations do not block execution.
+
+#### Example Constitution
+
+```markdown
+# Constitution
+
+## Purpose
+This file defines project-specific governance rules that guide PRD creation and execution.
+
+## Rules
+
+1. All acceptance tests must be codified in Makefile.toml (no one-off commands).
+2. Use `anyhow::Result` for all fallible functions.
+3. Prefer functional programming techniques where appropriate.
+4. All dev commands must route through `cargo make`.
+```
+
+#### Editing the Constitution
+
+You can edit `.mr/constitution.md` directly, or use the LLM-assisted command:
+
+```bash
+# Add a new rule via natural language
+mr constitution edit "Add a rule requiring tracing instead of println for diagnostics"
+
+# The LLM will ask clarifying questions and update the constitution
+```
+
+#### Enforcement Model
+
+Constitution violations are **informational, not blocking**:
+- The runner mentions violations in PRD History entries with reasoning
+- Violations provide feedback but don't fail builds or prevent commits
+- This allows flexibility while maintaining visibility into governance compliance
 
 ## Development
 

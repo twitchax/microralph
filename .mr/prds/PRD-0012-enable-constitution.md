@@ -84,7 +84,7 @@ tasks:
 - id: T-008
   title: Document constitution feature in README
   priority: 3
-  status: todo
+  status: done
   notes: Add section explaining constitution purpose, location, editing workflow, and how it influences PRD creation and execution.
 
 ---
@@ -244,3 +244,24 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Prompt now instructs LLM to mention violations with reasoning in History entries
   - No programmatic enforcement—violations are informational only
   - Pattern follows T-005 and T-006 (prd new and finalize prompts)
+
+---
+
+## 2026-01-25 — T-008 Completed
+- **Task**: Document constitution feature in README
+- **Status**: ✅ Done
+- **Changes**:
+  - Added "Constitution" subsection in README.md after "Configuration" section (lines 157-207)
+  - Added constitution explanation covering purpose, workflow, enforcement model
+  - Included example constitution file showing typical rules
+  - Documented `mr constitution edit "<request>"` command usage
+  - Clarified that violations are informational (logged in History) but not blocking
+  - Added "Constitution-based governance" to Features section
+  - Added `mr constitution edit` command to Commands table
+  - UAT pass: All 279 tests passed
+- **Documentation Structure**:
+  - What's the Constitution For? (governance rules, best practices)
+  - How It Works (bootstrap, version control, LLM integration)
+  - Example Constitution (showing typical project rules)
+  - Editing the Constitution (direct edit or LLM-assisted)
+  - Enforcement Model (informational violations, not blocking)
