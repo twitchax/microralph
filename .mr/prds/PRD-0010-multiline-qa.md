@@ -1,7 +1,7 @@
 ---
 id: PRD-0010
 title: Support Multi-line Q/A During PRD Creation
-status: active
+status: done
 owner: ""
 created: 2026-01-24
 updated: 2026-01-24
