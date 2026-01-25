@@ -14,7 +14,6 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-use crate::agents::{RecentChange, update_agents_md};
 use crate::config::load_constitution;
 use crate::prd::{AcceptanceTest, Prd, PrdStatus, TaskStatus, scan_prds};
 use crate::prompt::{
@@ -435,37 +434,6 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     } else {
         output.text.clone()
     };
-
-    // Update AGENTS.md with task completion info (only if runner succeeded).
-    if output.success {
-        let changes = vec![RecentChange {
-            file: prd_path.display().to_string(),
-            description: format!("Completed task {task_id}: {task_title}"),
-        }];
-
-        match update_agents_md(config.root, runner, &changes) {
-            Ok(result) if result.modified => {
-                let summary = result
-                    .new_content
-                    .as_ref()
-                    .map(|c| {
-                        if c.len() > 100 {
-                            &c[c.len() - 100..]
-                        } else {
-                            c.as_str()
-                        }
-                    })
-                    .unwrap_or("(empty)");
-                tracing::info!(summary = %summary, "Updated AGENTS.md auto-managed section");
-            }
-            Ok(_) => {
-                tracing::debug!("No changes needed for AGENTS.md");
-            }
-            Err(e) => {
-                tracing::warn!("Failed to update AGENTS.md: {e}");
-            }
-        }
-    }
 
     Ok(RunResult::TaskExecuted {
         prd_id,

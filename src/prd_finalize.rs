@@ -4,12 +4,16 @@
 //! updates the index, and marks the PRD as done.
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use chrono::{Local, Utc};
 use thiserror::Error;
+
+#[cfg(test)]
+use std::io::Write;
+
+#[cfg(test)]
+use chrono::{Local, Utc};
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::{AcceptanceTest, Task};
@@ -187,6 +191,7 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
 }
 
 /// Generates a summary report for a finalized PRD.
+#[cfg(test)]
 fn generate_summary_report(prd: &Prd) -> String {
     let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
     let local_date = Local::now().format("%Y-%m-%d");
@@ -211,6 +216,7 @@ fn generate_summary_report(prd: &Prd) -> String {
 }
 
 /// Appends a summary report to the PRD file.
+#[cfg(test)]
 fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
     let mut file = fs::OpenOptions::new()
         .append(true)
@@ -314,8 +320,12 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
 
     // Re-read the PRD after status update for the prompt context.
-    let prd = prd::parse_prd_file(&path)
-        .with_context(|| format!("Failed to re-read PRD after status update: {}", path.display()))?;
+    let prd = prd::parse_prd_file(&path).with_context(|| {
+        format!(
+            "Failed to re-read PRD after status update: {}",
+            path.display()
+        )
+    })?;
 
     // Build and execute the finalization prompt.
     let prompt = build_finalize_prompt(config.root, &prd);
@@ -371,7 +381,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
 
     // The runner has already:
     // - Appended finalization history entry to PRD
-    // - Updated CHANGELOG.md  
+    // - Updated CHANGELOG.md
     // - Regenerated PRDS.md via `cargo run -- list`
     // - Committed all changes via git
 

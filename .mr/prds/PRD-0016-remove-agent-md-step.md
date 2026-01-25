@@ -1,7 +1,7 @@
 ---
 id: PRD-0016
 title: Remove Automatic AGENTS.md Update Step
-status: draft
+status: active
 owner: twitchax
 created: 2026-01-25
 updated: 2026-01-25
@@ -23,7 +23,7 @@ tasks:
   - id: T-001
     title: Remove update_agents_md() call from src/run.rs
     priority: 1
-    status: todo
+    status: done
     notes: Remove the call after task completion
   - id: T-002
     title: Remove update_agents_md() call from src/prd_new.rs
@@ -100,3 +100,14 @@ The current implementation automatically calls `update_agents_md()` after three 
 - Modifying other auto-update mechanisms in the codebase
 
 # History
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Remove update_agents_md() call from src/run.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `update_agents_md()` call and associated logic from src/run.rs (lines 439-468)
+  - Removed unused import `use crate::agents::{RecentChange, update_agents_md};` from src/run.rs
+  - Fixed pre-existing dead code warnings in src/prd_finalize.rs by adding `#[cfg(test)]` to test-only functions
+  - Fixed pre-existing unused import warnings in src/prd_finalize.rs by marking test-only imports with `#[cfg(test)]`
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
