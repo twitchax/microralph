@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0012: Enable Constitution** — Project governance via `.mr/constitution.md` with LLM-assisted editing
+  - Constitution file created during `mr bootstrap` with numbered example rules
+  - `mr constitution edit "<request>"` command for intelligent constitution updates via LLM
+  - Constitution automatically loaded and respected by `mr new`, `mr run`, and `mr finalize`
+  - Constitution violations logged in PRD history with reasoning (informational, non-blocking)
+  - Version-controlled governance rules as single source of truth for project constraints
+
 - **PRD-0010: Support Multi-line Q/A During PRD Creation** — Enhanced interactive PRD creation to handle multi-line content
   - Multi-line questions from model now display completely with proper formatting (including bullet lists)
   - Multi-line answer input via double-enter pattern (press Enter twice to finish)

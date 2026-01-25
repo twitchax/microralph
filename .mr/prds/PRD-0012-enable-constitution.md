@@ -1,7 +1,7 @@
 ---
 id: PRD-0012
 title: Enable Constitution
-status: active
+status: done
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-25
@@ -344,5 +344,23 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Test also verifies the prompt includes "Constitution Compliance" instructions for the runner
   - Result: Test passed successfully (283 tests passed including new test)
   - Added Makefile.toml targets for all constitution UATs (uat-001 through uat-006)
+
+---
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 8 tasks (T-001 through T-008)
+- **UATs Verified**: 6 acceptance tests (uat-001 through uat-006)
+- **Outcome**: All tasks completed, all acceptance tests verified (283/283 tests passed)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Changes Summary**:
+  - Constitution template with 8 numbered example rules
+  - Constitution emitted during `mr bootstrap` and `mr init`
+  - `mr constitution edit "<request>"` command for LLM-assisted updates
+  - Constitution loaded and respected by `mr new`, `mr run`, and `mr finalize`
+  - Constitution violations logged in PRD history (informational, non-blocking)
+  - Comprehensive documentation in README.md
+- **Cleanup**: No temporary files or debug statements to remove (all println! statements are legitimate CLI output)
+- **Inter-PRD Links**: PRDS.md index updated via `mr list`
 
 
