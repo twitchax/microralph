@@ -25,6 +25,9 @@ cargo make ci
 
 # UAT (the one true gate)
 cargo make uat
+
+# Dev container (start and exec into container)
+cargo make devcontainer
 ```
 
 ## Suggest Command Workflow
@@ -119,6 +122,9 @@ cargo make ci
 
 # UAT
 cargo make uat
+
+# Dev container
+cargo make devcontainer
 ```
 
 ## Release Workflow
@@ -174,18 +180,54 @@ cargo make github-release v0.1.0 --draft  # Create as draft
 
 ### Release Tasks Reference
 
-| Task | Description |
-|------|-------------|
-| `release` | Unified task: runs CI, builds all targets, generates changelog |
-| `release-bump` | Bumps version using cargo-release (formerly just `release`) |
-| `publish-all <tag>` | Publishes to crates.io and creates GitHub release in one go |
-| `changelog` | Generates CHANGELOG.md from conventional commits |
-| `publish-crates` | Publishes to crates.io with pre-publish checks |
-| `github-release <tag>` | Creates GitHub release with artifacts |
-| `build-linux` | Builds Linux x86_64 binary |
-| `build-macos` | Builds macOS ARM binary |
-| `build-windows` | Builds Windows x86_64 binary |
-| `build-wasm` | Builds WASM32-WASIP2 binary |
+| Task                   | Description                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| `release`              | Unified task: runs CI, builds all targets, generates changelog |
+| `release-bump`         | Bumps version using cargo-release (formerly just `release`)    |
+| `publish-all <tag>`    | Publishes to crates.io and creates GitHub release in one go    |
+| `changelog`            | Generates CHANGELOG.md from conventional commits               |
+| `publish-crates`       | Publishes to crates.io with pre-publish checks                 |
+| `github-release <tag>` | Creates GitHub release with artifacts                          |
+| `build-linux`          | Builds Linux x86_64 binary                                     |
+| `build-macos`          | Builds macOS ARM binary                                        |
+| `build-windows`        | Builds Windows x86_64 binary                                   |
+| `build-wasm`           | Builds WASM32-WASIP2 binary                                    |
+
+## Dev Container Workflow
+
+microralph supports development containers for consistent, sandboxed environments. The `devcontainer` cargo-make task automates the entire setup:
+
+```bash
+# One command to install dependencies, start container, and exec into it
+cargo make devcontainer
+```
+
+This task:
+1. Checks for `@devcontainers/cli` and installs it via npm if missing
+2. Verifies `.devcontainer/devcontainer.json` exists (prompts to generate if not)
+3. Starts the dev container with `--remove-existing-container` (equivalent to `--rm`)
+4. Execs into the container with bash
+
+### Prerequisites
+
+- **Node.js/npm**: Required to install `@devcontainers/cli`
+- **Docker**: Must be installed and running
+- **Dev container config**: Generate with `cargo run -- devcontainer generate`
+
+### Manual Steps (if needed)
+
+```bash
+# Generate config
+cargo run -- devcontainer generate
+
+# Then use the automated task
+cargo make devcontainer
+
+# Or manual approach:
+npm install -g @devcontainers/cli
+devcontainer up --workspace-folder . --remove-existing-container
+devcontainer exec --workspace-folder . bash
+```
 
 ## Troubleshooting
 
@@ -197,18 +239,3 @@ cargo make github-release v0.1.0 --draft  # Create as draft
   ```
 
 ---
-
-<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-## Manual Updates by Agents
-
-Automatic AGENTS.md updates have been removed to give agents more flexibility. Agents should update AGENTS.md manually when:
-
-- Discovering new build/test commands or troubleshooting steps
-- Identifying code patterns or conventions not already documented
-- Adding new tools or dependencies that affect the workflow
-- Finding solutions to common issues during implementation
-
-Update any relevant section, not just this one. Keep additions concise and actionable.
-<!-- END MICRORALPH AUTO-MANAGED SECTION -->
-<!-- END MICRORALPH AUTO-MANAGED SECTION -->

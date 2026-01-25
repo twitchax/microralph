@@ -422,6 +422,31 @@ script = '''
 cargo watch -x "run -- status"
 '''
 
+[tasks.devcontainer]
+# Start and exec into the dev container
+cwd = "."
+workspace = false
+script_runner = "@shell"
+script = '''
+# Ensure @devcontainers/cli is installed
+if ! command -v devcontainer &> /dev/null; then
+    echo "📦 Installing @devcontainers/cli..."
+    npm install -g @devcontainers/cli
+fi
+
+# Generate config if it doesn't exist
+if [ ! -f ".devcontainer/devcontainer.json" ]; then
+    echo "⚠️  No devcontainer config found. Run 'cargo run -- devcontainer generate' first."
+    exit 1
+fi
+
+echo "🚀 Starting dev container..."
+devcontainer up --workspace-folder . --remove-existing-container
+
+echo "🔗 Connecting to dev container..."
+devcontainer exec --workspace-folder . bash
+'''
+
 # =============================================================================
 # Clean
 # =============================================================================

@@ -1,6 +1,7 @@
 [![Build and Test](https://github.com/twitchax/microralph/actions/workflows/build.yml/badge.svg)](https://github.com/twitchax/microralph/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/twitchax/microralph/branch/main/graph/badge.svg)](https://codecov.io/gh/twitchax/microralph)
 [![Version](https://img.shields.io/crates/v/microralph.svg)](https://crates.io/crates/microralph)
+[![Downloads](https://img.shields.io/github/downloads/twitchax/microralph/total.svg)](https://github.com/twitchax/microralph/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # microralph
