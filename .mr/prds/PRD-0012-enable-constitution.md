@@ -27,7 +27,7 @@ acceptance_tests:
 - id: uat-002
   name: Constitution contains numbered example rules
   command: cargo make uat constitution_template
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: prd new reads and respects constitution
   command: cargo make uat constitution_prd_new
@@ -276,4 +276,16 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Test: `src/bootstrap.rs::test_bootstrap_creates_constitution`
   - Command: `cargo make uat constitution_bootstrap` (runs via nextest filter)
   - Verification: Test confirms `.mr/constitution.md` is created during bootstrap with expected content structure
+  - Result: Test passed successfully
+
+---
+
+## 2026-01-25 — uat-002 Verification
+- **UAT**: Constitution contains numbered example rules
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `src/init.rs::test_constitution_template_content`
+  - Command: `cargo make uat constitution_template` (runs via nextest filter)
+  - Verification: Test confirms constitution template contains numbered example rules (specifically checks for "1. **Acceptance tests must be codified**")
   - Result: Test passed successfully
