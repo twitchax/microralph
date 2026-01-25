@@ -102,7 +102,7 @@ tasks:
 - id: T-010
   title: Add exhaustive user flow documentation to README
   priority: 10
-  status: todo
+  status: done
   notes: Add a comprehensive section to README.md documenting the complete user flow, including all commands, workflows, configuration options, and typical usage patterns. This should be placed lower in the README after the quick-start content.  Keep it light and funny like the rest of the README.
 ---
 
@@ -309,3 +309,30 @@ microralph currently has no release infrastructure. To distribute the tool to us
   - No additional UATs can be verified at this time
   - All previously verified UATs (UAT-001 through UAT-008) remain passing
 - **UAT Results**: ✅ All UATs pass - installation documentation complete and functional
+
+## 2026-01-25 — T-010 Completed
+- **Task**: Add exhaustive user flow documentation to README
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive "User Flows" section to README.md (between "Constitution" and "Development")
+  - Documented 10+ complete workflow scenarios:
+    - Starting fresh (new project flow)
+    - Adding to existing (bootstrap flow)
+    - Day-to-day task loop flow
+    - Constitution-driven development
+    - Configuration management
+    - Editing PRDs mid-flight
+    - Troubleshooting failed tasks
+    - Finalizing and UAT verification
+    - Multi-PRD parallel workflows
+    - Dev containers for sandboxed development
+  - Added "Quick Reference: Command Cheat Sheet" table (20+ commands)
+  - Added "Common Workflows: Real-World Scenarios" section (6 scenarios with copy-paste commands)
+  - Added "Tips and Tricks" section with 10 actionable best practices
+  - Maintained light and funny tone consistent with existing README (e.g., "if you're feeling spicy", "admire your git history")
+  - All code examples are runnable and reference actual microralph commands
+  - Section totals ~350 lines of exhaustive documentation
+  - Ran `cargo make uat` - all 304 tests pass
+- **Opportunistic UAT Verification**:
+  - No UATs can be verified at this time - all UATs (UAT-001 through UAT-008) already verified in previous tasks
+- **UAT Results**: ✅ All UATs pass - comprehensive user flow documentation added to README

@@ -333,6 +333,397 @@ Constitution violations are **informational, not blocking**:
 - Violations provide feedback but don't fail builds or prevent commits
 - This allows flexibility while maintaining visibility into governance compliance
 
+## User Flows
+
+### The Complete microralph Experience
+
+Let's walk through every way you can use microralph, from "I just heard about this" to "I'm shipping features like a boss."
+
+#### Starting Fresh: The New Project Flow
+
+You've got a brilliant idea and zero code. Here's how microralph helps you ralph it into existence:
+
+```bash
+# 1. Initialize your project
+mkdir my-awesome-project
+cd my-awesome-project
+git init
+mr init                          # Creates .mr/ structure, templates, and AGENTS.md
+
+# 2. (Optional) Specify a language if not Rust
+mr init --language python        # or node, go, java
+
+# 3. Create your first PRD
+mr suggest                        # Get 5 AI-generated suggestions (pick one or ignore)
+mr new add-cli-parser            # Guided Q/A creates .mr/prds/PRD-0001-add-cli-parser.md
+
+# 4. Run the loop until it's done
+mr run                           # Agent implements T-001, runs tests, commits
+mr run                           # Agent implements T-002, runs tests, commits
+mr run                           # ... repeat until all tasks done
+
+# 5. Check progress anytime
+mr status                        # Show what's done, what's left
+mr list                          # Regenerate .mr/PRDS.md index
+
+# 6. Finalize when complete
+mr finalize PRD-0001             # Mark PRD as done, append summary
+```
+
+**Pro tip**: Let `mr run` loop until the PRD is finished. Each run does one task and exits—no context bloat, no forgotten instructions.
+
+---
+
+#### Adding to Existing: The Bootstrap Flow
+
+You've got a mature codebase but want to ralph new features onto it:
+
+```bash
+# 1. Bootstrap existing repo
+cd my-existing-project
+mr bootstrap                     # Scans repo, creates .mr/, generates starter PRDs
+
+# 2. Review what was generated
+mr list                          # See auto-generated PRDs
+cat .mr/PRDS.md                  # Human-readable index
+
+# 3. Edit or create new PRDs
+mr edit PRD-0001 "Split T-003 into two tasks"  # LLM helps you edit
+mr new add-auth                  # Create new PRD for auth feature
+
+# 4. Run tasks
+mr run                           # Picks highest-priority task from active PRDs
+mr run PRD-0002                  # Force run from specific PRD
+
+# 5. Stream for long tasks (optional)
+mr run --stream                  # Watch the agent work in real-time
+```
+
+**Pro tip**: Use `mr suggest` after bootstrapping to get fresh ideas based on your codebase—it's like pair programming with an overenthusiastic intern who actually reads your TODO comments.
+
+---
+
+#### Day-to-Day: The Task Loop Flow
+
+You're in the flow. PRDs are planned, tasks are queued. Here's your daily routine:
+
+```bash
+# Morning: Check what's up
+mr status                        # "3 active PRDs, 12 tasks remaining"
+
+# Pick your battle
+mr run PRD-0003                  # Work on specific PRD
+mr run                           # Let microralph pick highest priority
+
+# Agent does the work:
+# - Reads PRD and task details
+# - Implements changes
+# - Runs `cargo make uat` (or equivalent)
+# - Updates PRD status and History
+# - Commits with standardized message
+
+# Rinse and repeat
+mr run && mr run && mr run       # Chain 'em if you're feeling spicy
+
+# End of day: Survey the damage
+mr status
+git log --oneline -10            # See what the agent committed
+```
+
+**Pro tip**: Use `mr run --stream` when you're actively watching—you'll see the agent's thought process unfold in real-time. Use plain `mr run` when you're grabbing coffee.
+
+---
+
+#### Advanced: Constitution-Driven Development
+
+You want to enforce project rules (e.g., "All tests must use nextest," "No XML config blobs"). Enter the Constitution:
+
+```bash
+# 1. Edit your constitution
+vim .mr/constitution.md          # Or use the LLM assistant:
+mr constitution edit "Add rule: all functions must have doc comments"
+
+# 2. PRD creation respects the constitution
+mr new add-logging               # Agent asks about tracing vs println because constitution says so
+
+# 3. Task execution logs violations
+mr run                           # If agent violates constitution, it notes it in History
+                                 # (but doesn't block—violations are informational)
+
+# 4. Check compliance
+grep -r "Constitution" .mr/prds/ # See where violations were noted
+```
+
+**Pro tip**: The constitution is git-tracked, so it evolves with your project. Update it as you learn what patterns work.
+
+---
+
+#### Configuration: Making microralph Yours
+
+Don't like the defaults? Tweak them:
+
+```bash
+# Global CLI flags (override everything)
+mr run --runner copilot --model claude-sonnet-4-20250514 --stream
+
+# Persistent config (set once, forget)
+cat > .mr/config.toml <<EOF
+runner = "copilot"
+model = "gpt-5-mini"
+permission_mode = "yolo"          # Auto-approve all permissions (YOLO mode)
+timeout_minutes = 60
+EOF
+
+# Now `mr run` uses your config
+mr run                           # Uses gpt-5-mini, auto-approves, times out after 60min
+```
+
+**Available runners**:
+- `copilot` (default) — Uses `gh copilot` CLI (requires `gh` and Copilot subscription)
+- More runners coming soon (Claude, Gemini, etc.)
+
+**Permission modes**:
+- `manual` (default) — Agent asks before dangerous operations
+- `yolo` — Auto-approve everything (great for trusted PRDs, terrible for unknown code)
+
+---
+
+#### Editing PRDs: When Plans Change
+
+PRDs aren't set in stone. Life happens. Scope creeps. Here's how to adapt:
+
+```bash
+# Light edits: Just open the file
+vim .mr/prds/PRD-0005-add-tests.md   # Change task priorities, add notes
+
+# Heavy edits: Let the LLM help
+mr edit PRD-0005 "Split T-008 into three tasks: unit tests, integration tests, E2E tests"
+# Agent asks clarifying questions, updates the PRD
+
+# Context-heavy edits: Provide upfront context
+mr edit PRD-0005 --context "The auth system changed, update all tasks to use JWT"
+# Agent uses context to guide questions
+```
+
+**Pro tip**: Don't delete tasks—mark them `status: parked` instead. The History section is your audit trail.
+
+---
+
+#### Troubleshooting: When Things Go Sideways
+
+Agents aren't perfect. Here's how to recover:
+
+```bash
+# Task failed? Check the History
+cat .mr/prds/PRD-0003-add-auth.md  # Scroll to History section
+# Look for "❌ Failed" entries with failure details
+
+# Retry the same task
+mr run PRD-0003                    # Agent reads History, tries a different approach
+
+# Skip a task manually
+vim .mr/prds/PRD-0003-add-auth.md  # Change task status from `todo` to `parked`
+mr run                             # Moves to next task
+
+# Check what the agent actually did
+git log -1 --stat                  # See last commit
+git diff HEAD~1                    # Review changes
+
+# Revert if needed
+git reset --hard HEAD~1            # Undo last commit (if not pushed)
+mr run                             # Try again
+```
+
+**Pro tip**: The History section is gold. If a task keeps failing, read past attempts—the agent learns from its mistakes (kinda).
+
+---
+
+#### Finalizing: Closing the Loop
+
+All tasks done? Time to wrap it up:
+
+```bash
+# 1. Verify all tasks complete
+mr status                        # Should show "0 tasks remaining"
+
+# 2. Run UAT verification
+mr run PRD-0003                  # If UATs are unverified, agent enters verification loop
+                                 # For each UAT: verify, create test, or opt-out
+
+# 3. Finalize the PRD
+mr finalize PRD-0003             # Marks as `done`, appends summary to History
+
+# 4. Celebrate
+git log --oneline --graph        # Admire your git history
+mr list                          # All green checkmarks
+```
+
+**Pro tip**: UATs (User Acceptance Tests) are defined in PRD frontmatter. They must be verified before finalization. If you skip verification, microralph won't let you finalize.
+
+---
+
+#### Multi-PRD Juggling: Parallel Workflows
+
+Got multiple PRDs? microralph handles it:
+
+```bash
+# Create multiple PRDs
+mr new add-auth
+mr new refactor-db
+mr new fix-ui-bugs
+
+# microralph picks highest-priority task across ALL active PRDs
+mr run                           # Might pick T-001 from PRD-0005 (priority 1)
+mr run                           # Might pick T-002 from PRD-0003 (priority 2)
+
+# Force work on specific PRD
+mr run PRD-0004                  # Only run tasks from this PRD
+
+# Check progress across all PRDs
+mr status                        # Shows status of all active PRDs
+```
+
+**Pro tip**: Use priority numbers to control execution order. Priority 1 = highest. If two tasks have the same priority, microralph picks the older PRD first.
+
+---
+
+#### Dev Containers: Sandboxed Ralph-ing
+
+Worried about AI-generated code trashing your machine? Use dev containers:
+
+```bash
+# 1. Generate dev container config
+mr devcontainer generate         # Analyzes repo, creates .devcontainer/devcontainer.json
+
+# 2. Open in container (VSCode)
+# VSCode will prompt: "Reopen in Container" → Click it
+
+# 3. Or use CLI
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . bash
+
+# 4. Ralph safely inside the sandbox
+mr run                           # All changes isolated to container
+```
+
+**Pro tip**: Dev containers also ensure consistent tooling across your team. No more "works on my machine" excuses.
+
+---
+
+#### Flags and Options: Power User Mode
+
+Combine flags for maximum control:
+
+```bash
+# Verbose mode (see all the internals)
+mr run --verbose
+
+# Quiet mode (just the facts)
+mr run --quiet
+
+# Custom model for expensive tasks
+mr run --model claude-opus-4-20250514
+
+# Stream + specific PRD + custom model
+mr run PRD-0003 --stream --model gpt-5.2-codex --verbose
+
+# List with custom output
+mr list --verbose                # More details in PRDS.md
+```
+
+**Pro tip**: `--verbose` shows token usage, model calls, and timing info. Great for debugging or cost tracking.
+
+---
+
+### Quick Reference: Command Cheat Sheet
+
+| **Scenario** | **Command** | **What It Does** |
+|--------------|-------------|------------------|
+| Start new project | `mr init` | Creates `.mr/` structure |
+| Bootstrap existing | `mr bootstrap` | Scans repo, generates PRDs |
+| Get AI suggestions | `mr suggest` | Analyzes codebase, suggests 5 PRDs |
+| Create PRD | `mr new <slug>` | Guided Q/A creates PRD |
+| Create PRD with context | `mr new <slug> --context "..."` | Skips some questions |
+| Edit PRD | `mr edit <id> "<request>"` | LLM helps edit PRD |
+| Edit constitution | `mr constitution edit "<request>"` | LLM updates project rules |
+| Run next task | `mr run` | Picks highest-priority task |
+| Run from specific PRD | `mr run <id>` | Only this PRD's tasks |
+| Stream output | `mr run --stream` | Watch agent work live |
+| Check progress | `mr status` | Summary of all PRDs |
+| List PRDs | `mr list` | Regenerates index |
+| Finalize PRD | `mr finalize <id>` | Mark done, append summary |
+| Reindex | `mr reindex` | Fix PRD cross-links |
+| Generate dev container | `mr devcontainer generate` | Create `.devcontainer/devcontainer.json` |
+
+---
+
+### Common Workflows: Real-World Scenarios
+
+#### "I want to add a feature to my app"
+
+```bash
+mr new add-user-profiles
+mr run && mr run && mr run       # Until done
+mr finalize PRD-0007
+```
+
+#### "I bootstrapped and got too many PRDs"
+
+```bash
+mr list                          # See all PRDs
+vim .mr/prds/PRD-0003-*.md       # Change status to `parked`
+mr run                           # Only runs active PRDs
+```
+
+#### "A task keeps failing"
+
+```bash
+cat .mr/prds/PRD-0005-*.md       # Read History section
+mr run PRD-0005 --verbose        # See detailed failure logs
+# Manually fix the issue, then:
+vim .mr/prds/PRD-0005-*.md       # Update task notes with hints
+mr run PRD-0005                  # Try again with new context
+```
+
+#### "I want to see what the agent is thinking"
+
+```bash
+mr run --stream --verbose        # Full transparency
+```
+
+#### "I need to enforce a coding standard"
+
+```bash
+mr constitution edit "All functions must have type hints"
+mr run                           # Agent respects constitution
+```
+
+#### "I want to ralph faster"
+
+```bash
+# Use faster model for simple tasks
+mr run --model gpt-5-mini
+
+# Use yolo mode (skip permission prompts)
+echo 'permission_mode = "yolo"' >> .mr/config.toml
+mr run
+```
+
+---
+
+### Tips and Tricks
+
+- **Don't fight the loop**: Let `mr run` do its thing. Each invocation is cheap (context-wise). Run it 100 times if needed.
+- **Read the History**: Failed tasks leave breadcrumbs. The agent learns from past attempts.
+- **Use priorities wisely**: Lower numbers = higher priority. Use priority 1 for blocking tasks.
+- **Stream when debugging**: `--stream` lets you see failures as they happen.
+- **Constitution is your friend**: Define rules once, enforce everywhere.
+- **Dev containers for safety**: Sandbox AI changes until you trust them.
+- **Commit often**: Each `mr run` commits on success. Use git branches for risky PRDs.
+- **Park, don't delete**: Mark tasks as `parked` instead of deleting. You might need them later.
+
+---
+
 ## Development
 
 Most dev workflows run via `cargo make`.
