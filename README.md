@@ -78,6 +78,55 @@ Each `mr run` invocation:
 
 ## Installation
 
+### Pre-built Binaries (Recommended)
+
+Download pre-built binaries from [GitHub Releases](https://github.com/twitchax/microralph/releases). Available for:
+- **Linux x86_64** (`mr-linux`)
+- **macOS ARM** (`mr-macos`)
+- **Windows x86_64** (`mr-windows.exe`)
+- **WASM32-WASIP2** (`mr.wasm`)
+
+#### Linux / macOS
+
+```bash
+# Download the latest release binary (replace VERSION with actual version, e.g., v0.1.0)
+curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr-linux -o mr
+# or for macOS ARM:
+# curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr-macos -o mr
+
+# Make it executable
+chmod +x mr
+
+# Move to a directory in your PATH
+sudo mv mr /usr/local/bin/
+
+# Verify installation
+mr --version
+```
+
+#### Windows
+
+1. Download `mr-windows.exe` from the [releases page](https://github.com/twitchax/microralph/releases)
+2. Rename to `mr.exe`
+3. Move to a directory in your PATH (e.g., `C:\Program Files\microralph\`)
+4. Open a new terminal and verify with `mr --version`
+
+#### WASM (with wasmtime)
+
+```bash
+# Install wasmtime if not present
+curl https://wasmtime.dev/install.sh -sSf | bash
+
+# Download the WASM binary
+curl -L https://github.com/twitchax/microralph/releases/download/VERSION/mr.wasm -o mr.wasm
+
+# Run with wasmtime
+wasmtime mr.wasm -- --version
+
+# Optional: Create an alias
+echo 'alias mr="wasmtime /path/to/mr.wasm --"' >> ~/.bashrc
+```
+
 ### Cargo
 
 ```bash

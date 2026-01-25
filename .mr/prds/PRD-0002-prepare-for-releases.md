@@ -97,7 +97,7 @@ tasks:
 - id: T-009
   title: Update README with installation instructions for downloading/unpacking releases
   priority: 9
-  status: todo
+  status: done
   notes: Add section to README.md explaining how to download pre-built binaries from GitHub Releases, unpack them, and add to PATH. Include instructions for all supported platforms.
 - id: T-010
   title: Add exhaustive user flow documentation to README
@@ -289,3 +289,23 @@ microralph currently has no release infrastructure. To distribute the tool to us
   - No additional UATs can be verified at this time
   - All previously verified UATs (UAT-001 through UAT-008) remain passing
 - **UAT Results**: ✅ All UATs pass - unified release pipeline implemented and functional
+
+## 2026-01-25 — T-009 Completed
+- **Task**: Update README with installation instructions for downloading/unpacking releases
+- **Status**: ✅ Done
+- **Changes**:
+  - Enhanced README.md Installation section (lines 79-138) with pre-built binary instructions
+  - Added "Pre-built Binaries (Recommended)" section before Cargo/Source options
+  - Included instructions for all four supported platforms:
+    - Linux x86_64 with curl + chmod + mv to PATH
+    - macOS ARM with curl + chmod + mv to PATH
+    - Windows with manual download + rename + PATH setup
+    - WASM32-WASIP2 with wasmtime runtime instructions
+  - Provided example URLs using VERSION placeholder for releases page
+  - Added verification steps (`mr --version`) for each platform
+  - Maintained existing Cargo and From Source sections
+  - Ran `cargo make uat` - all 304 tests pass
+- **Opportunistic UAT Verification**:
+  - No additional UATs can be verified at this time
+  - All previously verified UATs (UAT-001 through UAT-008) remain passing
+- **UAT Results**: ✅ All UATs pass - installation documentation complete and functional
