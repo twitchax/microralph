@@ -1893,4 +1893,80 @@ Test PRD.
             "Successful verification History entries are manually appended by the runner, not by the loop"
         );
     }
+
+    #[test]
+    fn test_constitution_violation_logging() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a run_task.md prompt that includes constitution placeholder.
+        let prompt_content = r#"Execute task {{next_task_id}} from {{prd_path}}
+
+{{#if constitution}}
+# Constitution
+
+{{constitution}}
+
+**Note**: When appending History entries, include a "Constitution Compliance" section if any rules were violated.
+{{/if}}"#;
+        std::fs::write(prompts_dir.join("run_task.md"), prompt_content).unwrap();
+
+        // Create a constitution file with example rules.
+        let constitution_content = r#"# Constitution
+
+## Purpose
+Project governance and best practices.
+
+## Rules
+1. **Acceptance tests must be codified** — One-off acceptance tests are unacceptable.
+2. **Use semantic versioning** — All releases must follow semver.
+"#;
+        std::fs::write(
+            root.join(".mr").join("constitution.md"),
+            constitution_content,
+        )
+        .unwrap();
+
+        // Create a test PRD with a task.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001-test.md");
+
+        // Build the prompt for the task.
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001");
+
+        // Verify the constitution is included in the prompt.
+        assert!(
+            prompt.contains("Acceptance tests must be codified"),
+            "Constitution content should be included in task execution prompt"
+        );
+        assert!(
+            prompt.contains("Use semantic versioning"),
+            "Constitution content should be included in task execution prompt"
+        );
+
+        // Verify the prompt instructs the runner to log violations.
+        assert!(
+            prompt.contains("Constitution Compliance"),
+            "Prompt should instruct runner to log constitution violations"
+        );
+    }
 }

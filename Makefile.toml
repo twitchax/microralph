@@ -119,6 +119,52 @@ workspace = false
 dependencies = ["test"]
 
 # =============================================================================
+# Constitution UATs (PRD-0012)
+# =============================================================================
+
+[tasks.constitution_bootstrap]
+# UAT-001: Bootstrap creates initial constitution file
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_bootstrap_creates_constitution"]
+
+[tasks.constitution_template]
+# UAT-002: Constitution contains numbered example rules
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_constitution_template_content"]
+
+[tasks.constitution_prd_new]
+# UAT-003: prd new reads and respects constitution
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_constitution_prd_new"]
+
+[tasks.constitution_prd_finalize]
+# UAT-004: prd finalize reads and respects constitution
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_constitution_prd_finalize"]
+
+[tasks.constitution_edit]
+# UAT-005: constitution edit command updates via LLM
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_constitution_edit"]
+
+[tasks.constitution_violation_logging]
+# UAT-006: Runner logs violations in PRD history
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "test_constitution_violation_logging"]
+
+# =============================================================================
 # CI Pipeline
 # =============================================================================
 
