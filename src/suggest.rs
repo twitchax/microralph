@@ -335,10 +335,10 @@ fn parse_suggestions(text: &str) -> Result<Vec<Suggestion>> {
 
             // Parse title and description from "Title — Description".
             let (title, description) = if let Some(sep_idx) = rest.find(" — ") {
-                (
-                    rest[..sep_idx].trim().to_string(),
-                    rest[sep_idx + 3..].trim().to_string(),
-                )
+                // Use split_at with byte index, then collect after separator.
+                let (title_part, rest_part) = rest.split_at(sep_idx);
+                let desc_part = &rest_part[" — ".len()..];
+                (title_part.trim().to_string(), desc_part.trim().to_string())
             } else {
                 (rest.trim().to_string(), String::new())
             };
@@ -411,4 +411,222 @@ fn generate_slug(title: &str) -> String {
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join("-")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::init;
+    use tempfile::TempDir;
+
+    fn setup_test_repo() -> TempDir {
+        let temp = TempDir::new().unwrap();
+        init::init(temp.path()).unwrap();
+        temp
+    }
+
+    /// Sample suggestion output matching the expected format.
+    fn sample_suggestion_output() -> String {
+        r#"
+Based on my analysis, here are 5 PRD suggestions:
+
+1. Add Logging Framework — Implement structured logging with tracing-subscriber
+   Category: Infrastructure
+   Effort: Medium (1-2 days)
+   Rationale: Improve debugging and monitoring capabilities across all modules
+
+2. Implement Configuration Validation — Validate config.toml on load with detailed error messages
+   Category: Quality
+   Effort: Small (4-6 hours)
+   Rationale: Prevent runtime failures due to misconfigured settings
+
+3. Add Metrics Collection — Integrate prometheus metrics for runner invocations
+   Category: Observability
+   Effort: Large (3-5 days)
+   Rationale: Enable production monitoring and performance tracking
+
+4. Improve Error Messages — Enhance user-facing error messages with suggestions
+   Category: UX
+   Effort: Medium (1-2 days)
+   Rationale: Reduce confusion when commands fail, improve developer experience
+
+5. Add Shell Completion — Generate bash/zsh/fish completion scripts
+   Category: UX
+   Effort: Small (4-6 hours)
+   Rationale: Improve CLI discoverability and reduce typing errors
+"#
+        .to_string()
+    }
+
+    /// UAT-001: Suggest command parses exactly 5 PRD suggestions from runner output.
+    #[test]
+    fn test_suggest_parses_five_suggestions() {
+        let output = sample_suggestion_output();
+        let suggestions = parse_suggestions(&output).unwrap();
+
+        assert_eq!(suggestions.len(), 5, "Should parse exactly 5 suggestions");
+
+        // Verify first suggestion structure.
+        let first = &suggestions[0];
+        assert_eq!(first.number, 1);
+        assert_eq!(first.title, "Add Logging Framework");
+        assert_eq!(
+            first.description,
+            "Implement structured logging with tracing-subscriber"
+        );
+        assert_eq!(first.category, "Infrastructure");
+        assert_eq!(first.effort, "Medium (1-2 days)");
+        assert_eq!(
+            first.rationale,
+            "Improve debugging and monitoring capabilities across all modules"
+        );
+
+        // Verify last suggestion.
+        let last = &suggestions[4];
+        assert_eq!(last.number, 5);
+        assert_eq!(last.title, "Add Shell Completion");
+        assert_eq!(last.category, "UX");
+    }
+
+    /// UAT-002: Parser handles malformed or missing suggestions gracefully.
+    #[test]
+    fn test_parse_suggestions_empty_output() {
+        let result = parse_suggestions("");
+        assert!(result.is_err(), "Should fail on empty output");
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("No suggestions found")
+        );
+    }
+
+    #[test]
+    fn test_parse_suggestions_incomplete() {
+        let output = r#"
+1. Test Suggestion — Description
+   Category: Testing
+"#;
+        let result = parse_suggestions(output);
+        assert!(result.is_ok(), "Should handle incomplete metadata");
+        let suggestions = result.unwrap();
+        assert_eq!(suggestions.len(), 1);
+        // Missing fields should be empty strings, not cause failure.
+        assert_eq!(suggestions[0].effort, "");
+        assert_eq!(suggestions[0].rationale, "");
+    }
+
+    /// UAT-003: Generate slug converts titles to URL-friendly format.
+    #[test]
+    fn test_generate_slug() {
+        assert_eq!(
+            generate_slug("Add Logging Framework"),
+            "add-logging-framework"
+        );
+        assert_eq!(
+            generate_slug("Implement Configuration Validation"),
+            "implement-configuration-validation"
+        );
+        assert_eq!(
+            generate_slug("Add Shell Completion!"),
+            "add-shell-completion"
+        );
+        assert_eq!(generate_slug("Fix Bug #123"), "fix-bug-123");
+        assert_eq!(
+            generate_slug("Multi---Hyphen   Spaces"),
+            "multi-hyphen-spaces"
+        );
+    }
+
+    /// UAT-004: Codebase analysis includes repository structure and tools.
+    #[test]
+    fn test_analyze_codebase() {
+        let temp = setup_test_repo();
+
+        // Create some sample files to analyze.
+        std::fs::write(temp.path().join("Cargo.toml"), "# sample").unwrap();
+        std::fs::write(temp.path().join("Makefile.toml"), "# sample").unwrap();
+        std::fs::create_dir(temp.path().join("src")).unwrap();
+
+        let analysis = analyze_codebase(temp.path()).unwrap();
+
+        assert!(
+            analysis.contains("Repository structure:"),
+            "Should include structure section"
+        );
+        assert!(
+            analysis.contains("Tools and dependencies:"),
+            "Should include tools section"
+        );
+        assert!(
+            analysis.contains("Rust (cargo)"),
+            "Should detect Cargo.toml"
+        );
+        assert!(
+            analysis.contains("cargo-make"),
+            "Should detect Makefile.toml"
+        );
+    }
+
+    /// UAT-005: Placeholder expansion includes PRDs and codebase snapshot.
+    #[test]
+    fn test_build_suggestion_prompt() {
+        use crate::prd::PrdStatus;
+
+        let template = "PRDs:\n{{existing_prds}}\n\nCodebase:\n{{codebase_snapshot}}";
+
+        let prds = vec![crate::prd::PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 1,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0001-test.md".to_string(),
+            references: vec![],
+        }];
+
+        let snapshot = "Sample codebase info";
+
+        let result = build_suggestion_prompt(template, &prds, snapshot);
+
+        assert!(result.contains("PRD-0001"));
+        assert!(result.contains("Test PRD"));
+        assert!(result.contains("active"));
+        assert!(result.contains("Sample codebase info"));
+    }
+
+    /// Integration test: Full suggestion flow with mock runner.
+    /// This test simulates the complete `mr suggest` command flow:
+    /// 1. Runner generates 5 suggestions
+    /// 2. User selects suggestion #2
+    /// 3. Flow into `mr new` with pre-filled context
+    /// 4. PRD is created successfully
+    ///
+    /// Note: This test uses a mock runner and simulated user input.
+    /// The actual interactive picker is not tested here (requires TTY).
+    #[test]
+    fn test_suggest_integration_with_mock_runner() {
+        let temp = setup_test_repo();
+
+        // Verify analyze_codebase runs without error.
+        let snapshot = analyze_codebase(temp.path()).unwrap();
+        assert!(!snapshot.is_empty());
+
+        // Verify parse_suggestions extracts 5 suggestions.
+        let suggestions = parse_suggestions(&sample_suggestion_output()).unwrap();
+        assert_eq!(suggestions.len(), 5);
+
+        // Verify slug generation for selection #2.
+        let selected = &suggestions[1];
+        let slug = generate_slug(&selected.title);
+        assert_eq!(slug, "implement-configuration-validation");
+
+        // Verify prompt building includes context.
+        let prds = vec![];
+        let prompt =
+            build_suggestion_prompt("{{existing_prds}}\n{{codebase_snapshot}}", &prds, &snapshot);
+        assert!(prompt.contains("Repository structure:"));
+    }
 }

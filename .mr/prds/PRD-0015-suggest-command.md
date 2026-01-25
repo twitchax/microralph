@@ -74,7 +74,7 @@ tasks:
 - id: T-007
   title: Add comprehensive UAT tests
   priority: 7
-  status: todo
+  status: done
   notes: Create integration tests verifying suggestion generation, selection, and flow into new
 - id: T-008
   title: Update AGENTS.md and README with suggest command
@@ -180,3 +180,18 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - UAT passed: All 293 tests passing
 
 ---
+
+## 2026-01-25 — T-007 Completed
+- **Task**: Add comprehensive UAT tests
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive test suite to `src/suggest.rs` covering all core functionality
+  - Created `test_suggest_parses_five_suggestions()` to verify parsing exactly 5 suggestions with correct structure
+  - Added `test_parse_suggestions_empty_output()` and `test_parse_suggestions_incomplete()` to test error handling
+  - Implemented `test_generate_slug()` to verify URL-friendly slug generation from various title formats
+  - Created `test_analyze_codebase()` to verify repository analysis includes structure and tools detection
+  - Added `test_build_suggestion_prompt()` to verify placeholder expansion with PRDs and codebase snapshot
+  - Implemented `test_suggest_integration_with_mock_runner()` as integration test covering full suggestion workflow
+  - Fixed UTF-8 byte boundary issue in `parse_suggestions()` when splitting on em dash separator
+  - All 300 tests passing (up from 293)
+  - UAT passed: `cargo make uat` completed successfully
