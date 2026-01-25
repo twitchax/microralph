@@ -66,7 +66,7 @@ tasks:
 - id: T-005
   title: Implement token usage parsing for Claude CLI output
   priority: 5
-  status: todo
+  status: done
   notes: Research actual Claude CLI output format. Note that as of late 2025, Claude CLI does not provide built-in token usage in output. May need to use `--output-format json` and parse response, or rely on third-party tools.
 
 - id: T-006
@@ -199,3 +199,27 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
     - Properly handles Manual permission mode (no special flags)
   - Comprehensive unit tests verify all flags and modes (lines 419-483)
   - UAT passes: All 283 tests pass
+
+---
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Implement token usage parsing for Claude CLI output
+- **Status**: ✅ Done
+- **Changes**:
+  - Discovered that Claude CLI supports `--output-format json` which includes a `usage` object with token information
+  - Fixed invalid `--no-ask-user` flag: replaced with `--permission-mode dontAsk` (correct Claude CLI syntax)
+  - Updated `build_args` method in `src/runner/claude.rs`:
+    - Added `--output-format json` to all CLI invocations
+    - Replaced `--no-ask-user` with `--permission-mode dontAsk`
+  - Implemented `parse_usage` function to extract token usage from JSON:
+    - Parses `input_tokens` and `output_tokens` from JSON response
+    - Calculates `total_tokens` when both are available
+    - Returns `None` for invalid JSON or missing usage data
+  - Implemented `extract_result_from_json` function to extract response text:
+    - Extracts the `result` field from JSON output
+    - Falls back to raw text if JSON parsing fails
+  - Updated `execute` and `execute_streaming` methods to use new JSON parsing functions
+  - Updated all unit tests to reflect new flags and behavior
+  - Added comprehensive tests for token usage parsing and JSON extraction
+  - All 288 tests pass
+  - UAT passes successfully

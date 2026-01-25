@@ -132,9 +132,10 @@ impl ClaudeRunner {
             }
         }
 
-        // Disable ask_user tool for autonomous operation.
+        // Disable ask_user tool for autonomous operation via permission mode.
         if self.config.no_ask_user {
-            args.push("--no-ask-user".to_string());
+            args.push("--permission-mode".to_string());
+            args.push("dontAsk".to_string());
         }
 
         // Model selection.
@@ -142,6 +143,10 @@ impl ClaudeRunner {
             args.push("--model".to_string());
             args.push(model.clone());
         }
+
+        // Request JSON output format for token usage parsing.
+        args.push("--output-format".to_string());
+        args.push("json".to_string());
 
         args
     }
@@ -157,16 +162,64 @@ impl ClaudeRunner {
 
     /// Attempts to parse token usage information from Claude CLI output.
     ///
-    /// Note: As of early 2025, Claude CLI does not provide built-in token usage
-    /// statistics in its stdout output like Copilot CLI does. This function is
-    /// provided for future compatibility if the CLI adds this feature.
+    /// Claude CLI supports `--output-format json` which includes a `usage` object with:
+    /// - `input_tokens`: Number of input tokens
+    /// - `output_tokens`: Number of output tokens
+    /// - `cache_creation_input_tokens`: Tokens used for cache creation
+    /// - `cache_read_input_tokens`: Tokens read from cache
     ///
-    /// For now, it returns None. External tools like `ccusage` can be used for
-    /// token tracking.
-    fn parse_usage(_text: &str) -> Option<UsageInfo> {
-        // Claude CLI does not currently output token usage statistics directly.
-        // If this changes in the future, we can add parsing logic here.
-        None
+    /// This function parses the JSON output and extracts token usage.
+    fn parse_usage(text: &str) -> Option<UsageInfo> {
+        // Try to parse as JSON.
+        let json: serde_json::Value = serde_json::from_str(text).ok()?;
+
+        // Extract usage object.
+        let usage = json.get("usage")?;
+
+        let input_tokens = usage.get("input_tokens").and_then(|v| v.as_u64());
+
+        let output_tokens = usage.get("output_tokens").and_then(|v| v.as_u64());
+
+        let total_tokens = match (input_tokens, output_tokens) {
+            (Some(i), Some(o)) => Some(i + o),
+            _ => None,
+        };
+
+        // Return UsageInfo if we found at least one piece of information.
+        if input_tokens.is_some() || output_tokens.is_some() {
+            Some(UsageInfo {
+                input_tokens,
+                output_tokens,
+                total_tokens,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Extracts the actual response text from Claude CLI JSON output.
+    ///
+    /// When using `--output-format json`, Claude CLI returns:
+    /// ```json
+    /// {
+    ///   "type": "result",
+    ///   "result": "The actual response text...",
+    ///   "usage": {...},
+    ///   ...
+    /// }
+    /// ```
+    ///
+    /// This function extracts the `result` field and returns it as plain text.
+    fn extract_result_from_json(text: &str) -> String {
+        // Try to parse as JSON.
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(text)
+            && let Some(result) = json.get("result").and_then(|v| v.as_str())
+        {
+            return result.to_string();
+        }
+
+        // If parsing fails or result is missing, return original text.
+        text.to_string()
     }
 }
 
@@ -195,7 +248,8 @@ impl Runner for ClaudeRunner {
 
         // Add no-ask-user flag
         if self.config.no_ask_user {
-            parts.push("--no-ask-user".to_string());
+            parts.push("--permission-mode".to_string());
+            parts.push("dontAsk".to_string());
         }
 
         // Add model flag
@@ -237,7 +291,7 @@ impl Runner for ClaudeRunner {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-        let combined_output = if stderr.is_empty() {
+        let raw_output = if stderr.is_empty() {
             stdout.clone()
         } else if stdout.is_empty() {
             stderr.clone()
@@ -245,21 +299,25 @@ impl Runner for ClaudeRunner {
             format!("{}\n{}", stdout, stderr)
         };
 
-        // Try to parse usage information (currently returns None for Claude CLI).
-        let usage = Self::parse_usage(&combined_output);
+        // Parse usage information from JSON output.
+        let usage = Self::parse_usage(&raw_output);
+
+        // Extract the actual result text from JSON response.
+        let result_text = Self::extract_result_from_json(&raw_output);
 
         let success = output.status.success();
 
         tracing::debug!(
             exit_code = ?output.status.code(),
             success = success,
-            output_len = combined_output.len(),
+            raw_output_len = raw_output.len(),
+            result_len = result_text.len(),
             usage_present = usage.is_some(),
             "Claude CLI completed"
         );
 
         let mut runner_output = RunnerOutput {
-            text: combined_output,
+            text: result_text,
             success,
             usage: None,
         };
@@ -361,19 +419,23 @@ impl Runner for ClaudeRunner {
 
         let success = status.success();
 
-        // Try to parse usage information (currently returns None for Claude CLI).
+        // Parse usage information from JSON output.
         let usage = Self::parse_usage(&captured_output);
+
+        // Extract the actual result text from JSON response.
+        let result_text = Self::extract_result_from_json(&captured_output);
 
         tracing::debug!(
             exit_code = ?status.code(),
             success = success,
-            output_len = captured_output.len(),
+            raw_output_len = captured_output.len(),
+            result_len = result_text.len(),
             usage_present = usage.is_some(),
             "Claude CLI completed (streaming)"
         );
 
         let mut runner_output = RunnerOutput {
-            text: captured_output,
+            text: result_text,
             success,
             usage: None,
         };
@@ -423,7 +485,10 @@ mod tests {
         assert!(args.contains(&"-p".to_string()));
         assert!(args.contains(&"test prompt".to_string()));
         assert!(args.contains(&"--dangerously-skip-permissions".to_string()));
-        assert!(args.contains(&"--no-ask-user".to_string()));
+        assert!(args.contains(&"--permission-mode".to_string()));
+        assert!(args.contains(&"dontAsk".to_string()));
+        assert!(args.contains(&"--output-format".to_string()));
+        assert!(args.contains(&"json".to_string()));
     }
 
     #[test]
@@ -437,7 +502,10 @@ mod tests {
         assert!(args.contains(&"-p".to_string()));
         assert!(args.contains(&"test prompt".to_string()));
         assert!(!args.contains(&"--dangerously-skip-permissions".to_string()));
-        assert!(!args.contains(&"--no-ask-user".to_string()));
+        assert!(!args.contains(&"--permission-mode".to_string()));
+        assert!(!args.contains(&"dontAsk".to_string()));
+        assert!(args.contains(&"--output-format".to_string()));
+        assert!(args.contains(&"json".to_string()));
     }
 
     #[test]
@@ -492,6 +560,83 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_usage_from_json() {
+        let json_output = r#"{
+            "type": "result",
+            "subtype": "success",
+            "result": "The answer is 42",
+            "usage": {
+                "input_tokens": 1234,
+                "output_tokens": 56,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0
+            }
+        }"#;
+
+        let usage = ClaudeRunner::parse_usage(json_output).unwrap();
+
+        assert_eq!(usage.input_tokens, Some(1234));
+        assert_eq!(usage.output_tokens, Some(56));
+        assert_eq!(usage.total_tokens, Some(1290));
+    }
+
+    #[test]
+    fn test_parse_usage_missing_fields() {
+        let json_output = r#"{
+            "type": "result",
+            "usage": {
+                "input_tokens": 100
+            }
+        }"#;
+
+        let usage = ClaudeRunner::parse_usage(json_output).unwrap();
+
+        assert_eq!(usage.input_tokens, Some(100));
+        assert_eq!(usage.output_tokens, None);
+        assert_eq!(usage.total_tokens, None);
+    }
+
+    #[test]
+    fn test_extract_result_from_json() {
+        let json_output = r#"{
+            "type": "result",
+            "result": "Hello, world!",
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+            }
+        }"#;
+
+        let result = ClaudeRunner::extract_result_from_json(json_output);
+
+        assert_eq!(result, "Hello, world!");
+    }
+
+    #[test]
+    fn test_extract_result_from_invalid_json() {
+        let invalid_json = "This is not JSON";
+
+        let result = ClaudeRunner::extract_result_from_json(invalid_json);
+
+        assert_eq!(result, "This is not JSON");
+    }
+
+    #[test]
+    fn test_extract_result_missing_result_field() {
+        let json_output = r#"{
+            "type": "result",
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let result = ClaudeRunner::extract_result_from_json(json_output);
+
+        // Should return original text if result field is missing
+        assert_eq!(result, json_output);
+    }
+
+    #[test]
     fn test_format_command_display() {
         let runner = ClaudeRunner::with_model(Some("claude-sonnet-4".to_string()));
         let prompt = "test prompt";
@@ -503,8 +648,9 @@ mod tests {
         assert!(cmd_display.contains("claude"));
         // Should include permission flags
         assert!(cmd_display.contains("--dangerously-skip-permissions"));
-        // Should include no-ask-user flag
-        assert!(cmd_display.contains("--no-ask-user"));
+        // Should include permission mode
+        assert!(cmd_display.contains("--permission-mode"));
+        assert!(cmd_display.contains("dontAsk"));
         // Should include model
         assert!(cmd_display.contains("--model"));
         assert!(cmd_display.contains("claude-sonnet-4"));
