@@ -109,29 +109,20 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-## CLI Command Structure
+I'll review the recent changes to determine if any new conventions or patterns need to be documented.
 
-As of PRD-0009, the CLI has been streamlined for better ergonomics:
+The recent change added a constitution feature (`.mr/constitution.md`) that defines project governance rules. This is a new concept that agents should be aware of. Let me check if there are any additional patterns or the constitution file itself to understand the full context.
 
-### PRD Management Commands (Top-Level)
-- `mr new <slug>` — Create new PRD (formerly `mr prd new`)
-- `mr list` — List all PRDs (formerly `mr prd list`)
-- `mr edit <id> "<request>"` — Edit PRD (formerly `mr prd edit`)
-- `mr finalize <id>` — Finalize PRD (formerly `mr prd finalize`)
+The constitution file hasn't been created yet in the current repository (likely needs `mr init` to be run). However, based on the PRD completion, this is a new feature that agents should know about. Let me update the AGENTS.md file with this information.
 
-### Run Command
-- `mr run` — Execute next task from active PRD
-- `mr run <id>` — Execute next task from specific PRD (formerly `mr run --prd <id>`)
-- `mr run --stream` — Stream output in real-time
+Updated AGENTS.md with new constitution feature (PRD-0012). Added section explaining `.mr/constitution.md` purpose, integration with PRD workflows, and violation logging behavior.
 
-### Other Commands
-- `mr init` — Initialize .mr/ structure
-- `mr bootstrap` — Generate PRDs from existing repo
-- `mr status` — Show PRD/task status
-- `mr reindex` — Regenerate index
 
-### Output Behavior
-- LLM output now shows **tail** (last 500 chars) instead of beginning
-- Applies to both task execution and UAT verification loops
-- Improves debugging by surfacing errors and completion status
+
+Total usage est:        1 Premium request
+API time spent:         25s
+Total session time:     29s
+Total code changes:     +0 -0
+Breakdown by AI model:
+ claude-sonnet-4.5       89.1k in, 1.5k out, 75.4k cached (Est. 1 Premium request)
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

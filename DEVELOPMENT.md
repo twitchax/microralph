@@ -277,7 +277,7 @@ Check if tests require specific environment:
 
 ## Upcoming PRD / Change Ideas
 
-- Remove agent runner step in the task run step.  Instead, just add a thing to the task prompt that says "make sure to update AGENTS.md if needed".
+- Add a "rectify" command or something that overwrites the editable prompts / templates with the built in ones.  Should _not_ commit automatically, just overwrite the files so the user can see what changed.
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
 
 ## License

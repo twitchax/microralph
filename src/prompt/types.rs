@@ -40,6 +40,9 @@ pub enum PromptKind {
     /// PRD edit prompt for quick modifications.
     PrdEdit,
 
+    /// Constitution edit prompt for updating governance rules.
+    ConstitutionEdit,
+
     /// Language adaptation prompt for rewriting prompts/templates.
     AdaptLanguage,
 
@@ -67,6 +70,7 @@ impl PromptKind {
             Self::RunUatVerify => "run_uat_verify.md",
             Self::UpdateAgents => "update_agents.md",
             Self::PrdEdit => "prd_edit.md",
+            Self::ConstitutionEdit => "constitution_edit.md",
             Self::AdaptLanguage => "adapt_language.md",
             Self::Reindex => "reindex.md",
             Self::PickPrd => "pick_prd.md",
@@ -87,6 +91,7 @@ impl PromptKind {
             Self::RunUatVerify,
             Self::UpdateAgents,
             Self::PrdEdit,
+            Self::ConstitutionEdit,
             Self::AdaptLanguage,
             Self::Reindex,
             Self::PickPrd,
@@ -117,7 +122,7 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 14);
+        assert_eq!(all.len(), 15);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::UpdateAgents));
         assert!(all.contains(&PromptKind::PrdEdit));

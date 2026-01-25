@@ -7,6 +7,7 @@ mod bootstrap;
 mod changelog;
 mod colors;
 mod config;
+mod constitution_edit;
 mod init;
 mod prd;
 mod prd_edit;
@@ -153,6 +154,12 @@ enum Command {
     /// Show status of PRDs and tasks.
     Status,
 
+    /// Constitution management commands.
+    Constitution {
+        #[command(subcommand)]
+        command: ConstitutionCommand,
+    },
+
     /// Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
     Reindex {
         /// The runner to use for link verification/fixing.
@@ -166,6 +173,23 @@ enum Command {
         /// Stream runner output to stdout in real-time.
         #[arg(long)]
         stream: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ConstitutionCommand {
+    /// Edit the constitution via LLM-assisted modifications.
+    Edit {
+        /// The edit request (what changes to make).
+        request: String,
+
+        /// The runner to use for the edit session.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 }
 
@@ -238,6 +262,16 @@ fn main() -> Result<()> {
             tracing::info!("Showing status...");
             cmd_status()?;
         }
+        Some(Command::Constitution { command }) => match command {
+            ConstitutionCommand::Edit {
+                request,
+                runner,
+                model,
+            } => {
+                tracing::info!(runner = %runner, "Editing constitution...");
+                cmd_constitution_edit(&request, &runner, model.as_deref())?;
+            }
+        },
         Some(Command::Reindex {
             runner,
             model,
@@ -647,6 +681,75 @@ fn cmd_prd_edit(
         "  {}",
         colors::dim(&format!("Title: {}", result.prd.title()))
     );
+    println!(
+        "  {}",
+        colors::dim(&format!("Path: {}", result.path.display()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Q/A Rounds: {}", result.rounds))
+    );
+
+    if !result.qa_history.is_empty() {
+        println!(
+            "  {}",
+            colors::dim(&format!("Questions answered: {}", result.qa_history.len()))
+        );
+    }
+
+    Ok(())
+}
+
+/// Runs the `mr constitution edit` command.
+fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::with_model(model);
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    let config = constitution_edit::ConstitutionEditConfig {
+        root: &cwd,
+        request,
+    };
+
+    let stdin = std::io::stdin();
+    let mut stdin_lock = stdin.lock();
+    let stdout = std::io::stdout();
+    let mut stdout_lock = stdout.lock();
+
+    let result = constitution_edit::edit_constitution(
+        &config,
+        runner.as_ref(),
+        &mut stdin_lock,
+        &mut stdout_lock,
+    )?;
+
+    println!();
+    println!("{}", colors::success("Constitution edited successfully!"));
     println!(
         "  {}",
         colors::dim(&format!("Path: {}", result.path.display()))

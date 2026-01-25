@@ -110,6 +110,7 @@ fn get_default_prompt(kind: PromptKind) -> &'static str {
         PromptKind::RunUatVerify => init::PROMPT_RUN_UAT_VERIFY,
         PromptKind::UpdateAgents => init::PROMPT_UPDATE_AGENTS,
         PromptKind::PrdEdit => init::PROMPT_PRD_EDIT,
+        PromptKind::ConstitutionEdit => init::PROMPT_CONSTITUTION_EDIT,
         PromptKind::AdaptLanguage => init::PROMPT_ADAPT_LANGUAGE,
         PromptKind::Reindex => init::PROMPT_REINDEX,
         PromptKind::PickPrd => init::PROMPT_PICK_PRD,
@@ -267,13 +268,13 @@ mod tests {
         let missing = loader.missing_prompts();
 
         // All should be missing initially.
-        assert_eq!(missing.len(), 14);
+        assert_eq!(missing.len(), 15);
 
         // Create one prompt file.
         std::fs::write(prompts_dir.join("init.md"), "test").unwrap();
 
         let missing = loader.missing_prompts();
-        assert_eq!(missing.len(), 13);
+        assert_eq!(missing.len(), 14);
         assert!(!missing.contains(&PromptKind::Init));
     }
 

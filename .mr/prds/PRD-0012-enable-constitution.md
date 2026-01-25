@@ -59,7 +59,7 @@ tasks:
 - id: T-003
   title: Add constitution edit subcommand
   priority: 2
-  status: todo
+  status: done
   notes: Add `mr constitution edit <request>` command that invokes the runner/LLM to intelligently update the constitution based on natural language request.
 - id: T-004
   title: Load constitution in runner context
@@ -152,3 +152,30 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Test validates constitution content includes "# Constitution", "## Purpose", and "## Rules" sections
   - UAT pass: All 275 tests passed (1 new test added)
 - **UAT Verification Note**: UAT-001 (bootstrap creates constitution) and UAT-002 (constitution template) are now functionally complete and verified by unit tests (`test_bootstrap_creates_constitution` and `test_constitution_template_content`). However, the PRD specifies custom Makefile.toml targets (`cargo make uat constitution_bootstrap` and `cargo make uat constitution_template`) which don't exist yet. These UATs remain `unverified` status until those specific test targets are added to Makefile.toml.
+
+---
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Add constitution edit subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/constitution_edit.rs` module implementing `mr constitution edit <request>` command
+  - Added `ConstitutionEditConfig` and `ConstitutionEditResult` structs for configuration and results
+  - Implemented `edit_constitution()` function with Q/A flow similar to prd_edit
+  - Created `.mr/prompts/constitution_edit.md` prompt template with placeholders for request, content, and Q/A history
+  - Added `PROMPT_CONSTITUTION_EDIT` constant to `src/init.rs` with embedded default prompt
+  - Added `ConstitutionEdit` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Updated `get_default_prompt()` in `src/prompt/loader.rs` to include ConstitutionEdit case
+  - Added `Constitution` command with nested `Edit` subcommand to CLI in `src/main.rs`
+  - Added `ConstitutionCommand` enum with Edit variant
+  - Implemented `cmd_constitution_edit()` function in `src/main.rs` following same pattern as prd_edit
+  - Updated `test_prompt_loader_missing_prompts` to expect 15 prompts instead of 14
+  - UAT pass: All 277 tests passed
+- **Implementation Details**:
+  - Command signature: `mr constitution edit "<request>"`
+  - Supports optional `--runner` and `--model` flags
+  - Uses Q/A flow with max 3 rounds before forcing application
+  - Runner signals readiness with `READY_TO_APPLY` marker
+  - Extracts constitution content from markdown code blocks
+  - Writes updated constitution directly to `.mr/constitution.md`
+- **Notes**: UAT-005 (constitution edit command) is functionally implemented but remains `unverified` until custom Makefile.toml target `cargo make uat constitution_edit` is added.

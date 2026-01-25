@@ -1,0 +1,111 @@
+---
+id: PRD-0016
+title: Remove Automatic AGENTS.md Update Step
+status: draft
+owner: twitchax
+created: 2026-01-25
+updated: 2026-01-25
+principles:
+  - Simplify the task execution pipeline by removing redundant automation
+  - Empower agents to make holistic documentation updates without artificial constraints
+  - Reduce code complexity by eliminating single-purpose modules
+references: []
+acceptance_tests:
+  - id: uat-001
+    name: All existing UATs pass after changes
+    command: cargo make uat
+    uat_status: unverified
+  - id: uat-002
+    name: Task execution completes without calling update_agents_md
+    command: cargo run -- run PRD-0001 --task T-001
+    uat_status: unverified
+tasks:
+  - id: T-001
+    title: Remove update_agents_md() call from src/run.rs
+    priority: 1
+    status: todo
+    notes: Remove the call after task completion
+  - id: T-002
+    title: Remove update_agents_md() call from src/prd_new.rs
+    priority: 1
+    status: todo
+    notes: Remove the call after PRD creation
+  - id: T-003
+    title: Remove update_agents_md() call from src/bootstrap.rs
+    priority: 1
+    status: todo
+    notes: Remove the call after bootstrapping
+  - id: T-004
+    title: Delete the agents.rs module if unused
+    priority: 2
+    status: todo
+    notes: Remove src/agents.rs and its mod declaration
+  - id: T-005
+    title: Remove update_agents.md prompt creation from init.rs
+    priority: 2
+    status: todo
+    notes: Line 1469 in init.rs creates this prompt - remove it
+  - id: T-006
+    title: Delete .mr/prompts/update_agents.md file
+    priority: 2
+    status: todo
+    notes: Remove the prompt file from the repository
+  - id: T-007
+    title: Add AGENTS.md update reminder to run_task.md prompt
+    priority: 1
+    status: todo
+    notes: Add to numbered task list - "Update AGENTS.md if needed based on changes made"
+  - id: T-008
+    title: Add AGENTS.md update reminder to run_new_prd.md prompt in init.rs
+    priority: 1
+    status: todo
+    notes: Add reminder to the PRD creation prompt
+  - id: T-009
+    title: Add AGENTS.md update reminder to bootstrap_all.md prompt in init.rs
+    priority: 1
+    status: todo
+    notes: Add reminder to the bootstrap prompt
+  - id: T-010
+    title: Verify all prompts are updated in both init.rs and .md files
+    priority: 3
+    status: todo
+    notes: Ensure consistency between init.rs embedded prompts and .mr/prompts/*.md files
+---
+
+# Summary
+
+Remove the automatic `update_agents_md()` step that runs after task completion, PRD creation, and bootstrapping. Replace it with a simple reminder in the relevant prompts instructing agents to update AGENTS.md if their changes warrant documentation updates. This simplifies the codebase while giving agents more flexibility to update any part of AGENTS.md, not just an auto-managed section.
+
+# Problem
+
+The current implementation automatically calls `update_agents_md()` after three operations: task execution, PRD creation, and bootstrapping. This approach has several issues:
+
+1. It constrains updates to only an "auto-managed" section of AGENTS.md, preventing holistic documentation updates
+2. It adds unnecessary complexity with a dedicated module and prompt file
+3. It's unclear why this automation was added as a separate step rather than being part of the agent's general responsibilities
+4. It creates a rigid pattern that doesn't adapt well to different types of changes
+
+# Goals
+
+1. Remove all three invocations of `update_agents_md()` from the codebase
+2. Delete the `agents.rs` module and associated prompt file
+3. Add clear reminders to task execution, PRD creation, and bootstrap prompts instructing agents to update AGENTS.md if needed
+4. Give agents the freedom to update any section of AGENTS.md, not just an auto-managed section
+5. Maintain all existing UAT pass rates
+
+# Non-Goals (MVP)
+
+- Changing how AGENTS.md is structured or organized
+- Adding new documentation automation features
+- Modifying other auto-update mechanisms in the codebase
+
+# History
+
+
+
+Total usage est:        1 Premium request
+API time spent:         25s
+Total session time:     27s
+Total code changes:     +0 -0
+Breakdown by AI model:
+ claude-sonnet-4.5       20.0k in, 1.5k out, 11.8k cached (Est. 1 Premium request)
