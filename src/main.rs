@@ -15,6 +15,7 @@ mod prd_edit;
 mod prd_finalize;
 mod prd_new;
 mod prompt;
+mod qa_workflow;
 mod reindex;
 mod run;
 mod runner;

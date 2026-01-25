@@ -1,10 +1,10 @@
 ---
 id: PRD-0014
 title: Cleanup Pass - Refactoring and Documentation
-status: draft
+status: active
 owner: microralph
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 principles:
   - Extract clearly duplicated logic (e.g., handlebars helpers) to shared modules
   - Reduce clones where practical, especially in high-density areas like run.rs
@@ -22,7 +22,7 @@ tasks:
   - id: T-001
     title: Extract duplicated Q/A workflow patterns to shared modules
     priority: 1
-    status: todo
+    status: done
     notes: Focus on parse_questions, extract_prd_content, and prompt building logic across prd_new.rs, prd_edit.rs, and run.rs. Only extract if truly duplicated, not semi-duplicated with context-specific variations.
   - id: T-002
     title: Reduce unnecessary clones in run.rs
@@ -81,3 +81,19 @@ The codebase has grown organically and now contains:
 - Changing behavior or fixing unrelated bugs
 
 # History
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Extract duplicated Q/A workflow patterns to shared modules
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new `src/qa_workflow.rs` module with shared Q/A workflow utilities
+  - Extracted `QaPair` struct from `prd_new.rs` to shared module
+  - Extracted and unified `parse_questions()` function (supports multi-line questions)
+  - Extracted and unified `extract_prd_content()` function (robust version with ANSI stripping, code fence handling)
+  - Extracted `strip_ansi_escapes()` helper function
+  - Created two variants of answer collection: `collect_multiline_answers()` and `collect_singleline_answers()`
+  - Updated `prd_new.rs` to use shared module (uses multiline variant)
+  - Updated `prd_edit.rs` to use shared module (uses singleline variant)
+  - Updated `constitution_edit.rs` to import QaPair from shared module
+  - Added comprehensive tests in `qa_workflow.rs` covering all extracted functions
+  - UAT passed: All 312 tests pass after refactoring

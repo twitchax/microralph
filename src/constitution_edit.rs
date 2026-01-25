@@ -9,11 +9,11 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use crate::prd_new::QaPair;
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
+use crate::qa_workflow::QaPair;
 use crate::runner::{CopilotRunner, Runner};
 
 /// Maximum number of Q/A rounds before forcing application.

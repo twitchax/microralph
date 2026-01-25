@@ -15,20 +15,14 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::{CopilotRunner, Runner};
+use crate::qa_workflow::{self, QaPair};
+use crate::runner::Runner;
 
 /// Maximum number of Q/A rounds before forcing synthesis.
 const MAX_QA_ROUNDS: usize = 5;
 
 /// The ready signal from the runner.
 const READY_SIGNAL: &str = "READY_TO_SYNTHESIZE";
-
-/// A question-answer pair from the Q/A session.
-#[derive(Debug, Clone)]
-pub struct QaPair {
-    pub question: String,
-    pub answer: String,
-}
 
 /// Result of the PRD creation process.
 #[derive(Debug)]
@@ -121,7 +115,7 @@ where
         bail!("Runner failed during round 1: {}", round1_output.text);
     }
 
-    let questions = parse_questions(&round1_output.text);
+    let questions = qa_workflow::parse_questions(&round1_output.text);
 
     if questions.is_empty() {
         bail!("Runner did not generate any questions");
@@ -135,7 +129,7 @@ where
     writeln!(output)?;
 
     // Collect answers.
-    let mut qa_history = collect_answers(&questions, input, output)?;
+    let mut qa_history = qa_workflow::collect_multiline_answers(&questions, input, output)?;
     let mut rounds = 1;
 
     // Loop with round N until ready.
@@ -178,7 +172,7 @@ where
         }
 
         // Parse additional questions.
-        let additional_questions = parse_questions(&round_n_output.text);
+        let additional_questions = qa_workflow::parse_questions(&round_n_output.text);
 
         if additional_questions.is_empty() {
             tracing::debug!("No additional questions, proceeding to synthesis");
@@ -190,7 +184,8 @@ where
         writeln!(output)?;
 
         // Collect additional answers.
-        let additional_qa = collect_answers(&additional_questions, input, output)?;
+        let additional_qa =
+            qa_workflow::collect_multiline_answers(&additional_questions, input, output)?;
         qa_history.extend(additional_qa);
     }
 
@@ -256,7 +251,17 @@ where
         // Fall back to parsing the response (for tests or if runner didn't create file).
         tracing::debug!("No PRD file found, parsing response content");
 
-        let prd_content = extract_prd_content(&synthesize_output.text);
+        let prd_content = match qa_workflow::extract_prd_content(&synthesize_output.text) {
+            Ok(content) => content,
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to extract PRD content from runner output, using raw output"
+                );
+                // Use the raw output if we can't extract PRD content
+                synthesize_output.text.clone()
+            }
+        };
 
         let prd = match parse_prd(&prd_content) {
             Ok(p) => p,
@@ -523,68 +528,6 @@ fn build_synthesize_prompt(
     expand_placeholders(&template, &ctx)
 }
 
-/// Parses questions from runner output.
-///
-/// Expects a numbered list like:
-/// 1. Question one?
-/// 2. Question two?
-fn parse_questions(output: &str) -> Vec<String> {
-    let mut questions = Vec::new();
-    let mut current_question = String::new();
-    let mut in_question = false;
-
-    for line in output.lines() {
-        let trimmed = line.trim();
-
-        // Check if this line starts a new numbered question (1., 2., etc.).
-        let is_question_start = trimmed
-            .chars()
-            .next()
-            .map(|c| c.is_ascii_digit())
-            .unwrap_or(false)
-            && (trimmed.contains(". ") || trimmed.contains(") "));
-
-        if is_question_start {
-            // Save previous question if any.
-            if in_question && !current_question.trim().is_empty() {
-                questions.push(current_question.trim().to_string());
-            }
-
-            // Start new question.
-            if let Some(rest) = trimmed
-                .strip_prefix(|c: char| c.is_ascii_digit())
-                .and_then(|s| s.strip_prefix('.'))
-                .or_else(|| {
-                    trimmed
-                        .strip_prefix(|c: char| c.is_ascii_digit())
-                        .and_then(|s| s.strip_prefix(')'))
-                })
-            {
-                current_question = rest.trim().to_string();
-                in_question = true;
-            }
-        } else if in_question {
-            // Continue previous question if line is non-empty.
-            if !trimmed.is_empty() {
-                current_question.push('\n');
-                current_question.push_str(trimmed);
-            } else if !current_question.trim().is_empty() {
-                // Empty line after content signals end of question.
-                questions.push(current_question.trim().to_string());
-                current_question.clear();
-                in_question = false;
-            }
-        }
-    }
-
-    // Save last question if any.
-    if in_question && !current_question.trim().is_empty() {
-        questions.push(current_question.trim().to_string());
-    }
-
-    questions
-}
-
 /// Prompts the user for optional upfront context.
 ///
 /// Returns `Some(context)` if the user provides context, or `None` if they skip.
@@ -620,205 +563,10 @@ where
     }
 }
 
-/// Collects answers from the user for each question.
-fn collect_answers<I, O>(questions: &[String], input: &mut I, output: &mut O) -> Result<Vec<QaPair>>
-where
-    I: BufRead,
-    O: Write,
-{
-    let mut pairs = Vec::new();
-
-    for (i, question) in questions.iter().enumerate() {
-        // Display question with proper multi-line formatting.
-        let question_lines: Vec<&str> = question.lines().collect();
-        if question_lines.len() == 1 {
-            writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
-        } else {
-            // First line with number.
-            writeln!(
-                output,
-                "{}. {}",
-                i + 1,
-                crate::colors::question(question_lines[0])
-            )?;
-            // Subsequent lines indented.
-            for line in &question_lines[1..] {
-                writeln!(output, "   {}", crate::colors::question(line))?;
-            }
-        }
-        write!(output, "   > ")?;
-        output.flush()?;
-
-        // Read multi-line answer; user presses Enter twice to finish.
-        let mut answer_lines = Vec::new();
-        loop {
-            let mut line = String::new();
-            let bytes_read = input.read_line(&mut line)?;
-
-            // Check for EOF (no more input).
-            if bytes_read == 0 {
-                break;
-            }
-
-            // Check if the line is empty (just newline = double-enter).
-            if line.trim().is_empty() {
-                // If we already have content, this is the terminating blank line.
-                if !answer_lines.is_empty() {
-                    break;
-                }
-                // Otherwise, it's a leading blank line; skip it.
-            } else {
-                answer_lines.push(line.trim_end().to_string());
-                // Prompt for next line if user continues.
-                write!(output, "   > ")?;
-                output.flush()?;
-            }
-        }
-
-        let answer = answer_lines.join("\n");
-
-        pairs.push(QaPair {
-            question: question.clone(),
-            answer: answer.trim().to_string(),
-        });
-    }
-
-    Ok(pairs)
-}
-
-/// Extracts PRD content from runner output.
-///
-/// Handles markdown code blocks if present, with robust fence detection.
-/// PRDs must start with `---` frontmatter, so we look for that as the
-/// primary content indicator.
-fn extract_prd_content(output: &str) -> String {
-    // First, strip any ANSI escape sequences that might be in the output.
-    let cleaned = strip_ansi_escapes(output);
-
-    // Strip usage statistics that shouldn't be in PRD content
-    let cleaned = CopilotRunner::strip_usage_stats(&cleaned);
-
-    let trimmed = cleaned.trim();
-
-    tracing::debug!(
-        output_len = output.len(),
-        cleaned_len = trimmed.len(),
-        first_50_chars = ?trimmed.chars().take(50).collect::<String>(),
-        "Extracting PRD content from runner output"
-    );
-
-    // If output starts directly with frontmatter, use it as-is.
-    if trimmed.starts_with("---") {
-        tracing::debug!("Output starts with frontmatter directly");
-        return trimmed.to_string();
-    }
-
-    // Try to find a code fence containing frontmatter.
-    // Handle various fence patterns: ```markdown, ```md, ```yaml, ``` (generic).
-    for fence_pattern in ["```markdown", "```md", "```yaml", "```"] {
-        if let Some(fence_start) = trimmed.find(fence_pattern) {
-            let after_fence = fence_start + fence_pattern.len();
-
-            // Skip to the next newline (past any remaining language identifier).
-            let content_start = trimmed[after_fence..]
-                .find('\n')
-                .map(|i| after_fence + i + 1)
-                .unwrap_or(after_fence);
-
-            // Look for the closing fence, but find the LAST one to handle
-            // nested code blocks inside the PRD content.
-            let remaining = &trimmed[content_start..];
-
-            if let Some(end) = remaining.rfind("\n```") {
-                let content = &remaining[..end];
-
-                // Verify this looks like a PRD (starts with ---).
-                let content_trimmed = content.trim();
-
-                if content_trimmed.starts_with("---") {
-                    tracing::debug!(
-                        fence_pattern,
-                        "Extracted from code block with newline+fence"
-                    );
-                    return content_trimmed.to_string();
-                }
-            }
-
-            // Fallback: try to find closing fence, even if not at line start.
-            if let Some(end) = remaining.rfind("```") {
-                let content = &remaining[..end];
-                let content_trimmed = content.trim();
-
-                if content_trimmed.starts_with("---") {
-                    tracing::debug!(fence_pattern, "Extracted from code block with inline fence");
-                    return content_trimmed.to_string();
-                }
-            }
-        }
-    }
-
-    // Last resort: look for --- delimiters directly in the output.
-    // Find the first --- that starts at the beginning of a line.
-    for (i, line) in trimmed.lines().enumerate() {
-        if line.trim() == "---" {
-            // Found a frontmatter delimiter, extract from here.
-            let lines: Vec<&str> = trimmed.lines().skip(i).collect();
-            let result = lines.join("\n");
-            tracing::debug!(line_number = i, "Found frontmatter delimiter on line");
-            return result;
-        }
-    }
-
-    // Really last resort: find --- anywhere.
-    if let Some(fm_start) = trimmed.find("---") {
-        tracing::debug!(position = fm_start, "Found --- at position (fallback)");
-        return trimmed[fm_start..].trim().to_string();
-    }
-
-    // No recognizable PRD content found, return as-is.
-    tracing::warn!(
-        first_100_chars = ?trimmed.chars().take(100).collect::<String>(),
-        "No frontmatter found in output"
-    );
-    trimmed.to_string()
-}
-
-/// Strips ANSI escape sequences from a string.
-fn strip_ansi_escapes(s: &str) -> String {
-    // Simple regex-like removal of ANSI escape sequences.
-    // Matches: ESC [ ... (letter) sequences.
-    let mut result = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '\x1b' {
-            // ESC character - start of escape sequence.
-            if chars.peek() == Some(&'[') {
-                chars.next(); // consume '['
-
-                // Skip until we hit a letter (the terminator).
-                while let Some(&next) = chars.peek() {
-                    chars.next();
-
-                    if next.is_ascii_alphabetic() {
-                        break;
-                    }
-                }
-            } else {
-                // Some other escape, skip next char.
-                chars.next();
-            }
-        } else {
-            result.push(c);
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::qa_workflow;
     use crate::runner::MockRunner;
     use tempfile::TempDir;
 
@@ -874,7 +622,7 @@ mod tests {
 3. Are there dependencies?
 "#;
 
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 3);
         assert_eq!(questions[0], "What problem are you solving?");
         assert_eq!(questions[1], "What does success look like?");
@@ -887,14 +635,14 @@ mod tests {
 2) Second question?
 "#;
 
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 2);
     }
 
     #[test]
     fn test_parse_questions_empty() {
         let output = "No questions here, just text.";
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert!(questions.is_empty());
     }
 
@@ -911,7 +659,7 @@ mod tests {
 
 Some additional text here."#;
 
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 3);
         assert_eq!(questions[0], "What problem are you solving?");
         assert_eq!(
@@ -939,7 +687,7 @@ This is a test.
 Done!
 "#;
 
-        let content = extract_prd_content(output);
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
         assert!(content.contains("id: PRD-0001"));
     }
@@ -959,7 +707,7 @@ title: Test
 ```
 "#;
 
-        let content = extract_prd_content(output);
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
         assert!(content.contains("id: PRD-0001"));
     }
@@ -985,7 +733,7 @@ More text.
 ```
 "#;
 
-        let content = extract_prd_content(output);
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
         assert!(content.contains("id: PRD-0001"));
         assert!(content.contains("echo \"hello\""));
@@ -1002,7 +750,7 @@ title: Test
 # Summary
 "#;
 
-        let content = extract_prd_content(output);
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
     }
 
@@ -1019,7 +767,7 @@ title: Test
 # Summary
 "#;
 
-        let content = extract_prd_content(output);
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
         assert!(content.contains("id: PRD-0001"));
     }
@@ -1032,7 +780,8 @@ title: Test
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let pairs = collect_answers(&questions, &mut input, &mut output).unwrap();
+        let pairs =
+            qa_workflow::collect_multiline_answers(&questions, &mut input, &mut output).unwrap();
 
         assert_eq!(pairs.len(), 2);
         assert_eq!(pairs[0].question, "Question 1?");
@@ -1049,7 +798,8 @@ title: Test
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let pairs = collect_answers(&questions, &mut input, &mut output).unwrap();
+        let pairs =
+            qa_workflow::collect_multiline_answers(&questions, &mut input, &mut output).unwrap();
 
         assert_eq!(pairs.len(), 1);
         assert_eq!(pairs[0].question, "Describe your feature?");

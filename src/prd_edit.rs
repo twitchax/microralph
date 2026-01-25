@@ -10,12 +10,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 
 use crate::prd::{Prd, generate_index_from_root, parse_prd, scan_prds};
-use crate::prd_new::QaPair;
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::{CopilotRunner, Runner};
+use crate::qa_workflow::{self, QaPair};
+use crate::runner::Runner;
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;
@@ -120,7 +120,7 @@ where
             tracing::debug!("Runner signaled ready to apply");
 
             // Extract and apply the new PRD content.
-            let new_content = extract_prd_content(&runner_output.text)?;
+            let new_content = qa_workflow::extract_prd_content(&runner_output.text)?;
             let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
 
             // Write the updated PRD.
@@ -142,11 +142,11 @@ where
         }
 
         // Parse follow-up questions.
-        let questions = parse_questions(&runner_output.text);
+        let questions = qa_workflow::parse_questions(&runner_output.text);
 
         if questions.is_empty() {
             // No questions and no ready signal - try to extract content anyway
-            if let Ok(new_content) = extract_prd_content(&runner_output.text) {
+            if let Ok(new_content) = qa_workflow::extract_prd_content(&runner_output.text) {
                 let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
 
                 std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
@@ -172,8 +172,8 @@ where
         writeln!(output, "The runner needs some clarification:")?;
         writeln!(output)?;
 
-        // Collect answers.
-        let additional_qa = collect_answers(&questions, input, output)?;
+        // Collect answers (single-line for prd_edit).
+        let additional_qa = qa_workflow::collect_singleline_answers(&questions, input, output)?;
         qa_history.extend(additional_qa);
     }
 
@@ -197,7 +197,7 @@ where
         );
     }
 
-    let new_content = extract_prd_content(&final_output.text)?;
+    let new_content = qa_workflow::extract_prd_content(&final_output.text)?;
     let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
 
     std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
@@ -262,119 +262,10 @@ fn build_edit_prompt(config: &PrdEditConfig, prd_content: &str, qa_history: &[Qa
     expand_placeholders(&template, &ctx)
 }
 
-/// Parses questions from runner output.
-fn parse_questions(output: &str) -> Vec<String> {
-    let mut questions = Vec::new();
-
-    // Check if this looks like a READY_TO_APPLY response
-    if output.contains(READY_SIGNAL) {
-        return questions;
-    }
-
-    for line in output.lines() {
-        let trimmed = line.trim();
-
-        // Match numbered questions (1., 2., etc.).
-        if let Some(rest) = trimmed
-            .strip_prefix(|c: char| c.is_ascii_digit())
-            .and_then(|s| s.strip_prefix('.'))
-            .or_else(|| {
-                trimmed
-                    .strip_prefix(|c: char| c.is_ascii_digit())
-                    .and_then(|s| s.strip_prefix(')'))
-            })
-        {
-            let question = rest.trim().to_string();
-
-            if !question.is_empty() && question.ends_with('?') {
-                questions.push(question);
-            }
-        }
-    }
-
-    questions
-}
-
-/// Collects answers from the user for each question.
-fn collect_answers<I, O>(questions: &[String], input: &mut I, output: &mut O) -> Result<Vec<QaPair>>
-where
-    I: BufRead,
-    O: Write,
-{
-    let mut pairs = Vec::new();
-
-    for (i, question) in questions.iter().enumerate() {
-        writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
-        write!(output, "   > ")?;
-        output.flush()?;
-
-        let mut answer = String::new();
-        input.read_line(&mut answer)?;
-
-        pairs.push(QaPair {
-            question: question.clone(),
-            answer: answer.trim().to_string(),
-        });
-    }
-
-    Ok(pairs)
-}
-
-/// Extracts PRD content from runner output.
-fn extract_prd_content(output: &str) -> Result<String> {
-    // Strip usage statistics before processing
-    let output = CopilotRunner::strip_usage_stats(output);
-
-    // Look for content after READY_TO_APPLY signal
-    let content_start = if let Some(idx) = output.find(READY_SIGNAL) {
-        &output[idx + READY_SIGNAL.len()..]
-    } else {
-        output.as_str()
-    };
-
-    // Check for markdown code block.
-    if let Some(start) = content_start.find("```markdown")
-        && let Some(end) = content_start[start + 11..].find("```")
-    {
-        return Ok(content_start[start + 11..start + 11 + end]
-            .trim()
-            .to_string());
-    }
-
-    if let Some(start) = content_start.find("```yaml")
-        && let Some(end) = content_start[start + 7..].find("```")
-    {
-        return Ok(content_start[start + 7..start + 7 + end].trim().to_string());
-    }
-
-    if let Some(start) = content_start.find("```") {
-        let after_first = start + 3;
-
-        // Skip the language identifier if present.
-        let inner_start = content_start[after_first..]
-            .find('\n')
-            .map(|i| after_first + i + 1)
-            .unwrap_or(after_first);
-
-        if let Some(end) = content_start[inner_start..].find("```") {
-            return Ok(content_start[inner_start..inner_start + end]
-                .trim()
-                .to_string());
-        }
-    }
-
-    // Check if it looks like a PRD (starts with ---)
-    let trimmed = content_start.trim();
-    if trimmed.starts_with("---") {
-        return Ok(trimmed.to_string());
-    }
-
-    bail!("Could not extract PRD content from runner output")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::qa_workflow;
     use crate::runner::{MockRunner, RunnerOutput};
     use tempfile::TempDir;
 
@@ -440,7 +331,7 @@ A test PRD.
 2. Should this replace the existing task?
 "#;
 
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 2);
         assert!(questions[0].contains("priority"));
         assert!(questions[1].contains("replace"));
@@ -457,7 +348,7 @@ id: PRD-0001
 ```
 "#;
 
-        let questions = parse_questions(output);
+        let questions = qa_workflow::parse_questions(output);
         assert!(questions.is_empty());
     }
 
@@ -479,7 +370,7 @@ Updated content.
 ```
 "#;
 
-        let content = extract_prd_content(output).unwrap();
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
         assert!(content.contains("PRD-0001"));
     }
@@ -498,7 +389,7 @@ tasks: []
 # Summary
 "#;
 
-        let content = extract_prd_content(output).unwrap();
+        let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
     }
 
@@ -616,7 +507,8 @@ A test PRD with a new high priority task.
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let pairs = collect_answers(&questions, &mut input, &mut output).unwrap();
+        let pairs =
+            qa_workflow::collect_singleline_answers(&questions, &mut input, &mut output).unwrap();
 
         assert_eq!(pairs.len(), 2);
         assert_eq!(pairs[0].question, "Question 1?");
