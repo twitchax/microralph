@@ -20,6 +20,11 @@ dependencies = ["install-cargo-binstall"]
 command = "cargo"
 args = ["binstall", "cargo-llvm-cov", "--no-confirm"]
 
+[tasks.install-cargo-release]
+dependencies = ["install-cargo-binstall"]
+command = "cargo"
+args = ["binstall", "cargo-release", "--no-confirm"]
+
 [tasks.tools]
 dependencies = ["install-nextest", "install-llvm-cov"]
 
@@ -232,11 +237,9 @@ args = ["build", "--target", "wasm32-wasip2", "--release"]
 [tasks.release]
 cwd = "."
 workspace = false
-dependencies = ["install-cargo-binstall"]
-script = '''
-cargo binstall cargo-release --no-confirm
-cargo release --workspace --no-publish --execute
-'''
+dependencies = ["install-cargo-release"]
+command = "cargo"
+args = ["release", "--workspace", "--no-publish", "--execute"]
 
 [tasks.publish-crates]
 cwd = "."
