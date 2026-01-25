@@ -38,7 +38,7 @@ tasks:
   - id: T-004
     title: Delete the agents.rs module if unused
     priority: 2
-    status: todo
+    status: done
     notes: Remove src/agents.rs and its mod declaration
   - id: T-005
     title: Remove update_agents.md prompt creation from init.rs
@@ -153,6 +153,15 @@ The current implementation automatically calls `update_agents_md()` after three 
 - **Changes**:
   - Added step 4 to "Required Actions" section in both `src/init.rs` (PROMPT_BOOTSTRAP_GENERATE_PRDS constant, lines 332-338) and `.mr/prompts/bootstrap_generate_prds.md`: "Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about"
   - This reminder is shown during bootstrap PRD generation phase, ensuring agents document new patterns discovered during repository analysis
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — T-004 Completed
+- **Task**: Delete the agents.rs module if unused
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `mod agents;` declaration from `src/main.rs` (line 5)
+  - Deleted `src/agents.rs` file (531 lines including comprehensive tests)
+  - The module was completely unused after T-001, T-002, and T-003 removed all calls to `update_agents_md()`
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
 

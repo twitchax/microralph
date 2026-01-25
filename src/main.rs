@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
-mod agents;
 mod bootstrap;
 mod changelog;
 mod colors;

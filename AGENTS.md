@@ -109,9 +109,16 @@ cargo make uat
 ---
 
 <!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
-I'll review the PRD file to understand what changes were made and determine if the auto-managed section needs updating.
+<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->
+## Manual Updates by Agents
 
-Now I understand. The PRD shows that automatic AGENTS.md updates have been removed, and the auto-managed section should be replaced with useful information for agents about how to maintain AGENTS.md manually. Let me update it with concise, actionable guidance:
+Automatic AGENTS.md updates have been removed to give agents more flexibility. Agents should update AGENTS.md manually when:
 
-Updated the auto-managed section with concise guidelines for when and what agents should document. The new content explains that automatic updates were removed and provides clear criteria for manual updates.
+- Discovering new build/test commands or troubleshooting steps
+- Identifying code patterns or conventions not already documented
+- Adding new tools or dependencies that affect the workflow
+- Finding solutions to common issues during implementation
+
+Update any relevant section, not just this one. Keep additions concise and actionable.
+<!-- END MICRORALPH AUTO-MANAGED SECTION -->
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->
