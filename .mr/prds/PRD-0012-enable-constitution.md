@@ -64,7 +64,7 @@ tasks:
 - id: T-004
   title: Load constitution in runner context
   priority: 2
-  status: todo
+  status: done
   notes: Add constitution reading function in runner.rs or config.rs. Constitution should be loaded and available to runner prompts.
 - id: T-005
   title: Include constitution in prd new prompts
@@ -179,3 +179,23 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Extracts constitution content from markdown code blocks
   - Writes updated constitution directly to `.mr/constitution.md`
 - **Notes**: UAT-005 (constitution edit command) is functionally implemented but remains `unverified` until custom Makefile.toml target `cargo make uat constitution_edit` is added.
+
+---
+
+## 2026-01-25 — T-004 Completed
+- **Task**: Load constitution in runner context
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `CONSTITUTION_FILE_NAME` constant to `src/config.rs` (`constitution.md`)
+  - Created `load_constitution()` function in `src/config.rs` that reads `.mr/constitution.md`
+  - Function returns `Option<String>` (None if file doesn't exist, Some(content) if it does)
+  - Added import of `load_constitution` in `src/run.rs`
+  - Updated `build_prompt()` function in `src/run.rs` to load constitution and add to placeholder context
+  - Constitution is inserted into context with key `"constitution"` if available
+  - Added two unit tests: `test_load_constitution_missing` and `test_load_constitution_exists`
+  - All 279 tests passed
+  - UAT pass: `cargo make uat` succeeded
+- **Implementation Notes**:
+  - Constitution is loaded opportunistically (doesn't fail if missing)
+  - Constitution is now available in the runner context for all task execution prompts
+  - Subsequent tasks (T-005, T-006) will update prompt templates to actually use the `{{constitution}}` placeholder

@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 use crate::agents::{RecentChange, update_agents_md};
+use crate::config::load_constitution;
 use crate::prd::{AcceptanceTest, Prd, PrdStatus, TaskStatus, scan_prds};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
@@ -302,6 +303,11 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str) -> Strin
         if let Some(notes) = &task.notes {
             ctx.insert("task_notes", notes.clone());
         }
+    }
+
+    // Load constitution if available.
+    if let Ok(Some(constitution)) = load_constitution(root) {
+        ctx.insert("constitution", constitution);
     }
 
     expand_placeholders(&prompt_template, &ctx)

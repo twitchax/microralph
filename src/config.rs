@@ -5,11 +5,14 @@
 
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
 /// The config file name within the `.mr/` directory.
 pub const CONFIG_FILE_NAME: &str = "config.toml";
+
+/// The constitution file name within the `.mr/` directory.
+pub const CONSTITUTION_FILE_NAME: &str = "constitution.md";
 
 /// Default configuration content for new repos.
 pub const DEFAULT_CONFIG: &str = r#"# microralph configuration
@@ -89,6 +92,27 @@ impl Config {
             .map(|s| s.to_string())
             .or_else(|| self.model.clone())
     }
+}
+
+/// Loads the constitution from `.mr/constitution.md`.
+///
+/// Returns `None` if the constitution file doesn't exist.
+/// Returns an error if the file exists but can't be read.
+pub fn load_constitution(root: &Path) -> Result<Option<String>> {
+    let constitution_path = root.join(".mr").join(CONSTITUTION_FILE_NAME);
+
+    if !constitution_path.exists() {
+        return Ok(None);
+    }
+
+    let content = std::fs::read_to_string(&constitution_path).with_context(|| {
+        format!(
+            "Failed to read constitution from {}",
+            constitution_path.display()
+        )
+    })?;
+
+    Ok(Some(content))
 }
 
 #[cfg(test)]
@@ -237,5 +261,28 @@ timeout_minutes = 60
     #[test]
     fn test_default_config_parses() {
         let _config: Config = toml::from_str(DEFAULT_CONFIG).unwrap();
+    }
+
+    #[test]
+    fn test_load_constitution_missing() {
+        let temp = TempDir::new().unwrap();
+        std::fs::create_dir_all(temp.path().join(".mr")).unwrap();
+
+        let constitution = super::load_constitution(temp.path()).unwrap();
+
+        assert!(constitution.is_none());
+    }
+
+    #[test]
+    fn test_load_constitution_exists() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        let test_content = "# Constitution\n\n## Rules\n\n1. Test rule";
+        std::fs::write(mr_dir.join("constitution.md"), test_content).unwrap();
+
+        let constitution = super::load_constitution(temp.path()).unwrap().unwrap();
+
+        assert_eq!(constitution, test_content);
     }
 }
