@@ -79,7 +79,7 @@ tasks:
 - id: T-007
   title: Update runner prompts to log constitution violations
   priority: 3
-  status: todo
+  status: done
   notes: Modify runner prompts to instruct LLM to mention and reason about constitution violations in PRD history entries. No programmatic enforcement needed.
 - id: T-008
   title: Document constitution feature in README
@@ -227,20 +227,20 @@ microralph currently has no mechanism to encode project-specific constraints, be
 
 ---
 
-## 2026-01-25 — T-006 Completed
-- **Task**: Include constitution in prd finalize prompts
+## 2026-01-25 — T-007 Completed
+- **Task**: Update runner prompts to log constitution violations
 - **Status**: ✅ Done
 - **Changes**:
-  - Updated `build_finalize_prompt()` in `src/prd_finalize.rs` to load constitution and add to placeholder context
-  - Constitution is loaded using `crate::config::load_constitution(root)` and inserted with key `"constitution"`
-  - Updated `PROMPT_RUN_TASK_FINALIZE` constant in `src/init.rs` to include constitution section with `{{#if constitution}}` conditional
-  - Added constitution section after "Current Changelog" and before "Required Actions"
-  - Updated `.mr/prompts/run_task_finalize.md` to match template with constitution section
-  - Constitution section includes note: "Your finalization work (changelog entries, documentation updates, cleanup decisions) should respect these constitutional rules."
+  - Updated `PROMPT_RUN_TASK` constant in `src/init.rs` to include constitution section with `{{#if constitution}}` conditional
+  - Added constitution display before "Required Actions" section in run_task prompt
+  - Updated "Append to History Section" format to include optional "Constitution Compliance" field
+  - Updated `.mr/prompts/run_task.md` to match new template with constitution sections
+  - Constitution violations now instructed to be logged in History entries with reasoning
+  - Clear messaging that violations are logged for transparency but do not block execution
   - All 279 tests passed
   - UAT pass: `cargo make uat` succeeded
 - **Implementation Notes**:
-  - Constitution is now available in PRD finalization prompts
-  - Follows same pattern as T-005 (prd new prompts)
-  - Constitution is loaded opportunistically (prompt works fine without it)
-  - Enables LLM to respect project governance rules during finalization tasks
+  - Constitution is loaded opportunistically in `src/run.rs` via `load_constitution()` (already implemented in T-004)
+  - Prompt now instructs LLM to mention violations with reasoning in History entries
+  - No programmatic enforcement—violations are informational only
+  - Pattern follows T-005 and T-006 (prd new and finalize prompts)

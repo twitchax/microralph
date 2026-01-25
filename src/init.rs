@@ -573,6 +573,18 @@ Look at the PRD file at `{{prd_path}}` to understand:
 
 The suggested next task is `{{next_task_id}}` based on priority, but verify against the PRD.
 
+{{#if constitution}}
+## Constitution
+
+This project has a constitution that defines governance rules and constraints. Your implementation should respect these rules:
+
+```
+{{constitution}}
+```
+
+**Important**: If your implementation violates any constitutional rules, you MUST mention the violation in the History entry with reasoning about why it was necessary or unavoidable. Constitution violations are logged for transparency but do not block task execution.
+{{/if}}
+
 ## Required Actions
 
 1. **Study the README** at the repository root to understand the project's purpose, conventions, and development workflow.
@@ -621,6 +633,9 @@ Add a new History entry at the bottom of the PRD file with this format:
   - Bullet points describing what was changed
   - Include file names and key details
   - Note UAT pass/fail with brief evidence
+{{#if constitution}}
+- **Constitution Compliance**: If any constitutional rules were violated, note them here with reasoning. If fully compliant, you may omit this section or note "No violations."
+{{/if}}
 ```
 
 ## Opportunistic UAT Verification (Per-Task)
