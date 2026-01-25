@@ -1,17 +1,15 @@
 ---
 id: PRD-0013
-title: "Add Claude CLI Runner"
-status: active
-owner: "microralph"
+title: Add Claude CLI Runner
+status: done
+owner: microralph
 created: 2026-01-24
 updated: 2026-01-25
-
 principles:
 - Mirror CopilotRunner surface area for consistency across runners
 - Default to non-interactive mode with yolo permissions for autonomous operation
 - Parse and track token usage to enable cost monitoring
 - Support model selection for flexibility between Claude models
-
 references:
 - name: Claude CLI Official Documentation
   url: https://deepwiki.com/anthropics/claude-code/2.3-cli-commands-and-interaction-modes
@@ -19,7 +17,6 @@ references:
   url: https://gist.github.com/dai/51b06d2ed1c1b11a90d16c1a913c96f8
 - name: CopilotRunner Implementation
   url: /home/twitchax/projects/microralph/src/runner/copilot.rs
-
 acceptance_tests:
 - id: uat-001
   name: ClaudeRunner executes prompts in non-interactive mode
@@ -37,62 +34,52 @@ acceptance_tests:
   name: Full CI passes with ClaudeRunner implementation
   command: cargo make ci
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Research Claude CLI command structure and flags
   priority: 1
   status: done
   notes: Verified binary name (`claude`), non-interactive mode (`-p`), permission flags (`--dangerously-skip-permissions`, `--allowedTools`), model selection, and token usage output format.
-
 - id: T-002
   title: Create ClaudeConfig struct with permission modes
   priority: 2
   status: done
   notes: Mirror CopilotConfig structure with `claude_path`, `permission_mode` (Yolo/Manual), `no_ask_user`, and `model` fields.
-
 - id: T-003
   title: Implement ClaudeRunner struct with Runner trait
   priority: 3
   status: done
   notes: Implement `name()`, `execute()`, `execute_streaming()`, and `is_available()` methods following CopilotRunner pattern.
-
 - id: T-004
   title: Implement build_args method for Claude CLI flags
   priority: 4
   status: done
   notes: Support `-p` for prompt, `--dangerously-skip-permissions` for yolo mode, model selection, and other relevant flags.
-
 - id: T-005
   title: Implement token usage parsing for Claude CLI output
   priority: 5
   status: done
   notes: Research actual Claude CLI output format. Note that as of late 2025, Claude CLI does not provide built-in token usage in output. May need to use `--output-format json` and parse response, or rely on third-party tools.
-
 - id: T-006
   title: Implement output stripping for Claude CLI stats section
   priority: 6
   status: done
   notes: If Claude CLI appends statistics similar to Copilot, strip them to keep output clean while preserving usage data.
-
 - id: T-007
   title: Add unit tests for ClaudeRunner
   priority: 7
   status: done
   notes: Test config builder, arg construction, permission modes, usage parsing, and output stripping. Mock the `claude` binary for tests.
-
 - id: T-008
   title: Export ClaudeRunner from runner module
   priority: 8
   status: done
   notes: Add ClaudeRunner to `mod.rs` exports alongside CopilotRunner.
-
 - id: T-009
   title: Update AGENTS.md with ClaudeRunner conventions
   priority: 9
   status: done
   notes: Document ClaudeRunner implementation patterns, token usage parsing, and testing approach for future agents.
-
 ---
 
 # Summary
@@ -316,4 +303,21 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
 - **Notes**:
   - Documentation provides clear guidance for future agents implementing additional runners
   - Patterns are derived from actual ClaudeRunner and CopilotRunner implementations
+  - Testing approach emphasizes CI-friendly mocking without external dependencies
+
+---
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 9 tasks (T-001 through T-009)
+- **Outcome**: All tasks completed, acceptance tests passed (293/293 tests)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Cleanup**: None required (no temporary files or excessive comments found)
+- **Summary**:
+  - ClaudeRunner implementation complete with full Runner trait support
+  - Token usage tracking via JSON output parsing with `--output-format json`
+  - Permission modes (yolo/manual) with `--dangerously-skip-permissions` and `--permission-mode dontAsk`
+  - Comprehensive unit tests (22 test functions) with mocked CLI for CI environments
+  - Multi-agent support enables flexible backend selection between Copilot and Claude
+  - Documentation updated in AGENTS.md with runner implementation patterns
   - Testing approach emphasizes CI-friendly mocking without external dependencies

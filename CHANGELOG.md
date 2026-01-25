@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0013: Add Claude CLI Runner** — Multi-agent support with Claude CLI integration
+  - Implemented ClaudeRunner with same surface area as CopilotRunner for consistent agent interfaces
+  - Support for non-interactive mode, permission controls (yolo/manual), and model selection
+  - Token usage tracking via JSON output parsing (`--output-format json`)
+  - Comprehensive unit tests with mocked CLI for CI environments
+
 - **PRD-0011: Dev Container Support and Generation** — Dev container tooling for sandboxed development
   - Added README documentation for dev container setup (VSCode, Codespaces, CLI workflows)
   - Implemented `mr devcontainer generate` command for autonomous `.devcontainer/devcontainer.json` generation
