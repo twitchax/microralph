@@ -14,7 +14,7 @@ acceptance_tests:
   - id: uat-001
     name: All existing UATs pass after changes
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: Task execution completes without calling update_agents_md
     command: cargo run -- run PRD-0001 --task T-001
@@ -205,4 +205,13 @@ The current implementation automatically calls `update_agents_md()` after three 
     - adapt_language, reindex, pick_prd
   - Confirmed AGENTS.md update reminders are present in all three modified prompts (T-007, T-008, T-009)
   - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — uat-001 Verification
+- **UAT**: All existing UATs pass after changes
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make uat` which executes the full UAT suite (267 tests)
+  - All tests passed successfully (exit code 0)
+  - Confirms that removal of automatic AGENTS.md update mechanism does not break any existing functionality
 
