@@ -151,3 +151,4 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Test confirms constitution.md is created when bootstrap initializes .mr/ structure
   - Test validates constitution content includes "# Constitution", "## Purpose", and "## Rules" sections
   - UAT pass: All 275 tests passed (1 new test added)
+- **UAT Verification Note**: UAT-001 (bootstrap creates constitution) and UAT-002 (constitution template) are now functionally complete and verified by unit tests (`test_bootstrap_creates_constitution` and `test_constitution_template_content`). However, the PRD specifies custom Makefile.toml targets (`cargo make uat constitution_bootstrap` and `cargo make uat constitution_template`) which don't exist yet. These UATs remain `unverified` status until those specific test targets are added to Makefile.toml.
