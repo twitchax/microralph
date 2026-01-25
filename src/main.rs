@@ -2006,4 +2006,161 @@ Output only the JSON content (optionally wrapped in markdown code block).
             "Should have correct image field"
         );
     }
+
+    #[test]
+    fn test_restore_fresh() {
+        // Test scenario: Fresh restore on an initialized repository
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Initialize first.
+        init::init(root).unwrap();
+
+        // Verify files exist after init.
+        assert!(root.join(".mr/prompts/init.md").exists());
+        assert!(root.join(".mr/templates/prd.md").exists());
+
+        // Save current directory and change to temp dir.
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(root).unwrap();
+
+        // Run restore.
+        let result = cmd_restore();
+
+        // Restore current directory.
+        std::env::set_current_dir(&original_dir).unwrap();
+
+        // Verify success.
+        assert!(result.is_ok(), "Restore should succeed: {:?}", result);
+
+        // Verify files still exist after restore.
+        assert!(root.join(".mr/prompts/init.md").exists());
+        assert!(root.join(".mr/templates/prd.md").exists());
+        assert!(root.join(".mr/prompts/run_task.md").exists());
+        assert!(root.join(".mr/prompts/suggest_generate.md").exists());
+    }
+
+    #[test]
+    fn test_restore_after_customization() {
+        // Test scenario: Restore after customizing prompt files
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Initialize first.
+        init::init(root).unwrap();
+
+        // Customize a prompt file.
+        let init_prompt_path = root.join(".mr/prompts/init.md");
+        let custom_content = "# CUSTOM INIT PROMPT\n\nThis is customized.";
+        std::fs::write(&init_prompt_path, custom_content).unwrap();
+
+        // Verify customization.
+        let content_before = std::fs::read_to_string(&init_prompt_path).unwrap();
+        assert_eq!(content_before, custom_content);
+
+        // Save current directory and change to temp dir.
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(root).unwrap();
+
+        // Run restore.
+        let result = cmd_restore();
+
+        // Restore current directory.
+        std::env::set_current_dir(&original_dir).unwrap();
+
+        // Verify success.
+        assert!(result.is_ok(), "Restore should succeed: {:?}", result);
+
+        // Verify the file was restored to built-in default (not custom content).
+        let content_after = std::fs::read_to_string(&init_prompt_path).unwrap();
+        assert_ne!(
+            content_after, custom_content,
+            "Content should be restored to built-in default"
+        );
+        assert!(
+            content_after.contains("microralph"),
+            "Restored content should contain built-in text"
+        );
+    }
+
+    #[test]
+    fn test_restore_idempotency() {
+        // Test scenario: Multiple restore operations produce the same result
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Initialize first.
+        init::init(root).unwrap();
+
+        // Save current directory and change to temp dir.
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(root).unwrap();
+
+        // Run restore first time.
+        let result1 = cmd_restore();
+        assert!(result1.is_ok(), "First restore should succeed");
+
+        // Capture file contents after first restore.
+        let init_content1 = std::fs::read_to_string(root.join(".mr/prompts/init.md")).unwrap();
+        let prd_template1 = std::fs::read_to_string(root.join(".mr/templates/prd.md")).unwrap();
+
+        // Run restore second time.
+        let result2 = cmd_restore();
+        assert!(result2.is_ok(), "Second restore should succeed");
+
+        // Capture file contents after second restore.
+        let init_content2 = std::fs::read_to_string(root.join(".mr/prompts/init.md")).unwrap();
+        let prd_template2 = std::fs::read_to_string(root.join(".mr/templates/prd.md")).unwrap();
+
+        // Run restore third time to ensure it still works.
+        let result3 = cmd_restore();
+        assert!(result3.is_ok(), "Third restore should succeed");
+
+        // Restore current directory before cleanup.
+        std::env::set_current_dir(&original_dir).unwrap();
+
+        // Verify idempotency: contents should be identical.
+        assert_eq!(
+            init_content1, init_content2,
+            "Init prompt should be identical after multiple restores"
+        );
+        assert_eq!(
+            prd_template1, prd_template2,
+            "PRD template should be identical after multiple restores"
+        );
+    }
+
+    #[test]
+    fn test_restore_fails_if_not_initialized() {
+        // Test scenario: Restore should fail if .mr/ directory doesn't exist
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Don't initialize - leave directory empty.
+
+        // Save current directory and change to temp dir.
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(root).unwrap();
+
+        // Run restore.
+        let result = cmd_restore();
+
+        // Restore current directory.
+        std::env::set_current_dir(&original_dir).unwrap();
+
+        // Verify failure.
+        assert!(result.is_err(), "Restore should fail if not initialized");
+        assert!(
+            result.unwrap_err().to_string().contains("not initialized"),
+            "Error message should mention not initialized"
+        );
+    }
 }

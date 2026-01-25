@@ -54,7 +54,7 @@ tasks:
 - id: T-005
   title: Add integration tests for restore command
   priority: 5
-  status: todo
+  status: done
   notes: Test scenarios - fresh restore, restore after customization, idempotency
 
 ---
@@ -154,5 +154,20 @@ Currently, there's no way to restore built-in files without manually deleting di
     - Implementation pattern note explaining DRY principle and code reuse
   - UAT passed: All 312 tests passed (cargo make uat succeeded)
   - Documentation clearly emphasizes Git workflow for reviewing changes and non-auto-commit behavior
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Add integration tests for restore command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 4 comprehensive integration tests in `src/main.rs` tests module:
+    - `test_restore_fresh`: Tests restore on a freshly initialized repository, verifies files are recreated correctly
+    - `test_restore_after_customization`: Tests that customized prompt files are properly overwritten with built-in defaults
+    - `test_restore_idempotency`: Tests that multiple restore operations produce identical results (3 consecutive restores)
+    - `test_restore_fails_if_not_initialized`: Tests that restore fails gracefully when `.mr/` doesn't exist
+  - All tests use `tempfile::TempDir` for isolated test environments
+  - Tests change current directory to temp dir to properly exercise `cmd_restore()` function
+  - Tests verify both success cases (files exist, content is correct) and failure cases (proper error messages)
+  - UAT passed: All 316 tests passed (4 new restore tests + 312 existing tests)
+  - Code formatted with `cargo fmt` to maintain consistency
 
 ---
