@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0010: Support Multi-line Q/A During PRD Creation** — Enhanced interactive PRD creation to handle multi-line content
+  - Multi-line questions from model now display completely with proper formatting (including bullet lists)
+  - Multi-line answer input via double-enter pattern (press Enter twice to finish)
+  - Support for unbounded multi-line content in both questions and answers
+
 - **PRD-0007: Output Underlying Agent Usage** — Token usage tracking and display for CopilotRunner
   - Added `UsageInfo` struct to capture input/output/total token metrics from runners
   - CopilotRunner parses token usage from Copilot CLI output (format: "18.3k in, 38 out")
