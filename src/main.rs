@@ -638,8 +638,29 @@ fn cmd_restore() -> Result<()> {
 
     println!("{}", colors::info("Restoring prompts and templates..."));
 
-    // TODO: T-002 will implement the actual restoration logic
-    anyhow::bail!("Command not yet implemented. See PRD-0017 for implementation plan.");
+    let mr_dir = cwd.join(".mr");
+    let prompts_dir = mr_dir.join("prompts");
+    let templates_dir = mr_dir.join("templates");
+
+    // Delete existing directories if they exist.
+    if prompts_dir.exists() {
+        std::fs::remove_dir_all(&prompts_dir)
+            .with_context(|| format!("Failed to remove directory: {}", prompts_dir.display()))?;
+        tracing::debug!(path = %prompts_dir.display(), "Removed prompts directory");
+    }
+
+    if templates_dir.exists() {
+        std::fs::remove_dir_all(&templates_dir)
+            .with_context(|| format!("Failed to remove directory: {}", templates_dir.display()))?;
+        tracing::debug!(path = %templates_dir.display(), "Removed templates directory");
+    }
+
+    println!(
+        "{}",
+        colors::success("✓ Deleted existing prompts and templates")
+    );
+
+    Ok(())
 }
 
 /// Runs the `mr new` command.

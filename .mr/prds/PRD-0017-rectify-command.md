@@ -39,7 +39,7 @@ tasks:
 - id: T-002
   title: Implement cmd_restore function to delete .mr/prompts/ and .mr/templates/
   priority: 2
-  status: todo
+  status: done
   notes: Use std::fs::remove_dir_all for deletion, handle missing directories gracefully
 - id: T-003
   title: Refactor init logic to support reinitialization of prompts/templates
@@ -110,5 +110,18 @@ Currently, there's no way to restore built-in files without manually deleting di
   - Command appears correctly in `mr --help` output in the [0] Initialization category
   - UAT passed: All existing tests continue to pass with the new command structure
   - Note: T-002 will implement the actual restoration logic
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Implement cmd_restore function to delete .mr/prompts/ and .mr/templates/
+- **Status**: ✅ Done
+- **Changes**:
+  - Implemented directory deletion logic in `cmd_restore()` in main.rs
+  - Used `std::fs::remove_dir_all()` to delete `.mr/prompts/` and `.mr/templates/`
+  - Added graceful handling for missing directories (checks existence before deletion)
+  - Added user feedback messages: info message at start, success message after deletion
+  - Used `anyhow::Context` for detailed error messages if deletion fails
+  - Added debug-level tracing for each directory removal
+  - UAT passed: All existing tests continue to pass (cargo make uat succeeded)
+  - Next: T-003 will implement the reinitialization logic to recreate directories with built-in defaults
 
 ---
