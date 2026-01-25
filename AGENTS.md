@@ -67,6 +67,19 @@ cargo make ci
 - Reduce nesting by using guard clauses and early returns.
 - Prefer functional programming techniques where appropriate.
 
+### Runner Implementation Patterns
+
+When implementing new runners (e.g., ClaudeRunner, CopilotRunner):
+
+- **Mirror the CopilotRunner surface area**: New runners should provide the same API as existing runners for consistency.
+- **Config struct with permission modes**: Each runner has a config struct (e.g., `ClaudeConfig`) with fields for binary path, permission mode (Yolo/Manual), no_ask_user flag, and optional model.
+- **Build args method**: Implement `build_args()` to construct CLI flags based on config. Keep this private and unit-testable.
+- **Token usage parsing**: Parse token usage from CLI output if available. For Claude, use `--output-format json` and extract from the `usage` object. Return `Option<UsageInfo>` with `input_tokens`, `output_tokens`, and `total_tokens`.
+- **Output stripping**: Implement a public `strip_usage_stats()` method to remove metadata from CLI output. For JSON-based CLIs (like Claude), extract only the `result` field. For text-based CLIs (like Copilot), use regex to strip stats sections.
+- **Mock for tests**: All runner tests should use mocked binaries (via test-only constructors) and never require actual CLI installation. This ensures CI can run without external dependencies.
+- **Default to yolo mode**: Runners default to non-interactive mode with permissions auto-granted (`--dangerously-skip-permissions` for Claude, similar for others) to enable autonomous operation.
+- **Streaming support**: Implement both `execute()` (non-streaming) and `execute_streaming()` (real-time output) methods from the `Runner` trait.
+
 ## PRD Format
 
 PRDs are Markdown files with YAML frontmatter containing:

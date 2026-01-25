@@ -90,7 +90,7 @@ tasks:
 - id: T-009
   title: Update AGENTS.md with ClaudeRunner conventions
   priority: 9
-  status: todo
+  status: done
   notes: Document ClaudeRunner implementation patterns, token usage parsing, and testing approach for future agents.
 
 ---
@@ -294,3 +294,26 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
   - This task was already completed during previous tasks (likely T-001)
   - The export statement has been present since the initial ClaudeRunner implementation
   - ClaudeRunner is now available alongside CopilotRunner for use throughout the codebase
+
+---
+
+## 2026-01-25 — T-009 Completed
+- **Task**: Update AGENTS.md with ClaudeRunner conventions
+- **Status**: ✅ Done
+- **Changes**:
+  - Added new "Runner Implementation Patterns" subsection to AGENTS.md under "Conventions for Agents"
+  - Documented key patterns for implementing new runners:
+    - Mirror CopilotRunner surface area for consistency
+    - Config struct design with permission modes, no_ask_user, and optional model
+    - Build args method pattern for constructing CLI flags
+    - Token usage parsing approach (JSON-based for Claude, regex for Copilot)
+    - Output stripping methodology (extract `result` field from JSON for Claude)
+    - Mock-based testing approach (no actual CLI installation required for CI)
+    - Default to yolo mode for autonomous operation
+    - Streaming support requirements (both `execute()` and `execute_streaming()`)
+  - All 293 tests pass
+  - UAT passes: `cargo make uat` successful
+- **Notes**:
+  - Documentation provides clear guidance for future agents implementing additional runners
+  - Patterns are derived from actual ClaudeRunner and CopilotRunner implementations
+  - Testing approach emphasizes CI-friendly mocking without external dependencies
