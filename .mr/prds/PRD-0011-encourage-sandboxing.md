@@ -56,7 +56,7 @@ tasks:
 - id: T-006
   title: Create dev container prompt template
   priority: 6
-  status: todo
+  status: done
   notes: Template should instruct model to generate devcontainer.json based on repo analysis. Include context about microralph requirements (Rust, cargo-make, cargo-nextest).
 
 - id: T-007
@@ -198,5 +198,25 @@ Currently, there is no guidance or tooling to help developers set up a consisten
   - Returns formatted analysis string used by `mr devcontainer generate` command
   - Implementation is complete and functional, just needed PRD status update
 - **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
+
+---
+
+## 2026-01-25 — T-006 Completed
+- **Task**: Create dev container prompt template
+- **Status**: ✅ Done
+- **Changes**:
+  - Task was already completed as part of T-004 implementation
+  - Verified prompt template exists at `.mr/prompts/devcontainer_generate.md`
+  - Template includes:
+    - Instructions for generating valid devcontainer.json based on repo analysis
+    - Language-specific base image guidance (Rust, Python, Node.js, Go, Java)
+    - Requirements for VS Code extensions, tool installations, and environment setup
+    - Support for `{{analysis}}` and `{{language}}` placeholder expansion
+    - Clear output format requirements (JSON only, optionally wrapped in markdown code block)
+    - Analysis guidelines for detecting tools from git history and PRD content
+    - Constraints ensuring use of official Microsoft images and maintained extensions
+  - Template is fully functional and used by `mr devcontainer generate` command
+  - No code changes needed—just PRD status update
+- **UAT Result**: ✅ Passed - All 270 tests pass with `cargo make uat`
 
 ---
