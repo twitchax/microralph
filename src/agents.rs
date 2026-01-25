@@ -3,6 +3,8 @@
 //! This module provides functionality to safely update the auto-managed section
 //! of AGENTS.md after PRD creation or task completion.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -40,7 +42,6 @@ pub struct AgentsUpdateResult {
     pub modified: bool,
 
     /// The new content of the auto-managed section (if modified).
-    #[allow(dead_code)]
     pub new_content: Option<String>,
 }
 

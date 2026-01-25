@@ -5,13 +5,11 @@
 //! - Invokes runner with `bootstrap_plan.md` to analyze the repo
 //! - Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 //! - Updates `.mr/PRDS.md` index
-//! - Patches `AGENTS.md` auto-managed section
 
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
-use crate::agents::{RecentChange, update_agents_md};
 use crate::init;
 use crate::prd::generate_index_from_root;
 use crate::prompt::{
@@ -69,7 +67,6 @@ pub struct BootstrapResult {
 /// 2. Invokes runner with `bootstrap_plan.md` to analyze the repo
 /// 3. Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 /// 4. Updates `.mr/PRDS.md` index
-/// 5. Patches `AGENTS.md` auto-managed section
 pub fn bootstrap<R>(config: &BootstrapConfig, runner: &R) -> Result<BootstrapResult>
 where
     R: Runner + ?Sized,
@@ -149,27 +146,6 @@ where
     tracing::info!("Regenerating PRD index...");
 
     generate_index_from_root(config.root)?;
-
-    // Step 5: Update AGENTS.md.
-    let changes = vec![RecentChange {
-        file: ".mr/".to_string(),
-        description: format!(
-            "Bootstrap completed: analyzed repo, generated {} PRD(s)",
-            result.prds_created
-        ),
-    }];
-
-    match update_agents_md(config.root, runner, &changes) {
-        Ok(agents_result) if agents_result.modified => {
-            tracing::info!("Updated AGENTS.md auto-managed section");
-        }
-        Ok(_) => {
-            tracing::debug!("No changes needed for AGENTS.md");
-        }
-        Err(e) => {
-            tracing::warn!("Failed to update AGENTS.md: {e}");
-        }
-    }
 
     Ok(result)
 }
@@ -287,7 +263,6 @@ mod tests {
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("Plan: Generate 2 PRDs..."),
             crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());
@@ -309,7 +284,6 @@ mod tests {
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("Plan: Generate 1 PRD..."),
             crate::runner::RunnerOutput::success("Created PRD-0001."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());
@@ -329,7 +303,6 @@ mod tests {
                 "Bootstrap Plan:\n1. PRD for feature A\n2. PRD for feature B",
             ),
             crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());
@@ -347,7 +320,6 @@ mod tests {
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("Plan complete."),
             crate::runner::RunnerOutput::success("Generated PRD-0001, PRD-0002, and PRD-0003."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());
@@ -459,7 +431,6 @@ mod tests {
                 "Bootstrap Plan:\n- PRD-0001: Core feature\n- PRD-0002: Extended feature",
             ),
             crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002 successfully."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());
@@ -472,8 +443,8 @@ mod tests {
         assert!(result.prds_generated);
         assert_eq!(result.prds_created, 2);
 
-        // Verify runner was called 3 times (plan, generate, agents update).
-        assert_eq!(runner.recorded_prompts().len(), 3);
+        // Verify runner was called 2 times (plan, generate).
+        assert_eq!(runner.recorded_prompts().len(), 2);
 
         // Verify .mr/ structure exists.
         assert!(temp.path().join(".mr/prds").exists());
@@ -491,7 +462,6 @@ mod tests {
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("Plan: Generate 1 PRD..."),
             crate::runner::RunnerOutput::success("Created PRD-0001."),
-            crate::runner::RunnerOutput::success("NO_CHANGES"),
         ]);
 
         let config = BootstrapConfig::new(temp.path());

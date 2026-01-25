@@ -33,7 +33,7 @@ tasks:
   - id: T-003
     title: Remove update_agents_md() call from src/bootstrap.rs
     priority: 1
-    status: todo
+    status: done
     notes: Remove the call after bootstrapping
   - id: T-004
     title: Delete the agents.rs module if unused
@@ -118,6 +118,17 @@ The current implementation automatically calls `update_agents_md()` after three 
   - Removed `update_agents_md()` call and associated logic from src/prd_new.rs (lines 315-335)
   - Removed unused import `use crate::agents::{RecentChange, update_agents_md};` from src/prd_new.rs (line 12)
   - Added `#[allow(dead_code)]` to `new_content` field in src/agents.rs to suppress dead code warning (field is still used by src/bootstrap.rs, will be cleaned up in T-004)
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Remove update_agents_md() call from src/bootstrap.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `update_agents_md()` call and associated logic from src/bootstrap.rs (lines 154-172)
+  - Removed unused import `use crate::agents::{RecentChange, update_agents_md};` from src/bootstrap.rs (line 14)
+  - Updated function documentation to remove references to AGENTS.md patching
+  - Updated all MockRunner test fixtures to expect 2 runner calls instead of 3 (removed the third call for agents update)
+  - Added `#![allow(dead_code)]` to entire src/agents.rs module since all functions are now unused (will be deleted in T-004)
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
 
