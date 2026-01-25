@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **PRD-0016: Remove Automatic AGENTS.md Update Step** — Simplified agent workflow by removing automatic documentation updates
+  - Removed automatic `update_agents_md()` calls after task execution, PRD creation, and bootstrapping
+  - Deleted `agents.rs` module (531 lines) and `update_agents.md` prompt template
+  - Added manual update reminders to task execution, PRD creation, and bootstrap prompts
+  - Agents now have flexibility to update any part of AGENTS.md, not just auto-managed sections
+
 - **PRD-0009: CLI Ergonomics Improvements** — Simplified command structure and improved output readability
   - PRD argument now optional and positional on `run` command: `mr run PRD-0001` or `mr run`
   - Flattened command hierarchy: `mr new/list/edit/finalize` instead of `mr prd new/list/edit/finalize`

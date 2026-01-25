@@ -1,75 +1,75 @@
 ---
 id: PRD-0016
 title: Remove Automatic AGENTS.md Update Step
-status: active
+status: done
 owner: twitchax
 created: 2026-01-25
 updated: 2026-01-25
 principles:
-  - Simplify the task execution pipeline by removing redundant automation
-  - Empower agents to make holistic documentation updates without artificial constraints
-  - Reduce code complexity by eliminating single-purpose modules
+- Simplify the task execution pipeline by removing redundant automation
+- Empower agents to make holistic documentation updates without artificial constraints
+- Reduce code complexity by eliminating single-purpose modules
 references: []
 acceptance_tests:
-  - id: uat-001
-    name: All existing UATs pass after changes
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: Task execution completes without calling update_agents_md
-    command: cargo run -- run PRD-0001 --task T-001
-    uat_status: verified
+- id: uat-001
+  name: All existing UATs pass after changes
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Task execution completes without calling update_agents_md
+  command: cargo run -- run PRD-0001 --task T-001
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: Remove update_agents_md() call from src/run.rs
-    priority: 1
-    status: done
-    notes: Remove the call after task completion
-  - id: T-002
-    title: Remove update_agents_md() call from src/prd_new.rs
-    priority: 1
-    status: done
-    notes: Remove the call after PRD creation
-  - id: T-003
-    title: Remove update_agents_md() call from src/bootstrap.rs
-    priority: 1
-    status: done
-    notes: Remove the call after bootstrapping
-  - id: T-004
-    title: Delete the agents.rs module if unused
-    priority: 2
-    status: done
-    notes: Remove src/agents.rs and its mod declaration
-  - id: T-005
-    title: Remove update_agents.md prompt creation from init.rs
-    priority: 2
-    status: done
-    notes: Line 1469 in init.rs creates this prompt - remove it
-  - id: T-006
-    title: Delete .mr/prompts/update_agents.md file
-    priority: 2
-    status: done
-    notes: Remove the prompt file from the repository
-  - id: T-007
-    title: Add AGENTS.md update reminder to run_task.md prompt
-    priority: 1
-    status: done
-    notes: Add to numbered task list - "Update AGENTS.md if needed based on changes made"
-  - id: T-008
-    title: Add AGENTS.md update reminder to run_new_prd.md prompt in init.rs
-    priority: 1
-    status: done
-    notes: Add reminder to the PRD creation prompt
-  - id: T-009
-    title: Add AGENTS.md update reminder to bootstrap_all.md prompt in init.rs
-    priority: 1
-    status: done
-    notes: Add reminder to the bootstrap prompt
-  - id: T-010
-    title: Verify all prompts are updated in both init.rs and .md files
-    priority: 3
-    status: done
-    notes: Ensure consistency between init.rs embedded prompts and .mr/prompts/*.md files
+- id: T-001
+  title: Remove update_agents_md() call from src/run.rs
+  priority: 1
+  status: done
+  notes: Remove the call after task completion
+- id: T-002
+  title: Remove update_agents_md() call from src/prd_new.rs
+  priority: 1
+  status: done
+  notes: Remove the call after PRD creation
+- id: T-003
+  title: Remove update_agents_md() call from src/bootstrap.rs
+  priority: 1
+  status: done
+  notes: Remove the call after bootstrapping
+- id: T-004
+  title: Delete the agents.rs module if unused
+  priority: 2
+  status: done
+  notes: Remove src/agents.rs and its mod declaration
+- id: T-005
+  title: Remove update_agents.md prompt creation from init.rs
+  priority: 2
+  status: done
+  notes: Line 1469 in init.rs creates this prompt - remove it
+- id: T-006
+  title: Delete .mr/prompts/update_agents.md file
+  priority: 2
+  status: done
+  notes: Remove the prompt file from the repository
+- id: T-007
+  title: Add AGENTS.md update reminder to run_task.md prompt
+  priority: 1
+  status: done
+  notes: Add to numbered task list - "Update AGENTS.md if needed based on changes made"
+- id: T-008
+  title: Add AGENTS.md update reminder to run_new_prd.md prompt in init.rs
+  priority: 1
+  status: done
+  notes: Add reminder to the PRD creation prompt
+- id: T-009
+  title: Add AGENTS.md update reminder to bootstrap_all.md prompt in init.rs
+  priority: 1
+  status: done
+  notes: Add reminder to the bootstrap prompt
+- id: T-010
+  title: Verify all prompts are updated in both init.rs and .md files
+  priority: 3
+  status: done
+  notes: Ensure consistency between init.rs embedded prompts and .mr/prompts/*.md files
 ---
 
 # Summary
@@ -226,3 +226,10 @@ The current implementation automatically calls `update_agents_md()` after three 
   - T-003 history explicitly documents: "Updated all MockRunner test fixtures to expect 2 runner calls instead of 3"
   - All 267 tests pass with `cargo make uat` (exit code 0)
   - Grep search confirms zero occurrences of `update_agents_md` in the codebase
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Outcome**: All 10 tasks completed, 2 acceptance tests verified, 267 UAT tests passed
+- **Changelog**: Entry added under [Unreleased] → Changed
+- **Cleanup**: No cleanup needed — all code changes were purposeful, no temporary files or debug statements found
+- **Summary**: Successfully removed automatic AGENTS.md update mechanism (agents.rs module, update_agents.md prompt, all invocations). Replaced with manual reminders in task execution, PRD creation, and bootstrap prompts. Agents now have full flexibility to update any section of AGENTS.md as needed.
