@@ -68,7 +68,7 @@ tasks:
   - id: T-010
     title: Verify all prompts are updated in both init.rs and .md files
     priority: 3
-    status: todo
+    status: done
     notes: Ensure consistency between init.rs embedded prompts and .mr/prompts/*.md files
 ---
 
@@ -189,5 +189,20 @@ The current implementation automatically calls `update_agents_md()` after three 
   - Deleted `.mr/prompts/update_agents.md` file (941 bytes)
   - This file was previously created during `mr init` but is no longer needed after removal of automatic AGENTS.md update mechanism
   - File contained the prompt template that instructed agents on how to update the auto-managed section of AGENTS.md
+  - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
+
+
+## 2026-01-25 — T-010 Completed
+- **Task**: Verify all prompts are updated in both init.rs and .md files
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `PROMPT_RUN_TASK` constant in `src/init.rs` (lines 593-601) to add step 7 about updating AGENTS.md
+  - Verified all 14 prompts are consistent between init.rs constants and .mr/prompts/*.md files:
+    - init, bootstrap_plan, bootstrap_generate_prds
+    - prd_new_round1_questions, prd_new_roundN_questions, prd_new_synthesize_prd
+    - run_task, run_task_finalize, run_uat_verify
+    - prd_edit, constitution_edit
+    - adapt_language, reindex, pick_prd
+  - Confirmed AGENTS.md update reminders are present in all three modified prompts (T-007, T-008, T-009)
   - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
 
