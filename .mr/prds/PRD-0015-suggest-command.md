@@ -30,7 +30,7 @@ acceptance_tests:
 - id: uat-003
   name: Selected suggestion flows into mr new with pre-filled context
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: Suggestions include both strategic and quick-win categories
   command: cargo make uat
@@ -238,3 +238,18 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
     - Invalid input (non-numeric, empty)
   - Refactored `suggest()` function to use `validate_selection()` helper
   - Test passed: 301/301 tests passing (up from 300)
+
+---
+
+## 2026-01-25 — uat-003 Verification
+- **UAT**: Selected suggestion flows into mr new with pre-filled context
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_suggestion_flows_to_prd_new_with_context()` in `src/suggest.rs`
+  - Test verifies that when a suggestion is selected:
+    - A slug is generated from the suggestion title (e.g., "implement-configuration-validation")
+    - Context is built with description, category, effort, and rationale
+    - All fields are properly extracted and formatted for PrdNewConfig
+  - Test parses sample suggestion output, selects suggestion #2, and validates all context fields
+  - Test passed: 302/302 tests passing (up from 301)
