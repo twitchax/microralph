@@ -755,4 +755,73 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(selected.category, "Quality");
         assert_eq!(selected.effort, "Small (4-6 hours)");
     }
+
+    /// UAT-004: Suggestions include both strategic and quick-win categories.
+    ///
+    /// Validates that parsed suggestions include a balanced mix of:
+    /// - At least one "Quick Win" category
+    /// - At least one "Strategic" category
+    /// - Valid categories from the expected set
+    #[test]
+    fn test_suggestions_include_strategic_and_quick_win() {
+        let output = r#"
+1. Add Telemetry Support — Integrate OpenTelemetry for distributed tracing
+   Category: Strategic
+   Effort: High
+   Rationale: Long-term observability investment for production systems
+
+2. Add --verbose Flag — Add verbose output flag to all commands
+   Category: Quick Win
+   Effort: Low
+   Rationale: Quick improvement to debugging experience with minimal code changes
+
+3. Implement Caching Layer — Add caching for expensive operations
+   Category: Strategic
+   Effort: Medium
+   Rationale: Performance optimization for future scale
+
+4. Fix Help Text Typos — Correct typos in command help messages
+   Category: Quick Win
+   Effort: Low
+   Rationale: Easy documentation fix that improves user experience
+
+5. Add Integration Tests — Expand test coverage with integration tests
+   Category: Testing
+   Effort: Medium
+   Rationale: Improve confidence in cross-module interactions
+"#;
+
+        let suggestions = parse_suggestions(output).unwrap();
+        assert_eq!(suggestions.len(), 5, "Should parse exactly 5 suggestions");
+
+        // Collect categories from all suggestions.
+        let categories: Vec<String> = suggestions.iter().map(|s| s.category.clone()).collect();
+
+        // Verify at least one "Strategic" category exists.
+        let has_strategic = categories.iter().any(|c| c == "Strategic");
+        assert!(
+            has_strategic,
+            "Suggestions should include at least one 'Strategic' category. Found: {:?}",
+            categories
+        );
+
+        // Verify at least one "Quick Win" category exists.
+        let has_quick_win = categories.iter().any(|c| c == "Quick Win");
+        assert!(
+            has_quick_win,
+            "Suggestions should include at least one 'Quick Win' category. Found: {:?}",
+            categories
+        );
+
+        // Verify all categories are from the expected set.
+        let valid_categories = ["Quick Win", "Strategic", "Debt", "Testing", "Docs"];
+        for category in &categories {
+            assert!(
+                valid_categories.contains(&category.as_str()),
+                "Invalid category '{}'. Must be one of: {:?}",
+                category,
+                valid_categories
+            );
+        }
+    }
 }
