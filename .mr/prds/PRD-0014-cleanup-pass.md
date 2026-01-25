@@ -42,7 +42,7 @@ tasks:
   - id: T-005
     title: Check and fix Rust idiom violations
     priority: 4
-    status: todo
+    status: done
     notes: Prefer `?` operator, avoid string concatenation in loops. Don't force changes if too risky.
   - id: T-006
     title: Identify and fix obvious performance issues
@@ -151,3 +151,14 @@ The codebase has grown organically and now contains:
   - Explained Q/A loop exit conditions: READY_TO_SYNTHESIZE signal, no additional questions, MAX_QA_ROUNDS limit
   - Clarified two-strategy persist approach: runner-created file vs. response parsing
   - UAT passed: All 312 tests pass after adding comments
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Check and fix Rust idiom violations
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced string concatenation in loops with iterator-based collection and join:
+    - `src/main.rs::analyze_project_structure()`: Refactored tool discovery loop to use `filter().map().collect()` instead of iterative `push_str()` (lines 1402-1407)
+    - `src/prd_finalize.rs::generate_finalization_report()`: Refactored task summary loop to use `map().collect()` instead of iterative `push_str()` (lines 205-210)
+  - Changed `vec![]` to array `[]` in `main.rs` line 1392 per clippy suggestion (useless_vec lint)
+  - Verified no risky explicit error handling patterns that should use `?` operator - all existing `match` statements have necessary fallback logic or context-specific error handling
+  - UAT passed: All 312 tests pass after refactoring

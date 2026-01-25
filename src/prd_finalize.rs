@@ -202,9 +202,11 @@ fn generate_summary_report(prd: &Prd) -> String {
     report.push_str(&format!("- **Tasks Completed**: {}\n", task_count));
     report.push_str("- **Summary**:\n");
 
-    for task in tasks {
-        report.push_str(&format!("  - {}: {}\n", task.id, task.title));
-    }
+    let task_lines: Vec<_> = tasks
+        .iter()
+        .map(|task| format!("  - {}: {}\n", task.id, task.title))
+        .collect();
+    report.push_str(&task_lines.join(""));
 
     report.push_str("- **Status**: ✅ All acceptance tests passed\n");
 

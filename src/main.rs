@@ -1389,7 +1389,7 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
     ));
 
     // Check for common tools in the project.
-    let tools = vec![
+    let tools = [
         ("Cargo.toml", "Rust (cargo)"),
         ("Makefile.toml", "cargo-make"),
         ("package.json", "Node.js (npm/yarn)"),
@@ -1399,11 +1399,12 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
     ];
 
     analysis.push_str("Project files found:\n");
-    for (file, desc) in tools {
-        if root.join(file).exists() {
-            analysis.push_str(&format!("- {}\n", desc));
-        }
-    }
+    let found_tools: Vec<_> = tools
+        .iter()
+        .filter(|(file, _)| root.join(file).exists())
+        .map(|(_, desc)| format!("- {}\n", desc))
+        .collect();
+    analysis.push_str(&found_tools.join(""));
     analysis.push('\n');
 
     // Check git log for recently added tools (last 50 commits).
