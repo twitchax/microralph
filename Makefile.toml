@@ -272,6 +272,77 @@ if [ "${1:-}" != "--dry-run" ]; then
 fi
 '''
 
+[tasks.github-release]
+cwd = "."
+workspace = false
+script_runner = "@shell"
+script = '''#!/bin/bash
+set -e
+
+TAG=${1:-}
+if [ -z "$TAG" ]; then
+    echo "❌ Error: Version tag required"
+    echo "Usage: cargo make github-release <tag> [--draft]"
+    echo "Example: cargo make github-release v0.1.0"
+    exit 1
+fi
+
+echo "📦 Creating GitHub release for $TAG..."
+
+# Prepare release notes
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+NOTES_FILE="$TEMP_DIR/release_notes.md"
+
+if [ -f "CHANGELOG.md" ]; then
+    echo "Using changelog for release notes..."
+    cp CHANGELOG.md "$NOTES_FILE"
+else
+    echo "## Release $TAG" > "$NOTES_FILE"
+    echo "" >> "$NOTES_FILE"
+    echo "See the full changelog at https://github.com/twitchax/microralph/blob/main/CHANGELOG.md" >> "$NOTES_FILE"
+fi
+
+# Check for artifacts directory
+ARTIFACTS=""
+if [ -d "release-artifacts" ]; then
+    echo "📎 Found release-artifacts directory"
+    for file in release-artifacts/*; do
+        if [ -f "$file" ]; then
+            echo "  → $(basename "$file")"
+            ARTIFACTS="$ARTIFACTS \"$file\""
+        fi
+    done
+fi
+
+# Build gh release create command
+GH_CMD="gh release create \"$TAG\" --title \"$TAG\" --notes-file \"$NOTES_FILE\""
+
+# Add draft flag if requested
+shift
+if echo "$@" | grep -q "\-\-draft"; then
+    GH_CMD="$GH_CMD --draft"
+    echo "📝 Creating as draft release"
+fi
+
+# Add artifacts
+if [ -n "$ARTIFACTS" ]; then
+    GH_CMD="$GH_CMD $ARTIFACTS"
+fi
+
+# Execute the release creation
+echo ""
+echo "🚀 Creating GitHub release..."
+eval $GH_CMD
+
+echo ""
+echo "✅ GitHub release created successfully!"
+echo "   View at: https://github.com/twitchax/microralph/releases/tag/$TAG"
+echo ""
+echo "💡 To download artifacts from CI, run:"
+echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
+'''
+
 # =============================================================================
 # Development Helpers
 # =============================================================================

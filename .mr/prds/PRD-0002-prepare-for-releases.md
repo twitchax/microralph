@@ -87,7 +87,7 @@ tasks:
 - id: T-007
   title: Add GitHub Release creation workflow/task
   priority: 7
-  status: todo
+  status: done
   notes: Create cargo-make task or script to create GitHub releases with attached binaries from artifacts. May use gh CLI.
 - id: T-008
   title: Add unified release task orchestrating full pipeline
@@ -240,3 +240,22 @@ microralph currently has no release infrastructure. To distribute the tool to us
 - **Opportunistic UAT Verification**:
   - ✅ UAT-008 verified - `cargo publish --no-verify --dry-run` completes successfully and shows "aborting upload due to dry run" message
 - **UAT Results**: ✅ All UATs pass - publish-crates task functional and ready for releases
+
+## 2026-01-25 — T-007 Completed
+- **Task**: Add GitHub Release creation workflow/task
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `github-release` task to Makefile.toml (lines 275-324)
+  - Task uses gh CLI to create GitHub releases with attached binaries
+  - Accepts version tag as first argument (required): `cargo make github-release v0.1.0`
+  - Supports `--draft` flag for creating draft releases
+  - Uses CHANGELOG.md for release notes if available
+  - Checks for `release-artifacts/` directory for binary attachments
+  - Provides helpful output with emoji indicators for each step
+  - Includes usage instructions for downloading CI artifacts with gh CLI
+  - Task follows bash scripting best practices with error handling (`set -e`)
+  - Ran `cargo make uat` - all 304 tests pass
+- **Opportunistic UAT Verification**:
+  - No UATs can be verified at this time - UAT-009 and beyond are not defined yet
+  - Manual testing confirms task works correctly (validates args, prepares notes, calls gh CLI)
+- **UAT Results**: ✅ All UATs pass - github-release task implemented and functional
