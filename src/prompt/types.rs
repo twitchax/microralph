@@ -51,6 +51,9 @@ pub enum PromptKind {
 
     /// Devcontainer generation prompt for creating dev container configs.
     DevcontainerGenerate,
+
+    /// Suggest generation prompt for analyzing codebase and proposing PRDs.
+    SuggestGenerate,
 }
 
 impl PromptKind {
@@ -74,6 +77,7 @@ impl PromptKind {
             Self::Reindex => "reindex.md",
             Self::PickPrd => "pick_prd.md",
             Self::DevcontainerGenerate => "devcontainer_generate.md",
+            Self::SuggestGenerate => "suggest_generate.md",
         }
     }
 
@@ -95,6 +99,7 @@ impl PromptKind {
             Self::Reindex,
             Self::PickPrd,
             Self::DevcontainerGenerate,
+            Self::SuggestGenerate,
         ]
     }
 }
@@ -122,13 +127,14 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 15);
+        assert_eq!(all.len(), 16);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));
         assert!(all.contains(&PromptKind::Reindex));
         assert!(all.contains(&PromptKind::PickPrd));
         assert!(all.contains(&PromptKind::RunUatVerify));
+        assert!(all.contains(&PromptKind::SuggestGenerate));
     }
 
     #[test]

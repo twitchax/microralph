@@ -1,10 +1,10 @@
 ---
 id: PRD-0015
 title: "Suggest Command for AI-Generated PRD Recommendations"
-status: draft
+status: active
 owner: "microralph"
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 
 principles:
 - Focus on strategic feature suggestions but include quick wins
@@ -44,7 +44,7 @@ tasks:
 - id: T-001
   title: Add PromptKind variant for suggestion generation
   priority: 1
-  status: todo
+  status: done
   notes: Add SuggestGenerate variant to PromptKind enum in src/prompt/types.rs
 - id: T-002
   title: Create suggest generation prompt template
@@ -121,5 +121,18 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Add PromptKind variant for suggestion generation
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `SuggestGenerate` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Implemented `filename()` method to return `"suggest_generate.md"`
+  - Added variant to `all()` array in `types.rs`
+  - Created `PROMPT_SUGGEST_GENERATE` constant in `src/init.rs` with comprehensive prompt template
+  - Added match arm in `src/prompt/loader.rs` to return the new prompt
+  - Updated test `test_prompt_kind_all` to expect 16 prompts (previously 15)
+  - Updated test `test_prompt_loader_missing_prompts` to expect 16/15 counts
+  - UAT passed: All 293 tests passing
 
 ---
