@@ -78,7 +78,7 @@ tasks:
 - id: T-007
   title: Add unit tests for ClaudeRunner
   priority: 7
-  status: todo
+  status: done
   notes: Test config builder, arg construction, permission modes, usage parsing, and output stripping. Mock the `claude` binary for tests.
 
 - id: T-008
@@ -254,3 +254,27 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
   - ClaudeRunner simply extracts the `result` JSON field, which is more robust
   - Both `execute()` and `execute_streaming()` already use this stripping internally
   - The public `strip_usage_stats()` method provides the same API surface as CopilotRunner for external callers
+
+---
+
+## 2026-01-25 — T-007 Completed
+- **Task**: Add unit tests for ClaudeRunner
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified comprehensive unit test coverage already exists in `src/runner/claude.rs` (lines 475-783)
+  - 22 test functions covering all requirements:
+    - Config builder: `test_claude_config_default`, `test_claude_config_builder`
+    - Arg construction: `test_build_args_yolo_mode`, `test_build_args_manual_mode`, `test_build_args_with_model`, `test_build_args_without_model`, `test_with_model_constructor`
+    - Permission modes: Tests for both Yolo and Manual modes with correct flags
+    - Usage parsing: `test_parse_usage_returns_none`, `test_parse_usage_from_json`, `test_parse_usage_missing_fields`
+    - Output stripping: `test_strip_usage_stats_with_full_json`, `test_strip_usage_stats_with_plain_text`, `test_strip_usage_stats_preserves_multiline_result`, `test_strip_usage_stats_with_empty_result`, `test_strip_usage_stats_missing_result_field`
+    - Result extraction: `test_extract_result_from_json`, `test_extract_result_from_invalid_json`, `test_extract_result_missing_result_field`
+    - Format command: `test_format_command_display`, `test_format_command_display_no_model`
+    - Runner trait: `test_runner_name`, `test_runner_default`
+  - All tests use mocked ClaudeConfig objects and do not require actual `claude` binary installation
+  - All 293 tests pass (verified with `cargo make uat`)
+  - UAT passes: `cargo make uat` successful
+- **Notes**:
+  - All test requirements from T-007 were already satisfied by implementation in previous tasks
+  - Tests provide comprehensive coverage of all ClaudeRunner functionality
+  - Mock-based testing approach ensures CI can run without Claude CLI installed
