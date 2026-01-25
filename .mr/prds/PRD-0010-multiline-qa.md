@@ -19,7 +19,7 @@ acceptance_tests:
   - id: uat-002
     name: Multi-line answer is captured correctly
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: Detect and display newlines in model-generated questions
@@ -29,7 +29,7 @@ tasks:
   - id: T-002
     title: Support multi-line answer input with double-enter termination
     priority: 2
-    status: todo
+    status: done
     notes: User presses Enter twice to finish multi-line answer; simple approach preferred
   - id: T-003
     title: Verify UAT scenarios pass
@@ -76,3 +76,18 @@ This limitation makes the interactive PRD creation process less effective when d
   - All 272 UAT tests pass
 - **UATs Verified**:
   - uat-001: Question with bullet list displays completely ✅ (verified via `test_parse_questions_multiline_with_bullets`)
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Support multi-line answer input with double-enter termination
+- **Status**: ✅ Done
+- **Changes**:
+  - Implementation already exists in `collect_answers()` function (lines 659-683 of `src/prd_new.rs`)
+  - Multi-line answer input works by:
+    - User types first line and presses Enter
+    - System prompts with `> ` for additional lines
+    - User presses Enter on blank line (double-enter) to finish
+    - All lines are joined with newlines and stored
+  - Existing test `test_collect_answers_multiline` verifies functionality
+  - All 273 UAT tests pass
+- **UATs Verified**:
+  - uat-002: Multi-line answer is captured correctly ✅ (verified via existing implementation and `test_collect_answers_multiline` test)
