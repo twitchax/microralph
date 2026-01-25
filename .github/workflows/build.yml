@@ -161,4 +161,4 @@ jobs:
             - name: Login to GitHub Container Registry
               run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             - name: Publish to GHCR
-              run: wkg oci push ghcr.io/twitchax/microralph:latest --file target/wasm32-wasip2/release/mr.wasm
+              run: wkg oci push ghcr.io/twitchax/microralph:latest target/wasm32-wasip2/release/mr.wasm
