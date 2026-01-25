@@ -281,6 +281,7 @@ fn extract_questions(response: &str) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runner::MockRunner;
 
     #[test]
     fn test_extract_constitution_content() {
@@ -319,5 +320,81 @@ I need more information:
         assert_eq!(questions[0], "What is the scope?");
         assert_eq!(questions[1], "Should this apply to all PRDs?");
         assert_eq!(questions[2], "Any exceptions?");
+    }
+
+    #[test]
+    fn test_constitution_edit() {
+        // UAT: constitution_edit — Verify constitution edit command updates via LLM
+        // This test verifies that the constitution edit command can successfully
+        // update the constitution file based on a user request through the runner.
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        let prompts_dir = mr_dir.join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create initial constitution file
+        let constitution_path = mr_dir.join("constitution.md");
+        let initial_constitution = r#"# Constitution
+
+## Purpose
+Project governance rules
+
+## Rules
+1. **Rule one**: Original rule
+"#;
+        std::fs::write(&constitution_path, initial_constitution).unwrap();
+
+        // Create constitution_edit prompt template
+        let prompt_path = prompts_dir.join("constitution_edit.md");
+        std::fs::write(
+            &prompt_path,
+            "Edit request: {{user_request}}\n\nCurrent:\n{{constitution_content}}",
+        )
+        .unwrap();
+
+        // Mock runner that returns an updated constitution
+        use crate::runner::RunnerOutput;
+        let mock_runner = MockRunner::new(vec![RunnerOutput {
+            success: true,
+            text: r#"
+READY_TO_APPLY
+
+Here's the updated constitution:
+
+```markdown
+# Constitution
+
+## Purpose
+Project governance rules
+
+## Rules
+1. **Rule one**: Updated rule via LLM
+2. **Rule two**: New rule added by edit
+```
+"#
+            .to_string(),
+            usage: None,
+        }]);
+
+        let config = ConstitutionEditConfig {
+            root: temp.path(),
+            request: "Update rule one and add rule two",
+        };
+
+        let mut input = std::io::empty();
+        let mut output = Vec::new();
+
+        let result = edit_constitution(&config, &mock_runner, &mut input, &mut output).unwrap();
+
+        // Verify the result
+        assert_eq!(result.rounds, 1);
+        assert_eq!(result.path, constitution_path);
+
+        // Verify the constitution file was updated
+        let updated_content = std::fs::read_to_string(&constitution_path).unwrap();
+        assert!(updated_content.contains("Updated rule via LLM"));
+        assert!(updated_content.contains("New rule added by edit"));
+        assert!(!updated_content.contains("Original rule"));
     }
 }

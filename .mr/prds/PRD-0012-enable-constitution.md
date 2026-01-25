@@ -39,7 +39,7 @@ acceptance_tests:
 - id: uat-005
   name: constitution edit command updates via LLM
   command: cargo make uat constitution_edit
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: Runner logs violations in PRD history
   command: cargo make uat constitution_violation_logging
@@ -315,4 +315,19 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Verification: Test confirms that when constitution.md exists, its content is loaded and included in the PRD finalization prompt
   - Test verifies constitution content appears in finalize prompt by checking for presence of "Acceptance tests must be codified" and "Use semantic versioning" rules
   - Result: Test passed successfully
+
+---
+
+## 2026-01-25 — uat-005 Verification
+- **UAT**: constitution edit command updates via LLM
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Test: `src/constitution_edit.rs::test_constitution_edit`
+  - Command: `cargo make uat constitution_edit` (runs via nextest filter)
+  - Verification: Test confirms that the constitution edit command can update the constitution file through a mock runner
+  - Test creates a temp constitution, invokes edit_constitution with a mock runner that returns READY_TO_APPLY signal with updated content
+  - Test verifies the constitution file is updated with new content and old content is replaced
+  - Result: Test passed successfully (282 tests passed including 3 constitution_edit tests)
+
 
