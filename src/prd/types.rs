@@ -452,21 +452,6 @@ impl Prd {
             .unwrap_or_default()
     }
 
-    /// Returns the acceptance tests in the PRD, if any.
-    #[allow(dead_code)] // Used by UAT verification loop (T-003).
-    pub fn acceptance_tests(&self) -> Option<&[AcceptanceTest]> {
-        self.frontmatter.acceptance_tests.as_deref()
-    }
-
-    /// Returns true if all tasks are done (or there are no tasks).
-    #[allow(dead_code)] // Used by UAT verification loop (T-003).
-    pub fn all_tasks_done(&self) -> bool {
-        self.frontmatter
-            .tasks
-            .as_ref()
-            .is_none_or(|tasks| tasks.iter().all(|t| t.status == TaskStatus::Done))
-    }
-
     /// Returns true if any acceptance tests have unverified status.
     pub fn has_unverified_uats(&self) -> bool {
         self.frontmatter

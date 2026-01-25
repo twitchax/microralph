@@ -61,14 +61,7 @@ pub struct PrdFinalizeConfig<'a> {
 }
 
 /// Result of PRD finalization.
-#[allow(dead_code)]
 pub struct PrdFinalizeResult {
-    /// The PRD ID.
-    pub prd_id: String,
-
-    /// The PRD title.
-    pub prd_title: String,
-
     /// Path to the PRD file.
     pub path: PathBuf,
 
@@ -405,8 +398,6 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     let summary_report = generate_summary_report(&final_prd);
 
     Ok(PrdFinalizeResult {
-        prd_id: final_prd.id().to_string(),
-        prd_title: final_prd.title().to_string(),
         path,
         changelog_path: changelog_result.path,
         changelog_created: changelog_result.created,

@@ -581,10 +581,6 @@ pub struct UatVerificationConfig<'a> {
     /// The PRD ID to verify UATs for.
     pub prd_id: &'a str,
 
-    /// Path to the PRD file (for display purposes).
-    #[allow(dead_code)]
-    pub prd_path: &'a Path,
-
     /// Whether to stream runner output in real-time.
     pub stream: bool,
 
@@ -1448,7 +1444,6 @@ Test PRD.
         let config = UatVerificationConfig {
             root: &root,
             prd_id: "PRD-0001",
-            prd_path: &prd_file,
             stream: false,
             max_iterations: Some(5),
         };
@@ -1512,7 +1507,6 @@ Test PRD.
         let config = UatVerificationConfig {
             root: &root,
             prd_id: "PRD-0001",
-            prd_path: &prd_file,
             stream: false,
             max_iterations: Some(1), // Only 1 iteration allowed.
         };
@@ -1589,7 +1583,6 @@ Test PRD.
         let config = UatVerificationConfig {
             root: &root,
             prd_id: "PRD-0001",
-            prd_path: &prd_file,
             stream: false,
             max_iterations: Some(2),
         };
@@ -1776,7 +1769,7 @@ Test PRD.
 
         let run_result = run_task(&run_config, &run_runner).unwrap();
 
-        let (prd_id, prd_path) = match run_result {
+        let (prd_id, _prd_path) = match run_result {
             RunResult::NeedsUatVerification {
                 prd_id,
                 prd_path,
@@ -1799,7 +1792,6 @@ Test PRD.
         let uat_config = UatVerificationConfig {
             root: &root,
             prd_id: &prd_id,
-            prd_path: &prd_path,
             stream: false,
             max_iterations: Some(2),
         };
@@ -1894,7 +1886,6 @@ Test PRD.
         let uat_config = UatVerificationConfig {
             root: &root,
             prd_id: "PRD-0099",
-            prd_path: &prd_file,
             stream: false,
             max_iterations: Some(2), // Stop after 2 iterations to avoid retrying opted-out UAT.
         };

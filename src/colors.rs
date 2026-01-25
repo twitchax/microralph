@@ -3,8 +3,6 @@
 //! This module provides utilities for colorizing terminal output using owo-colors.
 //! Colors automatically degrade to plain text when output is piped or NO_COLOR is set.
 
-#![allow(dead_code)]
-
 use owo_colors::{OwoColorize, Stream};
 
 /// Returns a string styled for success messages (green + ✅ emoji).

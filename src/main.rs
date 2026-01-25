@@ -1257,7 +1257,6 @@ fn cmd_run(
                 let uat_config = run::UatVerificationConfig {
                     root: &cwd,
                     prd_id: &prd_id,
-                    prd_path: &prd_path,
                     stream,
                     max_iterations: None, // Use PRD config or default.
                 };

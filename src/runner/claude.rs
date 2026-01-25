@@ -282,10 +282,6 @@ impl CliRunnerConfig for ClaudeRunner {
         Self::parse_usage(text)
     }
 
-    fn strip_usage_stats(&self, text: &str) -> String {
-        Self::strip_usage_stats(text)
-    }
-
     fn post_process_output(&self, text: &str) -> String {
         Self::extract_result_from_json(text)
     }

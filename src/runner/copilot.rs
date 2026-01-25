@@ -339,10 +339,6 @@ impl CliRunnerConfig for CopilotRunner {
         Self::parse_usage_impl(text)
     }
 
-    fn strip_usage_stats(&self, text: &str) -> String {
-        Self::strip_usage_stats(text)
-    }
-
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
         self.format_display_parts_impl(working_dir)
     }

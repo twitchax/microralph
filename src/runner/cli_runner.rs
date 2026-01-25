@@ -27,11 +27,6 @@ pub trait CliRunnerConfig {
     /// Returns None if usage info cannot be parsed.
     fn parse_usage(&self, text: &str) -> Option<UsageInfo>;
 
-    /// Strips usage statistics from output text.
-    /// This is used to clean up output before writing to files.
-    #[allow(dead_code)]
-    fn strip_usage_stats(&self, text: &str) -> String;
-
     /// Post-processes the output text (e.g., extracting result from JSON).
     /// Default implementation returns text as-is.
     fn post_process_output(&self, text: &str) -> String {
@@ -284,10 +279,6 @@ mod tests {
 
         fn parse_usage(&self, _text: &str) -> Option<UsageInfo> {
             None
-        }
-
-        fn strip_usage_stats(&self, text: &str) -> String {
-            text.to_string()
         }
     }
 
