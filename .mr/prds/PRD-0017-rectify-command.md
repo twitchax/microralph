@@ -1,7 +1,7 @@
 ---
 id: PRD-0017
 title: "Add Restore Command to Reset Prompts and Templates"
-status: draft
+status: active
 owner: "microralph"
 created: 2026-01-25
 updated: 2026-01-25
@@ -9,7 +9,7 @@ updated: 2026-01-25
 principles:
 - Leverage existing `mr init` logic to avoid code duplication
 - Don't auto-commit—let users review changes via Git workflow
-- All-or-nothing approach: restore all editable files, no selective options
+- "All-or-nothing approach: restore all editable files, no selective options"
 - Clear documentation prevents user confusion about destructive nature
 
 references:
@@ -34,7 +34,7 @@ tasks:
 - id: T-001
   title: Add `restore` subcommand to CLI enum and parser
   priority: 1
-  status: todo
+  status: done
   notes: Add to Command enum in main.rs, similar to Init/New/Run pattern
 - id: T-002
   title: Implement cmd_restore function to delete .mr/prompts/ and .mr/templates/
@@ -98,5 +98,17 @@ Currently, there's no way to restore built-in files without manually deleting di
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Add `restore` subcommand to CLI enum and parser
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `Restore` variant to the `Command` enum in main.rs with display_order = 3
+  - Updated all subsequent command display_order values to maintain correct ordering
+  - Added `cmd_restore()` function handler with initialization check and placeholder implementation
+  - Added match arm in main() to handle `Command::Restore`
+  - Command appears correctly in `mr --help` output in the [0] Initialization category
+  - UAT passed: All existing tests continue to pass with the new command structure
+  - Note: T-002 will implement the actual restoration logic
 
 ---

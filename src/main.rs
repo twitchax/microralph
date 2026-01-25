@@ -85,8 +85,12 @@ enum Command {
         model: Option<String>,
     },
 
-    /// [1] Create a new PRD via guided Q/A.
+    /// [0] Restore `.mr/prompts/` and `.mr/templates/` to built-in defaults.
     #[command(display_order = 3)]
+    Restore,
+
+    /// [1] Create a new PRD via guided Q/A.
+    #[command(display_order = 4)]
     New {
         /// The slug for the new PRD (e.g., "add-user-auth").
         slug: String,
@@ -106,7 +110,7 @@ enum Command {
     },
 
     /// [1] Edit an existing PRD via runner-assisted modifications.
-    #[command(display_order = 4)]
+    #[command(display_order = 5)]
     Edit {
         /// The PRD ID to edit (e.g., "PRD-0001").
         prd_id: String,
@@ -124,7 +128,7 @@ enum Command {
     },
 
     /// [2] Run the next task from the active PRD.
-    #[command(display_order = 5)]
+    #[command(display_order = 6)]
     Run {
         /// Optional PRD ID to run (e.g., "PRD-0001"). If omitted, runs the highest-priority active PRD.
         prd: Option<String>,
@@ -147,7 +151,7 @@ enum Command {
     },
 
     /// [3] Finalize a PRD after all tasks are complete.
-    #[command(display_order = 6)]
+    #[command(display_order = 7)]
     Finalize {
         /// The PRD ID to finalize (e.g., "PRD-0001").
         prd_id: String,
@@ -166,15 +170,15 @@ enum Command {
     },
 
     /// [H] List all PRDs.
-    #[command(display_order = 7)]
+    #[command(display_order = 8)]
     List,
 
     /// [H] Show status of PRDs and tasks.
-    #[command(display_order = 8)]
+    #[command(display_order = 9)]
     Status,
 
     /// [H] Generate AI-driven PRD suggestions based on codebase analysis.
-    #[command(display_order = 9)]
+    #[command(display_order = 10)]
     Suggest {
         /// The runner to use for suggestion generation.
         #[arg(long, default_value = "copilot")]
@@ -186,14 +190,14 @@ enum Command {
     },
 
     /// [C] Dev container management commands.
-    #[command(display_order = 10)]
+    #[command(display_order = 11)]
     Devcontainer {
         #[command(subcommand)]
         command: DevcontainerCommand,
     },
 
     /// [C] Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
-    #[command(display_order = 11)]
+    #[command(display_order = 12)]
     Reindex {
         /// The runner to use for link verification/fixing.
         #[arg(long, default_value = "copilot")]
@@ -209,7 +213,7 @@ enum Command {
     },
 
     /// [C] Constitution management commands.
-    #[command(display_order = 12)]
+    #[command(display_order = 13)]
     Constitution {
         #[command(subcommand)]
         command: ConstitutionCommand,
@@ -268,6 +272,10 @@ fn main() -> Result<()> {
         }) => {
             tracing::info!(runner = %runner, language = ?language, "Bootstrapping repo...");
             cmd_bootstrap(&runner, language.as_deref(), model.as_deref())?;
+        }
+        Some(Command::Restore) => {
+            tracing::info!("Restoring prompts and templates...");
+            cmd_restore()?;
         }
         Some(Command::New {
             slug,
@@ -618,6 +626,20 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     );
 
     Ok(())
+}
+
+/// Runs the `mr restore` command.
+fn cmd_restore() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    println!("{}", colors::info("Restoring prompts and templates..."));
+
+    // TODO: T-002 will implement the actual restoration logic
+    anyhow::bail!("Command not yet implemented. See PRD-0017 for implementation plan.");
 }
 
 /// Runs the `mr new` command.
