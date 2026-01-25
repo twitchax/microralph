@@ -12,9 +12,6 @@ use thiserror::Error;
 #[cfg(test)]
 use std::io::Write;
 
-#[cfg(test)]
-use chrono::{Local, Utc};
-
 use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::{AcceptanceTest, Task};
 use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
@@ -191,10 +188,9 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
 }
 
 /// Generates a summary report for a finalized PRD.
-#[cfg(test)]
 fn generate_summary_report(prd: &Prd) -> String {
-    let timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
-    let local_date = Local::now().format("%Y-%m-%d");
+    let timestamp = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
+    let local_date = chrono::Local::now().format("%Y-%m-%d");
     let tasks = prd.completed_tasks();
     let task_count = tasks.len();
 
@@ -395,13 +391,24 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     // - Regenerated PRDS.md via `cargo run -- list`
     // - Committed all changes via git
 
+    // Re-read the PRD one final time to generate the summary report with the most current data.
+    let final_prd = prd::parse_prd_file(&path).with_context(|| {
+        format!(
+            "Failed to re-read PRD for summary generation: {}",
+            path.display()
+        )
+    })?;
+
+    // Generate the summary report.
+    let summary_report = generate_summary_report(&final_prd);
+
     Ok(PrdFinalizeResult {
-        prd_id: prd.id().to_string(),
-        prd_title: prd.title().to_string(),
+        prd_id: final_prd.id().to_string(),
+        prd_title: final_prd.title().to_string(),
         path,
         changelog_path: changelog_result.path,
         changelog_created: changelog_result.created,
-        summary_report: String::new(), // Runner handles reporting via prompt
+        summary_report,
     })
 }
 
