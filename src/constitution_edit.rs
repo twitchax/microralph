@@ -13,7 +13,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::qa_workflow::QaPair;
+use crate::qa_workflow::{QaPair, parse_questions};
 use crate::runner::Runner;
 
 /// Maximum number of Q/A rounds before forcing application.
@@ -124,7 +124,7 @@ where
             });
         } else {
             // Runner has questions—extract and ask the user.
-            let questions = extract_questions(&runner_response)?;
+            let questions = parse_questions(&runner_response);
 
             if questions.is_empty() {
                 bail!(
@@ -218,30 +218,13 @@ fn build_constitution_edit_prompt(
     expand_placeholders(&prompt_template, &context)
 }
 
-/// Extracts questions from the runner response.
-fn extract_questions(response: &str) -> Result<Vec<String>> {
-    let mut questions = Vec::new();
-
-    for line in response.lines() {
-        let trimmed = line.trim();
-        // Look for numbered questions like "1. Question?"
-        if let Some(rest) = trimmed.strip_prefix(char::is_numeric)
-            && let Some(question) = rest.strip_prefix('.').or_else(|| rest.strip_prefix(')'))
-        {
-            questions.push(question.trim().to_string());
-        }
-    }
-
-    Ok(questions)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::runner::MockRunner;
 
     #[test]
-    fn test_extract_questions() {
+    fn test_parse_questions_for_constitution() {
         let response = r#"
 I need more information:
 
@@ -250,7 +233,7 @@ I need more information:
 3. Any exceptions?
 "#;
 
-        let questions = extract_questions(response).unwrap();
+        let questions = parse_questions(response);
         assert_eq!(questions.len(), 3);
         assert_eq!(questions[0], "What is the scope?");
         assert_eq!(questions[1], "Should this apply to all PRDs?");

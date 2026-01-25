@@ -3,11 +3,11 @@
 //! This runner shells out to the Claude CLI (`claude`) to execute prompts.
 //! It uses `--dangerously-skip-permissions` by default for yolo mode (no permission prompts).
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
 
-use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
+use super::cli_runner::{self, CliRunnerConfig};
+use super::types::{Runner, RunnerOutput, RunnerResult, UsageInfo};
 
 /// Permission mode for the Claude runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -113,51 +113,34 @@ impl ClaudeRunner {
         Self { config }
     }
 
-    /// Builds the command arguments based on configuration.
-    fn build_args(&self, prompt: &str) -> Vec<String> {
-        let mut args = Vec::new();
+    /// Builds display parts for format_command_display.
+    fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
+        let mut parts = vec![self.config.claude_path.clone()];
 
-        // Prompt (non-interactive mode).
-        args.push("-p".to_string());
-        args.push(prompt.to_string());
-
-        // Permission flags.
         match self.config.permission_mode {
             PermissionMode::Yolo => {
-                args.push("--dangerously-skip-permissions".to_string());
+                parts.push("--dangerously-skip-permissions".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {
-                // No permission flags.
-            }
+            PermissionMode::Manual => {}
         }
 
-        // Disable ask_user tool for autonomous operation via permission mode.
         if self.config.no_ask_user {
-            args.push("--permission-mode".to_string());
-            args.push("dontAsk".to_string());
+            parts.push("--permission-mode".to_string());
+            parts.push("dontAsk".to_string());
         }
 
-        // Model selection.
         if let Some(ref model) = self.config.model {
-            args.push("--model".to_string());
-            args.push(model.clone());
+            parts.push("--model".to_string());
+            parts.push(model.clone());
         }
 
-        // Request JSON output format for token usage parsing.
-        args.push("--output-format".to_string());
-        args.push("json".to_string());
+        parts.push("-p".to_string());
+        parts.push("<prompt>".to_string());
+        parts.push("--working-dir".to_string());
+        parts.push(working_dir.display().to_string());
 
-        args
-    }
-
-    /// Checks if the claude CLI is installed and accessible.
-    fn check_claude_available(&self) -> bool {
-        Command::new("which")
-            .arg(&self.config.claude_path)
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+        parts
     }
 
     /// Attempts to parse token usage information from Claude CLI output.
@@ -249,109 +232,80 @@ impl Default for ClaudeRunner {
     }
 }
 
-impl Runner for ClaudeRunner {
+impl CliRunnerConfig for ClaudeRunner {
     fn name(&self) -> &str {
         "claude"
     }
 
-    fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
-        let mut parts = vec![self.config.claude_path.clone()];
+    fn binary_path(&self) -> &str {
+        &self.config.claude_path
+    }
 
-        // Add permission flags
+    fn build_args(&self, prompt: &str) -> Vec<String> {
+        let mut args = Vec::new();
+
+        // Prompt (non-interactive mode).
+        args.push("-p".to_string());
+        args.push(prompt.to_string());
+
+        // Permission flags.
         match self.config.permission_mode {
             PermissionMode::Yolo => {
-                parts.push("--dangerously-skip-permissions".to_string());
+                args.push("--dangerously-skip-permissions".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {}
+            PermissionMode::Manual => {
+                // No permission flags.
+            }
         }
 
-        // Add no-ask-user flag
+        // Disable ask_user tool for autonomous operation via permission mode.
         if self.config.no_ask_user {
-            parts.push("--permission-mode".to_string());
-            parts.push("dontAsk".to_string());
+            args.push("--permission-mode".to_string());
+            args.push("dontAsk".to_string());
         }
 
-        // Add model flag
+        // Model selection.
         if let Some(ref model) = self.config.model {
-            parts.push("--model".to_string());
-            parts.push(model.clone());
+            args.push("--model".to_string());
+            args.push(model.clone());
         }
 
-        // Add working directory info
-        parts.push("-p".to_string());
-        parts.push("<prompt>".to_string());
-        parts.push("--working-dir".to_string());
-        parts.push(working_dir.display().to_string());
+        // Request JSON output format for token usage parsing.
+        args.push("--output-format".to_string());
+        args.push("json".to_string());
 
-        Some(parts.join(" "))
+        args
+    }
+
+    fn parse_usage(&self, text: &str) -> Option<UsageInfo> {
+        Self::parse_usage(text)
+    }
+
+    fn strip_usage_stats(&self, text: &str) -> String {
+        Self::strip_usage_stats(text)
+    }
+
+    fn post_process_output(&self, text: &str) -> String {
+        Self::extract_result_from_json(text)
+    }
+
+    fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
+        self.format_display_parts_impl(working_dir)
+    }
+}
+
+impl Runner for ClaudeRunner {
+    fn name(&self) -> &str {
+        CliRunnerConfig::name(self)
+    }
+
+    fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
+        Some(cli_runner::format_command_display(self, working_dir))
     }
 
     fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
-        // Display the command being invoked (without the prompt)
-        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
-            println!("\n🔧 Executing: {}", cmd_display);
-        }
-
-        let args = self.build_args(prompt);
-
-        tracing::debug!(
-            claude_path = %self.config.claude_path,
-            working_dir = %working_dir.display(),
-            args = ?args,
-            "Executing claude CLI"
-        );
-
-        let mut command = Command::new(&self.config.claude_path);
-
-        command.args(&args).current_dir(working_dir);
-
-        let output = command.output().map_err(|e| {
-            RunnerError::ProcessFailed(format!(
-                "Failed to start claude CLI at '{}': {}",
-                self.config.claude_path, e
-            ))
-        })?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-
-        let raw_output = if stderr.is_empty() {
-            stdout.to_string()
-        } else if stdout.is_empty() {
-            stderr.to_string()
-        } else {
-            format!("{}\n{}", stdout, stderr)
-        };
-
-        // Parse usage information from JSON output.
-        let usage = Self::parse_usage(&raw_output);
-
-        // Extract the actual result text from JSON response.
-        let result_text = Self::extract_result_from_json(&raw_output);
-
-        let success = output.status.success();
-
-        tracing::debug!(
-            exit_code = ?output.status.code(),
-            success = success,
-            raw_output_len = raw_output.len(),
-            result_len = result_text.len(),
-            usage_present = usage.is_some(),
-            "Claude CLI completed"
-        );
-
-        let mut runner_output = RunnerOutput {
-            text: result_text,
-            success,
-            usage: None,
-        };
-
-        if let Some(usage_info) = usage {
-            runner_output = runner_output.with_usage(usage_info);
-        }
-
-        Ok(runner_output)
+        cli_runner::execute_cli(self, prompt, working_dir)
     }
 
     fn execute_streaming(
@@ -360,125 +314,11 @@ impl Runner for ClaudeRunner {
         working_dir: &Path,
         output: &mut dyn Write,
     ) -> RunnerResult<RunnerOutput> {
-        // Display the command being invoked (without the prompt)
-        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
-            println!("\n🔧 Executing: {}", cmd_display);
-        }
-
-        let args = self.build_args(prompt);
-
-        tracing::debug!(
-            claude_path = %self.config.claude_path,
-            working_dir = %working_dir.display(),
-            args = ?args,
-            "Executing claude CLI (streaming)"
-        );
-
-        let mut command = Command::new(&self.config.claude_path);
-
-        command
-            .args(&args)
-            .current_dir(working_dir)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        let mut child = command.spawn().map_err(|e| {
-            RunnerError::ProcessFailed(format!(
-                "Failed to start claude CLI at '{}': {}",
-                self.config.claude_path, e
-            ))
-        })?;
-
-        let mut captured_output = String::new();
-
-        // Stream stdout in real-time.
-        if let Some(stdout) = child.stdout.take() {
-            let reader = BufReader::new(stdout);
-
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        // Write to the output stream.
-                        let _ = writeln!(output, "{}", line);
-                        let _ = output.flush();
-
-                        // Capture for return value.
-                        if !captured_output.is_empty() {
-                            captured_output.push('\n');
-                        }
-
-                        captured_output.push_str(&line);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Error reading claude stdout: {}", e);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Capture any stderr after stdout is done.
-        if let Some(stderr) = child.stderr.take() {
-            let reader = BufReader::new(stderr);
-
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        // Write stderr to output stream as well.
-                        let _ = writeln!(output, "{}", line);
-                        let _ = output.flush();
-
-                        if !captured_output.is_empty() {
-                            captured_output.push('\n');
-                        }
-
-                        captured_output.push_str(&line);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Error reading claude stderr: {}", e);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Wait for the process to complete.
-        let status = child.wait().map_err(|e| {
-            RunnerError::ProcessFailed(format!("Failed to wait for claude CLI: {}", e))
-        })?;
-
-        let success = status.success();
-
-        // Parse usage information from JSON output.
-        let usage = Self::parse_usage(&captured_output);
-
-        // Extract the actual result text from JSON response.
-        let result_text = Self::extract_result_from_json(&captured_output);
-
-        tracing::debug!(
-            exit_code = ?status.code(),
-            success = success,
-            raw_output_len = captured_output.len(),
-            result_len = result_text.len(),
-            usage_present = usage.is_some(),
-            "Claude CLI completed (streaming)"
-        );
-
-        let mut runner_output = RunnerOutput {
-            text: result_text,
-            success,
-            usage: None,
-        };
-
-        if let Some(usage_info) = usage {
-            runner_output = runner_output.with_usage(usage_info);
-        }
-
-        Ok(runner_output)
+        cli_runner::execute_cli_streaming(self, prompt, working_dir, output)
     }
 
     fn is_available(&self) -> bool {
-        self.check_claude_available()
+        cli_runner::check_cli_available(self.binary_path())
     }
 }
 
@@ -541,13 +381,13 @@ mod tests {
     #[test]
     fn test_runner_name() {
         let runner = ClaudeRunner::new();
-        assert_eq!(runner.name(), "claude");
+        assert_eq!(Runner::name(&runner), "claude");
     }
 
     #[test]
     fn test_runner_default() {
         let runner = ClaudeRunner::default();
-        assert_eq!(runner.name(), "claude");
+        assert_eq!(Runner::name(&runner), "claude");
     }
 
     #[test]

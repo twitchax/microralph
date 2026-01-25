@@ -5,8 +5,10 @@
 //! - Mock runner for testing
 //! - Copilot CLI runner (shell-based)
 //! - Claude CLI runner (shell-based)
+//! - Shared CLI runner infrastructure
 
 mod claude;
+mod cli_runner;
 mod copilot;
 mod mock;
 mod types;

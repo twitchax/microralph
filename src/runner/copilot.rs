@@ -3,11 +3,11 @@
 //! This runner shells out to the GitHub Copilot CLI (`copilot`) to execute prompts.
 //! It uses `--allow-all` by default for yolo mode (no permission prompts).
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
 
-use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
+use super::cli_runner::{self, CliRunnerConfig};
+use super::types::{Runner, RunnerOutput, RunnerResult, UsageInfo};
 
 /// Permission mode for the Copilot runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -130,7 +130,7 @@ impl CopilotRunner {
     }
 
     /// Builds the command arguments based on configuration.
-    fn build_args(&self, prompt: &str) -> Vec<String> {
+    fn build_args_impl(&self, prompt: &str) -> Vec<String> {
         let mut args = Vec::new();
 
         // Prompt (non-interactive mode).
@@ -173,13 +173,43 @@ impl CopilotRunner {
         args
     }
 
-    /// Checks if the copilot CLI is installed and accessible.
-    fn check_copilot_available(&self) -> bool {
-        Command::new("which")
-            .arg(&self.config.copilot_path)
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+    /// Builds display parts for format_command_display.
+    fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
+        let mut parts = vec![self.config.copilot_path.clone()];
+
+        match self.config.permission_mode {
+            PermissionMode::Yolo => {
+                parts.push("--allow-all".to_string());
+            }
+            #[cfg(test)]
+            PermissionMode::AllowAll => {
+                parts.push("--allow-all-tools".to_string());
+                parts.push("--allow-all-paths".to_string());
+                parts.push("--allow-all-urls".to_string());
+            }
+            #[cfg(test)]
+            PermissionMode::Manual => {}
+        }
+
+        if self.config.silent {
+            parts.push("-s".to_string());
+        }
+
+        if self.config.no_ask_user {
+            parts.push("--no-ask-user".to_string());
+        }
+
+        if let Some(ref model) = self.config.model {
+            parts.push("--model".to_string());
+            parts.push(model.clone());
+        }
+
+        parts.push("-p".to_string());
+        parts.push("<prompt>".to_string());
+        parts.push("--working-dir".to_string());
+        parts.push(working_dir.display().to_string());
+
+        parts
     }
 
     /// Attempts to parse token usage information from Copilot CLI output.
@@ -189,22 +219,16 @@ impl CopilotRunner {
     /// Breakdown by AI model:
     ///  claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)
     /// ```
-    ///
-    /// This function parses the actual format emitted by the CLI.
-    fn parse_usage(text: &str) -> Option<UsageInfo> {
+    fn parse_usage_impl(text: &str) -> Option<UsageInfo> {
         let mut input_tokens = None;
         let mut output_tokens = None;
 
         // Pattern for Copilot CLI format: "18.3k in, 38 out"
-        // This matches lines like:
-        // " claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)"
-        // " gpt-5                   1.2M in, 456 out"
         if let Some(caps) =
             regex::Regex::new(r"(?m)^\s+[\w\-\.]+\s+([\d.]+)([kKmM]?)\s+in,\s+(\d+)\s+out")
                 .ok()
                 .and_then(|re| re.captures(text))
         {
-            // Parse input tokens with possible k/M suffix
             if let (Some(num_match), Some(suffix_match)) = (caps.get(1), caps.get(2))
                 && let Ok(num) = num_match.as_str().parse::<f64>()
             {
@@ -216,12 +240,10 @@ impl CopilotRunner {
                 input_tokens = Some((num * multiplier) as u64);
             }
 
-            // Parse output tokens (no suffix in observed format)
             output_tokens = caps.get(3).and_then(|m| m.as_str().parse().ok());
         }
 
-        // Fallback: Generic patterns for other potential formats
-        // Pattern 1: "Token usage: input=123, output=456"
+        // Fallback patterns
         if input_tokens.is_none()
             && let Some(caps) =
                 regex::Regex::new(r"[Tt]oken usage:\s*input[=:\s]+(\d+)[,\s]*output[=:\s]+(\d+)")
@@ -232,7 +254,6 @@ impl CopilotRunner {
             output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
         }
 
-        // Pattern 2: "Input tokens: 123" and "Output tokens: 456" (separate lines)
         if input_tokens.is_none()
             && let Some(caps) = regex::Regex::new(r"[Ii]nput tokens[=:\s]+(\d+)")
                 .ok()
@@ -249,13 +270,11 @@ impl CopilotRunner {
             output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
         }
 
-        // Compute total if we have both input and output
         let total_tokens = match (input_tokens, output_tokens) {
             (Some(i), Some(o)) => Some(i + o),
             _ => None,
         };
 
-        // Only return UsageInfo if we found at least one piece of information.
         if input_tokens.is_some() || output_tokens.is_some() || total_tokens.is_some() {
             Some(UsageInfo {
                 input_tokens,
@@ -303,115 +322,43 @@ impl Default for CopilotRunner {
     }
 }
 
-impl Runner for CopilotRunner {
+impl CliRunnerConfig for CopilotRunner {
     fn name(&self) -> &str {
         "copilot"
     }
 
+    fn binary_path(&self) -> &str {
+        &self.config.copilot_path
+    }
+
+    fn build_args(&self, prompt: &str) -> Vec<String> {
+        self.build_args_impl(prompt)
+    }
+
+    fn parse_usage(&self, text: &str) -> Option<UsageInfo> {
+        Self::parse_usage_impl(text)
+    }
+
+    fn strip_usage_stats(&self, text: &str) -> String {
+        Self::strip_usage_stats(text)
+    }
+
+    fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
+        self.format_display_parts_impl(working_dir)
+    }
+}
+
+impl Runner for CopilotRunner {
+    fn name(&self) -> &str {
+        CliRunnerConfig::name(self)
+    }
+
     fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
-        let mut parts = vec![self.config.copilot_path.clone()];
-
-        // Add permission flags
-        match self.config.permission_mode {
-            PermissionMode::Yolo => {
-                parts.push("--allow-all".to_string());
-            }
-            #[cfg(test)]
-            PermissionMode::AllowAll => {
-                parts.push("--allow-all-tools".to_string());
-                parts.push("--allow-all-paths".to_string());
-                parts.push("--allow-all-urls".to_string());
-            }
-            #[cfg(test)]
-            PermissionMode::Manual => {}
-        }
-
-        // Add silent mode flag
-        if self.config.silent {
-            parts.push("-s".to_string());
-        }
-
-        // Add no-ask-user flag
-        if self.config.no_ask_user {
-            parts.push("--no-ask-user".to_string());
-        }
-
-        // Add model flag
-        if let Some(ref model) = self.config.model {
-            parts.push("--model".to_string());
-            parts.push(model.clone());
-        }
-
-        // Add working directory info
-        parts.push("-p".to_string());
-        parts.push("<prompt>".to_string());
-        parts.push("--working-dir".to_string());
-        parts.push(working_dir.display().to_string());
-
-        Some(parts.join(" "))
+        Some(cli_runner::format_command_display(self, working_dir))
     }
 
     fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
-        // Display the command being invoked (without the prompt)
-        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
-            println!("\n🔧 Executing: {}", cmd_display);
-        }
-
-        let args = self.build_args(prompt);
-
-        tracing::debug!(
-            copilot_path = %self.config.copilot_path,
-            working_dir = %working_dir.display(),
-            args = ?args,
-            "Executing copilot CLI"
-        );
-
-        let mut command = Command::new(&self.config.copilot_path);
-
-        command.args(&args).current_dir(working_dir);
-
-        let output = command.output().map_err(|e| {
-            RunnerError::ProcessFailed(format!(
-                "Failed to start copilot CLI at '{}': {}",
-                self.config.copilot_path, e
-            ))
-        })?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-
-        let combined_output = if stderr.is_empty() {
-            stdout.to_string()
-        } else if stdout.is_empty() {
-            stderr.to_string()
-        } else {
-            format!("{}\n{}", stdout, stderr)
-        };
-
-        // Try to parse usage information from combined output (stats are in stdout when not silent).
-        let usage = Self::parse_usage(&combined_output);
-
-        let success = output.status.success();
-
-        tracing::debug!(
-            exit_code = ?output.status.code(),
-            success = success,
-            output_len = combined_output.len(),
-            usage_present = usage.is_some(),
-            "Copilot CLI completed"
-        );
-
-        let mut runner_output = RunnerOutput {
-            text: combined_output,
-            success,
-            usage: None,
-        };
-
-        if let Some(usage_info) = usage {
-            runner_output = runner_output.with_usage(usage_info);
-        }
-
-        Ok(runner_output)
+        cli_runner::execute_cli(self, prompt, working_dir)
     }
 
     fn execute_streaming(
@@ -420,121 +367,11 @@ impl Runner for CopilotRunner {
         working_dir: &Path,
         output: &mut dyn Write,
     ) -> RunnerResult<RunnerOutput> {
-        // Display the command being invoked (without the prompt)
-        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
-            println!("\n🔧 Executing: {}", cmd_display);
-        }
-
-        let args = self.build_args(prompt);
-
-        tracing::debug!(
-            copilot_path = %self.config.copilot_path,
-            working_dir = %working_dir.display(),
-            args = ?args,
-            "Executing copilot CLI (streaming)"
-        );
-
-        let mut command = Command::new(&self.config.copilot_path);
-
-        command
-            .args(&args)
-            .current_dir(working_dir)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        let mut child = command.spawn().map_err(|e| {
-            RunnerError::ProcessFailed(format!(
-                "Failed to start copilot CLI at '{}': {}",
-                self.config.copilot_path, e
-            ))
-        })?;
-
-        let mut captured_output = String::new();
-
-        // Stream stdout in real-time.
-        if let Some(stdout) = child.stdout.take() {
-            let reader = BufReader::new(stdout);
-
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        // Write to the output stream.
-                        let _ = writeln!(output, "{}", line);
-                        let _ = output.flush();
-
-                        // Capture for return value.
-                        if !captured_output.is_empty() {
-                            captured_output.push('\n');
-                        }
-
-                        captured_output.push_str(&line);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Error reading copilot stdout: {}", e);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Capture any stderr after stdout is done.
-        if let Some(stderr) = child.stderr.take() {
-            let reader = BufReader::new(stderr);
-
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        // Write stderr to output stream as well.
-                        let _ = writeln!(output, "{}", line);
-                        let _ = output.flush();
-
-                        if !captured_output.is_empty() {
-                            captured_output.push('\n');
-                        }
-
-                        captured_output.push_str(&line);
-                    }
-                    Err(e) => {
-                        tracing::warn!("Error reading copilot stderr: {}", e);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Wait for the process to complete.
-        let status = child.wait().map_err(|e| {
-            RunnerError::ProcessFailed(format!("Failed to wait for copilot CLI: {}", e))
-        })?;
-
-        let success = status.success();
-
-        // Try to parse usage information from captured output.
-        let usage = Self::parse_usage(&captured_output);
-
-        tracing::debug!(
-            exit_code = ?status.code(),
-            success = success,
-            output_len = captured_output.len(),
-            usage_present = usage.is_some(),
-            "Copilot CLI completed (streaming)"
-        );
-
-        let mut runner_output = RunnerOutput {
-            text: captured_output,
-            success,
-            usage: None,
-        };
-
-        if let Some(usage_info) = usage {
-            runner_output = runner_output.with_usage(usage_info);
-        }
-
-        Ok(runner_output)
+        cli_runner::execute_cli_streaming(self, prompt, working_dir, output)
     }
 
     fn is_available(&self) -> bool {
-        self.check_copilot_available()
+        cli_runner::check_cli_available(self.binary_path())
     }
 }
 
@@ -610,13 +447,13 @@ mod tests {
     #[test]
     fn test_runner_name() {
         let runner = CopilotRunner::new();
-        assert_eq!(runner.name(), "copilot");
+        assert_eq!(Runner::name(&runner), "copilot");
     }
 
     #[test]
     fn test_runner_default() {
         let runner = CopilotRunner::default();
-        assert_eq!(runner.name(), "copilot");
+        assert_eq!(Runner::name(&runner), "copilot");
     }
 
     #[test]
@@ -654,7 +491,7 @@ mod tests {
     fn test_parse_usage_copilot_format() {
         let output = "Hello world\n\nTotal usage est:        3 Premium requests\nAPI time spent:         2s\nTotal session time:     4s\nTotal code changes:     +0 -0\nBreakdown by AI model:\n claude-opus-4.5         18.3k in, 38 out, 11.8k cached (Est. 3 Premium requests)";
 
-        let usage = CopilotRunner::parse_usage(output).expect("Should parse usage");
+        let usage = CopilotRunner::parse_usage_impl(output).expect("Should parse usage");
 
         assert_eq!(usage.input_tokens, Some(18300));
         assert_eq!(usage.output_tokens, Some(38));
@@ -665,7 +502,7 @@ mod tests {
     fn test_parse_usage_copilot_format_megabytes() {
         let output = "Breakdown by AI model:\n gpt-5                   1.2M in, 456 out";
 
-        let usage = CopilotRunner::parse_usage(output).expect("Should parse usage");
+        let usage = CopilotRunner::parse_usage_impl(output).expect("Should parse usage");
 
         assert_eq!(usage.input_tokens, Some(1_200_000));
         assert_eq!(usage.output_tokens, Some(456));
@@ -675,7 +512,7 @@ mod tests {
     fn test_parse_usage_no_stats() {
         let output = "Hello world\nThis is just normal output.";
 
-        let usage = CopilotRunner::parse_usage(output);
+        let usage = CopilotRunner::parse_usage_impl(output);
 
         assert!(usage.is_none());
     }
