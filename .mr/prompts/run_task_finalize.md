@@ -77,32 +77,7 @@ Add an entry under `## [Unreleased]` in `CHANGELOG.md`:
 - Summarize key changes (1-3 bullet points if multiple significant changes)
 - Keep entries concise but informative
 
-### 3. Create Summary Report
-
-Generate a summary report that will be:
-- Printed to stdout (for the user)
-- Appended to the PRD as a finalization history entry
-
-**Report Format**:
-```markdown
-## Finalization Summary — {{prd_id}}
-
-**Date**: YYYY-MM-DD
-**PRD**: {{prd_id}} — {{prd_title}}
-**Tasks Completed**: N tasks
-**Status**: ✅ Finalized
-
-### Completed Tasks
-- [List of completed tasks]
-
-### Changes Made
-- [Brief summary of main changes]
-
-### Changelog Entry Added
-- [Confirm category and brief description]
-```
-
-### 4. Clean Up Temporary Files and Excessive Comments
+### 3. Clean Up Temporary Files and Excessive Comments
 
 Search for and remove:
 
@@ -122,7 +97,7 @@ Search for and remove:
 - Documentation comments
 - Necessary inline explanations
 
-### 5. Append Finalization History Entry
+### 4. Append Finalization History Entry
 
 Add a final history entry to the PRD file documenting the finalization:
 
@@ -130,9 +105,35 @@ Add a final history entry to the PRD file documenting the finalization:
 ```markdown
 ## YYYY-MM-DD — PRD Finalized
 - **Status**: ✅ Finalized
-- **Outcome**: All tasks completed, acceptance tests passed
+- **Tasks Completed**: N tasks (T-001 through T-NNN)
+- **Outcome**: All tasks completed, acceptance tests passed (XXX/XXX tests)
 - **Changelog**: Entry added under [Unreleased] → [Category]
 - **Cleanup**: [Brief note on any cleanup performed]
+- **Summary**:
+  - [Key accomplishment 1]
+  - [Key accomplishment 2]
+  - [Key accomplishment 3]
+```
+
+### 5. Print Summary to Console
+
+After appending the history entry, print a summary to stdout for the user.
+
+**This is important** - the user should see a clear finalization summary in their terminal.
+
+**Format**:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Finalization Complete: {{prd_id}} — {{prd_title}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ UATs: XXX/XXX tests passed
+✅ Tasks: N tasks completed (T-001 through T-NNN)
+✅ Changelog: Entry added under "[Category]" — Brief description
+✅ Cleanup: [Summary of cleanup or "None required"]
+✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### 6. Commit All Changes
@@ -184,19 +185,19 @@ Ensure these documents are up-to-date:
 
 ## Output
 
-After completing all steps, provide:
+After completing all steps, print a structured summary to stdout:
 
-1. **UAT Result**: Pass/fail with test count
-2. **Changelog Entry**: The exact entry added
-3. **Cleanup Summary**: List of any files/comments cleaned up
-4. **Commit**: The commit hash and message
-5. **Final Summary**: Brief confirmation that finalization is complete
-
-Example output format:
+**Format**:
 ```
-✅ UAT: 219/219 tests passed
-✅ Changelog: Added entry under "Added" — {{prd_id}}: {{prd_title}}
-✅ Cleanup: Removed 2 debug println! statements, 1 TODO comment
-✅ Commit: abc1234 — prd({{prd_id}})finalize: {{prd_title}}
-✅ Finalization complete for {{prd_id}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Finalization Complete: {{prd_id}} — {{prd_title}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ UATs: XXX/XXX tests passed
+✅ Tasks: N tasks completed (T-001 through T-NNN)
+✅ Changelog: Entry added under "[Category]" — Brief description
+✅ Cleanup: [Summary of cleanup or "None required"]
+✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
