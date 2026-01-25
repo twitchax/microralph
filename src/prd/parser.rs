@@ -87,22 +87,30 @@ fn split_frontmatter(content: &str) -> Result<(String, String)> {
         anyhow::bail!("PRD file must start with '---' frontmatter delimiter");
     }
 
-    // Find the end of the first line (the opening delimiter).
+    // Move past the opening "---" delimiter and any trailing newline.
+    // We use `len()` to get byte offset (safe because "---" is ASCII).
     let after_open = &trimmed[FRONTMATTER_DELIMITER.len()..];
     let after_open = after_open.strip_prefix('\n').unwrap_or(after_open);
 
-    // Find the closing delimiter.
+    // Find the closing "---" delimiter. It must appear on its own line,
+    // so we search for "\n---" (newline + delimiter).
     let close_pos = after_open
         .find(&format!("\n{FRONTMATTER_DELIMITER}"))
         .ok_or_else(|| {
             anyhow::anyhow!("PRD file is missing closing '---' frontmatter delimiter")
         })?;
 
+    // Extract YAML frontmatter (everything before the closing delimiter).
     let frontmatter = after_open[..close_pos].to_string();
+
+    // Move past the closing delimiter. We skip:
+    // - The newline before "---" (already accounted for in close_pos)
+    // - The "---" itself (FRONTMATTER_DELIMITER.len())
+    // Total offset: close_pos + 1 (for '\n') + FRONTMATTER_DELIMITER.len()
     let after_close = &after_open[close_pos + 1 + FRONTMATTER_DELIMITER.len()..];
 
-    // The body starts after the closing delimiter.
-    // Strip a leading newline if present.
+    // The body starts immediately after the closing delimiter.
+    // Strip a leading newline if present to normalize whitespace.
     let body = after_close
         .strip_prefix('\n')
         .unwrap_or(after_close)

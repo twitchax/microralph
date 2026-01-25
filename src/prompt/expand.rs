@@ -144,18 +144,21 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
     let mut result = String::with_capacity(template.len());
     let mut chars = template.chars().peekable();
 
+    // Character-by-character parsing to handle {{variable}} syntax.
+    // We use a peekable iterator to look ahead for double braces.
     while let Some(c) = chars.next() {
         if c == '{' && chars.peek() == Some(&'{') {
             chars.next(); // consume second '{'
 
             // Check for block tags (skip them here, they're handled separately).
+            // Block tags start with {{# (e.g., {{#if}}) or {{/ (e.g., {{/if}}).
             if chars.peek() == Some(&'#') || chars.peek() == Some(&'/') {
                 result.push('{');
                 result.push('{');
                 continue;
             }
 
-            // Collect the variable name.
+            // Collect the variable name character by character until we hit "}}"
             let mut var_name = String::new();
             let mut found_close = false;
 
@@ -172,7 +175,8 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
             if found_close {
                 let var_name = var_name.trim();
 
-                // Skip block references like `@index`.
+                // Skip block-scoped references like `{{@index}}` in {{#each}} blocks.
+                // These are handled by expand_each_blocks, not here.
                 if var_name.starts_with('@') {
                     result.push_str("{{");
                     result.push_str(var_name);
@@ -180,6 +184,7 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
                     continue;
                 }
 
+                // Look up the variable in context and substitute its value.
                 if let Some(value) = context.get(var_name) {
                     match value {
                         PlaceholderValue::String(s) => result.push_str(s),
@@ -190,13 +195,13 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
                         }
                     }
                 } else {
-                    // Unknown placeholder, leave it unchanged.
+                    // Unknown placeholder, leave it unchanged for debugging.
                     result.push_str("{{");
                     result.push_str(var_name);
                     result.push_str("}}");
                 }
             } else {
-                // Unclosed placeholder.
+                // Unclosed placeholder (malformed syntax), preserve what we have.
                 result.push_str("{{");
                 result.push_str(&var_name);
             }
@@ -212,32 +217,40 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
 fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
     let mut result = template.to_string();
 
-    // Find and process all if blocks.
+    // Process all {{#if}} blocks iteratively. We use a loop because each
+    // replacement changes string offsets, so we re-search from the start.
     loop {
         let Some(if_start) = result.find("{{#if ") else {
             break;
         };
 
+        // Find the end of the opening tag (the closing "}}" after "{{#if variable")
         let Some(if_tag_end) = result[if_start..].find("}}") else {
             break;
         };
         let if_tag_end = if_start + if_tag_end;
 
-        // Extract variable name.
+        // Extract variable name from "{{#if variable}}".
+        // We skip the first 6 chars: "{{#if " (including the space).
         let var_name = result[if_start + 6..if_tag_end].trim();
 
-        // Find matching {{/if}}.
+        // Find the matching closing tag {{/if}}.
+        // Content starts right after the opening tag's closing "}}"
         let content_start = if_tag_end + 2;
         let Some(if_end) = result[content_start..].find("{{/if}}") else {
             break;
         };
         let if_end = content_start + if_end;
-        let block_end = if_end + 7;
+        let block_end = if_end + 7; // +7 to skip "{{/if}}"
 
-        // Extract content.
+        // Extract the content between {{#if}} and {{/if}}.
         let content = &result[content_start..if_end];
 
-        // Determine if we should include the content.
+        // Determine whether to include the content based on the variable's value.
+        // - Bool: use its truth value
+        // - String: include if non-empty
+        // - List: include if non-empty
+        // - None: exclude (variable not found)
         let include = match context.get(var_name) {
             Some(PlaceholderValue::Bool(b)) => *b,
             Some(PlaceholderValue::String(s)) => !s.is_empty(),
@@ -245,7 +258,8 @@ fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
             None => false,
         };
 
-        // Replace the block.
+        // Replace the entire block (from "{{#if" to "{{/if}}") with either
+        // the content (if true) or nothing (if false).
         let replacement = if include {
             content.to_string()
         } else {
@@ -267,32 +281,37 @@ fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
 fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
     let mut result = template.to_string();
 
-    // Find and process all each blocks.
+    // Process all {{#each}} blocks iteratively. Each replacement changes
+    // string offsets, so we re-search from the start each time.
     loop {
         let Some(each_start) = result.find("{{#each ") else {
             break;
         };
 
+        // Find the end of the opening tag (the closing "}}" after "{{#each variable")
         let Some(each_tag_end) = result[each_start..].find("}}") else {
             break;
         };
         let each_tag_end = each_start + each_tag_end;
 
-        // Extract variable name.
+        // Extract variable name from "{{#each variable}}".
+        // We skip the first 8 chars: "{{#each " (including the space).
         let var_name = result[each_start + 8..each_tag_end].trim();
 
-        // Find matching {{/each}}.
+        // Find the matching closing tag {{/each}}.
+        // Content starts right after the opening tag's closing "}}"
         let content_start = each_tag_end + 2;
         let Some(each_end) = result[content_start..].find("{{/each}}") else {
             break;
         };
         let each_end = content_start + each_end;
-        let block_end = each_end + 9;
+        let block_end = each_end + 9; // +9 to skip "{{/each}}"
 
-        // Extract template content.
+        // Extract the template content (the pattern to repeat for each item).
         let template_content = &result[content_start..each_end];
 
-        // Get the list value.
+        // Get the list value from context. If it's not a list or not found,
+        // we leave the block as-is (this prevents infinite loops on malformed blocks).
         let items = match context.get(var_name) {
             Some(PlaceholderValue::List(list)) => list,
             _ => {
@@ -301,16 +320,17 @@ fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
             }
         };
 
-        // Expand for each item.
+        // Expand the template for each item in the list.
         let mut expanded = String::new();
 
         for (index, item) in items.iter().enumerate() {
             let mut item_result = template_content.to_string();
 
-            // Replace {{@index}} with the index.
+            // Replace {{@index}} with the current 0-based index.
             item_result = item_result.replace("{{@index}}", &index.to_string());
 
-            // Replace item fields.
+            // Replace all item fields. Each item is a HashMap<String, String>,
+            // and we substitute {{key}} with the corresponding value.
             for (key, value) in item {
                 let placeholder = format!("{{{{{}}}}}", key);
                 item_result = item_result.replace(&placeholder, value);
@@ -319,6 +339,8 @@ fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
             expanded.push_str(&item_result);
         }
 
+        // Replace the entire block (from "{{#each" to "{{/each}}") with
+        // the expanded content generated from all items.
         result = format!(
             "{}{}{}",
             &result[..each_start],

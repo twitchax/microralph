@@ -32,7 +32,7 @@ tasks:
   - id: T-003
     title: Add comments to complex parsing logic
     priority: 3
-    status: todo
+    status: done
     notes: Target prd/parser.rs and prompt/expand.rs. Explain non-obvious logic.
   - id: T-004
     title: Add comments to orchestration state machines
@@ -111,3 +111,30 @@ The codebase has grown organically and now contains:
   - Replaced `uat.command.clone()` with `uat.command.as_str()` in context insertion (line 457)
   - UAT passed: All 312 tests pass after refactoring
   - Opportunistically verified uat-001: All existing tests continue to pass
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Add comments to complex parsing logic
+- **Status**: ✅ Done
+- **Changes**:
+  - Enhanced `src/prd/parser.rs::split_frontmatter()` with inline comments explaining:
+    - Byte offset calculation for moving past delimiters
+    - Newline-prefixed delimiter search strategy
+    - Frontmatter extraction and body normalization logic
+  - Enhanced `src/prompt/expand.rs::expand_simple_placeholders()` with inline comments explaining:
+    - Character-by-character parsing with peekable iterator
+    - Block tag detection and skip logic ({{#if}}, {{/each}})
+    - Variable name collection and closing brace detection
+    - Block-scoped reference handling ({{@index}})
+    - Value substitution and fallback for unknown placeholders
+  - Enhanced `src/prompt/expand.rs::expand_if_blocks()` with inline comments explaining:
+    - Iterative block processing and offset recalculation
+    - Tag extraction and matching logic
+    - Truthiness evaluation for different value types
+    - Block replacement strategy
+  - Enhanced `src/prompt/expand.rs::expand_each_blocks()` with inline comments explaining:
+    - Template iteration and offset management
+    - Item template extraction
+    - List value retrieval and validation
+    - Index substitution and field replacement
+    - Expanded content generation
+  - UAT passed: All 312 tests pass after adding comments
