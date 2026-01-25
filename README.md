@@ -14,7 +14,7 @@ Oh, and yes: **microralph was entirely `ralph`'d into existence by microralph it
 
 ## What is a Ralph?
 
-A project that is mostly **ralph'd into existence** by AI agents is itself called a **ralph**. microralph is a ralph—it was built almost entirely by running `mr run` in a loop, with a human steering via PRDs.
+A project that is mostly **ralph'd into existence** by AI agents is itself called a **ralph** (by me).  I'm hoping one day it becomes a verb so people can say things like, "I ralphed it." microralph is a ralph—it was built almost entirely by running `mr run` in a loop, with a human steering via PRDs.
 
 The name comes from [Ralph Wiggum](https://en.wikipedia.org/wiki/Ralph_Wiggum): loveable, earnest, occasionally brilliant, but needs guidance. AI agents are the same way.
 
@@ -1018,7 +1018,8 @@ What this PRD is about...
 
 A project that is predominantly built this way—a **ralph**—becomes a testament to the pattern's power: AI does the heavy lifting while you steer with PRDs and review results.
 
-Popular Ralph implementations include:
+Popular Ralph implementations and resources include:
+- [Ralph: The Ralph Wiggum Technique](https://ghuntley.com/ralph/) — Geoffrey Huntley's original post introducing the Ralph loop pattern
 - [soderlind/ralph](https://github.com/soderlind/ralph) — Shell script wrapper for GitHub Copilot CLI
 - [Ralph TUI](https://ralph-tui.com/) — Terminal UI for Ralph loops
 - [Ralph Loop blog post](https://benjamin-abt.com/blog/2026/01/19/ralph-loop-github-copilot-cli-dotnet/) — Deep dive on the Ralph pattern

@@ -1408,43 +1408,6 @@ Based on the repository analysis:
 - Set up post-create commands to run common initialization (e.g., `cargo build`, `npm install`)
 - If microralph is detected, ensure `gh` CLI is available for GitHub Copilot integration
 
-## Output Format
-
-Return ONLY the JSON content for `devcontainer.json`. Do NOT include any explanatory text before or after the JSON.
-
-You may wrap the JSON in a markdown code block like this:
-
-```json
-{
-  "name": "Project Name",
-  "image": "mcr.microsoft.com/devcontainers/...",
-  ...
-}
-```
-
-## Example Structure
-
-```json
-{
-  "name": "My Project",
-  "image": "mcr.microsoft.com/devcontainers/rust:latest",
-  "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "rust-lang.rust-analyzer",
-        "tamasfe.even-better-toml"
-      ]
-    }
-  },
-  "postCreateCommand": "cargo build",
-  "forwardPorts": [8080],
-  "remoteUser": "vscode"
-}
-```
-
 ## Constraints
 
 - Use only official Microsoft dev container base images
@@ -1455,7 +1418,11 @@ You may wrap the JSON in a markdown code block like this:
 
 ---
 
-Generate the `devcontainer.json` content now.
+## Task
+
+**Create the file `.devcontainer/devcontainer.json` directly** with the generated configuration.
+
+Use your file creation tools to write the file. Do not just output the JSON content - actually create the file in the repository.
 "#;
 
 /// Default suggest generation prompt.
