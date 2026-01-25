@@ -1,7 +1,7 @@
 ---
 id: PRD-0011
 title: "Dev Container Support and Generation"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-24
 updated: 2026-01-24
@@ -26,7 +26,7 @@ tasks:
 - id: T-001
   title: Add README section documenting dev container setup and usage
   priority: 1
-  status: todo
+  status: done
   notes: Include instructions for VSCode, Codespaces, and CLI-based workflows. Explain benefits of sandboxed development.
 
 - id: T-002
@@ -102,5 +102,17 @@ Currently, there is no guidance or tooling to help developers set up a consisten
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Add README section documenting dev container setup and usage
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive "Dev Containers" section to README.md after Configuration section
+  - Documented why to use dev containers (consistency, isolation, reproducibility, onboarding, safety)
+  - Included setup instructions for VSCode, GitHub Codespaces, and CLI workflows
+  - Documented `mr devcontainer generate` command (to be implemented in future tasks)
+  - Explained dev container warnings and regeneration workflow
+  - Fixed pre-existing formatting issue in src/prd/index.rs (unrelated but necessary for UAT pass)
+- **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
 
 ---

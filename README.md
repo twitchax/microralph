@@ -156,6 +156,76 @@ timeout_minutes = 30
 
 CLI flags override config file settings.
 
+### Dev Containers
+
+microralph supports **dev containers** for consistent, sandboxed development environments. Dev containers isolate your development environment from your host machine, ensuring all tools and dependencies are versioned and reproducible.
+
+#### Why Use Dev Containers?
+
+- **Consistency**: Every developer works in the same environment
+- **Isolation**: Protects your host machine from experimental or potentially risky operations
+- **Reproducibility**: Codify all dependencies and tools in version control
+- **Onboarding**: New contributors can get started in seconds
+- **Safety**: Run AI-generated code in a sandbox without risk to your local machine
+
+#### Supported Workflows
+
+microralph dev containers work with:
+- **VSCode**: Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) and open the repo—VSCode will prompt you to reopen in a container
+- **GitHub Codespaces**: Open the repo in Codespaces for a fully cloud-based dev environment
+- **CLI**: Use the [Dev Container CLI](https://github.com/devcontainers/cli) to build and run containers from the terminal:
+  ```bash
+  # Install the CLI
+  npm install -g @devcontainers/cli
+  
+  # Open a shell in the dev container
+  devcontainer up --workspace-folder .
+  devcontainer exec --workspace-folder . bash
+  ```
+
+#### Generating Dev Container Configs
+
+microralph can automatically generate `.devcontainer/devcontainer.json` by analyzing your repository:
+
+```bash
+mr devcontainer generate
+```
+
+This command:
+1. Scans your repository structure (languages, frameworks, dependencies)
+2. Analyzes git history for recently added tools
+3. Reads PRDs for tool references
+4. Generates a `.devcontainer/devcontainer.json` with appropriate base image, extensions, and tool installations
+
+The generated config includes:
+- Base container image matching your primary language
+- Pre-installed development tools (cargo-make, cargo-nextest, etc.)
+- VSCode extensions relevant to your stack
+- Forwarded ports for local services
+- Initialization scripts to set up the environment
+
+#### Dev Container Warnings
+
+When running commands that invoke AI models (`mr run`, `mr new`, `mr devcontainer generate`), microralph will show a brief warning if you're not inside a dev container. This is informational only—commands will still execute normally.
+
+To suppress the warning, either:
+- Work inside a dev container (recommended)
+- Run commands in an environment where dev container detection identifies container usage
+
+#### Regenerating After Changes
+
+As your project evolves, regenerate the dev container config to keep it in sync:
+
+```bash
+# Analyze current state and update .devcontainer/devcontainer.json
+mr devcontainer generate
+```
+
+This is especially useful after:
+- Adding new dependencies or tools
+- Switching to a different language or framework
+- Major architectural changes documented in PRDs
+
 ### Constitution
 
 microralph supports project-specific governance rules via a **Constitution** file (`.mr/constitution.md`). The constitution defines constraints, best practices, and architectural rules that influence PRD creation and execution.

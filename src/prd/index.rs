@@ -237,7 +237,7 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
 
     // Cross-References section.
     let mut all_summaries: Vec<&PrdSummary> = by_status.values().flat_map(|v| v.iter()).collect();
-    all_summaries.sort_by_key(|s| &s.id);  // Sort by ID for deterministic ordering
+    all_summaries.sort_by_key(|s| &s.id); // Sort by ID for deterministic ordering
     output.push_str(&generate_cross_references_section(&all_summaries));
 
     // Statistics.
