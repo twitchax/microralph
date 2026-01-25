@@ -610,15 +610,35 @@ pub struct UatVerificationConfig<'a> {
 /// # Returns
 ///
 /// A `UatVerificationLoopResult` describing what happened.
+///
+/// # State Machine Flow
+///
+/// This function implements a UAT verification state machine with the following states:
+///
+/// 1. **Load**: Read PRD and get max_iterations config
+/// 2. **Loop Start**: Reload PRD to get current unverified UATs (may change between iterations)
+/// 3. **Check Completion**: If no unverified UATs remain → Success exit
+/// 4. **Check Iteration Limit**: If max_iterations reached → Early exit with remaining UATs
+/// 5. **Pick UAT**: Select the first unverified UAT to process
+/// 6. **Execute Runner**: Invoke runner with UAT verification prompt
+/// 7. **Parse Response**: Check for OPT-OUT signal or success
+/// 8. **Update State**:
+///    - OPT-OUT: Append history entry, continue to next UAT
+///    - Success: Update UAT status to verified if not already done by runner
+/// 9. **Loop**: Return to step 2
+///
+/// The loop ensures eventual termination via max_iterations and allows the runner to modify
+/// the PRD (e.g., marking UATs as verified) between iterations. This state machine handles
+/// three exit conditions: all verified, iteration limit, or error.
 pub fn run_uat_verification_loop(
     config: &UatVerificationConfig,
     runner: &dyn Runner,
 ) -> Result<UatVerificationLoopResult> {
-    // Load the PRD to get current state.
+    // STATE: Load - Initialize loop state from PRD configuration
     let (_filename, prd, prd_path) = find_prd_by_id(config.root, config.prd_id)?
         .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
-    // Get max_iterations from PRD config or use default.
+    // Extract max_iterations from PRD loop_config or use default
     let max_iterations = config.max_iterations.unwrap_or_else(|| {
         prd.frontmatter
             .loop_config
@@ -638,13 +658,15 @@ pub fn run_uat_verification_loop(
     );
 
     loop {
-        // Reload PRD to get current unverified UATs (they may have been updated by runner).
+        // STATE: Loop Start - Reload PRD to capture any runner-made changes from previous iteration
+        // This is critical because the runner may update UAT statuses, task statuses, or PRD content
         let (_filename, current_prd, current_prd_path) =
             find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
         let unverified = current_prd.unverified_uats();
 
+        // STATE: Check Completion - Exit if all UATs are verified or opted out
         if unverified.is_empty() {
             tracing::info!(
                 prd_id = %config.prd_id,
@@ -655,6 +677,8 @@ pub fn run_uat_verification_loop(
             break;
         }
 
+        // STATE: Check Iteration Limit - Enforce max_iterations to prevent infinite loops
+        // This protects against scenarios where UATs repeatedly fail verification
         if iterations >= max_iterations as usize {
             tracing::info!(
                 prd_id = %config.prd_id,
@@ -675,10 +699,11 @@ pub fn run_uat_verification_loop(
             });
         }
 
-        // Get the next unverified UAT.
+        // STATE: Pick UAT - Select the first unverified UAT for processing
+        // We always pick the first to ensure consistent ordering across loop iterations
         let uat = unverified[0];
 
-        // Calculate UAT progress.
+        // Calculate UAT progress for display
         let all_uats = current_prd
             .frontmatter
             .acceptance_tests
@@ -698,7 +723,7 @@ pub fn run_uat_verification_loop(
             "Verifying UAT"
         );
 
-        // Build and execute the verification prompt.
+        // STATE: Execute Runner - Build verification prompt and invoke runner
         let prompt = build_uat_verify_prompt(config.root, &current_prd, &current_prd_path, uat);
 
         let output = if config.stream {
@@ -712,7 +737,7 @@ pub fn run_uat_verification_loop(
                 .with_context(|| format!("Runner failed for UAT {}", uat.id))?
         };
 
-        // Summarize output (truncate if too long). Skip summary if we already streamed.
+        // Display output if not already streamed
         if !config.stream {
             if output.text.len() > 500 {
                 let start = output.text.len() - 500;
@@ -724,7 +749,8 @@ pub fn run_uat_verification_loop(
 
         iterations += 1;
 
-        // Check for OPT-OUT in response.
+        // STATE: Parse Response - Check for OPT-OUT or success signal from runner
+        // OPT-OUT allows runner to skip UATs that can't be verified (e.g., manual tests, blocked tests)
         if let Some(explanation) = parse_opt_out(&output.text) {
             tracing::info!(
                 prd_id = %config.prd_id,
@@ -734,26 +760,26 @@ pub fn run_uat_verification_loop(
             );
             opted_out_count += 1;
 
-            // Append opt-out History entry to the PRD.
+            // STATE: Update State (OPT-OUT path) - Record opt-out in PRD history
             append_opt_out_history(&current_prd_path, &uat.id, &uat.name, &explanation)?;
 
-            // Reload to check if UAT is still unverified (runner might have updated it).
+            // Reload to check if UAT is still unverified (runner might have updated it)
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
-            // If UAT is still unverified after opt-out, we need to continue to next UAT.
-            // The OPT-OUT means the runner decided not to verify this specific UAT.
-            // The loop should still try to verify remaining UATs.
+            // If UAT is still unverified after opt-out, continue to next UAT
+            // OPT-OUT doesn't block verification of remaining UATs
             if refreshed_prd
                 .unverified_uats()
                 .iter()
                 .any(|u| u.id == uat.id)
             {
-                // UAT is still unverified after opt-out - continue to see if others can be verified.
+                // UAT is still unverified after opt-out - continue loop to try other UATs
                 continue;
             }
         } else if output.success {
-            // Runner completed successfully - check if UAT was marked verified.
+            // STATE: Update State (Success path) - Mark UAT as verified
+            // Runner may have already updated the UAT status, or we update it here
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
@@ -763,7 +789,7 @@ pub fn run_uat_verification_loop(
                 .any(|u| u.id == uat.id);
 
             if still_unverified {
-                // Runner succeeded but didn't update UAT status - update it ourselves.
+                // Runner succeeded but didn't update UAT status - update it ourselves
                 update_uat_status(&current_prd_path, &uat.id)?;
                 tracing::info!(
                     prd_id = %config.prd_id,
@@ -779,6 +805,7 @@ pub fn run_uat_verification_loop(
             }
             verified_count += 1;
         }
+        // STATE: Loop - Return to Loop Start for next iteration
     }
 
     // Final state check.

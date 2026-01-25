@@ -37,7 +37,7 @@ tasks:
   - id: T-004
     title: Add comments to orchestration state machines
     priority: 3
-    status: todo
+    status: done
     notes: Document run.rs UAT loop and prd_new.rs multi-round Q/A flows.
   - id: T-005
     title: Check and fix Rust idiom violations
@@ -137,4 +137,17 @@ The codebase has grown organically and now contains:
     - List value retrieval and validation
     - Index substitution and field replacement
     - Expanded content generation
+  - UAT passed: All 312 tests pass after adding comments
+
+## 2026-01-25 — T-004 Completed
+- **Task**: Add comments to orchestration state machines
+- **Status**: ✅ Done
+- **Changes**:
+  - Enhanced `src/run.rs::run_uat_verification_loop()` with comprehensive state machine comments
+  - Documented 9 distinct states in the UAT verification loop: Load, Loop Start, Check Completion, Check Iteration Limit, Pick UAT, Execute Runner, Parse Response, Update State (OPT-OUT/Success paths), and Loop
+  - Explained critical design decisions: PRD reloading between iterations, max_iterations enforcement, OPT-OUT handling, and UAT status update strategy
+  - Enhanced `src/prd_new.rs::create_prd()` with comprehensive state machine comments
+  - Documented 11 distinct states in the multi-round Q/A flow: Initialize, Round 1 Question Generation, Round 1 Answer Collection, Loop State (Round N Start, Question Generation, Ready Check, Additional Questions, Auto-Advance), Synthesis, Persist, and Finalize
+  - Explained Q/A loop exit conditions: READY_TO_SYNTHESIZE signal, no additional questions, MAX_QA_ROUNDS limit
+  - Clarified two-strategy persist approach: runner-created file vs. response parsing
   - UAT passed: All 312 tests pass after adding comments

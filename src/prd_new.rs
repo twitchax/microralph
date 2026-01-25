@@ -68,6 +68,30 @@ pub struct PrdNewConfig<'a> {
 /// 6. Writes the PRD to disk
 /// 7. Updates the index
 /// 8. Updates AGENTS.md auto-managed section
+///
+/// # Multi-Round Q/A State Machine
+///
+/// This function implements a multi-round Q/A state machine with the following states:
+///
+/// 1. **Initialize**: Gather upfront context (CLI-provided or interactive prompt)
+/// 2. **Round 1 - Question Generation**: Runner generates initial questions based on context
+/// 3. **Round 1 - Answer Collection**: User provides answers to initial questions
+/// 4. **Loop State - Round N Start**: Check if we've hit MAX_QA_ROUNDS limit
+/// 5. **Loop State - Question Generation**: Runner examines Q/A history and generates follow-up questions
+/// 6. **Loop State - Ready Check**: Parse runner response for READY_TO_SYNTHESIZE signal
+/// 7. **Loop State - Additional Questions**: If runner provided more questions → collect answers
+/// 8. **Loop State - Auto-Advance**: If no questions and no ready signal → proceed to synthesis
+/// 9. **Synthesis**: Runner generates final PRD content from complete Q/A history
+/// 10. **Persist**: Write PRD to disk (runner may create file directly or return content)
+/// 11. **Finalize**: Update index and return result
+///
+/// The loop has multiple exit conditions:
+/// - Runner signals READY_TO_SYNTHESIZE
+/// - Runner returns no additional questions
+/// - MAX_QA_ROUNDS limit reached
+///
+/// This adaptive approach allows the runner to gather just enough information without
+/// burdening the user with unnecessary questions.
 pub fn create_prd<R, I, O>(
     config: &PrdNewConfig,
     runner: &R,
@@ -82,7 +106,8 @@ where
     writeln!(output, "Creating new PRD: {}", config.slug)?;
     writeln!(output)?;
 
-    // Determine user context: use CLI-provided context, or prompt interactively.
+    // STATE: Initialize - Determine user context for the PRD
+    // Context can be provided via CLI flag (non-interactive) or prompted interactively
     let user_context: Option<String> = if config.context.is_some() {
         config.context.map(|s| s.to_string())
     } else {
@@ -96,7 +121,8 @@ where
     let next_id = generate_next_prd_id(&existing_prds);
     tracing::debug!(next_id = %next_id, runner = %runner.name(), "Starting PRD creation");
 
-    // Round 1: Get initial questions.
+    // STATE: Round 1 - Question Generation
+    // Runner analyzes context and existing PRDs to generate initial questions
     writeln!(output, "Generating questions...")?;
 
     let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
@@ -128,14 +154,18 @@ where
     )?;
     writeln!(output)?;
 
-    // Collect answers.
+    // STATE: Round 1 - Answer Collection
+    // User provides answers to initial questions; these become the Q/A history
     let mut qa_history = qa_workflow::collect_multiline_answers(&questions, input, output)?;
     let mut rounds = 1;
 
-    // Loop with round N until ready.
+    // STATE: Loop State - Multi-round Q/A until runner is ready to synthesize
+    // Each iteration builds on previous Q/A history to gather more specific details
     loop {
         rounds += 1;
 
+        // STATE: Loop State - Check MAX_QA_ROUNDS limit
+        // Force synthesis if we've asked too many rounds (prevents infinite loops)
         if rounds > MAX_QA_ROUNDS {
             writeln!(output)?;
             writeln!(
@@ -145,6 +175,8 @@ where
             break;
         }
 
+        // STATE: Loop State - Question Generation (Round N)
+        // Runner reviews Q/A history and decides whether to ask follow-ups or signal readiness
         let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
 
         tracing::info!(
@@ -165,15 +197,19 @@ where
             );
         }
 
-        // Check if ready to synthesize.
+        // STATE: Loop State - Ready Check
+        // Runner signals READY_TO_SYNTHESIZE when it has enough information
         if round_n_output.text.contains(READY_SIGNAL) {
             tracing::debug!("Runner signaled ready to synthesize");
             break;
         }
 
-        // Parse additional questions.
+        // STATE: Loop State - Additional Questions parsing
+        // Runner may provide follow-up questions to clarify details
         let additional_questions = qa_workflow::parse_questions(&round_n_output.text);
 
+        // STATE: Loop State - Auto-Advance
+        // If runner didn't provide questions or signal ready, assume it's ready
         if additional_questions.is_empty() {
             tracing::debug!("No additional questions, proceeding to synthesis");
             break;
@@ -183,13 +219,15 @@ where
         writeln!(output, "A few more questions:")?;
         writeln!(output)?;
 
-        // Collect additional answers.
+        // Collect additional answers and append to Q/A history
         let additional_qa =
             qa_workflow::collect_multiline_answers(&additional_questions, input, output)?;
         qa_history.extend(additional_qa);
+        // Continue loop for next round
     }
 
-    // Synthesize the PRD.
+    // STATE: Synthesis - Generate final PRD from complete Q/A history
+    // Runner creates PRD frontmatter (id, title, tasks, etc.) and body content
     writeln!(output)?;
     writeln!(output, "Synthesizing PRD...")?;
 
@@ -210,20 +248,22 @@ where
         bail!("Runner failed during synthesis: {}", synthesize_output.text);
     }
 
-    // Strategy: The runner can create the PRD file directly (production),
-    // or return content that we write (tests with MockRunner).
-    // We check for file first, then fall back to parsing response if needed.
+    // STATE: Persist - Write PRD to disk
+    // Two strategies: (1) runner creates file directly, or (2) we parse runner's response and write
+    // Strategy (1) is used in production, strategy (2) in tests with MockRunner
     let prds_dir = config.root.join(".mr").join("prds");
 
     // Look for the newly created PRD file matching our slug.
     let (prd, prd_path, prd_content) = if let Some((path, content)) =
         find_created_prd_file(&prds_dir, config.slug, &next_id)?
     {
+        // Strategy (1): Runner created the file directly
         tracing::debug!(path = %path.display(), "Found PRD file created by runner");
 
         let parsed = match parse_prd(&content) {
             Ok(p) => p,
             Err(e) => {
+                // Runner created file but it's malformed - keep it as-is but warn
                 tracing::warn!(
                     path = %path.display(),
                     error = %e,
@@ -248,7 +288,7 @@ where
 
         (parsed, path, content)
     } else {
-        // Fall back to parsing the response (for tests or if runner didn't create file).
+        // Strategy (2): Parse runner's response and write ourselves (fallback for tests)
         tracing::debug!("No PRD file found, parsing response content");
 
         let prd_content = match qa_workflow::extract_prd_content(&synthesize_output.text) {
@@ -297,7 +337,7 @@ where
         (prd, prd_path, prd_content)
     };
 
-    // Verify the PRD file is valid (it should be, since we just parsed it).
+    // Validate the PRD has required fields
     if prd.id().is_empty() || prd.title().is_empty() {
         tracing::warn!(
             content_preview = ?prd_content.chars().take(200).collect::<String>(),
@@ -312,7 +352,7 @@ where
     writeln!(output)?;
     writeln!(output, "Created PRD: {}", prd_path.display())?;
 
-    // Update the index.
+    // STATE: Finalize - Update index to reflect new PRD
     generate_index_from_root(config.root)?;
     writeln!(output, "Updated PRD index")?;
 
