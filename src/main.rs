@@ -25,8 +25,16 @@ mod suggest;
 use runner::Runner;
 
 /// microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
+///
+/// Commands are organized by stages:
+/// - [0] Initialization
+/// - [1] PRD Creation
+/// - [2] Task Execution
+/// - [3] PRD Finalization
+/// - [H] Helper Commands
+/// - [C] Configuration/Container Commands
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, long_about, verbatim_doc_comment)]
 struct Args {
     /// Enable verbose output.
     #[arg(short, long, global = true)]
@@ -157,15 +165,15 @@ enum Command {
         stream: bool,
     },
 
-    /// [E] List all PRDs.
+    /// [H] List all PRDs.
     #[command(display_order = 7)]
     List,
 
-    /// [E] Show status of PRDs and tasks.
+    /// [H] Show status of PRDs and tasks.
     #[command(display_order = 8)]
     Status,
 
-    /// [O] Generate AI-driven PRD suggestions based on codebase analysis.
+    /// [H] Generate AI-driven PRD suggestions based on codebase analysis.
     #[command(display_order = 9)]
     Suggest {
         /// The runner to use for suggestion generation.

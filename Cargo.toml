@@ -1,5 +1,6 @@
 [package]
 name = "microralph"
+authors = ["Aaron Roney <twitchax@gmail.com>"]
 version = "0.1.0"
 edition = "2024"
 description = "A tiny CLI for creating and executing PRDs with coding agents"
