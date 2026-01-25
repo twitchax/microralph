@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - PRD-0002: Complete release infrastructure with multi-platform builds (Linux, macOS, Windows, WASM), code coverage via Codecov, cargo-release for versioning, git-cliff for changelog generation, crates.io publishing, and GitHub Releases with binary artifacts
+- PRD-0014: Cleanup Pass - Extracted duplicated Q/A workflow patterns, reduced unnecessary clones, added comprehensive comments to parsing logic and state machines, aligned code with Rust idioms, and fixed performance issues
 
 ### 🚀 Features
 
