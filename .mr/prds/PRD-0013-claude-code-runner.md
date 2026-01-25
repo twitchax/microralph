@@ -48,7 +48,7 @@ tasks:
 - id: T-002
   title: Create ClaudeConfig struct with permission modes
   priority: 2
-  status: todo
+  status: done
   notes: Mirror CopilotConfig structure with `claude_path`, `permission_mode` (Yolo/Manual), `no_ask_user`, and `model` fields.
 
 - id: T-003
@@ -150,4 +150,19 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
   - Added helper function `create_runner()` in main.rs to centralize runner creation
   - Updated all runner instantiation sites to support "claude" runner
   - Updated runner module exports in `src/runner/mod.rs`
+  - UAT passes: All 283 tests pass
+
+---
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Create ClaudeConfig struct with permission modes
+- **Status**: ✅ Done
+- **Changes**:
+  - No additional changes required; T-001 implementation already included ClaudeConfig
+  - Verified ClaudeConfig struct in `src/runner/claude.rs` (lines 24-84):
+    - Contains `claude_path`, `permission_mode`, `no_ask_user`, and `model` fields
+    - PermissionMode enum with Yolo and Manual variants (lines 13-22)
+    - Default implementation with yolo mode and no_ask_user enabled
+    - Builder methods: `with_path()`, `with_permission_mode()`, `with_no_ask_user()`, `with_model()`
+  - Mirrors CopilotConfig structure as specified
   - UAT passes: All 283 tests pass
