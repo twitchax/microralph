@@ -128,7 +128,7 @@ struct TaskPickSummary {
 }
 
 /// Asks the runner to pick the next PRD to work on.
-fn pick_prd_via_runner(root: &Path, runner: &dyn Runner, stream: bool) -> Result<Option<String>> {
+pub fn pick_prd_via_runner(root: &Path, runner: &dyn Runner, stream: bool) -> Result<Option<String>> {
     let prds_dir = root.join(".mr").join("prds");
     let prds = scan_prds(&prds_dir)?;
 
@@ -309,35 +309,26 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str) -> Strin
 
 /// Runs the next task from the active PRD.
 ///
-/// If no PRD ID is specified, the runner is first asked to determine which PRD
-/// to work on next (two-pass approach). Then the normal task execution proceeds.
+/// The PRD ID must be provided in the config. If you need to pick a PRD,
+/// use `pick_prd_via_runner` first.
 ///
 /// # Arguments
 ///
-/// * `config` - Configuration for the run
+/// * `config` - Configuration for the run (must include prd_id)
 /// * `runner` - The runner to use for task execution
 ///
 /// # Returns
 ///
 /// A `RunResult` describing what happened, or an error.
 pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
-    // Determine which PRD to work on.
-    let (_filename, prd, prd_path) = if let Some(explicit_id) = config.prd_id {
-        // Explicit PRD ID provided.
-        find_prd_by_id(config.root, explicit_id)?
-            .ok_or_else(|| anyhow::anyhow!("PRD not found: {explicit_id}"))?
-    } else {
-        // Ask the runner to pick the next PRD.
-        let picked_id =
-            pick_prd_via_runner(config.root, runner, config.stream)?.ok_or_else(|| {
-                anyhow::anyhow!(
-                    "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
-                )
-            })?;
+    // PRD ID must be provided.
+    let prd_id = config.prd_id.ok_or_else(|| {
+        anyhow::anyhow!("PRD ID must be provided to run_task. Use pick_prd_via_runner first.")
+    })?;
 
-        find_prd_by_id(config.root, &picked_id)?
-            .ok_or_else(|| anyhow::anyhow!("Runner picked PRD {picked_id}, but it was not found"))?
-    };
+    // Find the PRD.
+    let (_filename, prd, prd_path) = find_prd_by_id(config.root, prd_id)?
+        .ok_or_else(|| anyhow::anyhow!("PRD not found: {prd_id}"))?;
 
     // Pick the next task.
     let Some(task) = prd.next_task() else {
@@ -955,15 +946,23 @@ mod tests {
             ],
         );
 
-        // Two responses: one for pick_prd, one for run_task.
+        // Runner picks PRD, then executes task.
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("PRD-0001"),
             crate::runner::RunnerOutput::success("Task executed successfully."),
         ]);
 
+        // First, pick the PRD.
+        let picked_prd = pick_prd_via_runner(&root, &runner, false)
+            .unwrap()
+            .expect("Should pick a PRD");
+
+        assert_eq!(picked_prd, "PRD-0001");
+
+        // Then run task with the picked PRD.
         let config = RunConfig {
             root: &root,
-            prd_id: None,
+            prd_id: Some(&picked_prd),
             stream: false,
         };
 
@@ -1023,7 +1022,46 @@ mod tests {
     }
 
     #[test]
-    fn test_run_task_no_active_prd() {
+    fn test_pick_prd_selects_active_with_tasks() {
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create pick_prd.md prompt.
+        std::fs::write(root.join(".mr/prompts/pick_prd.md"), "Pick the next PRD").unwrap();
+
+        // Create multiple PRDs with different states.
+        create_test_prd(
+            &prds_dir,
+            "PRD-0001",
+            PrdStatus::Active,
+            vec![make_task("T-001", 1, TaskStatus::Done)], // All done.
+        );
+        create_test_prd(
+            &prds_dir,
+            "PRD-0002",
+            PrdStatus::Active,
+            vec![make_task("T-001", 1, TaskStatus::Todo)], // Has incomplete task.
+        );
+        create_test_prd(
+            &prds_dir,
+            "PRD-0003",
+            PrdStatus::Draft,
+            vec![make_task("T-001", 1, TaskStatus::Todo)], // Draft with task.
+        );
+
+        // Runner picks PRD-0002.
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success("PRD-0002")]);
+
+        let picked = pick_prd_via_runner(&root, &runner, false)
+            .unwrap()
+            .expect("Should pick a PRD");
+
+        assert_eq!(picked, "PRD-0002");
+    }
+
+    #[test]
+    fn test_pick_prd_no_active_prd() {
         let temp = TempDir::new().unwrap();
         let root = setup_test_repo(&temp);
 
@@ -1032,6 +1070,19 @@ mod tests {
 
         // Runner returns NONE (no PRDs available).
         let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success("NONE")]);
+
+        let result = pick_prd_via_runner(&root, &runner, false);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn test_run_task_requires_prd_id() {
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+
+        let runner = MockRunner::new(vec![]);
 
         let config = RunConfig {
             root: &root,
@@ -1042,7 +1093,10 @@ mod tests {
         let result = run_task(&config, &runner);
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("No active PRD"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("PRD ID must be provided"));
     }
 
     #[test]

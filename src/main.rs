@@ -1110,16 +1110,29 @@ fn cmd_run(
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
-    let config = run::RunConfig {
-        root: &cwd,
-        prd_id: normalized_prd_id.as_deref(),
-        stream,
+    // If no PRD ID was provided, ask the runner to pick one.
+    let active_prd_id = if let Some(id) = normalized_prd_id {
+        id
+    } else {
+        // Ask runner to pick the PRD once, then use it for all task executions.
+        run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
+                )
+            })?
     };
 
     let mut tasks_completed = 0;
     let mut last_failed = false;
 
     loop {
+        let config = run::RunConfig {
+            root: &cwd,
+            prd_id: Some(&active_prd_id),
+            stream,
+        };
+
         let result = match run::run_task(&config, runner.as_ref()) {
             Ok(result) => result,
             Err(e) => {
