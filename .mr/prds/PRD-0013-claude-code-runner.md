@@ -84,7 +84,7 @@ tasks:
 - id: T-008
   title: Export ClaudeRunner from runner module
   priority: 8
-  status: todo
+  status: done
   notes: Add ClaudeRunner to `mod.rs` exports alongside CopilotRunner.
 
 - id: T-009
@@ -278,3 +278,19 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
   - All test requirements from T-007 were already satisfied by implementation in previous tasks
   - Tests provide comprehensive coverage of all ClaudeRunner functionality
   - Mock-based testing approach ensures CI can run without Claude CLI installed
+
+---
+
+## 2026-01-25 — T-008 Completed
+- **Task**: Export ClaudeRunner from runner module
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified ClaudeRunner is already properly exported in `src/runner/mod.rs` (line 14: `pub use claude::ClaudeRunner;`)
+  - Verified claude module is declared in mod.rs (line 9: `mod claude;`)
+  - ClaudeRunner struct is public in `src/runner/claude.rs` (line 91: `pub struct ClaudeRunner`)
+  - All 293 tests pass
+  - UAT passes: `cargo make uat` successful
+- **Notes**:
+  - This task was already completed during previous tasks (likely T-001)
+  - The export statement has been present since the initial ClaudeRunner implementation
+  - ClaudeRunner is now available alongside CopilotRunner for use throughout the codebase
