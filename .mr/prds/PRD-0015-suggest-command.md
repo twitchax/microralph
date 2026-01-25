@@ -1,23 +1,20 @@
 ---
 id: PRD-0015
-title: "Suggest Command for AI-Generated PRD Recommendations"
-status: active
-owner: "microralph"
+title: Suggest Command for AI-Generated PRD Recommendations
+status: done
+owner: microralph
 created: 2026-01-24
 updated: 2026-01-25
-
 principles:
 - Focus on strategic feature suggestions but include quick wins
 - Leverage both internal codebase analysis and external research
 - Maintain consistency with existing PRD workflow patterns
 - Provide actionable, scoped suggestions that fit the PRD format
-
 references:
 - name: PRD-0003 PRD New Allows Upfront Context
   url: .mr/prds/PRD-0003-prd-new-allows-upfront-context.md
 - name: PRD-0009 CLI Ergonomics Improvements
   url: .mr/prds/PRD-0009-cli-ergonomics-improvements.md
-
 acceptance_tests:
 - id: uat-001
   name: Suggest command generates exactly 5 PRD suggestions
@@ -39,7 +36,6 @@ acceptance_tests:
   name: Codebase analysis covers tech debt and dependency versions
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Add PromptKind variant for suggestion generation
@@ -81,7 +77,6 @@ tasks:
   priority: 8
   status: done
   notes: Document new command usage and behavior in both files
-
 ---
 
 # Summary
@@ -286,3 +281,18 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Test verifies analysis output contains both dependency and tech debt sections
   - Test passed: 304/304 tests passing (up from 303)
   - Verified with `cargo make uat` - all tests passing
+
+---
+
+## 2026-01-25 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 8 tasks (T-001 through T-008)
+- **Outcome**: All tasks completed, acceptance tests passed (304/304 tests)
+- **Changelog**: Entry added under [Unreleased] → Added
+- **Cleanup**: None required — no temporary files or resolved TODOs found
+- **Summary**:
+  - Implemented `mr suggest` command with AI-powered codebase analysis
+  - Generates exactly 5 strategic PRD suggestions with interactive numbered picker
+  - Seamless integration with `mr new` workflow via pre-filled context
+  - Comprehensive test coverage including analysis, parsing, selection, and integration tests
+  - Full documentation in README.md and AGENTS.md

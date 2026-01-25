@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PRD-0015: Suggest Command for AI-Generated PRD Recommendations** — AI-powered analysis generates strategic PRD suggestions
+  - Added `mr suggest` command that analyzes codebase, existing PRDs, git history, and TODO comments
+  - Generates exactly 5 actionable PRD suggestions with title, description, category, effort estimate, and rationale
+  - Interactive numbered picker (1-5 or 'q') for suggestion selection
+  - Selected suggestion flows directly into `mr new` with pre-filled context
+  - Balances strategic features with quick-win improvements
+  - Comprehensive test coverage with 304/304 tests passing
+
 - **PRD-0013: Add Claude CLI Runner** — Multi-agent support with Claude CLI integration
   - Implemented ClaudeRunner with same surface area as CopilotRunner for consistent agent interfaces
   - Support for non-interactive mode, permission controls (yolo/manual), and model selection
