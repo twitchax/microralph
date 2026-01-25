@@ -23,7 +23,7 @@ acceptance_tests:
 - id: uat-001
   name: Bootstrap creates initial constitution file
   command: cargo make uat constitution_bootstrap
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Constitution contains numbered example rules
   command: cargo make uat constitution_template
@@ -265,3 +265,15 @@ microralph currently has no mechanism to encode project-specific constraints, be
   - Example Constitution (showing typical project rules)
   - Editing the Constitution (direct edit or LLM-assisted)
   - Enforcement Model (informational violations, not blocking)
+
+---
+
+## 2026-01-25 — uat-001 Verification
+- **UAT**: Bootstrap creates initial constitution file
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `src/bootstrap.rs::test_bootstrap_creates_constitution`
+  - Command: `cargo make uat constitution_bootstrap` (runs via nextest filter)
+  - Verification: Test confirms `.mr/constitution.md` is created during bootstrap with expected content structure
+  - Result: Test passed successfully
