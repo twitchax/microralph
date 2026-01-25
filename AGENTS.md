@@ -121,6 +121,50 @@ cargo make ci
 cargo make uat
 ```
 
+## Release Workflow
+
+microralph uses a multi-step release process powered by cargo-make tasks:
+
+### Release Tasks
+
+```bash
+# Generate/update changelog from conventional commits
+cargo make changelog
+
+# Version bump with cargo-release (dry-run to preview)
+cargo make release --dry-run
+
+# Build platform-specific binaries (done automatically by CI on main)
+cargo make build-linux
+cargo make build-macos
+cargo make build-windows
+cargo make build-wasm
+
+# Publish to crates.io (dry-run recommended first)
+cargo make publish-crates -- --dry-run
+cargo make publish-crates
+
+# Create GitHub release with binaries
+# First download CI artifacts (requires gh CLI auth):
+gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | \
+  xargs -I {} gh run download {} --dir release-artifacts
+
+# Then create the release:
+cargo make github-release v0.1.0
+cargo make github-release v0.1.0 --draft  # Create as draft
+```
+
+### Release Checklist
+
+1. Ensure all PRD tasks are complete and committed
+2. Generate changelog: `cargo make changelog`
+3. Review and commit CHANGELOG.md updates
+4. Bump version: `cargo make release` (or manually edit Cargo.toml)
+5. Push changes and wait for CI to build artifacts on main
+6. Download CI artifacts with gh CLI (see command above)
+7. Publish to crates.io: `cargo make publish-crates`
+8. Create GitHub release: `cargo make github-release vX.Y.Z`
+
 ## Troubleshooting
 
 - If `cargo-make` is missing: `cargo install cargo-make`
