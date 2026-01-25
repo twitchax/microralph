@@ -17,7 +17,7 @@ use chrono::{Local, Utc};
 
 use crate::changelog::{ensure_changelog_exists, read_changelog};
 use crate::prd::types::{AcceptanceTest, Task};
-use crate::prd::{self, Prd, PrdStatus, TaskStatus, serialize_prd};
+use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
@@ -318,6 +318,13 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     // This ensures when the runner executes `cargo run -- list`, it sees the correct status.
     update_prd_status_to_done(&path)
         .with_context(|| format!("Failed to update PRD status to done: {}", config.prd_id))?;
+
+    // Regenerate PRDS.md to reflect the new "done" status.
+    // This ensures PRDS.md is ready to be committed by the runner.
+    let _ = generate_index_from_root(config.root)
+        .with_context(|| "Failed to regenerate PRDS.md before finalization")?;
+
+    tracing::info!(prd_id = config.prd_id, "Regenerated PRDS.md with updated status");
 
     // Re-read the PRD after status update for the prompt context.
     let prd = prd::parse_prd_file(&path).with_context(|| {

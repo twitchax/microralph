@@ -122,20 +122,7 @@ Search for and remove:
 - Documentation comments
 - Necessary inline explanations
 
-### 5. Update Inter-PRD Links in Index
-
-Check `PRDS.md` for any references to this PRD that need updating:
-
-- If this PRD was blocked by another PRD, verify the blocker is resolved
-- If other PRDs reference this PRD, ensure links/references are accurate
-- Update any "See Also" or cross-reference sections
-
-Run to regenerate the index:
-```bash
-cargo run -- list
-```
-
-### 6. Append Finalization History Entry
+### 5. Append Finalization History Entry
 
 Add a final history entry to the PRD file documenting the finalization:
 
@@ -148,10 +135,23 @@ Add a final history entry to the PRD file documenting the finalization:
 - **Cleanup**: [Brief note on any cleanup performed]
 ```
 
-### 7. Commit All Changes
+### 6. Commit All Changes
 
-After all finalization steps are complete, commit the changes:
+After all finalization steps are complete, commit the changes.
 
+**CRITICAL**: You MUST commit these files (they've all been updated):
+1. `.mr/prds/{{prd_id}}-*.md` — The PRD file with your appended history entry
+2. `CHANGELOG.md` — With the new changelog entry you added
+3. `.mr/PRDS.md` — Auto-regenerated with updated PRD status (already done, just commit it)
+4. Any other files you modified during cleanup
+
+**Git commands**:
+```bash
+git add .mr/prds/{{prd_id}}*.md CHANGELOG.md .mr/PRDS.md
+git commit -m "prd({{prd_id}})finalize: [brief description]"
+```
+
+If you modified other files during cleanup, add them too:
 ```bash
 git add -A
 git commit -m "prd({{prd_id}})finalize: [brief description]"
