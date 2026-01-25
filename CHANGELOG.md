@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- PRD-0002: Complete release infrastructure with multi-platform builds (Linux, macOS, Windows, WASM), code coverage via Codecov, cargo-release for versioning, git-cliff for changelog generation, crates.io publishing, and GitHub Releases with binary artifacts
-- PRD-0014: Cleanup Pass - Extracted duplicated Q/A workflow patterns, reduced unnecessary clones, added comprehensive comments to parsing logic and state machines, aligned code with Rust idioms, and fixed performance issues
-- PRD-0017: Add `mr restore` command to overwrite `.mr/prompts/` and `.mr/templates/` with built-in defaults. Reuses `mr init` logic for DRY, leaves changes uncommitted for Git review, and supports idempotent restoration.
-
 ### 🚀 Features
 
 - Implement static prompt library + placeholder system (T-005)
@@ -37,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Bug Fixes
 
 - *finalize*: Enable finalization summary report output
+- Add missing constitution_edit and devcontainer_generate prompt files to init/restore
 
 ### 📋 PRD Tasks
 
@@ -453,6 +448,83 @@ This commit updates the PRD to reflect the actual completion status.
 - Supports attaching binaries from release-artifacts/ directory
 - Includes helpful instructions for downloading CI artifacts
 - All 304 tests pass
+- Prd(PRD-0002)feat(T-008): Add unified release task orchestrating full pipeline
+
+- Renamed original 'release' task to 'release-bump' to preserve version bumping
+- Created 'release-builds' helper task for sequential changelog and builds
+- Created unified 'release' task that runs CI + builds + provides next-steps
+- Created 'publish-all' task for one-command crates.io + GitHub release
+- Updated AGENTS.md with comprehensive release workflow documentation
+- All tasks follow cargo-make patterns and support argument passing
+- Tested orchestration flow, error handling, and version bump validation
+- Prd(PRD-0002)feat(T-009): Add pre-built binary installation instructions to README
+- Prd(PRD-0002)feat(T-010): Add exhaustive user flow documentation to README
+
+- Added comprehensive 'User Flows' section with 10+ workflow scenarios
+- Included quick reference command cheat sheet and real-world scenarios
+- Added tips and tricks section with 10 actionable best practices
+- Maintained light and funny tone consistent with existing README
+- All examples are runnable and reference actual commands
+- ~350 lines of exhaustive documentation covering complete user experience
+- Prd(PRD-0002)finalize: complete release infrastructure with multi-platform builds
+- Prd(PRD-0014)feat(T-001): Extract Q/A workflow patterns to shared module
+
+- Created src/qa_workflow.rs with shared utilities for PRD operations
+- Extracted QaPair, parse_questions, extract_prd_content, strip_ansi_escapes
+- Unified duplicate code across prd_new.rs and prd_edit.rs
+- Added multiline and singleline answer collection variants
+- All 312 tests pass
+- Prd(PRD-0014)feat(T-002): reduce unnecessary clones in run.rs by 37.5%
+- Prd(PRD-0014)feat(T-003): Add inline comments to complex parsing logic
+
+- Enhanced split_frontmatter() in prd/parser.rs with detailed comments
+- Enhanced expand_simple_placeholders() with character parsing explanations
+- Enhanced expand_if_blocks() with block processing logic comments
+- Enhanced expand_each_blocks() with iteration and expansion details
+- All 312 tests pass after documentation improvements
+- Prd(PRD-0014)feat(T-004): Add comprehensive state machine comments to orchestration flows
+
+- Enhanced run.rs UAT verification loop with 9-state machine documentation
+- Enhanced prd_new.rs multi-round Q/A flow with 11-state machine documentation
+- Documented critical design decisions, exit conditions, and state transitions
+- All 312 tests passing
+- Prd(PRD-0014)feat(T-005): Replace string concatenation in loops with iterator-based collection
+- Prd(PRD-0014)feat(T-006): Optimize string allocations and reduce unnecessary clones
+
+- Runner optimization: Remove redundant .to_string() after String::from_utf8_lossy and eliminate unnecessary .clone() calls
+- Status report optimization: Replace format! + push_str pattern with direct push_str calls
+- Index optimization: Use .into_owned() instead of .to_string() to avoid double conversion
+- All 312 tests pass
+- Prd(PRD-0014)finalize: Cleanup Pass - Refactoring and Documentation
+- Prd(PRD-0017)feat(T-001): Add restore subcommand to CLI enum and parser
+
+- Added Restore variant to Command enum with display_order = 3
+- Updated subsequent command display_order values for correct ordering
+- Added cmd_restore() function with initialization check
+- Command appears in --help output in [0] Initialization category
+- UAT passed: all existing tests continue to pass
+- Prd(PRD-0017)feat(T-002): Implement directory deletion for restore command
+- Prd(PRD-0017)feat(T-003): Refactor init logic to support prompts/templates reinitialization
+
+- Created init_prompts_and_templates() function for reusable file-writing logic
+- Added create_file_always() helper that overwrites existing files
+- Updated cmd_restore() to call init_prompts_and_templates() after deletion
+- Maintains DRY principle by sharing file-writing logic between init and restore
+- All 312 UAT tests passed
+- Prd(PRD-0017)feat(T-004): Add restore command documentation to README and AGENTS.md
+- Prd(PRD-0017)feat(T-005): Add integration tests for restore command
+
+- Added 4 comprehensive integration tests for cmd_restore:
+  - test_restore_fresh: Fresh restore on initialized repository
+  - test_restore_after_customization: Verify customized files are overwritten
+  - test_restore_idempotency: Multiple restores produce identical results
+  - test_restore_fails_if_not_initialized: Proper error handling
+- All tests use tempfile::TempDir for isolated test environments
+- All 316 tests passing (4 new + 312 existing)
+- Updated PRD-0017 status: T-005 marked as done (all tasks complete: 5/5)
+- Regenerated .mr/PRDS.md index
+- *PRD-0017*: Verify all UATs for restore command
+- Prd(PRD-0017)finalize: Add Restore Command to Reset Prompts and Templates
 
 ### 📚 Documentation
 
