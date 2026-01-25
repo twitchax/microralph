@@ -2,40 +2,40 @@
 id: PRD-0010
 title: Support Multi-line Q/A During PRD Creation
 status: done
-owner: ""
+owner: ''
 created: 2026-01-24
 updated: 2026-01-24
 principles:
-  - Keep implementation simple; avoid complex formatting if it adds significant complexity
-  - Detect newline characters in model output for questions
-  - Use double-enter pattern for multi-line answer input
-  - Support unbounded multi-line content
+- Keep implementation simple; avoid complex formatting if it adds significant complexity
+- Detect newline characters in model output for questions
+- Use double-enter pattern for multi-line answer input
+- Support unbounded multi-line content
 references: []
 acceptance_tests:
-  - id: uat-001
-    name: Question with bullet list displays completely
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: Multi-line answer is captured correctly
-    command: cargo make uat
-    uat_status: verified
+- id: uat-001
+  name: Question with bullet list displays completely
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Multi-line answer is captured correctly
+  command: cargo make uat
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: Detect and display newlines in model-generated questions
-    priority: 1
-    status: done
-    notes: Model output sometimes includes newlines for lists/formatting; ensure full question is displayed with proper line breaks
-  - id: T-002
-    title: Support multi-line answer input with double-enter termination
-    priority: 2
-    status: done
-    notes: User presses Enter twice to finish multi-line answer; simple approach preferred
-  - id: T-003
-    title: Verify UAT scenarios pass
-    priority: 3
-    status: done
-    notes: Test with questions containing bullet lists and multi-line answers
+- id: T-001
+  title: Detect and display newlines in model-generated questions
+  priority: 1
+  status: done
+  notes: Model output sometimes includes newlines for lists/formatting; ensure full question is displayed with proper line breaks
+- id: T-002
+  title: Support multi-line answer input with double-enter termination
+  priority: 2
+  status: done
+  notes: User presses Enter twice to finish multi-line answer; simple approach preferred
+- id: T-003
+  title: Verify UAT scenarios pass
+  priority: 3
+  status: done
+  notes: Test with questions containing bullet lists and multi-line answers
 ---
 
 # Summary
@@ -109,3 +109,12 @@ This limitation makes the interactive PRD creation process less effective when d
 - **Changelog**: Entry added under [Unreleased] → Added
 - **Cleanup**: No cleanup required; all code is production-ready
 - **Summary**: Successfully implemented multi-line question display and answer input for `mr new` Q/A sessions
+## 2026-01-25 — Finalization Complete
+- **PRD**: PRD-0010 — Support Multi-line Q/A During PRD Creation
+- **Finalized**: 2026-01-25T01:22:46Z
+- **Tasks Completed**: 3
+- **Summary**:
+  - T-001: Detect and display newlines in model-generated questions
+  - T-002: Support multi-line answer input with double-enter termination
+  - T-003: Verify UAT scenarios pass
+- **Status**: ✅ All acceptance tests passed
