@@ -336,6 +336,8 @@ For each PRD in the plan:
    - Non-Goals section (if applicable)
    - Empty History section
 
+4. Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
+
 ## Constraints
 
 - Generate at most {{prd_budget}} PRDs

@@ -63,7 +63,7 @@ tasks:
   - id: T-009
     title: Add AGENTS.md update reminder to bootstrap_all.md prompt in init.rs
     priority: 1
-    status: todo
+    status: done
     notes: Add reminder to the bootstrap prompt
   - id: T-010
     title: Verify all prompts are updated in both init.rs and .md files
@@ -145,6 +145,14 @@ The current implementation automatically calls `update_agents_md()` after three 
 - **Changes**:
   - Added step 5 to "Required Actions" section in both `src/init.rs` (PROMPT_PRD_NEW_SYNTHESIZE constant, line 530) and `.mr/prompts/prd_new_synthesize_prd.md`: "Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about"
   - This reminder is shown during PRD creation/synthesis phase, ensuring agents document new patterns introduced by new PRDs
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — T-009 Completed
+- **Task**: Add AGENTS.md update reminder to bootstrap_all.md prompt in init.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Added step 4 to "Required Actions" section in both `src/init.rs` (PROMPT_BOOTSTRAP_GENERATE_PRDS constant, lines 332-338) and `.mr/prompts/bootstrap_generate_prds.md`: "Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about"
+  - This reminder is shown during bootstrap PRD generation phase, ensuring agents document new patterns discovered during repository analysis
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
 
 
