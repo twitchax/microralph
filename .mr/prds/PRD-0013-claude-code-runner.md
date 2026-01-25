@@ -72,7 +72,7 @@ tasks:
 - id: T-006
   title: Implement output stripping for Claude CLI stats section
   priority: 6
-  status: todo
+  status: done
   notes: If Claude CLI appends statistics similar to Copilot, strip them to keep output clean while preserving usage data.
 
 - id: T-007
@@ -228,3 +228,29 @@ Currently, microralph only supports GitHub Copilot CLI as a runner. Users who pr
   - ✅ uat-002: ClaudeRunner parses token usage from Claude CLI output (verified via new parse_usage tests)
   - ✅ uat-003: ClaudeRunner supports yolo/manual permission modes (verified via unit tests)
   - ✅ uat-004: Full CI passes with ClaudeRunner implementation (cargo make uat passed)
+
+---
+
+## 2026-01-25 — T-006 Completed
+- **Task**: Implement output stripping for Claude CLI stats section
+- **Status**: ✅ Done
+- **Changes**:
+  - Added public `strip_usage_stats()` method to `ClaudeRunner` in `src/runner/claude.rs`
+  - This method mirrors the `CopilotRunner::strip_usage_stats()` API for consistency
+  - Leverages existing `extract_result_from_json()` function which already strips JSON metadata
+  - Claude CLI's `--output-format json` provides clean separation: `result` field contains clean text, `usage` field contains token stats
+  - The implementation extracts only the `result` field, automatically stripping all metadata (usage, type, session info, etc.)
+  - Added comprehensive unit tests covering:
+    - Full JSON with all metadata fields (strips correctly)
+    - Plain text fallback (returns as-is)
+    - Multiline results (preserves newlines)
+    - Empty results (returns empty string)
+    - Missing result field (returns original JSON)
+  - All 293 tests pass
+  - UAT passes: `cargo make uat` successful
+- **Notes**:
+  - Output stripping is actually cleaner for Claude than Copilot because Claude uses structured JSON output
+  - CopilotRunner uses regex to find/remove stats sections from unstructured text
+  - ClaudeRunner simply extracts the `result` JSON field, which is more robust
+  - Both `execute()` and `execute_streaming()` already use this stripping internally
+  - The public `strip_usage_stats()` method provides the same API surface as CopilotRunner for external callers

@@ -221,6 +221,26 @@ impl ClaudeRunner {
         // If parsing fails or result is missing, return original text.
         text.to_string()
     }
+
+    /// Strips the statistics metadata from Claude CLI JSON output.
+    ///
+    /// When using `--output-format json`, Claude CLI returns JSON with usage stats,
+    /// type information, and other metadata. This function removes all metadata and
+    /// returns only the actual response text (the `result` field).
+    ///
+    /// This is analogous to `CopilotRunner::strip_usage_stats` but leverages Claude's
+    /// structured JSON output for cleaner parsing.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let json_output = r#"{"type": "result", "result": "Hello!", "usage": {...}}"#;
+    /// let clean = ClaudeRunner::strip_usage_stats(json_output);
+    /// assert_eq!(clean, "Hello!");
+    /// ```
+    #[allow(dead_code)] // Public API for consistency with CopilotRunner
+    pub fn strip_usage_stats(text: &str) -> String {
+        Self::extract_result_from_json(text)
+    }
 }
 
 impl Default for ClaudeRunner {
@@ -674,5 +694,90 @@ mod tests {
 
         // Should NOT include model flags
         assert!(!cmd_display.contains("--model"));
+    }
+
+    #[test]
+    fn test_strip_usage_stats_with_full_json() {
+        let json_output = r#"{
+            "type": "result",
+            "subtype": "success",
+            "result": "Hello, world!",
+            "usage": {
+                "input_tokens": 1234,
+                "output_tokens": 56,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0
+            },
+            "metadata": {
+                "session_id": "abc123"
+            }
+        }"#;
+
+        let stripped = ClaudeRunner::strip_usage_stats(json_output);
+
+        // Should return only the result text, stripping all metadata
+        assert_eq!(stripped, "Hello, world!");
+        assert!(!stripped.contains("usage"));
+        assert!(!stripped.contains("input_tokens"));
+        assert!(!stripped.contains("metadata"));
+    }
+
+    #[test]
+    fn test_strip_usage_stats_with_plain_text() {
+        let plain_text = "This is just plain text output";
+
+        let stripped = ClaudeRunner::strip_usage_stats(plain_text);
+
+        // Should return text as-is when not JSON
+        assert_eq!(stripped, plain_text);
+    }
+
+    #[test]
+    fn test_strip_usage_stats_preserves_multiline_result() {
+        let json_output = r#"{
+            "type": "result",
+            "result": "Line 1\nLine 2\nLine 3",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 50
+            }
+        }"#;
+
+        let stripped = ClaudeRunner::strip_usage_stats(json_output);
+
+        // Should preserve newlines in the result
+        assert_eq!(stripped, "Line 1\nLine 2\nLine 3");
+    }
+
+    #[test]
+    fn test_strip_usage_stats_with_empty_result() {
+        let json_output = r#"{
+            "type": "result",
+            "result": "",
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let stripped = ClaudeRunner::strip_usage_stats(json_output);
+
+        // Should return empty string for empty result
+        assert_eq!(stripped, "");
+    }
+
+    #[test]
+    fn test_strip_usage_stats_missing_result_field() {
+        let json_output = r#"{
+            "type": "error",
+            "error": "Something went wrong",
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let stripped = ClaudeRunner::strip_usage_stats(json_output);
+
+        // Should return original JSON when result field is missing
+        assert_eq!(stripped, json_output);
     }
 }
