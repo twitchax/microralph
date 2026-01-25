@@ -49,7 +49,7 @@ tasks:
 - id: T-002
   title: Create suggest generation prompt template
   priority: 2
-  status: todo
+  status: done
   notes: Create .mr/prompts/suggest-generate.md with instructions for analyzing codebase, existing PRDs, and conducting research
 - id: T-003
   title: Implement top-level suggest command in CLI
@@ -133,6 +133,19 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Added match arm in `src/prompt/loader.rs` to return the new prompt
   - Updated test `test_prompt_kind_all` to expect 16 prompts (previously 15)
   - Updated test `test_prompt_loader_missing_prompts` to expect 16/15 counts
+  - UAT passed: All 293 tests passing
+
+---
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Create suggest generation prompt template
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `create_file_if_missing` call in `src/init.rs` to create `.mr/prompts/suggest_generate.md` during initialization
+  - Inserted the file creation call after `pick_prd.md` and before the PRDS.md index creation
+  - Created `.mr/prompts/suggest_generate.md` with comprehensive prompt template from `PROMPT_SUGGEST_GENERATE` constant
+  - Updated test `test_init_creates_structure`: Added assertion for `suggest_generate.md` file existence, changed expected file count from 18 to 19 (14 prompts instead of 13)
+  - Updated test `test_init_is_idempotent`: Changed expected file counts from 18 to 19 for both initialization runs
   - UAT passed: All 293 tests passing
 
 ---

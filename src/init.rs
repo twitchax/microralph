@@ -1749,6 +1749,11 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         PROMPT_PICK_PRD,
         &mut result,
     )?;
+    create_file_if_missing(
+        &prompts_dir.join("suggest_generate.md"),
+        PROMPT_SUGGEST_GENERATE,
+        &mut result,
+    )?;
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
@@ -1865,6 +1870,7 @@ mod tests {
         assert!(root.join(".mr/prompts/adapt_language.md").exists());
         assert!(root.join(".mr/prompts/reindex.md").exists());
         assert!(root.join(".mr/prompts/pick_prd.md").exists());
+        assert!(root.join(".mr/prompts/suggest_generate.md").exists());
 
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
@@ -1880,7 +1886,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 18); // 1 template + 13 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 19); // 1 template + 14 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1891,13 +1897,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 18);
+        assert_eq!(result1.files_created, 19);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 18);
+        assert_eq!(result2.files_skipped, 19);
         assert_eq!(result2.dirs_created, 0);
     }
 
