@@ -12,7 +12,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::Runner;
+use crate::runner::{CopilotRunner, Runner};
 
 /// Marker for the start of the auto-managed section.
 const AUTO_MANAGED_START: &str = "<!-- BEGIN MICRORALPH AUTO-MANAGED SECTION -->";
@@ -151,8 +151,13 @@ fn build_update_agents_prompt(
 /// - "NO_CHANGES" signal
 /// - Markdown code blocks
 /// - Plain text
+/// - Strips usage statistics that shouldn't be in file content
 fn parse_update_response(output: &str) -> Option<String> {
     let trimmed = output.trim();
+
+    // Strip usage statistics before processing
+    let trimmed = CopilotRunner::strip_usage_stats(trimmed);
+    let trimmed = trimmed.trim();
 
     // Check for no changes signal.
     if trimmed.contains(NO_CHANGES_SIGNAL) {

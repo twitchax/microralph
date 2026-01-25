@@ -14,7 +14,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::Runner;
+use crate::runner::{CopilotRunner, Runner};
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;
@@ -234,6 +234,9 @@ fn build_constitution_edit_prompt(
 
 /// Extracts the updated constitution content from the runner response.
 fn extract_constitution_content(response: &str) -> Result<String> {
+    // Strip usage statistics before processing
+    let response = CopilotRunner::strip_usage_stats(response);
+
     // Look for markdown code block after READY_TO_APPLY.
     let after_signal = response
         .split(READY_SIGNAL)

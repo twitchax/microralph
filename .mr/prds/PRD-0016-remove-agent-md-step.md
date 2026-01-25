@@ -100,12 +100,3 @@ The current implementation automatically calls `update_agents_md()` after three 
 - Modifying other auto-update mechanisms in the codebase
 
 # History
-
-
-
-Total usage est:        1 Premium request
-API time spent:         25s
-Total session time:     27s
-Total code changes:     +0 -0
-Breakdown by AI model:
- claude-sonnet-4.5       20.0k in, 1.5k out, 11.8k cached (Est. 1 Premium request)

@@ -116,13 +116,4 @@ The recent change added a constitution feature (`.mr/constitution.md`) that defi
 The constitution file hasn't been created yet in the current repository (likely needs `mr init` to be run). However, based on the PRD completion, this is a new feature that agents should know about. Let me update the AGENTS.md file with this information.
 
 Updated AGENTS.md with new constitution feature (PRD-0012). Added section explaining `.mr/constitution.md` purpose, integration with PRD workflows, and violation logging behavior.
-
-
-
-Total usage est:        1 Premium request
-API time spent:         25s
-Total session time:     29s
-Total code changes:     +0 -0
-Breakdown by AI model:
- claude-sonnet-4.5       89.1k in, 1.5k out, 75.4k cached (Est. 1 Premium request)
 <!-- END MICRORALPH AUTO-MANAGED SECTION -->

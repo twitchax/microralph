@@ -280,8 +280,8 @@ impl CopilotRunner {
     /// ```
     ///
     /// This function removes that section while preserving the actual response.
-    #[allow(dead_code)]
-    fn strip_stats(text: &str) -> String {
+    /// It's useful when runner output will be written to files where stats shouldn't appear.
+    pub fn strip_usage_stats(text: &str) -> String {
         // Find the start of the stats section
         // It typically starts with "Total usage est:" or "API time spent:"
         if let Some(pos) = text.find("\n\nTotal usage est:") {
@@ -710,19 +710,19 @@ mod tests {
     }
 
     #[test]
-    fn test_strip_stats() {
+    fn test_strip_usage_stats() {
         let output = "Hello world\n\nTotal usage est:        3 Premium requests\nAPI time spent:         2s\nTotal session time:     4s\nTotal code changes:     +0 -0\nBreakdown by AI model:\n claude-opus-4.5         18.3k in, 38 out, 11.8k cached (Est. 3 Premium requests)";
 
-        let cleaned = CopilotRunner::strip_stats(output);
+        let cleaned = CopilotRunner::strip_usage_stats(output);
 
         assert_eq!(cleaned, "Hello world");
     }
 
     #[test]
-    fn test_strip_stats_no_stats() {
+    fn test_strip_usage_stats_no_stats() {
         let output = "Hello world\nThis is just normal output.";
 
-        let cleaned = CopilotRunner::strip_stats(output);
+        let cleaned = CopilotRunner::strip_usage_stats(output);
 
         assert_eq!(cleaned, output);
     }

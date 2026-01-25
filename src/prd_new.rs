@@ -15,7 +15,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::Runner;
+use crate::runner::{CopilotRunner, Runner};
 
 /// Maximum number of Q/A rounds before forcing synthesis.
 const MAX_QA_ROUNDS: usize = 5;
@@ -701,6 +701,10 @@ where
 fn extract_prd_content(output: &str) -> String {
     // First, strip any ANSI escape sequences that might be in the output.
     let cleaned = strip_ansi_escapes(output);
+
+    // Strip usage statistics that shouldn't be in PRD content
+    let cleaned = CopilotRunner::strip_usage_stats(&cleaned);
+
     let trimmed = cleaned.trim();
 
     tracing::debug!(

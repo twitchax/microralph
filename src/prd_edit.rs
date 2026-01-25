@@ -15,7 +15,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::Runner;
+use crate::runner::{CopilotRunner, Runner};
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;
@@ -322,11 +322,14 @@ where
 
 /// Extracts PRD content from runner output.
 fn extract_prd_content(output: &str) -> Result<String> {
+    // Strip usage statistics before processing
+    let output = CopilotRunner::strip_usage_stats(output);
+
     // Look for content after READY_TO_APPLY signal
     let content_start = if let Some(idx) = output.find(READY_SIGNAL) {
         &output[idx + READY_SIGNAL.len()..]
     } else {
-        output
+        output.as_str()
     };
 
     // Check for markdown code block.
