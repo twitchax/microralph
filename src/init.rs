@@ -528,6 +528,7 @@ The body contains ONLY narrative/exposition sections:
 2. Scan the codebase for relevant files, patterns, or entry points.
 3. Review existing PRDs for related work or patterns.
 4. Create the PRD following the template structure EXACTLY.
+5. Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
 
 ## Acceptance Tests Format
 
