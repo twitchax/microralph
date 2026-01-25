@@ -19,6 +19,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   cache-all-crates: "true"
+                  cache-bin: "false"
             - run: cargo binstall cargo-make --no-confirm
             - run: cargo make ci
 
@@ -35,6 +36,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   cache-all-crates: "true"
+                  cache-bin: "false"
             - run: cargo binstall cargo-make --no-confirm
             - run: cargo make codecov
             - uses: codecov/codecov-action@v5
@@ -56,6 +58,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   cache-all-crates: "true"
+                  cache-bin: "false"
             - name: Install mold linker
               run: |
                   sudo apt-get update
@@ -86,6 +89,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   cache-all-crates: "true"
+                  cache-bin: "false"
             - run: cargo binstall cargo-make --no-confirm
             - run: cargo make build-windows
             - uses: actions/upload-artifact@v4
@@ -108,6 +112,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   cache-all-crates: "true"
+                  cache-bin: "false"
             - run: cargo binstall cargo-make --no-confirm
             - run: cargo make build-macos
             - uses: actions/upload-artifact@v4

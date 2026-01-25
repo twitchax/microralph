@@ -324,7 +324,10 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     let _ = generate_index_from_root(config.root)
         .with_context(|| "Failed to regenerate PRDS.md before finalization")?;
 
-    tracing::info!(prd_id = config.prd_id, "Regenerated PRDS.md with updated status");
+    tracing::info!(
+        prd_id = config.prd_id,
+        "Regenerated PRDS.md with updated status"
+    );
 
     // Re-read the PRD after status update for the prompt context.
     let prd = prd::parse_prd_file(&path).with_context(|| {

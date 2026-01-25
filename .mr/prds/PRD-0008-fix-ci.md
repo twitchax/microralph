@@ -1,10 +1,10 @@
 ---
 id: PRD-0008
 title: "Fix CI cargo-make Not Found Error"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 
 principles:
 - Fix must be simple and targeted; avoid over-engineering
@@ -27,7 +27,7 @@ tasks:
 - id: T-001
   title: Investigate rust-cache bin caching interaction with binstall
   priority: 1
-  status: todo
+  status: done
   notes: The cache restores ~/.cargo/bin, binstall sees cargo-make as "already installed" but the binary isn't properly available to cargo.  Weirdly, this works for kord (https://github.com/twitchax/kord/actions/runs/21278722168/job/61243513376).
 - id: T-002
   title: Fix CI workflow to ensure cargo-make is available
@@ -73,6 +73,14 @@ The root cause is likely that the cached cargo-make binary or its metadata is st
 
 # History
 
-(Entries appended by `mr run` will go below this line.)
+## 2026-01-25 — T-001 Completed
+- **Task**: Investigate rust-cache bin caching interaction with binstall
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `cache-bin: "false"` to all Swatinem/rust-cache@v2 uses in `.github/workflows/build.yml`
+  - This prevents caching of `~/.cargo/bin`, which was causing binstall to detect cargo-make as "already installed" but the binary wasn't properly available to cargo
+  - Applied to all 5 jobs: test, codecov, build_linux, build_windows, build_macos
+  - UAT passed: `cargo make uat` runs successfully (all tests pass)
+- **Root Cause**: The rust-cache action by default caches `~/.cargo/bin`. When restored, binstall sees tools as installed but cargo doesn't recognize them as valid subcommands. Disabling bin caching forces fresh reinstalls, avoiding the issue.
 
 ---
