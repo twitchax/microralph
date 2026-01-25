@@ -338,11 +338,23 @@ For each PRD in the plan:
 
 4. Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
 
+## Tasks Format
+
+Each task in the frontmatter MUST have these fields:
+```yaml
+- id: T-001
+  title: Clear, actionable task title
+  priority: 1              # MUST be a number (lower = higher priority)
+  status: todo             # always start as todo
+  notes: Optional implementation hints or dependencies
+```
+
 ## Constraints
 
 - Generate at most {{prd_budget}} PRDs
 - Each PRD should have 3-8 tasks
 - Tasks should be actionable and verifiable
+- **Priority MUST be a numeric value** (1, 2, 3, etc.) where 1 is highest priority
 
 ## Output
 
