@@ -102,7 +102,7 @@ chmod +x mr
 sudo mv mr /usr/local/bin/
 
 # Verify installation
-mr --version
+mr -h
 ```
 
 #### Windows
@@ -110,7 +110,7 @@ mr --version
 1. Download `mr-windows.exe` from the [releases page](https://github.com/twitchax/microralph/releases)
 2. Rename to `mr.exe`
 3. Move to a directory in your PATH (e.g., `C:\Program Files\microralph\`)
-4. Open a new terminal and verify with `mr --version`
+4. Open a new terminal and verify with `mr -h`
 
 #### WebAssembly (via OCI Registry)
 
