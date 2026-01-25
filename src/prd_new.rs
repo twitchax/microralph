@@ -656,8 +656,33 @@ where
         write!(output, "   > ")?;
         output.flush()?;
 
-        let mut answer = String::new();
-        input.read_line(&mut answer)?;
+        // Read multi-line answer; user presses Enter twice to finish.
+        let mut answer_lines = Vec::new();
+        loop {
+            let mut line = String::new();
+            let bytes_read = input.read_line(&mut line)?;
+
+            // Check for EOF (no more input).
+            if bytes_read == 0 {
+                break;
+            }
+
+            // Check if the line is empty (just newline = double-enter).
+            if line.trim().is_empty() {
+                // If we already have content, this is the terminating blank line.
+                if !answer_lines.is_empty() {
+                    break;
+                }
+                // Otherwise, it's a leading blank line; skip it.
+            } else {
+                answer_lines.push(line.trim_end().to_string());
+                // Prompt for next line if user continues.
+                write!(output, "   > ")?;
+                output.flush()?;
+            }
+        }
+
+        let answer = answer_lines.join("\n");
 
         pairs.push(QaPair {
             question: question.clone(),
@@ -1006,7 +1031,7 @@ title: Test
     fn test_collect_answers() {
         let questions = vec!["Question 1?".to_string(), "Question 2?".to_string()];
 
-        let input = "Answer 1\nAnswer 2\n";
+        let input = "Answer 1\n\nAnswer 2\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1017,6 +1042,21 @@ title: Test
         assert_eq!(pairs[0].answer, "Answer 1");
         assert_eq!(pairs[1].question, "Question 2?");
         assert_eq!(pairs[1].answer, "Answer 2");
+    }
+
+    #[test]
+    fn test_collect_answers_multiline() {
+        let questions = vec!["Describe your feature?".to_string()];
+
+        let input = "Line 1\nLine 2\nLine 3\n\n";
+        let mut input = input.as_bytes();
+        let mut output = Vec::new();
+
+        let pairs = collect_answers(&questions, &mut input, &mut output).unwrap();
+
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(pairs[0].question, "Describe your feature?");
+        assert_eq!(pairs[0].answer, "Line 1\nLine 2\nLine 3");
     }
 
     #[test]
@@ -1076,7 +1116,7 @@ A test feature.
             context: None,
         };
 
-        let input = "Solving problem X\nMVP scope\n";
+        let input = "Solving problem X\n\nMVP scope\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1148,7 +1188,7 @@ tasks: []
         };
 
         // Provide enough answers: 1 for round1 + (MAX_QA_ROUNDS - 1) for subsequent rounds
-        let input = "Answer\n".repeat(MAX_QA_ROUNDS);
+        let input = "Answer\n\n".repeat(MAX_QA_ROUNDS);
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1208,7 +1248,7 @@ tasks: []
         };
 
         // Simulate user input: provide context, then answer the question
-        let input = "This is a test context for the feature\nThe goal is to test\n";
+        let input = "This is a test context for the feature\nThe goal is to test\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1275,7 +1315,7 @@ tasks: []
         };
 
         // Simulate user input: only the answer to the question (no context prompt expected)
-        let input = "The goal is to test the flag\n";
+        let input = "The goal is to test the flag\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1341,7 +1381,7 @@ tasks: []
             context: Some("This is a payment processing feature for e-commerce"),
         };
 
-        let input = "Process payments securely\n";
+        let input = "Process payments securely\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1411,7 +1451,7 @@ tasks: []
             context: Some("Multi-tenant auth system with role-based access"),
         };
 
-        let input = "Answer 1\nAnswer 2\n";
+        let input = "Answer 1\n\nAnswer 2\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1491,7 +1531,7 @@ tasks: []
             context: Some("API Gateway with rate limiting and JWT auth"),
         };
 
-        let input = "Answer 1\n";
+        let input = "Answer 1\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 
@@ -1561,7 +1601,7 @@ Just some random text."#;
             context: None,
         };
 
-        let input = "Test goal\n";
+        let input = "Test goal\n\n";
         let mut input = input.as_bytes();
         let mut output = Vec::new();
 

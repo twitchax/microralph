@@ -34,7 +34,7 @@ tasks:
   - id: T-003
     title: Verify UAT scenarios pass
     priority: 3
-    status: todo
+    status: done
     notes: Test with questions containing bullet lists and multi-line answers
 ---
 
@@ -91,3 +91,14 @@ This limitation makes the interactive PRD creation process less effective when d
   - All 273 UAT tests pass
 - **UATs Verified**:
   - uat-002: Multi-line answer is captured correctly ✅ (verified via existing implementation and `test_collect_answers_multiline` test)
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Verify UAT scenarios pass
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `cargo make uat` to verify all acceptance tests pass
+  - All 273 tests passed successfully
+  - Both acceptance tests (uat-001 and uat-002) were already verified by previous tasks:
+    - uat-001: Question with bullet list displays completely (verified via `test_parse_questions_multiline_with_bullets`)
+    - uat-002: Multi-line answer is captured correctly (verified via `test_collect_answers_multiline`)
+  - No code changes required; all functionality already implemented and tested

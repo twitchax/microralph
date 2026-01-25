@@ -277,6 +277,7 @@ Check if tests require specific environment:
 
 ## Upcoming PRD / Change Ideas
 
+- Remove agent runner step in the task run step.  Instead, just add a thing to the task prompt that says "make sure to update AGENTS.md if needed".
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
 
 ## License

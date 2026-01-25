@@ -1,0 +1,7 @@
+# nextest configuration for microralph
+# See: https://nexte.st/book/configuration.html
+
+[profile.default]
+# Global timeout: kill tests after 30 seconds (prevents hung tests)
+# Tests will be marked slow after 5s, then killed after 6 periods (30s total)
+slow-timeout = { period = "5s", terminate-after = 6 }

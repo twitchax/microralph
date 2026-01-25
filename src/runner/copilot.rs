@@ -280,6 +280,7 @@ impl CopilotRunner {
     /// ```
     ///
     /// This function removes that section while preserving the actual response.
+    #[allow(dead_code)]
     fn strip_stats(text: &str) -> String {
         // Find the start of the stats section
         // It typically starts with "Total usage est:" or "API time spent:"
@@ -385,21 +386,18 @@ impl Runner for CopilotRunner {
         // Try to parse usage information from combined output (stats are in stdout when not silent).
         let usage = Self::parse_usage(&combined_output);
 
-        // Strip stats section from output to keep it clean
-        let cleaned_output = Self::strip_stats(&combined_output);
-
         let success = output.status.success();
 
         tracing::debug!(
             exit_code = ?output.status.code(),
             success = success,
-            output_len = cleaned_output.len(),
+            output_len = combined_output.len(),
             usage_present = usage.is_some(),
             "Copilot CLI completed"
         );
 
         let mut runner_output = RunnerOutput {
-            text: cleaned_output,
+            text: combined_output,
             success,
             usage: None,
         };
@@ -504,19 +502,16 @@ impl Runner for CopilotRunner {
         // Try to parse usage information from captured output.
         let usage = Self::parse_usage(&captured_output);
 
-        // Strip stats section from output to keep it clean
-        let cleaned_output = Self::strip_stats(&captured_output);
-
         tracing::debug!(
             exit_code = ?status.code(),
             success = success,
-            output_len = cleaned_output.len(),
+            output_len = captured_output.len(),
             usage_present = usage.is_some(),
             "Copilot CLI completed (streaming)"
         );
 
         let mut runner_output = RunnerOutput {
-            text: cleaned_output,
+            text: captured_output,
             success,
             usage: None,
         };
