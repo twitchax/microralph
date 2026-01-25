@@ -38,7 +38,7 @@ tasks:
 - id: T-003
   title: Add dev container warning to model-invoking commands
   priority: 3
-  status: todo
+  status: done
   notes: Show warning if not in dev container. Keep message brief and non-blocking. Apply to `mr run`, `mr prd new`, and `mr devcontainer generate`.
 
 - id: T-004
@@ -128,5 +128,21 @@ Currently, there is no guidance or tooling to help developers set up a consisten
   - Added module to `src/main.rs` imports
   - Marked function with `#[allow(dead_code)]` until used in T-003
 - **UAT Result**: ✅ Passed - All 270 tests pass with `cargo make uat`
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Add dev container warning to model-invoking commands
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `show_dev_container_warning()` function to `src/devcontainer.rs`
+  - Function displays brief warning message on stderr if not in dev container
+  - Warning is informative and non-blocking (commands still execute)
+  - Removed `#[allow(dead_code)]` from `is_dev_container()` function
+  - Added warning calls to three model-invoking commands:
+    - `cmd_run()` in `src/main.rs` (for `mr run`)
+    - `cmd_prd_new()` in `src/main.rs` (for `mr new`)
+    - `cmd_bootstrap()` in `src/main.rs` (for `mr bootstrap`)
+  - Warning appears after initialization checks but before actual work
+  - Message suggests running `mr devcontainer generate` (to be implemented in T-004)
+- **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
 
 ---

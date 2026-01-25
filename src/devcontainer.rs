@@ -15,7 +15,6 @@ use std::path::Path;
 /// - `/workspaces` directory (common dev container workspace root)
 ///
 /// Returns `true` if any indicator is present, `false` otherwise.
-#[allow(dead_code)]
 pub fn is_dev_container() -> bool {
     // Check for VS Code Remote Containers environment variable
     if env::var("REMOTE_CONTAINERS").is_ok() {
@@ -33,6 +32,22 @@ pub fn is_dev_container() -> bool {
     }
 
     false
+}
+
+/// Shows a brief warning if not running inside a dev container.
+///
+/// This function checks if the current environment is a dev container and,
+/// if not, prints a non-blocking informational message suggesting the use
+/// of dev containers for safety and isolation.
+pub fn show_dev_container_warning() {
+    if !is_dev_container() {
+        eprintln!(
+            "\n⚠️  Not running in a dev container. For safety, consider using a dev container."
+        );
+        eprintln!(
+            "   Run `mr devcontainer generate` to create a config, or continue at your own risk.\n"
+        );
+    }
 }
 
 #[cfg(test)]

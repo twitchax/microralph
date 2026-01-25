@@ -457,6 +457,9 @@ fn adapt_language(
 fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
+    // Show dev container warning for safety.
+    devcontainer::show_dev_container_warning();
+
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
     let model = cfg.effective_model(cli_model);
@@ -564,6 +567,9 @@ fn cmd_prd_new(
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
+
+    // Show dev container warning for safety.
+    devcontainer::show_dev_container_warning();
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1035,6 +1041,9 @@ fn cmd_run(
     if !init::is_initialized(&cwd) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
+
+    // Show dev container warning for safety.
+    devcontainer::show_dev_container_warning();
 
     // Normalize PRD ID if provided (e.g., "5" -> "PRD-0005").
     let normalized_prd_id = prd_id.map(normalize_prd_id);
