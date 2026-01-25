@@ -101,6 +101,9 @@ mr init
 # Bootstrap an existing repo into PRDs
 mr bootstrap
 
+# Get AI-generated PRD suggestions
+mr suggest
+
 # Create a new PRD via guided Q/A
 mr new my-feature
 
@@ -121,6 +124,7 @@ mr status
 | `mr init`                  | Initialize a new repo with `.mr/` structure, templates, prompts, and starter AGENTS.md |
 | `mr init --language <lang>`| Initialize for a specific language (rust, python, node, go, java)                      |
 | `mr bootstrap`             | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
+| `mr suggest`               | Generate 5 AI-powered PRD suggestions based on codebase analysis and research          |
 | `mr new <slug>`            | Create a new PRD via guided Q/A                                                        |
 | `mr new <slug> --context`  | Create a new PRD with upfront context to guide initial questions                       |
 | `mr edit <id> "<request>"` | Edit an existing PRD via runner assistance                                             |

@@ -27,6 +27,17 @@ cargo make ci
 cargo make uat
 ```
 
+## Suggest Command Workflow
+
+The `mr suggest` command uses AI to analyze the codebase and generate PRD suggestions:
+
+1. **Analysis Phase**: Scans repository structure, existing PRDs, git history, TODO comments, and dependency versions
+2. **Generation**: Produces exactly 5 suggestions with title, description, category, effort estimate, and rationale
+3. **Selection**: Displays numbered picker (1-5 or 'q' to quit) for user to choose a suggestion
+4. **Integration**: Selected suggestion flows into `mr new` with pre-filled context
+
+Suggestions balance strategic features with quick wins. The command follows existing CLI patterns from PRD-0009.
+
 ## Build & Test
 
 ### Prerequisites

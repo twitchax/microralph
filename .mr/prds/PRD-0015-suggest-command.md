@@ -79,7 +79,7 @@ tasks:
 - id: T-008
   title: Update AGENTS.md and README with suggest command
   priority: 8
-  status: todo
+  status: done
   notes: Document new command usage and behavior in both files
 
 ---
@@ -195,3 +195,16 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Fixed UTF-8 byte boundary issue in `parse_suggestions()` when splitting on em dash separator
   - All 300 tests passing (up from 293)
   - UAT passed: `cargo make uat` completed successfully
+
+---
+
+## 2026-01-25 — T-008 Completed
+- **Task**: Update AGENTS.md and README with suggest command
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated README.md: Added `mr suggest` to usage examples section before `mr new`
+  - Updated README.md: Added `mr suggest` entry to Commands table with description of AI-powered suggestions
+  - Updated AGENTS.md: Added new "Suggest Command Workflow" section documenting the 4-phase workflow (analysis, generation, selection, integration)
+  - Documented that suggestions balance strategic features with quick wins
+  - Referenced PRD-0009 compliance for CLI patterns
+  - UAT passed: `cargo make uat` completed successfully with exit code 0
