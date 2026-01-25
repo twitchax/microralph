@@ -38,7 +38,7 @@ acceptance_tests:
 - id: uat-005
   name: Codebase analysis covers tech debt and dependency versions
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -268,4 +268,21 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
     - All categories are from the valid set: [Quick Win, Strategic, Debt, Testing, Docs]
   - Test uses sample output with 2 Strategic, 2 Quick Win, and 1 Testing categories
   - Test passed: 303/303 tests passing (up from 302)
+  - Verified with `cargo make uat` - all tests passing
+
+---
+
+## 2026-01-25 — uat-005 Verification
+- **UAT**: Codebase analysis covers tech debt and dependency versions
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_analyze_codebase_includes_tech_debt_and_dependencies()` in `src/suggest.rs`
+  - Test verifies that `analyze_codebase()` includes:
+    - Dependency file detection (Cargo.toml, package.json via "Tools and dependencies:" section)
+    - TODO comments detection (tech debt indicators via "TODO comments found:" section)
+  - Test creates a temporary git repository with Rust and Node.js dependency files
+  - Test adds source files with TODO comments and commits them for git grep detection
+  - Test verifies analysis output contains both dependency and tech debt sections
+  - Test passed: 304/304 tests passing (up from 303)
   - Verified with `cargo make uat` - all tests passing

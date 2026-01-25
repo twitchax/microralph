@@ -756,6 +756,77 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(selected.effort, "Small (4-6 hours)");
     }
 
+    /// UAT-005: Codebase analysis covers tech debt and dependency versions.
+    ///
+    /// Verifies that analyze_codebase() includes:
+    /// - TODO comments detection (tech debt indicators)
+    /// - Dependency file detection (Cargo.toml, package.json, etc.)
+    #[test]
+    fn test_analyze_codebase_includes_tech_debt_and_dependencies() {
+        let temp = setup_test_repo();
+
+        // Initialize git repository (setup_test_repo only creates .mr structure).
+        Command::new("git")
+            .args(["init"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        // Create dependency files.
+        std::fs::write(temp.path().join("Cargo.toml"), "# Rust dependencies").unwrap();
+        std::fs::write(temp.path().join("package.json"), "{}").unwrap();
+
+        // Create a source file with TODO comments.
+        std::fs::create_dir(temp.path().join("src")).unwrap();
+        std::fs::write(
+            temp.path().join("src/main.rs"),
+            "// TODO: Refactor this module\nfn main() {}\n// TODO: Add error handling",
+        )
+        .unwrap();
+
+        // Also create a top-level .rs file that matches the git grep pattern.
+        std::fs::write(
+            temp.path().join("lib.rs"),
+            "// TODO: Improve error handling\npub fn test() {}\n",
+        )
+        .unwrap();
+
+        // Need to add and commit files to git for git grep to find them.
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        Command::new("git")
+            .args(["commit", "-m", "Add test files"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        let analysis = analyze_codebase(temp.path()).unwrap();
+
+        // Verify dependency detection section exists.
+        assert!(
+            analysis.contains("Tools and dependencies:"),
+            "Analysis should include dependency detection section"
+        );
+        assert!(
+            analysis.contains("Rust (cargo)"),
+            "Analysis should detect Cargo.toml"
+        );
+        assert!(
+            analysis.contains("Node.js (npm/yarn)"),
+            "Analysis should detect package.json"
+        );
+
+        // Verify TODO comments (tech debt) detection.
+        assert!(
+            analysis.contains("TODO comments found:"),
+            "Analysis should detect TODO comments as tech debt indicators"
+        );
+    }
+
     /// UAT-004: Suggestions include both strategic and quick-win categories.
     ///
     /// Validates that parsed suggestions include a balanced mix of:
