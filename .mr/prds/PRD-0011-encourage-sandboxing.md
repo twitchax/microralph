@@ -20,7 +20,7 @@ acceptance_tests:
 - id: uat-001
   name: Verify devcontainer generate creates valid config with fake context
   command: cargo make test
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -62,7 +62,7 @@ tasks:
 - id: T-007
   title: Write unit test for devcontainer generate with fake context
   priority: 7
-  status: todo
+  status: done
   notes: Test that command creates valid JSON in temporary location. Mock repo analysis to provide deterministic input.
 
 ---
@@ -198,6 +198,26 @@ Currently, there is no guidance or tooling to help developers set up a consisten
   - Returns formatted analysis string used by `mr devcontainer generate` command
   - Implementation is complete and functional, just needed PRD status update
 - **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
+
+---
+
+## 2026-01-25 — T-007 Completed
+- **Task**: Write unit test for devcontainer generate with fake context
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `serde_json` dependency to Cargo.toml for JSON validation
+  - Refactored `cmd_devcontainer_generate()` to extract core logic into testable `generate_devcontainer_config()` function
+  - Separated CLI handling from business logic for better testability
+  - Added JSON validation step in generation to catch malformed responses early
+  - Created comprehensive unit test `test_devcontainer_generate_with_mock_runner` that:
+    - Sets up temporary directory with .mr/prompts structure
+    - Uses MockRunner with pre-configured valid devcontainer.json response
+    - Tests that JSON is correctly extracted from markdown-wrapped response
+    - Verifies .devcontainer/devcontainer.json is created with valid JSON
+    - Validates expected fields (name, image) in generated config
+  - Test uses deterministic fake context (no real repo analysis or LLM calls)
+- **UAT Result**: ✅ Passed - All 271 tests pass with `cargo make uat`
+- **UAT Verified**: ✅ UAT-001 opportunistically verified - Test `test_devcontainer_generate_with_mock_runner` directly satisfies acceptance criteria
 
 ---
 
