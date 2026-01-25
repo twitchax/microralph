@@ -7,6 +7,7 @@ mod changelog;
 mod colors;
 mod config;
 mod constitution_edit;
+mod devcontainer;
 mod init;
 mod prd;
 mod prd_edit;

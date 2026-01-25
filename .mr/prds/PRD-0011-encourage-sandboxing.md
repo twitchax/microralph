@@ -32,7 +32,7 @@ tasks:
 - id: T-002
   title: Implement dev container detection utility
   priority: 2
-  status: todo
+  status: done
   notes: Check for `/workspaces` path, `REMOTE_CONTAINERS` env var, or other indicators. Make reusable across commands.
 
 - id: T-003
@@ -114,5 +114,19 @@ Currently, there is no guidance or tooling to help developers set up a consisten
   - Explained dev container warnings and regeneration workflow
   - Fixed pre-existing formatting issue in src/prd/index.rs (unrelated but necessary for UAT pass)
 - **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Implement dev container detection utility
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new `src/devcontainer.rs` module with reusable detection logic
+  - Implemented `is_dev_container()` function checking three indicators:
+    - `REMOTE_CONTAINERS` environment variable (VS Code Dev Containers)
+    - `CODESPACES` environment variable (GitHub Codespaces)
+    - `/workspaces` directory presence (common dev container mount point)
+  - Added comprehensive unit tests for all detection scenarios
+  - Added module to `src/main.rs` imports
+  - Marked function with `#[allow(dead_code)]` until used in T-003
+- **UAT Result**: ✅ Passed - All 270 tests pass with `cargo make uat`
 
 ---
