@@ -1647,4 +1647,99 @@ Just some random text."#;
             "Output should contain warning message"
         );
     }
+
+    #[test]
+    fn test_constitution_prd_new() {
+        // UAT: constitution_prd_new — Verify prd new reads and respects constitution
+        // This test verifies that when a constitution file exists, its content
+        // is loaded and included in all prompts during PRD creation.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create constitution file
+        let constitution_content = r#"# Constitution
+
+## Purpose
+Project governance rules.
+
+## Rules
+1. **Acceptance tests must be codified** — No one-off manual tests.
+2. **Use semantic versioning** — All releases follow semver.
+"#;
+        std::fs::write(
+            temp.path().join(".mr").join("constitution.md"),
+            constitution_content,
+        )
+        .unwrap();
+
+        // Create prompt files that include constitution placeholder
+        std::fs::write(
+            prompts_dir.join("prd_new_round1_questions.md"),
+            "Round1 for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_roundN_questions.md"),
+            "RoundN for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+        )
+        .unwrap();
+
+        let prd_content = r#"---
+id: PRD-0001
+title: Constitution Test
+status: draft
+tasks: []
+---
+# Summary
+"#;
+
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("1. First question?"),
+            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
+            crate::runner::RunnerOutput::success(prd_content),
+        ]);
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "constitution-test",
+            description: None,
+            context: None,
+        };
+
+        let input = "Answer 1\n\n";
+        let mut input = input.as_bytes();
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0001");
+
+        // Verify constitution was loaded and included in all prompts
+        let recorded = runner.recorded_prompts();
+
+        // Round 1 should include constitution
+        assert!(
+            recorded[0].contains("Acceptance tests must be codified"),
+            "Round1 prompt should contain constitution content"
+        );
+
+        // Round N (ready signal response) should include constitution
+        assert!(
+            recorded[1].contains("Acceptance tests must be codified"),
+            "RoundN prompt should contain constitution content"
+        );
+
+        // Synthesis should include constitution
+        assert!(
+            recorded[2].contains("Acceptance tests must be codified"),
+            "Synthesis prompt should contain constitution content"
+        );
+    }
 }
