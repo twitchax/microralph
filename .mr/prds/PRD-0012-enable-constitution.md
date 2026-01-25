@@ -1,10 +1,10 @@
 ---
 id: PRD-0012
 title: Enable Constitution
-status: draft
+status: active
 owner: twitchax
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 
 principles:
 - Constitution is version-controlled and part of project governance
@@ -49,7 +49,7 @@ tasks:
 - id: T-001
   title: Create constitution template with numbered examples
   priority: 1
-  status: todo
+  status: done
   notes: Create a markdown template with commented-out numbered example rules (e.g., "1. One-off acceptance tests are unacceptable..."). Should be mostly empty but provide clear guidance.
 - id: T-002
   title: Emit constitution during bootstrap
@@ -127,3 +127,15 @@ microralph currently has no mechanism to encode project-specific constraints, be
 (Entries appended by `mr run` will go below this line.)
 
 ---
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Create constitution template with numbered examples
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `CONSTITUTION_TEMPLATE` constant in `src/init.rs` with numbered example rules
+  - Template includes commented-out examples (8 numbered rules) covering common governance topics
+  - Updated `init()` function to create `.mr/constitution.md` during initialization
+  - Added test `test_constitution_template_content` to verify template structure
+  - Updated test expectations from 18 to 19 files created
+  - Verified that `mr init` creates constitution.md alongside other `.mr/` files
+  - UAT pass: All 274 tests passed

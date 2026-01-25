@@ -186,6 +186,44 @@ tasks:
 ---
 "#;
 
+/// Default content for the constitution template.
+pub const CONSTITUTION_TEMPLATE: &str = r#"# Constitution
+
+This file defines project-specific governance rules and constraints that guide PRD creation and execution.
+
+## Purpose
+
+The constitution:
+- Encodes project-specific best practices and constraints
+- Influences PRD creation and finalization via LLM prompts
+- Is version-controlled and user-editable
+- Violations are logged in PRD history but do not block execution
+
+## Rules
+
+<!-- Example rules (uncomment and customize as needed):
+
+1. **Acceptance tests must be codified**: One-off acceptance tests are unacceptable. Every UAT must be implemented as a repeatable test in the codebase.
+
+2. **Follow existing architecture patterns**: New features must align with established patterns in the codebase. Introduce new patterns only when necessary and document why.
+
+3. **No breaking changes without migration path**: Breaking API changes require a clear migration guide and deprecation warnings.
+
+4. **Security-first design**: All user inputs must be validated and sanitized. Authentication and authorization must be explicit.
+
+5. **Performance baselines**: New features must not degrade performance by more than 10% without explicit justification in the PRD.
+
+6. **Documentation requirements**: All public APIs must have docstrings. Complex logic must have inline comments explaining the "why".
+
+7. **Test coverage standards**: New code must maintain or improve test coverage. Aim for at least 80% line coverage.
+
+8. **Code review requirements**: All PRs require at least one approval. High-risk changes require two approvals.
+
+-->
+
+<!-- Add your project-specific rules below: -->
+"#;
+
 /// Default content for the init prompt.
 pub const PROMPT_INIT: &str = r#"# microralph — Init Prompt
 
@@ -1358,6 +1396,7 @@ pub struct InitResult {
 /// - `.mr/templates/` directory with `prd.md`
 /// - `.mr/prompts/` directory with all prompt files
 /// - `.mr/PRDS.md` empty index
+/// - `.mr/constitution.md` governance rules
 /// - `AGENTS.md` starter file (if not exists)
 ///
 /// # Arguments
@@ -1455,6 +1494,13 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     create_file_if_missing(
         &mr_dir.join("config.toml"),
         config::DEFAULT_CONFIG,
+        &mut result,
+    )?;
+
+    // Create constitution.md.
+    create_file_if_missing(
+        &mr_dir.join("constitution.md"),
+        CONSTITUTION_TEMPLATE,
         &mut result,
     )?;
 
@@ -1564,12 +1610,15 @@ mod tests {
         // Check config.toml exists.
         assert!(root.join(".mr/config.toml").exists());
 
+        // Check constitution.md exists.
+        assert!(root.join(".mr/constitution.md").exists());
+
         // Check AGENTS.md exists.
         assert!(root.join("AGENTS.md").exists());
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 18); // 1 template + 14 prompts + 1 index + 1 config + 1 AGENTS.md
+        assert_eq!(result.files_created, 19); // 1 template + 14 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -1580,13 +1629,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 18);
+        assert_eq!(result1.files_created, 19);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 18);
+        assert_eq!(result2.files_skipped, 19);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -1632,6 +1681,16 @@ mod tests {
         assert!(PRD_TEMPLATE.contains("{{title}}"));
         assert!(PRD_TEMPLATE.contains("# Summary"));
         assert!(PRD_TEMPLATE.contains("# History"));
+    }
+
+    #[test]
+    fn test_constitution_template_content() {
+        assert!(CONSTITUTION_TEMPLATE.contains("# Constitution"));
+        assert!(CONSTITUTION_TEMPLATE.contains("## Purpose"));
+        assert!(CONSTITUTION_TEMPLATE.contains("## Rules"));
+        assert!(CONSTITUTION_TEMPLATE.contains("<!-- Example rules"));
+        // Check for numbered example rules
+        assert!(CONSTITUTION_TEMPLATE.contains("1. **Acceptance tests must be codified**"));
     }
 
     #[test]
