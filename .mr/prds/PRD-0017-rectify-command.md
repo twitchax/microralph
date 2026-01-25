@@ -20,15 +20,15 @@ acceptance_tests:
 - id: uat-001
   name: mr restore command overwrites .mr/prompts/ and .mr/templates/ with built-in defaults
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Command does not auto-commit changes
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Command succeeds when .mr/ directories already exist
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -169,5 +169,9 @@ Currently, there's no way to restore built-in files without manually deleting di
   - Tests verify both success cases (files exist, content is correct) and failure cases (proper error messages)
   - UAT passed: All 316 tests passed (4 new restore tests + 312 existing tests)
   - Code formatted with `cargo fmt` to maintain consistency
+  - **UATs Verified**:
+    - uat-001 ✅: Integration test `test_restore_after_customization` verifies files are overwritten with built-in defaults
+    - uat-002 ✅: Code inspection confirms no git commit logic in `cmd_restore()` function
+    - uat-003 ✅: Integration test `test_restore_idempotency` verifies restore succeeds multiple times on existing directories
 
 ---
