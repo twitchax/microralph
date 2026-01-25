@@ -1,5 +1,6 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use std::path::Path;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod bootstrap;
@@ -154,6 +155,12 @@ enum Command {
     /// Show status of PRDs and tasks.
     Status,
 
+    /// Dev container management commands.
+    Devcontainer {
+        #[command(subcommand)]
+        command: DevcontainerCommand,
+    },
+
     /// Constitution management commands.
     Constitution {
         #[command(subcommand)]
@@ -173,6 +180,20 @@ enum Command {
         /// Stream runner output to stdout in real-time.
         #[arg(long)]
         stream: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum DevcontainerCommand {
+    /// Generate a dev container configuration from repository analysis.
+    Generate {
+        /// The runner to use for generation.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
     },
 }
 
@@ -262,6 +283,12 @@ fn main() -> Result<()> {
             tracing::info!("Showing status...");
             cmd_status()?;
         }
+        Some(Command::Devcontainer { command }) => match command {
+            DevcontainerCommand::Generate { runner, model } => {
+                tracing::info!(runner = %runner, "Generating dev container config...");
+                cmd_devcontainer_generate(&runner, model.as_deref())?;
+            }
+        },
         Some(Command::Constitution { command }) => match command {
             ConstitutionCommand::Edit {
                 request,
@@ -1287,6 +1314,209 @@ fn cmd_run(
     }
 
     Ok(())
+}
+
+/// Runs the `mr devcontainer generate` command.
+fn cmd_devcontainer_generate(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    // Show dev container warning for safety.
+    devcontainer::show_dev_container_warning();
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Detect language from project files.
+    let lang = init::detect_language(&cwd).unwrap_or(init::Language::Rust);
+    tracing::info!(language = %lang, "Detected language");
+
+    // Select runner based on name.
+    let runner: Box<dyn runner::Runner> = match runner_name {
+        "mock" => Box::new(runner::MockRunner::empty()),
+        "copilot" => {
+            let copilot = runner::CopilotRunner::with_model(model.clone());
+
+            if !copilot.is_available() {
+                anyhow::bail!(
+                    "Copilot CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Box::new(copilot)
+        }
+        other => {
+            anyhow::bail!("Unknown runner: {other}. Available: copilot, mock");
+        }
+    };
+
+    println!("{}", colors::info("Analyzing repository..."));
+    println!("{}", colors::info(&format!("Detected language: {}", lang)));
+    println!();
+
+    // Analyze repository for dev container context.
+    let analysis = analyze_repo_for_devcontainer(&cwd, lang)?;
+
+    tracing::debug!("Repository analysis complete");
+
+    // Load the devcontainer generation prompt.
+    use crate::prompt::{
+        PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
+        load_prompt_with_fallback,
+    };
+
+    let prompt_text = load_prompt_with_fallback(&cwd, PromptKind::DevcontainerGenerate);
+
+    // Build placeholder context.
+    let mut context = PlaceholderContext::new();
+    context.insert("language", PlaceholderValue::String(lang.to_string()));
+    context.insert("analysis", PlaceholderValue::String(analysis));
+
+    let expanded_prompt = expand_placeholders(&prompt_text, &context);
+
+    tracing::debug!("Invoking runner for devcontainer generation");
+
+    // Invoke runner to generate devcontainer.json content.
+    let result = runner.execute(&expanded_prompt, &cwd)?;
+
+    if !result.success {
+        anyhow::bail!("Runner failed to generate devcontainer config");
+    }
+
+    let response = result.text;
+
+    tracing::debug!("Runner responded");
+
+    // Extract JSON content from response (may be wrapped in markdown code blocks).
+    let json_content = extract_json_from_response(&response)?;
+
+    // Write to .devcontainer/devcontainer.json.
+    let devcontainer_dir = cwd.join(".devcontainer");
+    let devcontainer_path = devcontainer_dir.join("devcontainer.json");
+
+    std::fs::create_dir_all(&devcontainer_dir)
+        .context("Failed to create .devcontainer directory")?;
+
+    std::fs::write(&devcontainer_path, json_content)
+        .context("Failed to write devcontainer.json")?;
+
+    println!("{}", colors::success("Dev container config generated!"));
+    println!(
+        "  {}",
+        colors::dim(&format!("Created: {}", devcontainer_path.display()))
+    );
+    println!();
+    println!("{}", colors::header("Next steps:"));
+    println!(
+        "  {}",
+        colors::dim("1. Review .devcontainer/devcontainer.json")
+    );
+    println!(
+        "  {}",
+        colors::dim(
+            "2. Reopen project in dev container (VSCode: Cmd+Shift+P → 'Reopen in Container')"
+        )
+    );
+    println!(
+        "  {}",
+        colors::dim("3. Or use GitHub Codespaces for cloud-based development")
+    );
+
+    Ok(())
+}
+
+/// Analyzes the repository to gather context for dev container generation.
+///
+/// Returns a string containing:
+/// - Detected language and frameworks
+/// - Development tools found in git history
+/// - Tools referenced in PRDs
+/// - Current dependencies from manifest files
+fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<String> {
+    use std::process::Command;
+
+    let mut analysis = String::new();
+
+    // Language and typical tools.
+    analysis.push_str(&format!("Language: {}\n", lang));
+    analysis.push_str(&format!(
+        "Typical build commands: {:?}\n\n",
+        lang.build_commands()
+    ));
+
+    // Check for common tools in the project.
+    let tools = vec![
+        ("Cargo.toml", "Rust (cargo)"),
+        ("Makefile.toml", "cargo-make"),
+        ("package.json", "Node.js (npm/yarn)"),
+        ("requirements.txt", "Python (pip)"),
+        ("go.mod", "Go modules"),
+        (".github/workflows", "GitHub Actions"),
+    ];
+
+    analysis.push_str("Project files found:\n");
+    for (file, desc) in tools {
+        if root.join(file).exists() {
+            analysis.push_str(&format!("- {}\n", desc));
+        }
+    }
+    analysis.push('\n');
+
+    // Check git log for recently added tools (last 50 commits).
+    if let Ok(output) = Command::new("git")
+        .args([
+            "log",
+            "--all",
+            "--oneline",
+            "--no-merges",
+            "-50",
+            "--pretty=format:%s",
+        ])
+        .current_dir(root)
+        .output()
+        && output.status.success()
+    {
+        let log = String::from_utf8_lossy(&output.stdout);
+        analysis.push_str("Recent commit messages (last 50):\n");
+        analysis.push_str(&log);
+        analysis.push_str("\n\n");
+    }
+
+    // Scan PRDs for tool references.
+    let mr_dir = root.join(".mr");
+    if mr_dir.exists() {
+        let prds_dir = mr_dir.join("prds");
+        if prds_dir.exists() {
+            analysis.push_str("PRDs directory exists - tools may be referenced in PRDs.\n");
+        }
+    }
+
+    Ok(analysis)
+}
+
+/// Extracts JSON content from a runner response.
+///
+/// Handles responses that are:
+/// - Raw JSON
+/// - JSON wrapped in markdown code blocks (```json ... ```)
+fn extract_json_from_response(response: &str) -> Result<String> {
+    let trimmed = response.trim();
+
+    // Check if wrapped in markdown code block.
+    if trimmed.starts_with("```") {
+        // Find the first and last ``` markers.
+        let lines: Vec<&str> = trimmed.lines().collect();
+        if lines.len() < 3 {
+            anyhow::bail!("Invalid code block format");
+        }
+
+        // Skip first line (```json or similar) and last line (```).
+        let json_lines = &lines[1..lines.len() - 1];
+        return Ok(json_lines.join("\n"));
+    }
+
+    // If not wrapped, assume it's raw JSON.
+    Ok(trimmed.to_string())
 }
 
 /// Runs the `mr status` command.
