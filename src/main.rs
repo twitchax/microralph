@@ -19,6 +19,7 @@ mod reindex;
 mod run;
 mod runner;
 mod status;
+mod suggest;
 
 use runner::Runner;
 
@@ -155,6 +156,17 @@ enum Command {
     /// Show status of PRDs and tasks.
     Status,
 
+    /// Generate AI-driven PRD suggestions based on codebase analysis.
+    Suggest {
+        /// The runner to use for suggestion generation.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4-20250514").
+        #[arg(long)]
+        model: Option<String>,
+    },
+
     /// Dev container management commands.
     Devcontainer {
         #[command(subcommand)]
@@ -282,6 +294,10 @@ fn main() -> Result<()> {
         Some(Command::Status) => {
             tracing::info!("Showing status...");
             cmd_status()?;
+        }
+        Some(Command::Suggest { runner, model }) => {
+            tracing::info!(runner = %runner, "Generating PRD suggestions...");
+            cmd_suggest(&runner, model.as_deref())?;
         }
         Some(Command::Devcontainer { command }) => match command {
             DevcontainerCommand::Generate { runner, model } => {
@@ -1458,6 +1474,27 @@ fn cmd_status() -> Result<()> {
     let output = status::format_status(&report);
 
     print!("{output}");
+
+    Ok(())
+}
+
+/// Runs the `mr suggest` command.
+fn cmd_suggest(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Select runner based on name.
+    let runner = create_runner(runner_name, model)?;
+
+    // Run suggest logic.
+    suggest::suggest(&cwd, runner.as_ref())?;
 
     Ok(())
 }

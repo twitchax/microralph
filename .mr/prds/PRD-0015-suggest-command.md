@@ -54,7 +54,7 @@ tasks:
 - id: T-003
   title: Implement top-level suggest command in CLI
   priority: 3
-  status: todo
+  status: done
   notes: Add Suggest subcommand to main.rs at top level, similar to List/Edit/Finalize
 - id: T-004
   title: Create suggest module with analysis logic
@@ -146,6 +146,20 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
   - Created `.mr/prompts/suggest_generate.md` with comprehensive prompt template from `PROMPT_SUGGEST_GENERATE` constant
   - Updated test `test_init_creates_structure`: Added assertion for `suggest_generate.md` file existence, changed expected file count from 18 to 19 (14 prompts instead of 13)
   - Updated test `test_init_is_idempotent`: Changed expected file counts from 18 to 19 for both initialization runs
+  - UAT passed: All 293 tests passing
+
+---
+
+## 2026-01-25 — T-003 Completed
+- **Task**: Implement top-level suggest command in CLI
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `mod suggest;` declaration in `src/main.rs` to include new suggest module
+  - Added `Suggest` subcommand to `Command` enum with `runner` and `model` parameters
+  - Added match arm in main() to handle `Command::Suggest` and route to `cmd_suggest()`
+  - Implemented `cmd_suggest()` function that initializes runner and calls `suggest::suggest()`
+  - Created `src/suggest.rs` with placeholder `suggest()` function (implementation deferred to T-004)
+  - Verified command is accessible via `mr suggest --help`
   - UAT passed: All 293 tests passing
 
 ---
