@@ -28,7 +28,7 @@ tasks:
   - id: T-002
     title: Remove update_agents_md() call from src/prd_new.rs
     priority: 1
-    status: todo
+    status: done
     notes: Remove the call after PRD creation
   - id: T-003
     title: Remove update_agents_md() call from src/bootstrap.rs
@@ -110,4 +110,14 @@ The current implementation automatically calls `update_agents_md()` after three 
   - Fixed pre-existing dead code warnings in src/prd_finalize.rs by adding `#[cfg(test)]` to test-only functions
   - Fixed pre-existing unused import warnings in src/prd_finalize.rs by marking test-only imports with `#[cfg(test)]`
   - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Remove update_agents_md() call from src/prd_new.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `update_agents_md()` call and associated logic from src/prd_new.rs (lines 315-335)
+  - Removed unused import `use crate::agents::{RecentChange, update_agents_md};` from src/prd_new.rs (line 12)
+  - Added `#[allow(dead_code)]` to `new_content` field in src/agents.rs to suppress dead code warning (field is still used by src/bootstrap.rs, will be cleaned up in T-004)
+  - UAT pass: All tests pass (`cargo make uat` exits with code 0)
+
 

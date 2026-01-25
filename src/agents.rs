@@ -40,6 +40,7 @@ pub struct AgentsUpdateResult {
     pub modified: bool,
 
     /// The new content of the auto-managed section (if modified).
+    #[allow(dead_code)]
     pub new_content: Option<String>,
 }
 
