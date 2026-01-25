@@ -1115,12 +1115,11 @@ fn cmd_run(
         id
     } else {
         // Ask runner to pick the PRD once, then use it for all task executions.
-        run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
-                )
-            })?
+        run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?.ok_or_else(|| {
+            anyhow::anyhow!(
+                "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
+            )
+        })?
     };
 
     let mut tasks_completed = 0;

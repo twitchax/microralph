@@ -128,7 +128,11 @@ struct TaskPickSummary {
 }
 
 /// Asks the runner to pick the next PRD to work on.
-pub fn pick_prd_via_runner(root: &Path, runner: &dyn Runner, stream: bool) -> Result<Option<String>> {
+pub fn pick_prd_via_runner(
+    root: &Path,
+    runner: &dyn Runner,
+    stream: bool,
+) -> Result<Option<String>> {
     let prds_dir = root.join(".mr").join("prds");
     let prds = scan_prds(&prds_dir)?;
 
@@ -1093,10 +1097,12 @@ mod tests {
         let result = run_task(&config, &runner);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("PRD ID must be provided"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("PRD ID must be provided")
+        );
     }
 
     #[test]
