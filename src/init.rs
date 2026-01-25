@@ -553,6 +553,10 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## Constraints
+
+- **DRY (Don't Repeat Yourself)**: When planning tasks, ensure they don't duplicate work from existing PRDs. Reference or depend on completed work rather than re-implementing functionality.
+
 ## Output
 
 CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.
@@ -668,6 +672,7 @@ This reduces work during the final UAT verification loop and catches issues earl
 - Do not change the public API unless the task requires it.
 - Prefer fixing root causes over surface workarounds.
 - Always update the PRD even if the task fails (document what was attempted).
+- **DRY (Don't Repeat Yourself)**: Extract common logic into reusable functions or modules. Avoid duplicating code across files or within the same file. If you find yourself copying code, consider creating a shared helper or abstraction.
 
 ## When All Tasks Are Done
 
@@ -886,6 +891,7 @@ Ensure these documents are up-to-date:
 - **No breaking changes**: The codebase should be in a releasable state
 - **Minimal changes**: Only make changes required for finalization
 - **Concise entries**: Changelog and history entries should be brief but complete
+- **DRY (Don't Repeat Yourself)**: When cleaning up, consolidate any duplicated code you find. Extract repeated patterns into reusable functions before finalizing.
 
 ---
 
@@ -991,6 +997,7 @@ Add a History entry documenting your verification attempt:
 - Keep test code minimal — just enough to cover the acceptance criterion.
 - Do not modify unrelated code.
 - Always update the PRD even if opting out (document your reasoning).
+- **DRY (Don't Repeat Yourself)**: Use existing test helpers and fixtures where possible. Avoid duplicating test setup code across multiple tests.
 
 ## On Success
 
@@ -1061,6 +1068,7 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
+- **DRY (Don't Repeat Yourself)**: When adding new tasks, check if similar work exists in other PRDs. Consider creating dependencies rather than duplicating implementation work.
 
 ## Output Format
 

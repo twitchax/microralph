@@ -79,6 +79,7 @@ Add a History entry documenting your verification attempt:
 - Keep test code minimal — just enough to cover the acceptance criterion.
 - Do not modify unrelated code.
 - Always update the PRD even if opting out (document your reasoning).
+- **DRY (Don't Repeat Yourself)**: Use existing test helpers and fixtures where possible. Avoid duplicating test setup code across multiple tests.
 
 ## On Success
 

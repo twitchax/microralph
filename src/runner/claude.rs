@@ -288,6 +288,11 @@ impl Runner for ClaudeRunner {
     }
 
     fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
+        // Display the command being invoked (without the prompt)
+        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
+            println!("\n🔧 Executing: {}", cmd_display);
+        }
+
         let args = self.build_args(prompt);
 
         tracing::debug!(
@@ -355,6 +360,11 @@ impl Runner for ClaudeRunner {
         working_dir: &Path,
         output: &mut dyn Write,
     ) -> RunnerResult<RunnerOutput> {
+        // Display the command being invoked (without the prompt)
+        if let Some(cmd_display) = self.format_command_display(prompt, working_dir) {
+            println!("\n🔧 Executing: {}", cmd_display);
+        }
+
         let args = self.build_args(prompt);
 
         tracing::debug!(

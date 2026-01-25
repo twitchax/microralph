@@ -41,6 +41,7 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
+- **DRY (Don't Repeat Yourself)**: When adding new tasks, check if similar work exists in other PRDs. Consider creating dependencies rather than duplicating implementation work.
 
 ## Output Format
 

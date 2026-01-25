@@ -92,6 +92,10 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## Constraints
+
+- **DRY (Don't Repeat Yourself)**: When planning tasks, ensure they don't duplicate work from existing PRDs. Reference or depend on completed work rather than re-implementing functionality.
+
 ## Output
 
 CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.

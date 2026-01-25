@@ -94,6 +94,16 @@ tasks:
   priority: 8
   status: todo
   notes: "Add 'release' and 'publish-all' tasks that orchestrate: version bump, changelog generation, build, publish to crates.io, create GitHub release."
+- id: T-009
+  title: Update README with installation instructions for downloading/unpacking releases
+  priority: 9
+  status: todo
+  notes: Add section to README.md explaining how to download pre-built binaries from GitHub Releases, unpack them, and add to PATH. Include instructions for all supported platforms.
+- id: T-010
+  title: Add exhaustive user flow documentation to README
+  priority: 10
+  status: todo
+  notes: Add a comprehensive section to README.md documenting the complete user flow, including all commands, workflows, configuration options, and typical usage patterns. This should be placed lower in the README after the quick-start content.  Keep it light and funny like the rest of the README.
 ---
 
 ## Summary
@@ -134,4 +144,3 @@ microralph currently has no release infrastructure. To distribute the tool to us
 - Automated release on tag push (prefer manual cargo-make driven releases for now)
 
 ## History
-
