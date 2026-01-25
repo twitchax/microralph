@@ -50,7 +50,7 @@ tasks:
 - id: T-005
   title: Add repo analysis module for dev container generation
   priority: 5
-  status: todo
+  status: done
   notes: Detect languages/frameworks from cargo.toml, package files, etc. Parse git logs for recently added dependencies. Scan PRDs for tool references.
 
 - id: T-006
@@ -178,5 +178,25 @@ Currently, there is no guidance or tooling to help developers set up a consisten
   - Uses existing runner abstraction (supports Copilot and mock runners)
   - Helper function `extract_json_from_response()` handles markdown-wrapped JSON
 - **UAT Result**: ✅ Passed - All 270 tests pass with `cargo make uat`
+
+---
+
+## 2026-01-25 — T-005 Completed
+- **Task**: Add repo analysis module for dev container generation
+- **Status**: ✅ Done
+- **Changes**:
+  - Task was already implemented as part of T-004 via `analyze_repo_for_devcontainer()` in `src/main.rs`
+  - Function detects languages/frameworks by checking for:
+    - Cargo.toml (Rust/cargo)
+    - Makefile.toml (cargo-make)
+    - package.json (Node.js)
+    - requirements.txt (Python)
+    - go.mod (Go modules)
+    - .github/workflows (GitHub Actions)
+  - Parses git logs for recent commits (last 50) to identify recently added dependencies
+  - Scans for `.mr/prds/` directory to note PRD-referenced tools
+  - Returns formatted analysis string used by `mr devcontainer generate` command
+  - Implementation is complete and functional, just needed PRD status update
+- **UAT Result**: ✅ Passed - All tests pass with `cargo make uat`
 
 ---
