@@ -48,7 +48,7 @@ tasks:
   - id: T-006
     title: Delete .mr/prompts/update_agents.md file
     priority: 2
-    status: todo
+    status: done
     notes: Remove the prompt file from the repository
   - id: T-007
     title: Add AGENTS.md update reminder to run_task.md prompt
@@ -180,5 +180,14 @@ The current implementation automatically calls `update_agents_md()` after three 
   - Updated `test_init_creates_structure` test: changed expected file count from 19 to 18 (13 prompts instead of 14)
   - Updated `test_init_is_idempotent` test: changed expected file counts from 19 to 18
   - Updated `test_prompt_loader_missing_prompts` test: changed expected prompt counts from 15 to 14 (initially) and 14 to 13 (after creating one)
+  - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
+
+## 2026-01-25 — T-006 Completed
+- **Task**: Delete .mr/prompts/update_agents.md file
+- **Status**: ✅ Done
+- **Changes**:
+  - Deleted `.mr/prompts/update_agents.md` file (941 bytes)
+  - This file was previously created during `mr init` but is no longer needed after removal of automatic AGENTS.md update mechanism
+  - File contained the prompt template that instructed agents on how to update the auto-managed section of AGENTS.md
   - UAT pass: All 267 tests pass (`cargo make uat` exits with code 0)
 
