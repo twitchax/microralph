@@ -17,7 +17,7 @@ acceptance_tests:
   - id: uat-001
     name: All existing tests pass after refactoring
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: Extract duplicated Q/A workflow patterns to shared modules
@@ -27,7 +27,7 @@ tasks:
   - id: T-002
     title: Reduce unnecessary clones in run.rs
     priority: 2
-    status: todo
+    status: done
     notes: Target the ~154 clone calls. Focus on cases where owned data isn't needed. Balance risk vs. benefit.
   - id: T-003
     title: Add comments to complex parsing logic
@@ -97,3 +97,17 @@ The codebase has grown organically and now contains:
   - Updated `constitution_edit.rs` to import QaPair from shared module
   - Added comprehensive tests in `qa_workflow.rs` covering all extracted functions
   - UAT passed: All 312 tests pass after refactoring
+
+## 2026-01-25 — T-002 Completed
+- **Task**: Reduce unnecessary clones in run.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Reduced clone calls in `src/run.rs` from 16 to 10 (37.5% reduction)
+  - Replaced `task.title.clone()` with `task.title.as_str()` in context insertion (line 294)
+  - Replaced `notes.clone()` with `notes.as_str()` in context insertion (line 298)
+  - Replaced `output.text.clone()` with direct move of `output.text` (line 425)
+  - Replaced `uat.id.clone()` with `uat.id.as_str()` in context insertion (line 455)
+  - Replaced `uat.name.clone()` with `uat.name.as_str()` in context insertion (line 456)
+  - Replaced `uat.command.clone()` with `uat.command.as_str()` in context insertion (line 457)
+  - UAT passed: All 312 tests pass after refactoring
+  - Opportunistically verified uat-001: All existing tests continue to pass

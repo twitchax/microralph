@@ -291,11 +291,11 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str) -> Strin
     if let Some(tasks) = prd.tasks()
         && let Some(task) = tasks.iter().find(|t| t.id == task_id)
     {
-        ctx.insert("task_title", task.title.clone());
+        ctx.insert("task_title", task.title.as_str());
         ctx.insert("task_priority", task.priority.to_string());
 
         if let Some(notes) = &task.notes {
-            ctx.insert("task_notes", notes.clone());
+            ctx.insert("task_notes", notes.as_str());
         }
     }
 
@@ -422,7 +422,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         let start = output.text.len() - 500;
         format!("... (truncated)\n{}", &output.text[start..])
     } else {
-        output.text.clone()
+        output.text
     };
 
     Ok(RunResult::TaskExecuted {
@@ -452,9 +452,9 @@ fn build_uat_verify_prompt(
 
     ctx.insert("prd_path", prd_path.display().to_string());
     ctx.insert("prd_id", prd.id());
-    ctx.insert("uat_id", uat.id.clone());
-    ctx.insert("uat_name", uat.name.clone());
-    ctx.insert("uat_command", uat.command.clone());
+    ctx.insert("uat_id", uat.id.as_str());
+    ctx.insert("uat_name", uat.name.as_str());
+    ctx.insert("uat_command", uat.command.as_str());
 
     expand_placeholders(&prompt_template, &ctx)
 }
