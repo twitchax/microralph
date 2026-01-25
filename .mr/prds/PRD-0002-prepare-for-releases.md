@@ -1,10 +1,10 @@
 ---
 id: PRD-0002
 title: Prepare for Releases
-status: draft                 # draft | active | done | parked
+status: active                 # draft | active | done | parked
 owner: Aaron Roney
 created: 2026-01-24
-updated: 2026-01-24
+updated: 2026-01-25
 
 principles:
 - Follow kord patterns for release infrastructure and CI/CD.
@@ -57,7 +57,7 @@ tasks:
 - id: T-001
   title: Add code coverage with cargo-llvm-cov + Codecov integration
   priority: 1
-  status: todo
+  status: done
   notes: Add codecov task to Makefile.toml, update CI workflow to run coverage and upload to Codecov.
 - id: T-002
   title: Add cross-platform build jobs to CI (Linux x86_64, macOS ARM, Windows, WASM32-WASIP2)
@@ -144,3 +144,15 @@ microralph currently has no release infrastructure. To distribute the tool to us
 - Automated release on tag push (prefer manual cargo-make driven releases for now)
 
 ## History
+
+## 2026-01-25 — T-001 Completed
+- **Task**: Add code coverage with cargo-llvm-cov + Codecov integration
+- **Status**: ✅ Done
+- **Changes**:
+  - Task was already implemented in a previous session
+  - Verified `codecov` task exists in Makefile.toml (lines 184-190)
+  - Verified CI workflow has codecov job that uploads to Codecov (build.yml lines 26-45)
+  - Ran `cargo make codecov` successfully - generated coverage.lcov (201KB)
+  - Ran `cargo make uat` - all 304 tests pass
+  - UAT-001 (Code coverage runs successfully) verified and passing
+- **UAT Results**: ✅ UAT-001 verified - `cargo make codecov` completes successfully and generates coverage.lcov file
