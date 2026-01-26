@@ -33,7 +33,7 @@ tasks:
   - id: T-002
     title: Draft comprehensive constitutional rules covering identified themes
     priority: 2
-    status: todo
+    status: done
     notes: Rules should include DRY, SOC, minimal changes, language best practices, public API stability, research expectations
   - id: T-003
     title: Update default constitution in src/init.rs with new rules
@@ -115,6 +115,29 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - PROMPT_CONSTITUTION_EDIT, PROMPT_ADAPT_LANGUAGE
   - PROMPT_PICK_PRD, PROMPT_DEVCONTAINER_GENERATE, PROMPT_SUGGEST_GENERATE
   - PROMPT_REINDEX (has task-specific constraints, which are appropriate)
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Draft comprehensive constitutional rules covering identified themes
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 2 new rules to `.mr/constitution.md` covering previously missing themes:
+    - Rule 6: **Public API Stability** — addresses theme 5 (public API stability)
+    - Rule 7: **Root Cause Resolution** — addresses theme 6 (root cause over workarounds)
+  - Constitution now has 7 rules total (well under the 10-rule limit)
+  - All 6 themes identified in T-001 are now covered by constitution rules
+
+- **Theme Coverage Summary**:
+  | Theme | Constitution Rule |
+  |-------|------------------|
+  | DRY (Don't Repeat Yourself) | Rule 2: Single Source of Truth |
+  | Minimal Changes | Rule 4: Minimal Changes |
+  | Don't modify unrelated code | Rule 4: Minimal Changes |
+  | Follow existing patterns/style | Rule 5: Consistency |
+  | Public API stability | Rule 6: Public API Stability (NEW) |
+  | Root cause over workarounds | Rule 7: Root Cause Resolution (NEW) |
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations

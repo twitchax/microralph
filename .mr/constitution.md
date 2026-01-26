@@ -17,3 +17,7 @@ This constitution defines the core principles and rules that govern the developm
 4. **Minimal Changes**: When making changes, modify only what is necessary to achieve the objective. Avoid unrelated refactoring, style changes, or "improvements" that are not directly related to the task at hand.
 
 5. **Consistency**: Follow the existing code style, conventions, and patterns established in the codebase. Do not introduce new patterns without justification.
+
+6. **Public API Stability**: Do not change public API signatures unless the task explicitly requires it. Breaking changes must be documented and justified in the PRD history.
+
+7. **Root Cause Resolution**: Prefer fixing root causes over applying surface-level workarounds. When a workaround is necessary, document the underlying issue and rationale.
