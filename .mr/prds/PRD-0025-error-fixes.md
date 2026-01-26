@@ -41,7 +41,7 @@ tasks:
 - id: T-002
   title: "Fix bootstrap.rs Regex::new unwrap"
   priority: 2
-  status: todo
+  status: done
   notes: "Line 231 - use lazy_static or compile-time regex, or propagate error with context"
 - id: T-003
   title: "Fix spinner.rs template expect"
@@ -132,3 +132,16 @@ Affected production files:
 - **Constitution Compliance**: No violations. Changes were minimal and focused on lint infrastructure.
 
 ---
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Fix bootstrap.rs Regex::new unwrap
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `std::sync::LazyLock` import to `src/bootstrap.rs`
+  - Added `regex::Regex` import to `src/bootstrap.rs`
+  - Created static `PRD_PATTERN: LazyLock<Regex>` constant for pre-compiled regex pattern
+  - Updated `count_prds_in_output()` function to use the static regex instead of inline compilation
+  - Removed the TODO comment and `#[allow(clippy::unwrap_used)]` attribute from the function
+  - UAT passed: 360 tests, all passing
+- **Rationale**: Using `LazyLock` ensures the regex is compiled exactly once at first use, and the `expect()` on a known-valid pattern is acceptable since compilation failure is a programmer error (the pattern is constant and valid).
+- **Constitution Compliance**: No violations. Changes were minimal and focused on the specific unwrap issue.

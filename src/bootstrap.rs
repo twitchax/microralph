@@ -7,8 +7,10 @@
 //! - Updates `.mr/PRDS.md` index
 
 use std::path::Path;
+use std::sync::LazyLock;
 
 use anyhow::{Context, Result, bail};
+use regex::Regex;
 
 use crate::init;
 use crate::prd::generate_index_from_root;
@@ -20,6 +22,10 @@ use crate::runner::Runner;
 
 /// Default PRD budget when bootstrapping.
 const DEFAULT_PRD_BUDGET: u32 = 6;
+
+/// Regex pattern for matching PRD identifiers (PRD-NNNN).
+static PRD_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"PRD-\d{4}").expect("PRD regex pattern is valid"));
 
 /// Configuration for the bootstrap command.
 #[derive(Debug)]
@@ -226,13 +232,10 @@ fn summarize_plan(plan: &str) -> String {
 }
 
 /// Counts PRDs mentioned in the output.
-// TODO(T-002): Replace unwrap with proper error handling.
-#[allow(clippy::unwrap_used)]
 fn count_prds_in_output(output: &str) -> usize {
-    // Look for PRD-NNNN patterns.
-    let re = regex::Regex::new(r"PRD-\d{4}").unwrap();
+    // Look for PRD-NNNN patterns using the pre-compiled static regex.
     let matches: std::collections::HashSet<&str> =
-        re.find_iter(output).map(|m| m.as_str()).collect();
+        PRD_PATTERN.find_iter(output).map(|m| m.as_str()).collect();
 
     matches.len()
 }
