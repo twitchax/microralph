@@ -35,7 +35,7 @@ acceptance_tests:
   - id: uat-004
     name: Spinner is hidden when stdout is not a TTY
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: Spinner clears before output is displayed
     command: cargo make uat
@@ -277,3 +277,15 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Test name: `test_spinner_suggest_workflow_simulation`
   - This test simulates the suggest workflow: creates spinner with "Analyzing codebase..." message, updates during AI generation, and clears before displaying suggestions
   - Integration in `src/suggest.rs` calls `start_spinner(true, ...)` since suggest command doesn't have streaming option (TTY detection handled by spinner module)
+
+---
+
+## 2026-01-26 — uat-004 Verification
+- **UAT**: Spinner is hidden when stdout is not a TTY
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - Test file: `src/spinner.rs`
+  - Test names: `test_spinner_disabled_in_non_tty_environment`, `test_start_spinner_returns_disabled_in_non_tty`
+  - These tests verify that `Spinner::new_internal(true)` returns a spinner with `bar: None` in non-TTY environments
+  - The implementation in `src/spinner.rs:22` uses `stdout().is_terminal()` to detect TTY and disable spinner when not a TTY
