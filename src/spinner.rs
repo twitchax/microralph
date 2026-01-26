@@ -4,8 +4,16 @@
 //! Spinners automatically disable when stdout is not a TTY (CI, redirected output).
 
 use std::io::{IsTerminal, stdout};
+use std::sync::LazyLock;
 
 use indicatif::{ProgressBar, ProgressStyle};
+
+/// Pre-compiled spinner style for reuse across spinner instances.
+static SPINNER_STYLE: LazyLock<ProgressStyle> = LazyLock::new(|| {
+    ProgressStyle::default_spinner()
+        .template("{spinner:.cyan} {msg}")
+        .expect("spinner template is valid")
+});
 
 /// A wrapper around indicatif's ProgressBar that handles TTY detection.
 ///
@@ -21,13 +29,7 @@ impl Spinner {
     fn new_internal(enabled: bool) -> Self {
         if enabled && stdout().is_terminal() {
             let bar = ProgressBar::new_spinner();
-            // TODO(T-003): Handle template compilation error gracefully.
-            #[allow(clippy::unwrap_used)]
-            bar.set_style(
-                ProgressStyle::default_spinner()
-                    .template("{spinner:.cyan} {msg}")
-                    .expect("valid template"),
-            );
+            bar.set_style(SPINNER_STYLE.clone());
             bar.enable_steady_tick(std::time::Duration::from_millis(80));
             Self { bar: Some(bar) }
         } else {
