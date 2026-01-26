@@ -27,7 +27,7 @@ acceptance_tests:
   - id: uat-002
     name: Spinner displays during mr refactor when not streaming
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: Spinner displays during mr suggest when not streaming
     command: cargo make uat
@@ -253,3 +253,15 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Test name: `test_spinner_run_task_simulation`
   - This test simulates the run_task workflow: creates spinner with "Running task N/M..." message, updates message during processing, and clears before output display
   - Integration in `src/run.rs:409` calls `start_spinner(!config.stream, ...)` ensuring spinner only shows when not streaming
+
+---
+
+## 2026-01-26 — uat-002 Verification
+- **UAT**: Spinner displays during mr refactor when not streaming
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/spinner.rs`
+  - Test name: `test_spinner_refactor_iteration_simulation`
+  - This test simulates the refactor workflow: creates spinner with "Refactor iteration N/M..." message per iteration, updates message during analysis, and clears before output display
+  - Integration in `src/refactor.rs` calls `start_spinner(!config.stream, ...)` ensuring spinner only shows when not streaming
