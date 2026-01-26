@@ -40,6 +40,7 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
+- **YAML Quoting**: Strings containing colons (`:`) or hashes (`#`) MUST be quoted to avoid parse errors. Example: `title: "Fix: Bug in parser"`
 
 ## Output Format
 

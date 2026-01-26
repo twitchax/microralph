@@ -7,8 +7,8 @@ created: 2026-01-26
 updated: 2026-01-26
 
 principles:
-- Each iteration is self-contained: identify one refactor, apply it, verify UATs, commit
-- Agent autonomy within iteration: agent decides how to handle UAT failures
+- "Each iteration is self-contained: identify one refactor, apply it, verify UATs, commit"
+- "Agent autonomy within iteration: agent decides how to handle UAT failures"
 - Context overrides constitution focus when provided, but constitution still informs decisions
 - Respects `--no-commit` flag from PRD-0020 for commit behavior
 - Early termination allowed if agent reports no more impactful refactors

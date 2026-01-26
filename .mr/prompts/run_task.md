@@ -61,6 +61,8 @@ tasks:
     status: done  # <-- Change from 'todo' to 'done'
 ```
 
+**YAML Quoting Reminder**: When editing frontmatter, ensure strings containing colons (`:`) or hashes (`#`) are quoted. Example: `title: "Feature: Add new command"`
+
 ### Append to History Section
 
 Add a new History entry at the bottom of the PRD file with this format:

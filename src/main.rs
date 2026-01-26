@@ -172,7 +172,11 @@ enum Command {
 
     /// [H] List all PRDs.
     #[command(display_order = 8)]
-    List,
+    List {
+        /// Include done PRDs in the listing (hidden by default).
+        #[arg(long)]
+        done: bool,
+    },
 
     /// [H] Show status of PRDs and tasks.
     #[command(display_order = 9)]
@@ -297,9 +301,9 @@ fn main() -> Result<()> {
             tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
             cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
         }
-        Some(Command::List) => {
-            tracing::info!("Listing PRDs...");
-            cmd_prd_list()?;
+        Some(Command::List { done }) => {
+            tracing::info!(done = %done, "Listing PRDs...");
+            cmd_prd_list(done)?;
         }
         Some(Command::Finalize {
             prd_id,
@@ -865,7 +869,7 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
 }
 
 /// Runs the `mr list` command.
-fn cmd_prd_list() -> Result<()> {
+fn cmd_prd_list(include_done: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     if !init::is_initialized(&cwd) {
@@ -877,8 +881,25 @@ fn cmd_prd_list() -> Result<()> {
 
     let prds = prd::scan_prd_summaries(&cwd)?;
 
+    // Filter out done PRDs unless --done flag is set.
+    let prds: Vec<_> = if include_done {
+        prds
+    } else {
+        prds.into_iter()
+            .filter(|p| p.status != prd::PrdStatus::Done)
+            .collect()
+    };
+
     if prds.is_empty() {
-        println!("{}", colors::info("No PRDs found."));
+        if include_done {
+            println!("{}", colors::info("No PRDs found."));
+        } else {
+            println!("{}", colors::info("No active PRDs found."));
+            println!(
+                "{}",
+                colors::dim("Use `mr list --done` to include done PRDs.")
+            );
+        }
         println!();
         println!(
             "{}",
@@ -1883,7 +1904,22 @@ mod tests {
     fn test_args_parse_list() {
         // Verify list command works at top level
         let args = Args::try_parse_from(["mr", "list"]).unwrap();
-        assert!(matches!(args.command, Some(Command::List)));
+        if let Some(Command::List { done }) = args.command {
+            assert!(!done, "Default should not include done PRDs");
+        } else {
+            panic!("Expected List command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_list_with_done_flag() {
+        // Verify list command accepts --done flag
+        let args = Args::try_parse_from(["mr", "list", "--done"]).unwrap();
+        if let Some(Command::List { done }) = args.command {
+            assert!(done, "--done flag should be true");
+        } else {
+            panic!("Expected List command with --done flag");
+        }
     }
 
     #[test]

@@ -97,6 +97,19 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## YAML Frontmatter Quoting Rules
+
+**CRITICAL**: YAML strings containing special characters MUST be quoted to avoid parse errors:
+- **Colons (`:`)**: Any string with a colon must be quoted: `title: "Fix: Bug in parser"`
+- **Hashes (`#`)**: Strings with `#` must be quoted to avoid comment interpretation
+- **Leading/trailing spaces**: Use quotes to preserve whitespace
+- **Empty strings**: Use `""` for empty values
+
+When in doubt, wrap the value in double quotes. This is especially important for:
+- `title` fields that often contain colons (e.g., "Feature: Add X")
+- `notes` fields with complex descriptions
+- `name` fields in references and acceptance tests
+
 ## Output
 
 CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.

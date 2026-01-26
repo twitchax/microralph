@@ -39,7 +39,7 @@ tasks:
   title: Add no_commit option to config.rs and CLI args
   priority: 1
   status: todo
-  notes: Add `no_commit: Option<bool>` to Config struct with parsing and an `effective_no_commit()` method. Add `--no-commit` flag to Run command in main.rs.
+  notes: "Add `no_commit: Option<bool>` to Config struct with parsing and an `effective_no_commit()` method. Add `--no-commit` flag to Run command in main.rs."
 - id: T-002
   title: Add commit conditional to prompt templates
   priority: 2

@@ -341,6 +341,13 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## YAML Frontmatter Quoting Rules
+
+**CRITICAL**: YAML strings containing special characters MUST be quoted to avoid parse errors:
+- **Colons (`:`)**: Any string with a colon must be quoted: `title: "Fix: Bug in parser"`
+- **Hashes (`#`)**: Strings with `#` must be quoted to avoid comment interpretation
+- When in doubt, wrap string values in double quotes.
+
 ## Constraints
 
 - Generate at most {{prd_budget}} PRDs
@@ -567,6 +574,19 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## YAML Frontmatter Quoting Rules
+
+**CRITICAL**: YAML strings containing special characters MUST be quoted to avoid parse errors:
+- **Colons (`:`)**: Any string with a colon must be quoted: `title: "Fix: Bug in parser"`
+- **Hashes (`#`)**: Strings with `#` must be quoted to avoid comment interpretation
+- **Leading/trailing spaces**: Use quotes to preserve whitespace
+- **Empty strings**: Use `""` for empty values
+
+When in doubt, wrap the value in double quotes. This is especially important for:
+- `title` fields that often contain colons (e.g., "Feature: Add X")
+- `notes` fields with complex descriptions
+- `name` fields in references and acceptance tests
+
 ## Output
 
 CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.
@@ -637,6 +657,8 @@ tasks:
     priority: N
     status: done  # <-- Change from 'todo' to 'done'
 ```
+
+**YAML Quoting Reminder**: When editing frontmatter, ensure strings containing colons (`:`) or hashes (`#`) are quoted. Example: `title: "Feature: Add new command"`
 
 ### Append to History Section
 
@@ -1068,6 +1090,7 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
+- **YAML Quoting**: Strings containing colons (`:`) or hashes (`#`) MUST be quoted to avoid parse errors. Example: `title: "Fix: Bug in parser"`
 
 ## Output Format
 
