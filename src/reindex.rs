@@ -98,6 +98,11 @@ pub fn reindex(root: impl AsRef<Path>, runner: &dyn Runner, stream: bool) -> Res
     // Step 4: Run the runner with the prompt.
     tracing::info!("Invoking runner to verify and fix links...");
 
+    // Print command info before spinner (only when not streaming).
+    if !stream && let Some(cmd_display) = runner.format_command_display(&prompt, root) {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
     let spinner = start_spinner(!stream, "Verifying links...");
 
     let result = if stream {

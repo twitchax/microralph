@@ -344,6 +344,13 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         "Invoking runner for finalization"
     );
 
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
     // Start spinner during agent execution phase (only when not streaming).
     let spinner = start_spinner(!config.stream, "Finalizing PRD...");
 

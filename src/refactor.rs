@@ -150,6 +150,13 @@ fn run_iteration(
     );
 
     // Start spinner when not streaming (streaming already provides visual feedback).
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
     let spinner = start_spinner(
         !config.stream,
         format!(

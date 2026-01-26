@@ -128,9 +128,16 @@ where
 
     // STATE: Round 1 - Question Generation
     // Runner analyzes context and existing PRDs to generate initial questions
-    let spinner = start_spinner(!config.stream, "Generating questions...");
-
     let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
+
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&round1_prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
+    let spinner = start_spinner(!config.stream, "Generating questions...");
 
     tracing::info!(
         runner = %runner.name(),
@@ -188,12 +195,19 @@ where
 
         // STATE: Loop State - Question Generation (Round N)
         // Runner reviews Q/A history and decides whether to ask follow-ups or signal readiness
+        let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
+
+        // Print command info before spinner (only when not streaming).
+        if !config.stream
+            && let Some(cmd_display) = runner.format_command_display(&round_n_prompt, config.root)
+        {
+            println!("\n🔧 Executing: {}", cmd_display);
+        }
+
         let spinner = start_spinner(
             !config.stream,
             format!("Generating follow-up questions (round {})...", rounds),
         );
-
-        let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
 
         tracing::info!(
             runner = %runner.name(),
@@ -251,10 +265,18 @@ where
     // STATE: Synthesis - Generate final PRD from complete Q/A history
     // Runner creates PRD frontmatter (id, title, tasks, etc.) and body content
     writeln!(output)?;
-    let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
 
     let synthesize_prompt =
         build_synthesize_prompt(config, &qa_history, &existing_prds, user_context.as_deref());
+
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&synthesize_prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
+    let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
 
     tracing::info!(
         runner = %runner.name(),

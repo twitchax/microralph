@@ -227,6 +227,11 @@ pub fn pick_prd_via_runner(
 
     tracing::info!("Asking runner to pick the next PRD to work on...");
 
+    // Print command info before spinner (only when not streaming).
+    if !stream && let Some(cmd_display) = runner.format_command_display(&prompt, root) {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
     // Start spinner when not streaming.
     let spinner = start_spinner(!stream, "Selecting PRD...");
 
@@ -410,6 +415,13 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         stream = config.stream,
         "Invoking runner to execute task"
     );
+
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
 
     // Start spinner when not streaming (streaming already provides visual feedback).
     let spinner = start_spinner(
@@ -639,6 +651,13 @@ pub fn run_uat_verification_loop(
 
         // STATE: Execute Runner - Build verification prompt and invoke runner
         let prompt = build_uat_verify_prompt(config.root, &current_prd, &current_prd_path, uat);
+
+        // Print command info before spinner (only when not streaming).
+        if !config.stream
+            && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
+        {
+            println!("\n🔧 Executing: {}", cmd_display);
+        }
 
         let spinner = start_spinner(
             !config.stream,
