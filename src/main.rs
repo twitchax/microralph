@@ -174,6 +174,11 @@ enum Command {
         /// Stream runner output to stdout in real-time.
         #[arg(long)]
         stream: bool,
+
+        /// Do not instruct the agent to commit changes.
+        /// When set, prompts say "Do NOT commit" instead of commit instructions.
+        #[arg(long)]
+        no_commit: bool,
     },
 
     /// [H] List all PRDs.
@@ -353,10 +358,11 @@ fn main() -> Result<()> {
             runner,
             model,
             stream,
+            no_commit,
         }) => {
             let prd_id = normalize_prd_id(&prd_id);
-            tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Finalizing PRD...");
-            cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream)?;
+            tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, no_commit = %no_commit, "Finalizing PRD...");
+            cmd_prd_finalize(&prd_id, &runner, model.as_deref(), stream, no_commit)?;
         }
         Some(Command::Run {
             prd,
@@ -1109,6 +1115,7 @@ fn cmd_prd_finalize(
     runner_name: &str,
     cli_model: Option<&str>,
     stream: bool,
+    no_commit: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -1127,6 +1134,7 @@ fn cmd_prd_finalize(
         root: &cwd,
         prd_id,
         stream,
+        no_commit,
     };
 
     let result = prd_finalize::finalize_prd(&config, runner.as_ref())?;
@@ -2019,12 +2027,14 @@ mod tests {
             runner,
             model,
             stream,
+            no_commit,
         }) = args.command
         {
             assert_eq!(prd_id, "PRD-0001");
             assert_eq!(runner, "copilot");
             assert!(model.is_none());
             assert!(!stream);
+            assert!(!no_commit);
         } else {
             panic!("Expected Finalize command");
         }
@@ -2041,14 +2051,30 @@ mod tests {
             runner,
             model,
             stream,
+            no_commit,
         }) = args.command
         {
             assert_eq!(prd_id, "PRD-0002");
             assert_eq!(runner, "mock");
             assert_eq!(model, Some("gpt-4o".to_string()));
             assert!(stream);
+            assert!(!no_commit);
         } else {
             panic!("Expected Prd Finalize command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_prd_finalize_no_commit() {
+        let args = Args::try_parse_from(["mr", "finalize", "PRD-0003", "--no-commit"]).unwrap();
+        if let Some(Command::Finalize {
+            prd_id, no_commit, ..
+        }) = args.command
+        {
+            assert_eq!(prd_id, "PRD-0003");
+            assert!(no_commit);
+        } else {
+            panic!("Expected Finalize command with no_commit");
         }
     }
 

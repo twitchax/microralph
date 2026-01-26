@@ -1,24 +1,21 @@
 ---
 id: PRD-0022
-title: "Refactor Command for AI-Driven Code Improvements"
-status: active
-owner: "twitchax"
+title: Refactor Command for AI-Driven Code Improvements
+status: done
+owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
-
 principles:
-- "Each iteration is self-contained: identify one refactor, apply it, verify UATs, commit"
-- "Agent autonomy within iteration: agent decides how to handle UAT failures"
+- 'Each iteration is self-contained: identify one refactor, apply it, verify UATs, commit'
+- 'Agent autonomy within iteration: agent decides how to handle UAT failures'
 - Context overrides constitution focus when provided, but constitution still informs decisions
 - Respects `--no-commit` flag from PRD-0020 for commit behavior
 - Early termination allowed if agent reports no more impactful refactors
-
 references:
 - name: PRD-0020 No-Commit Flag
   url: .mr/prds/PRD-0020-add-no-commit-flag.md
 - name: PRD-0015 Suggest Command
   url: .mr/prds/PRD-0015-suggest-command.md
-
 acceptance_tests:
 - id: uat-001
   name: Refactor command runs with default 3 iterations
@@ -48,7 +45,6 @@ acceptance_tests:
   name: CI passes after refactor command implementation
   command: cargo make ci
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Add Refactor subcommand to main.rs CLI
@@ -85,7 +81,6 @@ tasks:
   priority: 7
   status: done
   notes: Document refactor command usage, flags, and expected behavior for future agents.
-
 ---
 
 # Summary
@@ -230,3 +225,17 @@ Currently, improving code quality requires manual identification of refactoring 
   - Ran `cargo make ci` which executes the complete CI pipeline (fmt, clippy, test)
   - All 343 tests passed with no warnings or errors
   - This confirms the refactor command implementation is fully integrated and working
+
+---
+
+## 2026-01-26 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 7 tasks (T-001 through T-007)
+- **Outcome**: All tasks completed, acceptance tests passed (343/343 tests)
+- **Cleanup**: Updated README.md with refactor command documentation; no temp files or debug artifacts found
+- **Summary**:
+  - Implemented `mr refactor` command with iterative AI-driven code improvements loop
+  - Added support for `--context`, `--path`, `--dry-run`, `--no-commit`, `--max`, `--stream`, `--runner`, and `--model` flags
+  - Created `src/refactor.rs` module with early termination signals (NO-MORE-REFACTORS, PREVIEW-COMPLETE)
+  - Added refactor prompt templates with constitution integration
+  - Documented workflow in AGENTS.md and README.md

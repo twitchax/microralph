@@ -58,6 +58,10 @@ pub struct PrdFinalizeConfig<'a> {
 
     /// Whether to stream runner output.
     pub stream: bool,
+
+    /// Whether to instruct the agent NOT to commit changes.
+    /// When true, prompts say "Do NOT commit" instead of commit instructions.
+    pub no_commit: bool,
 }
 
 /// Result of PRD finalization.
@@ -157,7 +161,7 @@ fn format_completed_tasks(prd: &Prd) -> String {
 }
 
 /// Builds the finalization prompt for the runner.
-fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
+fn build_finalize_prompt(root: &Path, prd: &Prd, no_commit: bool) -> String {
     let template = load_prompt_with_fallback(root, PromptKind::RunTaskFinalize);
 
     let mut ctx = PlaceholderContext::new();
@@ -166,6 +170,11 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
     ctx.insert("prd_title", prd.title());
     ctx.insert("prd_summary", prd.body.clone());
     ctx.insert("completed_tasks", format_completed_tasks(prd));
+
+    // Add commit variable (inverted: commit = !no_commit).
+    // When commit is true, prompts include commit instructions.
+    // When commit is false, prompts say "Do NOT commit".
+    ctx.insert("commit", !no_commit);
 
     // Load constitution if it exists.
     if let Ok(Some(constitution)) = crate::config::load_constitution(root) {
@@ -324,7 +333,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     })?;
 
     // Build and execute the finalization prompt.
-    let prompt = build_finalize_prompt(config.root, &prd);
+    let prompt = build_finalize_prompt(config.root, &prd, config.no_commit);
 
     tracing::info!(
         prompt_len = prompt.len(),
@@ -620,7 +629,7 @@ mod tests {
             "# Test PRD Summary\n\nThis is the PRD body content.".to_string(),
         );
 
-        let prompt = build_finalize_prompt(temp.path(), &prd);
+        let prompt = build_finalize_prompt(temp.path(), &prd, false);
 
         // Verify placeholders are expanded.
         assert!(prompt.contains("PRD-0001"), "Prompt should contain PRD ID");
@@ -1020,7 +1029,7 @@ Project governance rules.
         );
 
         // Build the finalization prompt
-        let prompt = build_finalize_prompt(temp.path(), &prd);
+        let prompt = build_finalize_prompt(temp.path(), &prd, false);
 
         // Verify constitution was loaded and included in the prompt
         assert!(

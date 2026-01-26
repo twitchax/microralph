@@ -196,6 +196,10 @@ mr status
 | `mr run <id>`                      | Run the next task from a specific PRD                                                  |
 | `mr run --stream`                  | Run with real-time streaming output                                                    |
 | `mr run --no-commit`               | Run without instructing the agent to commit (for manual review)                        |
+| `mr refactor`                      | Run iterative AI-driven code improvements (default 3 iterations)                       |
+| `mr refactor --context "<hint>"`   | Focus refactors on a specific improvement area                                         |
+| `mr refactor --path <dir>`         | Constrain refactors to a specific directory/file pattern                               |
+| `mr refactor --dry-run`            | Preview refactor suggestions without applying changes                                  |
 | `mr reindex`                       | Regenerate index and verify/fix PRD interlinks                                         |
 | `mr status`                        | Show status of PRDs and tasks                                                          |
 
@@ -739,6 +743,9 @@ mr list --verbose                # More details in PRDS.md
 | Finalize PRD            | `mr finalize <id>`                 | Mark done, append summary                |
 | Reindex                 | `mr reindex`                       | Fix PRD cross-links                      |
 | Generate dev container  | `mr devcontainer generate`         | Create `.devcontainer/devcontainer.json` |
+| Refactor codebase       | `mr refactor`                      | AI-driven iterative improvements         |
+| Focused refactor        | `mr refactor --context "..."`      | Target specific improvement areas        |
+| Preview refactors       | `mr refactor --dry-run`            | See suggestions without applying         |
 
 ---
 
@@ -792,6 +799,22 @@ mr run --model gpt-5-mini
 # Use yolo mode (skip permission prompts)
 echo 'permission_mode = "yolo"' >> .mr/config.toml
 mr run
+```
+
+#### "I want to clean up my codebase"
+
+```bash
+# Let AI find and fix issues (3 iterations by default)
+mr refactor
+
+# Focus on specific improvements
+mr refactor --context "improve error handling"
+
+# Preview suggestions first
+mr refactor --dry-run
+
+# Target a specific directory
+mr refactor --path src/api/
 ```
 
 ---
