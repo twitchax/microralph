@@ -456,15 +456,30 @@ else
     echo "See the full changelog at https://github.com/twitchax/microralph/blob/main/CHANGELOG.md" >> "$NOTES_FILE"
 fi
 
-# Check for artifacts directory
+# Check for artifacts directory and rename files for unique asset names
 ARTIFACTS=""
+STAGING_DIR=$(mktemp -d)
 if [ -d "target/release-artifacts" ]; then
     echo "📎 Found target/release-artifacts directory"
-    for file in target/release-artifacts/*; do
-        if [ -f "$file" ]; then
-            echo "  → $(basename "$file")"
-            ARTIFACTS="$ARTIFACTS \"$file\""
+    # Find all files recursively and rename using parent dir name
+    for file in $(find target/release-artifacts -type f); do
+        # Extract parent dir name (e.g., mr_x86_64-unknown-linux-gnu)
+        parent_dir=$(basename "$(dirname "$file")")
+        filename=$(basename "$file")
+        # Get extension if any
+        if [[ "$filename" == *.* ]]; then
+            ext=".${filename##*.}"
+            base="${filename%.*}"
+        else
+            ext=""
+            base="$filename"
         fi
+        # Create unique name: mr-x86_64-unknown-linux-gnu or mr-x86_64-pc-windows-gnu.exe
+        new_name="${parent_dir}${ext}"
+        staged_file="$STAGING_DIR/$new_name"
+        cp "$file" "$staged_file"
+        echo "  → $new_name"
+        ARTIFACTS="$ARTIFACTS \"$staged_file\""
     done
 fi
 

@@ -82,32 +82,29 @@ Each `mr run` invocation:
 ### Pre-built Binaries (Recommended)
 
 Download pre-built binaries from [GitHub Releases](https://github.com/twitchax/microralph/releases). Available for:
-- **Linux x86_64** (`mr_x86_64-unknown-linux-gnu.zip`)
-- **macOS ARM** (`mr_aarch64-apple-darwin.zip`)
-- **Windows x86_64** (`mr_x86_64-pc-windows-gnu.zip`)
-- **WASM32-WASIP2** (`mr.wasm`)
+- **Linux x86_64** (`mr_x86_64-unknown-linux-gnu`)
+- **macOS ARM** (`mr_aarch64-apple-darwin`)
+- **Windows x86_64** (`mr_x86_64-pc-windows-gnu.exe`)
+- **WASM32-WASIP2** (`mr_wasm32-wasip2.wasm`)
 
 #### Linux
 
 ```bash
-$ curl -LO https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-unknown-linux-gnu.zip
-$ unzip mr_x86_64-unknown-linux-gnu.zip -d /usr/local/bin
+$ curl -L https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-unknown-linux-gnu -o /usr/local/bin/mr
 $ chmod a+x /usr/local/bin/mr
 ```
 
 #### Mac OS (Apple Silicon)
 
 ```bash
-$ curl -LO https://github.com/twitchax/microralph/releases/latest/download/mr_aarch64-apple-darwin.zip
-$ unzip mr_aarch64-apple-darwin.zip -d /usr/local/bin
+$ curl -L https://github.com/twitchax/microralph/releases/latest/download/mr_aarch64-apple-darwin -o /usr/local/bin/mr
 $ chmod a+x /usr/local/bin/mr
 ```
 
 #### Windows
 
 ```powershell
-$ iwr https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-pc-windows-gnu.zip -OutFile mr_x86_64-pc-windows-gnu.zip
-$ Expand-Archive mr_x86_64-pc-windows-gnu.zip -DestinationPath C:\Users\$env:USERNAME\AppData\Local\Programs\mr
+$ iwr https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-pc-windows-gnu.exe -OutFile C:\Users\$env:USERNAME\AppData\Local\Programs\mr\mr.exe
 ```
 
 #### Cargo
