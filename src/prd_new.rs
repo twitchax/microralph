@@ -17,6 +17,7 @@ use crate::prompt::{
 };
 use crate::qa_workflow::{self, QaPair};
 use crate::runner::Runner;
+use crate::spinner::start_spinner;
 
 /// Maximum number of Q/A rounds before forcing synthesis.
 const MAX_QA_ROUNDS: usize = 5;
@@ -55,6 +56,10 @@ pub struct PrdNewConfig<'a> {
     /// Optional upfront context from the user (via --context flag).
     /// Used by `build_round1_prompt` and subsequent rounds.
     pub context: Option<&'a str>,
+
+    /// Stream runner output to stdout in real-time.
+    /// When true, spinner is disabled.
+    pub stream: bool,
 }
 
 /// Runs the PRD creation flow.
@@ -123,7 +128,7 @@ where
 
     // STATE: Round 1 - Question Generation
     // Runner analyzes context and existing PRDs to generate initial questions
-    writeln!(output, "Generating questions...")?;
+    let spinner = start_spinner(!config.stream, "Generating questions...");
 
     let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
 
@@ -136,6 +141,8 @@ where
     let round1_output = runner
         .execute(&round1_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
+
+    spinner.finish_and_clear();
 
     if !round1_output.success {
         bail!("Runner failed during round 1: {}", round1_output.text);
@@ -181,6 +188,11 @@ where
 
         // STATE: Loop State - Question Generation (Round N)
         // Runner reviews Q/A history and decides whether to ask follow-ups or signal readiness
+        let spinner = start_spinner(
+            !config.stream,
+            format!("Generating follow-up questions (round {})...", rounds),
+        );
+
         let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
 
         tracing::info!(
@@ -193,6 +205,8 @@ where
         let round_n_output = runner
             .execute(&round_n_prompt, config.root)
             .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
+
+        spinner.finish_and_clear();
 
         if !round_n_output.success {
             bail!(
@@ -237,7 +251,7 @@ where
     // STATE: Synthesis - Generate final PRD from complete Q/A history
     // Runner creates PRD frontmatter (id, title, tasks, etc.) and body content
     writeln!(output)?;
-    writeln!(output, "Synthesizing PRD...")?;
+    let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
 
     let synthesize_prompt =
         build_synthesize_prompt(config, &qa_history, &existing_prds, user_context.as_deref());
@@ -251,6 +265,8 @@ where
     let synthesize_output = runner
         .execute(&synthesize_prompt, config.root)
         .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
+
+    spinner.finish_and_clear();
 
     if !synthesize_output.success {
         bail!("Runner failed during synthesis: {}", synthesize_output.text);
@@ -909,6 +925,7 @@ A test feature.
             slug: "test-feature",
             description: None,
             context: None,
+            stream: false,
         };
 
         let input = "Solving problem X\n\nMVP scope\n\n";
@@ -980,6 +997,7 @@ tasks: []
             slug: "test",
             description: None,
             context: None,
+            stream: false,
         };
 
         // Provide enough answers: 1 for round1 + (MAX_QA_ROUNDS - 1) for subsequent rounds
@@ -1040,6 +1058,7 @@ tasks: []
             slug: "test-feature",
             description: None,
             context: None, // No context flag provided
+            stream: false,
         };
 
         // Simulate user input: provide context, then answer the question
@@ -1107,6 +1126,7 @@ tasks: []
             slug: "flag-feature",
             description: None,
             context: Some("This context came from the --context flag"),
+            stream: false,
         };
 
         // Simulate user input: only the answer to the question (no context prompt expected)
@@ -1174,6 +1194,7 @@ tasks: []
             slug: "context-test",
             description: None,
             context: Some("This is a payment processing feature for e-commerce"),
+            stream: false,
         };
 
         let input = "Process payments securely\n\n";
@@ -1244,6 +1265,7 @@ tasks: []
             slug: "persistence-test",
             description: None,
             context: Some("Multi-tenant auth system with role-based access"),
+            stream: false,
         };
 
         let input = "Answer 1\n\nAnswer 2\n\n";
@@ -1324,6 +1346,7 @@ tasks: []
             slug: "synthesis-test",
             description: None,
             context: Some("API Gateway with rate limiting and JWT auth"),
+            stream: false,
         };
 
         let input = "Answer 1\n\n";
@@ -1394,6 +1417,7 @@ Just some random text."#;
             slug: "parse-fail-test",
             description: None,
             context: None,
+            stream: false,
         };
 
         let input = "Test goal\n\n";
@@ -1486,6 +1510,7 @@ tasks: []
             slug: "constitution-test",
             description: None,
             context: None,
+            stream: false,
         };
 
         let input = "Answer 1\n\n";

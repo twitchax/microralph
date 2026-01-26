@@ -165,6 +165,7 @@ where
         slug: &slug,
         description: Some(&selected.description),
         context: Some(&context),
+        stream: false,
     };
 
     let stdin = io::stdin();

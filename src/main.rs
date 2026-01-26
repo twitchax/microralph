@@ -110,6 +110,10 @@ enum Command {
         /// This helps the AI ask more relevant, targeted questions.
         #[arg(long)]
         context: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
     },
 
     /// [1] Edit an existing PRD via runner-assisted modifications.
@@ -336,9 +340,10 @@ fn main() -> Result<()> {
             runner,
             model,
             context,
+            stream,
         }) => {
-            tracing::info!(slug = %slug, runner = %runner, "Creating new PRD...");
-            cmd_prd_new(&slug, &runner, model.as_deref(), context.as_deref())?;
+            tracing::info!(slug = %slug, runner = %runner, stream = %stream, "Creating new PRD...");
+            cmd_prd_new(&slug, &runner, model.as_deref(), context.as_deref(), stream)?;
         }
         Some(Command::Edit {
             prd_id,
@@ -791,6 +796,7 @@ fn cmd_prd_new(
     runner_name: &str,
     cli_model: Option<&str>,
     context: Option<&str>,
+    stream: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -813,6 +819,7 @@ fn cmd_prd_new(
         slug,
         description: None,
         context,
+        stream,
     };
 
     let stdin = std::io::stdin();
@@ -1915,12 +1922,14 @@ mod tests {
             runner,
             model,
             context,
+            stream,
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
             assert_eq!(runner, "copilot");
             assert!(model.is_none());
             assert!(context.is_none());
+            assert!(!stream);
         } else {
             panic!("Expected New command");
         }
@@ -1934,12 +1943,14 @@ mod tests {
             runner,
             model,
             context,
+            stream,
         }) = args.command
         {
             assert_eq!(slug, "my-feature");
             assert_eq!(runner, "copilot");
             assert_eq!(model, Some("gpt-4o".to_string()));
             assert!(context.is_none());
+            assert!(!stream);
         } else {
             panic!("Expected New command");
         }
