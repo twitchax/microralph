@@ -83,7 +83,7 @@ tasks:
 - id: T-007
   title: Update AGENTS.md with refactor workflow documentation
   priority: 7
-  status: todo
+  status: done
   notes: Document refactor command usage, flags, and expected behavior for future agents.
 
 ---
@@ -179,3 +179,17 @@ Currently, improving code quality requires manual identification of refactoring 
   - Updated test assertions for new file counts (21→22 files, 16→17 prompts)
   - UAT: `cargo make uat` passes (340 tests)
 - **Constitution Compliance**: No violations. All changes are focused on implementing the refactor command functionality.
+
+---
+
+## 2026-01-26 — T-007 Completed
+- **Task**: Update AGENTS.md with refactor workflow documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive "Refactor Command Workflow" section to AGENTS.md
+  - Documented all CLI flags with usage examples and reference table
+  - Explained termination signals (NO-MORE-REFACTORS, PREVIEW-COMPLETE)
+  - Covered constitution integration and guidance
+  - Added important notes on iteration behavior and UAT gating
+  - UAT: `cargo make uat` passes (340 tests)
+- **Constitution Compliance**: No violations. Documentation-only change.

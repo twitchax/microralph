@@ -41,6 +41,77 @@ The `mr suggest` command uses AI to analyze the codebase and generate PRD sugges
 
 Suggestions balance strategic features with quick wins. The command follows existing CLI patterns from PRD-0009.
 
+## Refactor Command Workflow
+
+The `mr refactor` command runs an iterative AI-driven loop to improve code quality:
+
+1. **Iteration Loop**: Runs up to N iterations (default: 3, configurable with `--max`)
+2. **Analysis**: Agent analyzes codebase against constitution principles
+3. **Application**: Agent applies one focused refactor per iteration
+4. **Verification**: Runs `cargo make uat` to ensure no regressions
+5. **Commit**: Each iteration commits separately (unless `--no-commit`)
+
+### Usage
+
+```bash
+# Basic usage (3 iterations)
+mr refactor
+
+# Custom iteration count
+mr refactor --max 5
+
+# Focus on specific improvements
+mr refactor --context "improve error handling"
+
+# Constrain to specific path
+mr refactor --path src/runner/
+
+# Preview without applying (dry-run)
+mr refactor --dry-run
+
+# Skip commits (for manual review)
+mr refactor --no-commit
+
+# Use specific runner and model
+mr refactor --runner claude --model claude-sonnet-4.5
+
+# Stream output in real-time
+mr refactor --stream
+```
+
+### Flags Reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--max` | 3 | Maximum number of refactor iterations |
+| `--context` | None | Focus hint for the agent (takes priority over constitution) |
+| `--path` | None | Constrain scope to specific directory/file pattern |
+| `--dry-run` | false | Preview suggestions without applying changes |
+| `--no-commit` | false | Leave changes uncommitted for manual review |
+| `--runner` | copilot | Runner to use (copilot, claude) |
+| `--model` | None | Model override for the runner |
+| `--stream` | false | Stream runner output in real-time |
+
+### Termination Signals
+
+- **`NO-MORE-REFACTORS`**: Agent signals no more impactful refactors remain (early termination)
+- **`PREVIEW-COMPLETE`**: Agent completed dry-run suggestion (in preview mode)
+
+### Constitution Integration
+
+When no `--context` is provided, the agent uses the project's constitution (`.mr/constitution.md`) to guide refactor selection. Common constitution-driven improvements include:
+- DRY (Don't Repeat Yourself) violations
+- Separation of Concerns improvements
+- Consistency with existing patterns
+- Root cause fixes over workarounds
+
+### Important Notes
+
+- **Self-contained iterations**: Each iteration is independent (no cross-iteration memory)
+- **UAT gating**: Refactors are only committed if UATs pass
+- **Minimal changes**: Each iteration makes one focused change
+- **Git safety**: Always use `git diff` to review changes before pushing
+
 ## Restore Command Workflow
 
 The `mr restore` command overwrites `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` with built-in defaults:
