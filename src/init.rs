@@ -1850,6 +1850,34 @@ pub fn init_prompts_and_templates(root: impl AsRef<Path>) -> Result<InitResult> 
     Ok(result)
 }
 
+/// Recreates constitution.md and config.toml with built-in defaults.
+///
+/// This function overwrites existing files (no skip behavior).
+///
+/// Used by `cmd_restore()` (restoration).
+pub fn init_constitution_and_config(root: impl AsRef<Path>) -> Result<InitResult> {
+    let root = root.as_ref();
+    let mut result = InitResult::default();
+
+    let mr_dir = root.join(".mr");
+
+    // Write constitution.md (always overwrite).
+    create_file_always(
+        &mr_dir.join("constitution.md"),
+        CONSTITUTION_TEMPLATE,
+        &mut result,
+    )?;
+
+    // Write config.toml (always overwrite).
+    create_file_always(
+        &mr_dir.join("config.toml"),
+        config::DEFAULT_CONFIG,
+        &mut result,
+    )?;
+
+    Ok(result)
+}
+
 /// Creates a directory if it doesn't exist.
 fn create_dir_if_missing(path: &Path, result: &mut InitResult) -> Result<()> {
     if !path.exists() {

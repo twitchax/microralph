@@ -43,16 +43,17 @@ Suggestions balance strategic features with quick wins. The command follows exis
 
 ## Restore Command Workflow
 
-The `mr restore` command overwrites `.mr/prompts/` and `.mr/templates/` with built-in defaults:
+The `mr restore` command overwrites `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` with built-in defaults:
 
 1. **Pre-flight check**: Verifies that `mr init` has been run (`.mr/` directory exists)
 2. **Deletion phase**: Removes `.mr/prompts/` and `.mr/templates/` directories using `std::fs::remove_dir_all`
 3. **Recreation phase**: Calls `init::init_prompts_and_templates()` to recreate directories with built-in defaults
-4. **No auto-commit**: Leaves changes uncommitted so users can review via Git workflow
+4. **Config restoration**: Calls `init::init_constitution_and_config()` to overwrite `constitution.md` and `config.toml`
+5. **No auto-commit**: Leaves changes uncommitted so users can review via Git workflow
 
 ### Use Cases
 
-- **Reset customizations**: Agents who have modified prompts/templates can restore defaults to test baseline behavior
+- **Reset customizations**: Agents who have modified prompts/templates/constitution/config can restore defaults to test baseline behavior
 - **Update after upgrade**: After microralph version upgrades, restore to get latest built-in prompts/templates
 - **Compare customizations**: Use Git diff to see differences between custom and default prompts
 
@@ -60,7 +61,7 @@ The `mr restore` command overwrites `.mr/prompts/` and `.mr/templates/` with bui
 
 - **Destructive**: Overwrites existing files with no backup (Git is the safety net)
 - **Git workflow**: Always use `git diff` to review changes before committing
-- **Scope limited**: Only affects `.mr/prompts/` and `.mr/templates/` (not constitution or config)
+- **Scope**: Affects `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` (not PRDs or PRDS.md)
 - **Idempotent**: Running multiple times produces the same result (all files overwritten with built-in defaults)
 
 ### Implementation Pattern

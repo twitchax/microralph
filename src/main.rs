@@ -86,7 +86,7 @@ enum Command {
         model: Option<String>,
     },
 
-    /// [0] Restore `.mr/prompts/` and `.mr/templates/` to built-in defaults.
+    /// [0] Restore `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` to built-in defaults.
     #[command(display_order = 3)]
     Restore,
 
@@ -629,17 +629,17 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     Ok(())
 }
 
-/// Runs the `mr restore` command.
-fn cmd_restore() -> Result<()> {
-    let cwd = std::env::current_dir()?;
-
-    if !init::is_initialized(&cwd) {
+/// Core restore logic that takes an explicit root path.
+///
+/// This is separated from `cmd_restore` to allow testing without changing cwd.
+fn restore_impl(root: &Path) -> Result<()> {
+    if !init::is_initialized(root) {
         anyhow::bail!("microralph is not initialized. Run `mr init` first.");
     }
 
     println!("{}", colors::info("Restoring prompts and templates..."));
 
-    let mr_dir = cwd.join(".mr");
+    let mr_dir = root.join(".mr");
     let prompts_dir = mr_dir.join("prompts");
     let templates_dir = mr_dir.join("templates");
 
@@ -662,17 +662,34 @@ fn cmd_restore() -> Result<()> {
     );
 
     // Recreate prompts and templates with built-in defaults.
-    let result = init::init_prompts_and_templates(&cwd)?;
+    let prompts_result = init::init_prompts_and_templates(root)?;
 
     println!(
         "{}",
         colors::success(&format!(
             "✓ Restored {} prompt and template files",
-            result.files_created
+            prompts_result.files_created
+        ))
+    );
+
+    // Restore constitution.md and config.toml.
+    let config_result = init::init_constitution_and_config(root)?;
+
+    println!(
+        "{}",
+        colors::success(&format!(
+            "✓ Replaced constitution.md and config.toml ({} files)",
+            config_result.files_created
         ))
     );
 
     Ok(())
+}
+
+/// Runs the `mr restore` command.
+fn cmd_restore() -> Result<()> {
+    let cwd = std::env::current_dir()?;
+    restore_impl(&cwd)
 }
 
 /// Runs the `mr new` command.
@@ -1959,15 +1976,8 @@ Generate a devcontainer.json configuration for:
         assert!(root.join(".mr/prompts/init.md").exists());
         assert!(root.join(".mr/templates/prd.md").exists());
 
-        // Save current directory and change to temp dir.
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(root).unwrap();
-
-        // Run restore.
-        let result = cmd_restore();
-
-        // Restore current directory.
-        std::env::set_current_dir(&original_dir).unwrap();
+        // Run restore (using restore_impl to avoid cwd changes).
+        let result = restore_impl(root);
 
         // Verify success.
         assert!(result.is_ok(), "Restore should succeed: {:?}", result);
@@ -1977,6 +1987,8 @@ Generate a devcontainer.json configuration for:
         assert!(root.join(".mr/templates/prd.md").exists());
         assert!(root.join(".mr/prompts/run_task.md").exists());
         assert!(root.join(".mr/prompts/suggest_generate.md").exists());
+        assert!(root.join(".mr/constitution.md").exists());
+        assert!(root.join(".mr/config.toml").exists());
     }
 
     #[test]
@@ -1999,15 +2011,13 @@ Generate a devcontainer.json configuration for:
         let content_before = std::fs::read_to_string(&init_prompt_path).unwrap();
         assert_eq!(content_before, custom_content);
 
-        // Save current directory and change to temp dir.
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(root).unwrap();
+        // Also customize constitution.md.
+        let constitution_path = root.join(".mr/constitution.md");
+        let custom_constitution = "# CUSTOM CONSTITUTION";
+        std::fs::write(&constitution_path, custom_constitution).unwrap();
 
-        // Run restore.
-        let result = cmd_restore();
-
-        // Restore current directory.
-        std::env::set_current_dir(&original_dir).unwrap();
+        // Run restore (using restore_impl to avoid cwd changes).
+        let result = restore_impl(root);
 
         // Verify success.
         assert!(result.is_ok(), "Restore should succeed: {:?}", result);
@@ -2022,6 +2032,17 @@ Generate a devcontainer.json configuration for:
             content_after.contains("microralph"),
             "Restored content should contain built-in text"
         );
+
+        // Verify constitution was also restored.
+        let constitution_after = std::fs::read_to_string(&constitution_path).unwrap();
+        assert_ne!(
+            constitution_after, custom_constitution,
+            "Constitution should be restored to built-in default"
+        );
+        assert!(
+            constitution_after.contains("Constitution"),
+            "Restored constitution should contain built-in text"
+        );
     }
 
     #[test]
@@ -2035,32 +2056,29 @@ Generate a devcontainer.json configuration for:
         // Initialize first.
         init::init(root).unwrap();
 
-        // Save current directory and change to temp dir.
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(root).unwrap();
-
-        // Run restore first time.
-        let result1 = cmd_restore();
+        // Run restore first time (using restore_impl to avoid cwd changes).
+        let result1 = restore_impl(root);
         assert!(result1.is_ok(), "First restore should succeed");
 
         // Capture file contents after first restore.
         let init_content1 = std::fs::read_to_string(root.join(".mr/prompts/init.md")).unwrap();
         let prd_template1 = std::fs::read_to_string(root.join(".mr/templates/prd.md")).unwrap();
+        let constitution1 = std::fs::read_to_string(root.join(".mr/constitution.md")).unwrap();
+        let config1 = std::fs::read_to_string(root.join(".mr/config.toml")).unwrap();
 
         // Run restore second time.
-        let result2 = cmd_restore();
+        let result2 = restore_impl(root);
         assert!(result2.is_ok(), "Second restore should succeed");
 
         // Capture file contents after second restore.
         let init_content2 = std::fs::read_to_string(root.join(".mr/prompts/init.md")).unwrap();
         let prd_template2 = std::fs::read_to_string(root.join(".mr/templates/prd.md")).unwrap();
+        let constitution2 = std::fs::read_to_string(root.join(".mr/constitution.md")).unwrap();
+        let config2 = std::fs::read_to_string(root.join(".mr/config.toml")).unwrap();
 
         // Run restore third time to ensure it still works.
-        let result3 = cmd_restore();
+        let result3 = restore_impl(root);
         assert!(result3.is_ok(), "Third restore should succeed");
-
-        // Restore current directory before cleanup.
-        std::env::set_current_dir(&original_dir).unwrap();
 
         // Verify idempotency: contents should be identical.
         assert_eq!(
@@ -2070,6 +2088,14 @@ Generate a devcontainer.json configuration for:
         assert_eq!(
             prd_template1, prd_template2,
             "PRD template should be identical after multiple restores"
+        );
+        assert_eq!(
+            constitution1, constitution2,
+            "Constitution should be identical after multiple restores"
+        );
+        assert_eq!(
+            config1, config2,
+            "Config should be identical after multiple restores"
         );
     }
 
@@ -2083,15 +2109,8 @@ Generate a devcontainer.json configuration for:
 
         // Don't initialize - leave directory empty.
 
-        // Save current directory and change to temp dir.
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(root).unwrap();
-
-        // Run restore.
-        let result = cmd_restore();
-
-        // Restore current directory.
-        std::env::set_current_dir(&original_dir).unwrap();
+        // Run restore (using restore_impl to avoid cwd changes).
+        let result = restore_impl(root);
 
         // Verify failure.
         assert!(result.is_err(), "Restore should fail if not initialized");
