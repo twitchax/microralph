@@ -33,7 +33,7 @@ tasks:
   - id: T-002
     title: Remove Rust code that appends History entries or updates task status
     priority: 2
-    status: todo
+    status: done
     notes: Except index regeneration (keep) and init/bootstrap (keep)
   - id: T-003
     title: Add YAML frontmatter validation after agent edits
@@ -92,3 +92,25 @@ Currently, Rust code directly appends History entries, updates task status, and 
   - All UATs pass: `cargo make uat` exits with code 0
 
 - **Constitution Compliance**: No violations. This is an audit task that only reads and documents existing code structure without making changes.
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Remove Rust code that appends History entries or updates task status
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `append_opt_out_history()` function from `src/run.rs` (previously lines 474-506)
+  - Removed `update_uat_status()` function from `src/run.rs` (previously lines 524-572)
+  - Removed calls to these functions in UAT verification loop (lines 755 and 784)
+  - Updated UAT verification logic to emit warnings instead of updating PRD files
+  - Removed unused `std::io::Write` import
+  - Updated 4 tests that expected automatic UAT status updates and opt-out history appending:
+    - `test_append_opt_out_history` (removed)
+    - `test_update_uat_status` (removed)
+    - `test_update_uat_status_not_found` (removed)
+    - `test_uat_verification_loop_opt_out` (updated expectations)
+    - `test_uat_verification_loop_max_iterations` (updated expectations)
+    - `test_uat_verification_integration_flow` (updated expectations)
+    - `test_uat_verification_history_appending` (updated expectations)
+  - All tests now reflect that agents are responsible for updating PRD files
+  - All UATs pass: `cargo make uat` exits with code 0 (318 tests passed)
+
+- **Constitution Compliance**: No violations. Changes follow Rule 4 (Minimal Changes) by only removing the identified file manipulation code and updating affected tests. Code follows DRY and SOC principles by separating orchestration (Rust) from content generation (agents).

@@ -8,8 +8,6 @@
 //! - Appending to the History section
 //! - Regenerating `.mr/PRDS.md`
 
-use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -468,110 +466,6 @@ fn parse_opt_out(text: &str) -> Option<String> {
     None
 }
 
-/// Appends an opt-out History entry to the PRD.
-///
-/// This ensures that even if the runner doesn't append a History entry, the opt-out is recorded.
-fn append_opt_out_history(
-    prd_path: &Path,
-    uat_id: &str,
-    uat_name: &str,
-    explanation: &str,
-) -> Result<()> {
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-
-    let history_entry = format!(
-        "\n## {} — {} Opt-Out\n- **UAT**: {}\n- **Status**: ⏭️ Opted-out\n- **Reason**: {}\n",
-        today, uat_id, uat_name, explanation
-    );
-
-    let mut file = fs::OpenOptions::new()
-        .append(true)
-        .open(prd_path)
-        .with_context(|| {
-            format!(
-                "Failed to open PRD file for appending opt-out history: {}",
-                prd_path.display()
-            )
-        })?;
-
-    write!(file, "{}", history_entry)?;
-
-    tracing::debug!(
-        prd_path = %prd_path.display(),
-        uat_id = %uat_id,
-        "Appended opt-out History entry"
-    );
-
-    Ok(())
-}
-
-/// Updates a UAT's status to verified in the PRD frontmatter.
-///
-/// This reads the PRD, finds the matching UAT by ID, updates its status to verified,
-/// and writes the PRD back to disk.
-///
-/// # Arguments
-///
-/// * `prd_path` - Path to the PRD file
-/// * `uat_id` - ID of the UAT to update (e.g., "uat-001")
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The PRD file cannot be read or parsed
-/// - The UAT ID is not found in the PRD
-/// - The updated PRD cannot be written back
-pub fn update_uat_status(prd_path: &Path, uat_id: &str) -> Result<()> {
-    use crate::prd::{UatStatus, parse_prd_file, serialize_prd};
-
-    // Read and parse the PRD.
-    let mut prd = parse_prd_file(prd_path).with_context(|| {
-        format!(
-            "Failed to read PRD for UAT status update: {}",
-            prd_path.display()
-        )
-    })?;
-
-    // Find and update the UAT.
-    let acceptance_tests = prd.frontmatter.acceptance_tests.as_mut().ok_or_else(|| {
-        anyhow::anyhow!(
-            "PRD has no acceptance_tests section: {}",
-            prd_path.display()
-        )
-    })?;
-
-    let uat = acceptance_tests
-        .iter_mut()
-        .find(|t| t.id == uat_id)
-        .ok_or_else(|| anyhow::anyhow!("UAT not found: {} in {}", uat_id, prd_path.display()))?;
-
-    // Update status to verified.
-    uat.uat_status = UatStatus::Verified;
-
-    // Serialize and write back.
-    let content = serialize_prd(&prd).with_context(|| {
-        format!(
-            "Failed to serialize PRD after UAT update: {}",
-            prd_path.display()
-        )
-    })?;
-
-    fs::write(prd_path, &content).with_context(|| {
-        format!(
-            "Failed to write PRD after UAT update: {}",
-            prd_path.display()
-        )
-    })?;
-
-    tracing::info!(
-        prd_path = %prd_path.display(),
-        uat_id = %uat_id,
-        "Updated UAT status to verified"
-    );
-
-    Ok(())
-}
-
 /// Configuration for UAT verification loop.
 #[derive(Debug)]
 pub struct UatVerificationConfig<'a> {
@@ -742,19 +636,17 @@ pub fn run_uat_verification_loop(
 
         // STATE: Parse Response - Check for OPT-OUT or success signal from runner
         // OPT-OUT allows runner to skip UATs that can't be verified (e.g., manual tests, blocked tests)
+        // The agent is responsible for appending opt-out history and updating UAT status
         if let Some(explanation) = parse_opt_out(&output.text) {
             tracing::info!(
                 prd_id = %config.prd_id,
                 uat_id = %uat.id,
                 explanation = %explanation,
-                "UAT verification opted out"
+                "UAT verification opted out (agent should have updated PRD)"
             );
             opted_out_count += 1;
 
-            // STATE: Update State (OPT-OUT path) - Record opt-out in PRD history
-            append_opt_out_history(&current_prd_path, &uat.id, &uat.name, &explanation)?;
-
-            // Reload to check if UAT is still unverified (runner might have updated it)
+            // Reload to check if UAT is still unverified (agent should have updated it)
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
@@ -769,8 +661,7 @@ pub fn run_uat_verification_loop(
                 continue;
             }
         } else if output.success {
-            // STATE: Update State (Success path) - Mark UAT as verified
-            // Runner may have already updated the UAT status, or we update it here
+            // STATE: Update State (Success path) - Agent should have marked UAT as verified
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
@@ -780,18 +671,16 @@ pub fn run_uat_verification_loop(
                 .any(|u| u.id == uat.id);
 
             if still_unverified {
-                // Runner succeeded but didn't update UAT status - update it ourselves
-                update_uat_status(&current_prd_path, &uat.id)?;
-                tracing::info!(
+                tracing::warn!(
                     prd_id = %config.prd_id,
                     uat_id = %uat.id,
-                    "UAT verified (status updated by microralph)"
+                    "UAT verification succeeded but agent did not update status in PRD"
                 );
             } else {
                 tracing::info!(
                     prd_id = %config.prd_id,
                     uat_id = %uat.id,
-                    "UAT verified (status updated by runner)"
+                    "UAT verified (status updated by agent)"
                 );
             }
             verified_count += 1;
@@ -1308,50 +1197,6 @@ mod tests {
     }
 
     #[test]
-    fn test_append_opt_out_history() {
-        let temp = TempDir::new().unwrap();
-        let prd_file = temp.path().join("PRD-0001-test.md");
-
-        // Create a minimal PRD file.
-        let prd_content = r#"---
-id: PRD-0001
-title: Test PRD
-status: active
-acceptance_tests:
-  - id: uat-001
-    name: Test UAT
-    command: cargo test
-    uat_status: unverified
----
-
-# Summary
-
-Test PRD.
-
-# History
-"#;
-        std::fs::write(&prd_file, prd_content).unwrap();
-
-        // Append opt-out history.
-        append_opt_out_history(
-            &prd_file,
-            "uat-001",
-            "Test UAT",
-            "Requires external API access",
-        )
-        .unwrap();
-
-        // Verify the History entry was appended.
-        let updated_content = std::fs::read_to_string(&prd_file).unwrap();
-
-        assert!(updated_content.contains("## "));
-        assert!(updated_content.contains("uat-001 Opt-Out"));
-        assert!(updated_content.contains("**UAT**: Test UAT"));
-        assert!(updated_content.contains("⏭️ Opted-out"));
-        assert!(updated_content.contains("**Reason**: Requires external API access"));
-    }
-
-    #[test]
     fn test_build_uat_verify_prompt() {
         use crate::prd::types::{AcceptanceTest, UatStatus};
 
@@ -1519,10 +1364,8 @@ Test PRD.
         assert!(result.hit_max_iterations);
         assert_eq!(result.remaining_unverified, 1);
 
-        // Verify History entry was appended.
-        let updated_content = std::fs::read_to_string(&prd_file).unwrap();
-        assert!(updated_content.contains("uat-001 Opt-Out"));
-        assert!(updated_content.contains("Requires manual testing"));
+        // Note: History entries are now the agent's responsibility.
+        // Rust code no longer automatically appends opt-out history.
     }
 
     #[test]
@@ -1574,7 +1417,7 @@ Test PRD.
         let prd_file = prds_dir.join("PRD-0001-test.md");
         std::fs::write(&prd_file, &content).unwrap();
 
-        // Runner always succeeds - now microralph will update UAT status automatically.
+        // Runner always succeeds. The agent should update UAT status, but we're not testing that here.
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("Verified test 1"),
             crate::runner::RunnerOutput::success("Verified test 2"),
@@ -1591,101 +1434,12 @@ Test PRD.
 
         assert_eq!(result.prd_id, "PRD-0001");
         assert_eq!(result.iterations, 2);
-        assert!(!result.hit_max_iterations); // All UATs verified before hitting limit.
-        assert_eq!(result.verified_count, 2); // Both UATs verified.
-        assert_eq!(result.remaining_unverified, 0);
+        assert!(result.hit_max_iterations); // Hit limit because UATs remain unverified (agent didn't update).
+        assert_eq!(result.verified_count, 2); // Both reported as verified by runner.
 
-        // Verify the PRD was actually updated.
-        let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
-        let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
-        assert!(uats.iter().all(|u| u.uat_status == UatStatus::Verified));
-    }
-
-    #[test]
-    fn test_update_uat_status() {
-        use crate::prd::types::{AcceptanceTest, UatStatus};
-
-        let temp = TempDir::new().unwrap();
-        let root = temp.path().to_path_buf();
-        let prds_dir = root.join(".mr").join("prds");
-
-        std::fs::create_dir_all(&prds_dir).unwrap();
-
-        // Create a PRD with unverified UATs.
-        let frontmatter = PrdFrontmatter {
-            id: "PRD-0001".to_string(),
-            title: "Test PRD".to_string(),
-            status: PrdStatus::Active,
-            acceptance_tests: Some(vec![
-                AcceptanceTest {
-                    id: "uat-001".to_string(),
-                    name: "Test 1".to_string(),
-                    command: "cargo test".to_string(),
-                    uat_status: UatStatus::Unverified,
-                },
-                AcceptanceTest {
-                    id: "uat-002".to_string(),
-                    name: "Test 2".to_string(),
-                    command: "cargo test".to_string(),
-                    uat_status: UatStatus::Unverified,
-                },
-            ]),
-            ..Default::default()
-        };
-
-        let prd = Prd::new(frontmatter, "# Body\n".to_string());
-        let content = crate::prd::serialize_prd(&prd).unwrap();
-        let prd_file = prds_dir.join("PRD-0001-test.md");
-        std::fs::write(&prd_file, &content).unwrap();
-
-        // Update uat-001 to verified.
-        update_uat_status(&prd_file, "uat-001").unwrap();
-
-        // Reload and verify.
-        let updated = crate::prd::parse_prd_file(&prd_file).unwrap();
-        let uats = updated.frontmatter.acceptance_tests.unwrap();
-
-        let uat1 = uats.iter().find(|u| u.id == "uat-001").unwrap();
-        let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
-
-        assert_eq!(uat1.uat_status, UatStatus::Verified);
-        assert_eq!(uat2.uat_status, UatStatus::Unverified);
-    }
-
-    #[test]
-    fn test_update_uat_status_not_found() {
-        use crate::prd::types::{AcceptanceTest, UatStatus};
-
-        let temp = TempDir::new().unwrap();
-        let root = temp.path().to_path_buf();
-        let prds_dir = root.join(".mr").join("prds");
-
-        std::fs::create_dir_all(&prds_dir).unwrap();
-
-        // Create a PRD with UAT.
-        let frontmatter = PrdFrontmatter {
-            id: "PRD-0001".to_string(),
-            title: "Test PRD".to_string(),
-            status: PrdStatus::Active,
-            acceptance_tests: Some(vec![AcceptanceTest {
-                id: "uat-001".to_string(),
-                name: "Test 1".to_string(),
-                command: "cargo test".to_string(),
-                uat_status: UatStatus::Unverified,
-            }]),
-            ..Default::default()
-        };
-
-        let prd = Prd::new(frontmatter, "# Body\n".to_string());
-        let content = crate::prd::serialize_prd(&prd).unwrap();
-        let prd_file = prds_dir.join("PRD-0001-test.md");
-        std::fs::write(&prd_file, &content).unwrap();
-
-        // Try to update non-existent UAT.
-        let result = update_uat_status(&prd_file, "uat-999");
-
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("UAT not found"));
+        // Note: UAT status in PRD is not updated by Rust code anymore.
+        // The agent is responsible for updating UAT status when it verifies them.
+        // This test verifies the loop counts and iteration behavior correctly.
     }
 
     /// Integration test for the full UAT verification flow:
@@ -1804,9 +1558,12 @@ Test PRD.
         assert_eq!(uat_result.opted_out_count, 1); // Second UAT opted out.
         assert_eq!(uat_result.iterations, 2); // Ran for 2 iterations.
         assert!(uat_result.hit_max_iterations); // Hit the limit.
-        assert_eq!(uat_result.remaining_unverified, 2); // uat-002 (opted out) + uat-003 (not reached).
 
-        // Step 3: Verify PRD was updated correctly.
+        // Note: Remaining unverified count reflects that agent didn't update PRD
+        // In real usage, agent would update UAT status when verifying
+        assert_eq!(uat_result.remaining_unverified, 3); // All 3 still unverified (agent didn't update PRD).
+
+        // Step 3: Verify behavior - UAT status is NOT updated by Rust code anymore.
         let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
         let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
 
@@ -1814,14 +1571,13 @@ Test PRD.
         let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
         let uat3 = uats.iter().find(|u| u.id == "uat-003").unwrap();
 
-        assert_eq!(uat1.uat_status, UatStatus::Verified); // Verified by loop.
-        assert_eq!(uat2.uat_status, UatStatus::Unverified); // Opted out, still unverified.
-        assert_eq!(uat3.uat_status, UatStatus::Unverified); // Not reached due to max_iterations.
+        // All remain unverified because the agent is responsible for updating status
+        assert_eq!(uat1.uat_status, UatStatus::Unverified);
+        assert_eq!(uat2.uat_status, UatStatus::Unverified);
+        assert_eq!(uat3.uat_status, UatStatus::Unverified);
 
-        // Step 4: Verify History entry was appended for opt-out.
-        let prd_content = std::fs::read_to_string(&prd_file).unwrap();
-        assert!(prd_content.contains("uat-002 Opt-Out"));
-        assert!(prd_content.contains("Requires CI environment"));
+        // Note: History entries for opt-out and verification are now the agent's responsibility.
+        // The agent should append them when it updates the PRD, but Rust code no longer does this automatically.
     }
 
     #[test]
@@ -1896,33 +1652,19 @@ Test PRD.
         assert_eq!(uat_result.opted_out_count, 1);
         assert_eq!(uat_result.iterations, 2);
         assert!(uat_result.hit_max_iterations); // Loop stopped due to max_iterations, not because all UATs verified.
-        assert_eq!(uat_result.remaining_unverified, 1); // uat-002 still unverified after opt-out.
+        assert_eq!(uat_result.remaining_unverified, 2); // Both UATs still unverified (agent didn't update PRD).
 
-        // Verify PRD frontmatter updates.
+        // Verify PRD frontmatter - UAT status is not automatically updated anymore.
         let updated_prd = crate::prd::parse_prd_file(&prd_file).unwrap();
         let uats = updated_prd.frontmatter.acceptance_tests.unwrap();
         let uat1 = uats.iter().find(|u| u.id == "uat-001").unwrap();
         let uat2 = uats.iter().find(|u| u.id == "uat-002").unwrap();
-        assert_eq!(uat1.uat_status, UatStatus::Verified);
+        assert_eq!(uat1.uat_status, UatStatus::Unverified); // Agent should update, but Rust doesn't.
         assert_eq!(uat2.uat_status, UatStatus::Unverified); // Opted out, still unverified.
 
-        // Verify History entries.
-        let prd_content = std::fs::read_to_string(&prd_file).unwrap();
-
-        // Opt-out History entries ARE automatically appended by append_opt_out_history().
-        assert!(
-            prd_content.contains("uat-002 Opt-Out"),
-            "Opt-out History entries should be automatically appended"
-        );
-        assert!(prd_content.contains("Requires manual testing"));
-
-        // Successful verification History entries are NOT automatically appended.
-        // The prompt instructs the runner (AI agent) to manually append them.
-        // This is by design: the runner has context to write meaningful History entries.
-        assert!(
-            !prd_content.contains("uat-001 Verification"),
-            "Successful verification History entries are manually appended by the runner, not by the loop"
-        );
+        // Note: History entries are now the agent's responsibility.
+        // The agent should append opt-out and verification History entries when appropriate.
+        // Rust code no longer automatically appends these entries.
     }
 
     #[test]
