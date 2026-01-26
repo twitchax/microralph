@@ -26,8 +26,13 @@ The following governance rules and constraints apply to this project:
 ## Q/A Session
 
 {{#each qa_history}}
-**Q**: {{question}}
-**A**: {{answer}}
+**Q**:
+
+{{question}}
+
+**A**:
+
+{{answer}}
 
 {{/each}}
 

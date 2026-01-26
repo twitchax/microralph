@@ -27,8 +27,13 @@ The following governance rules and constraints apply to this project:
 ## Previous Q/A
 
 {{#each qa_history}}
-**Q{{@index}}**: {{question}}
-**A{{@index}}**: {{answer}}
+**Q{{@index}}**:
+
+{{question}}
+
+**A{{@index}}**:
+
+{{answer}}
 
 {{/each}}
 

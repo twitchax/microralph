@@ -277,12 +277,7 @@ Check if tests require specific environment:
 
 ## Upcoming PRD / Change Ideas
 
-- Rename binaries like kord.
-- No commit flag
-- Bootstrap should work on an existing bootstrap and generate PRD fixes?
-- Maybe rename to .prompts and .templates for clarity?
 - Ability to select options in CLI, instead of typing all commands.  Does clap support this?
-- Try a "refactor" loop that suggests code improvements.
 
 ## License
 
