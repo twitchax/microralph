@@ -26,7 +26,7 @@ acceptance_tests:
 - id: uat-002
   name: github-release task attaches artifacts from release-artifacts directory
   command: grep -q "release-artifacts" Makefile.toml
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: README uses target triple naming convention
   command: grep -q "mr_x86_64-unknown-linux-gnu" README.md
@@ -41,7 +41,7 @@ tasks:
 - id: T-002
   title: Verify github-release task downloads and attaches zipped artifacts
   priority: 2
-  status: todo
+  status: done
   notes: The github-release task already attaches files from release-artifacts/. Verify the workflow in AGENTS.md shows downloading CI artifacts before running github-release. No zipping needed—GitHub Actions artifacts come down as zips already.
 - id: T-003
   title: Update Windows install instructions for PowerShell
@@ -103,5 +103,21 @@ This inconsistency makes it harder for users familiar with kord to install micro
 - **Opportunistic UAT Verification**:
   - **uat-001** (README install instructions show curl/unzip/chmod workflow): Verified ✅
   - **uat-003** (README uses target triple naming convention): Verified ✅
+
+---
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Verify github-release task downloads and attaches zipped artifacts
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified `github-release` task in `Makefile.toml` (lines 398-406) checks for `release-artifacts/` directory and attaches all files found
+  - Verified `AGENTS.md` "Unified Release Workflow" (lines 259-265) shows correct sequence:
+    - Step 3: Download artifacts with `gh run download {} --dir release-artifacts`
+    - Step 4: Create release with `cargo make publish-all` which calls `github-release`
+  - No code changes needed—this was a verification task confirming existing workflow is correct
+  - UAT passed: 344 tests passed
+
+- **Opportunistic UAT Verification**:
+  - **uat-002** (github-release task attaches artifacts from release-artifacts directory): Verified ✅ (`grep -q "release-artifacts" Makefile.toml` passes)
 
 ---
