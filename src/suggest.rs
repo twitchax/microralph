@@ -207,9 +207,10 @@ fn analyze_codebase(root: &Path) -> Result<String> {
     for entry in std::fs::read_dir(root).context("Failed to read repository directory")? {
         let entry = entry?;
         let path = entry.path();
-        // TODO(T-004): Handle missing file name with proper error.
-        #[allow(clippy::unwrap_used)]
-        let name = path.file_name().unwrap().to_string_lossy();
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_default();
 
         // Skip hidden files and target/build directories.
         if name.starts_with('.') || name == "target" || name == "node_modules" {
