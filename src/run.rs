@@ -408,6 +408,10 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
             .with_context(|| format!("Runner failed for task {task_id}"))?
     };
 
+    // Validate PRD frontmatter after agent edits.
+    tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
+    crate::validate::validate_prd_frontmatter(&prd_path);
+
     // Summarize output (truncate if too long). Skip summary if we already streamed.
     let output_summary = if config.stream {
         "(output was streamed above)".to_string()
@@ -631,6 +635,10 @@ pub fn run_uat_verification_loop(
                 println!("{}", output.text);
             }
         }
+
+        // Validate PRD frontmatter after agent edits.
+        tracing::debug!(prd_path = %current_prd_path.display(), "Validating PRD frontmatter after UAT verification");
+        crate::validate::validate_prd_frontmatter(&current_prd_path);
 
         iterations += 1;
 

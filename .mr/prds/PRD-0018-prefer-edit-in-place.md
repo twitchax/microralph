@@ -19,11 +19,11 @@ acceptance_tests:
   - id: uat-001
     name: Verify all existing UATs pass after refactoring
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: Verify YAML frontmatter validation emits warnings on malformed PRDs
     command: cargo test -- --nocapture yaml_validation
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: Audit all runner commands (run, edit, etc.) for Rust-side file writes
@@ -38,7 +38,7 @@ tasks:
   - id: T-003
     title: Add YAML frontmatter validation after agent edits
     priority: 3
-    status: todo
+    status: done
     notes: Parse frontmatter, emit warnings if malformed; applies to PRDs and Constitution
   - id: T-004
     title: Update prompts if needed to ensure agents edit files correctly
@@ -114,3 +114,27 @@ Currently, Rust code directly appends History entries, updates task status, and 
   - All UATs pass: `cargo make uat` exits with code 0 (318 tests passed)
 
 - **Constitution Compliance**: No violations. Changes follow Rule 4 (Minimal Changes) by only removing the identified file manipulation code and updating affected tests. Code follows DRY and SOC principles by separating orchestration (Rust) from content generation (agents).
+
+## 2026-01-26 — T-003 Completed
+- **Task**: Add YAML frontmatter validation after agent edits
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new validation module `src/validate.rs` with functions for PRD and Constitution frontmatter validation
+  - Implemented `validate_prd_frontmatter()` to parse PRD files and emit warnings if YAML frontmatter is malformed
+  - Implemented `validate_constitution_frontmatter()` to handle Constitution files (with or without frontmatter)
+  - Added validation calls in 5 key locations where agents edit files:
+    - `src/run.rs`: After task execution (line ~413)
+    - `src/run.rs`: After UAT verification in loop (line ~642)
+    - `src/prd_edit.rs`: After PRD edit with READY_SIGNAL (line ~131)
+    - `src/prd_edit.rs`: After PRD edit without questions (line ~160)
+    - `src/prd_edit.rs`: After final PRD edit attempt (line ~214)
+    - `src/constitution_edit.rs`: After constitution edit completes (line ~120)
+  - Added comprehensive unit tests for validation functions (6 test cases covering valid/invalid scenarios)
+  - Validation emits warnings via `tracing::warn!()` and `eprintln!()` but does not block execution
+  - All UATs pass: `cargo make uat` exits with code 0 (324 tests passed)
+
+- **Constitution Compliance**: No violations. Changes follow Rule 4 (Minimal Changes) by adding only the necessary validation logic. Code follows Rule 2 (Single Source of Truth) by using existing `parse_prd_file()` function. Code follows Rule 3 (Separation of Concerns) by creating a dedicated validation module.
+
+- **Opportunistic UAT Verification**:
+  - ✅ **uat-001** (Verify all existing UATs pass after refactoring): Verified via `cargo make uat` - all 324 tests passed
+  - ✅ **uat-002** (Verify YAML frontmatter validation emits warnings on malformed PRDs): Verified via `cargo test validate` - 6 validation tests pass and warnings are correctly emitted for malformed frontmatter (visible with `--nocapture`)

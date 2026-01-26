@@ -126,6 +126,10 @@ where
             // Write the updated PRD.
             std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
 
+            // Validate PRD frontmatter after agent edits.
+            tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
+            crate::validate::validate_prd_frontmatter(&prd_path);
+
             writeln!(output)?;
             writeln!(output, "Updated PRD: {}", prd_path.display())?;
 
@@ -150,6 +154,10 @@ where
                 let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
 
                 std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
+
+                // Validate PRD frontmatter after agent edits.
+                tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
+                crate::validate::validate_prd_frontmatter(&prd_path);
 
                 writeln!(output)?;
                 writeln!(output, "Updated PRD: {}", prd_path.display())?;
@@ -201,6 +209,10 @@ where
     let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
 
     std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
+
+    // Validate PRD frontmatter after agent edits.
+    tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
+    crate::validate::validate_prd_frontmatter(&prd_path);
 
     writeln!(output)?;
     writeln!(output, "Updated PRD: {}", prd_path.display())?;

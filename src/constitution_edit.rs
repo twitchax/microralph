@@ -115,6 +115,10 @@ where
 
         // Check if runner has completed edits or has questions.
         if runner_response.contains(EDIT_COMPLETE_SIGNAL) {
+            // Validate constitution frontmatter after agent edits.
+            tracing::debug!(constitution_path = %constitution_path.display(), "Validating constitution frontmatter after agent edit");
+            crate::validate::validate_constitution_frontmatter(&constitution_path);
+
             writeln!(output, "Constitution updated successfully.")?;
 
             return Ok(ConstitutionEditResult {

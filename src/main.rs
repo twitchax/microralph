@@ -21,6 +21,7 @@ mod run;
 mod runner;
 mod status;
 mod suggest;
+mod validate;
 
 use runner::Runner;
 
