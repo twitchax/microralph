@@ -48,7 +48,7 @@ tasks:
   - id: T-005
     title: Run full UAT suite and verify no regressions
     priority: 5
-    status: todo
+    status: done
     notes: Ensure History entries, task status updates, and UAT verification still work
 ---
 
@@ -156,3 +156,14 @@ Currently, Rust code directly appends History entries, updates task status, and 
   - All UATs pass: `cargo make uat` exits with code 0 (324 tests passed)
 
 - **Constitution Compliance**: No violations. This was an audit/verification task that confirmed existing prompts are correctly implemented. No code changes were made, which aligns with Rule 4 (Minimal Changes).
+
+## 2026-01-26 — T-005 Completed
+- **Task**: Run full UAT suite and verify no regressions
+- **Status**: ✅ Done
+- **Changes**:
+  - Executed `cargo make uat` to run the full UAT suite
+  - All 324 tests passed with 0 failures and 0 skipped
+  - Verified History entries, task status updates, and UAT verification still work correctly
+  - No code changes required - this was a verification task confirming the refactoring from T-001 through T-004 is complete and functional
+
+- **Constitution Compliance**: No violations. This was a verification-only task with no code changes, which aligns with Rule 4 (Minimal Changes).
