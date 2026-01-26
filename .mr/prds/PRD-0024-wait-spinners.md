@@ -60,7 +60,7 @@ tasks:
   - id: T-004
     title: Integrate spinner into mr run --loop mode
     priority: 4
-    status: todo
+    status: done
     notes: Reset spinner between iterations with message like "Task 2/5...".
   - id: T-005
     title: Integrate spinner into mr refactor command
@@ -157,6 +157,20 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Spinner starts when `stream=false` (enabled via `!config.stream`)
   - Spinner clears before output is displayed via `finish_and_clear()`
   - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-004 Completed
+- **Task**: Integrate spinner into mr run --loop mode
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that T-003's implementation already satisfies T-004's requirements
+  - The spinner in `run_task()` (src/run.rs:408-428) already handles loop mode correctly:
+    - Each call to `run_task()` creates a fresh spinner with updated task count ("Running task N/M...")
+    - `finish_and_clear()` is called before output display, resetting the spinner for the next iteration
+    - The loop in main.rs (line 1262) calls `run_task()` repeatedly, each time getting correct task numbers
+  - No additional code changes required - the spinner automatically resets between iterations due to the architecture of one spinner per `run_task()` invocation
   - UAT passed: 348 tests run, 348 passed
 
 ---
