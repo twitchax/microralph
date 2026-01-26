@@ -350,12 +350,12 @@ if [ -n "$RUN_ID" ]; then
     
     echo ""
     echo "📥 Step 5/5: Downloading artifacts..."
-    rm -rf release-artifacts
-    gh run download "$RUN_ID" --dir release-artifacts
-    echo "   → Artifacts downloaded to release-artifacts/"
+    rm -rf target/release-artifacts
+    gh run download "$RUN_ID" --dir target/release-artifacts
+    echo "   → Artifacts downloaded to target/release-artifacts/"
 else
     echo "⚠️  Could not find workflow run. Download artifacts manually with:"
-    echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
+    echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir target/release-artifacts"
 fi
 
 echo ""
@@ -457,9 +457,9 @@ fi
 
 # Check for artifacts directory
 ARTIFACTS=""
-if [ -d "release-artifacts" ]; then
-    echo "📎 Found release-artifacts directory"
-    for file in release-artifacts/*; do
+if [ -d "target/release-artifacts" ]; then
+    echo "📎 Found target/release-artifacts directory"
+    for file in target/release-artifacts/*; do
         if [ -f "$file" ]; then
             echo "  → $(basename "$file")"
             ARTIFACTS="$ARTIFACTS \"$file\""
@@ -492,7 +492,7 @@ echo "✅ GitHub release created successfully!"
 echo "   View at: https://github.com/twitchax/microralph/releases/tag/$TAG"
 echo ""
 echo "💡 To download artifacts from CI, run:"
-echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
+echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir target/release-artifacts"
 '''
 
 # =============================================================================

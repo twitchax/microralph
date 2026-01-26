@@ -260,7 +260,7 @@ The `release` task automatically:
 3. Bumps version using cargo-release
 4. Commits and pushes changes (including tags)
 5. Waits for GitHub Actions to complete
-6. Downloads artifacts to `release-artifacts/`
+6. Downloads artifacts to `target/release-artifacts/`
 
 ### Manual Release Workflow (Advanced)
 
