@@ -85,7 +85,7 @@ tasks:
   - id: T-009
     title: Add integration tests for spinner behavior
     priority: 9
-    status: todo
+    status: done
     notes: Test that spinner is disabled in non-TTY environments and clears properly.
 
 ---
@@ -224,5 +224,22 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Spinner clears before processing output via `finish_and_clear()`
   - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
   - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-009 Completed
+- **Task**: Add integration tests for spinner behavior
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 12 new integration tests to `src/spinner.rs` covering:
+    - Non-TTY detection: `test_spinner_disabled_in_non_tty_environment`, `test_start_spinner_returns_disabled_in_non_tty`
+    - Explicit disable: `test_spinner_explicitly_disabled_has_no_bar`
+    - Idempotency: `test_spinner_clear_is_idempotent`
+    - Multiple message updates: `test_spinner_message_updates_on_disabled_spinner`
+    - Workflow simulations: `test_spinner_run_task_simulation`, `test_spinner_refactor_iteration_simulation`, `test_spinner_suggest_workflow_simulation`, `test_spinner_finalize_workflow_simulation`, `test_spinner_reindex_workflow_simulation`
+    - Edge cases: `test_disabled_spinner_set_message_empty_string`, `test_spinner_cow_static_vs_owned`
+  - Tests verify spinner is correctly disabled in non-TTY environments (test runners, CI)
+  - Tests verify `finish_and_clear()` is idempotent and safe to call multiple times
+  - UAT passed: 360 tests run, 360 passed
 
 ---
