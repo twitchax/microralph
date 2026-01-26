@@ -1,93 +1,88 @@
 ---
 id: PRD-0024
-title: "Add Progress Indicators for Long-Running Operations"
-status: active
-owner: "twitchax"
+title: Add Progress Indicators for Long-Running Operations
+status: done
+owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
-
 principles:
-  - Spinners display only when --stream is false (streaming already provides feedback)
-  - Automatically disable spinners when stdout is not a TTY (CI, redirected output)
-  - Clear spinner before displaying accumulated runner output
-  - Reset spinner with iteration count for multi-step operations
-  - Use indicatif crate for spinner implementation
-
+- Spinners display only when --stream is false (streaming already provides feedback)
+- Automatically disable spinners when stdout is not a TTY (CI, redirected output)
+- Clear spinner before displaying accumulated runner output
+- Reset spinner with iteration count for multi-step operations
+- Use indicatif crate for spinner implementation
 references:
-  - name: indicatif crate
-    url: https://docs.rs/indicatif/latest/indicatif/
-  - name: owo-colors supports-colors feature
-    url: https://docs.rs/owo-colors/latest/owo_colors/
-
+- name: indicatif crate
+  url: https://docs.rs/indicatif/latest/indicatif/
+- name: owo-colors supports-colors feature
+  url: https://docs.rs/owo-colors/latest/owo_colors/
 acceptance_tests:
-  - id: uat-001
-    name: Spinner displays during mr run when not streaming
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: Spinner displays during mr refactor when not streaming
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-003
-    name: Spinner displays during mr suggest when not streaming
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-004
-    name: Spinner is hidden when stdout is not a TTY
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-005
-    name: Spinner clears before output is displayed
-    command: cargo make uat
-    uat_status: verified
-
+- id: uat-001
+  name: Spinner displays during mr run when not streaming
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Spinner displays during mr refactor when not streaming
+  command: cargo make uat
+  uat_status: verified
+- id: uat-003
+  name: Spinner displays during mr suggest when not streaming
+  command: cargo make uat
+  uat_status: verified
+- id: uat-004
+  name: Spinner is hidden when stdout is not a TTY
+  command: cargo make uat
+  uat_status: verified
+- id: uat-005
+  name: Spinner clears before output is displayed
+  command: cargo make uat
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: Add indicatif dependency to Cargo.toml
-    priority: 1
-    status: done
-    notes: Add indicatif crate with default features.
-  - id: T-002
-    title: Create spinner utility module
-    priority: 2
-    status: done
-    notes: "Create src/spinner.rs with helper functions: start_spinner, update_message, finish_and_clear. Include TTY detection logic using std::io::stdout().is_terminal()."
-  - id: T-003
-    title: Integrate spinner into mr run command
-    priority: 3
-    status: done
-    notes: Add spinner that shows task progress (e.g., "Running task 2/5..."). Only display when stream=false. Clear before showing output.
-  - id: T-004
-    title: Integrate spinner into mr run --loop mode
-    priority: 4
-    status: done
-    notes: Reset spinner between iterations with message like "Task 2/5...".
-  - id: T-005
-    title: Integrate spinner into mr refactor command
-    priority: 5
-    status: done
-    notes: Show iteration progress (e.g., "Refactor iteration 2/5..."). Reset between iterations.
-  - id: T-006
-    title: Integrate spinner into mr suggest command
-    priority: 6
-    status: done
-    notes: Show analyzing spinner during AI generation phase.
-  - id: T-007
-    title: Integrate spinner into mr finalize command
-    priority: 7
-    status: done
-    notes: Show spinner during agent execution phase.
-  - id: T-008
-    title: Integrate spinner into mr reindex command
-    priority: 8
-    status: done
-    notes: Show spinner during link verification agent call.
-  - id: T-009
-    title: Add integration tests for spinner behavior
-    priority: 9
-    status: done
-    notes: Test that spinner is disabled in non-TTY environments and clears properly.
-
+- id: T-001
+  title: Add indicatif dependency to Cargo.toml
+  priority: 1
+  status: done
+  notes: Add indicatif crate with default features.
+- id: T-002
+  title: Create spinner utility module
+  priority: 2
+  status: done
+  notes: 'Create src/spinner.rs with helper functions: start_spinner, update_message, finish_and_clear. Include TTY detection logic using std::io::stdout().is_terminal().'
+- id: T-003
+  title: Integrate spinner into mr run command
+  priority: 3
+  status: done
+  notes: Add spinner that shows task progress (e.g., "Running task 2/5..."). Only display when stream=false. Clear before showing output.
+- id: T-004
+  title: Integrate spinner into mr run --loop mode
+  priority: 4
+  status: done
+  notes: Reset spinner between iterations with message like "Task 2/5...".
+- id: T-005
+  title: Integrate spinner into mr refactor command
+  priority: 5
+  status: done
+  notes: Show iteration progress (e.g., "Refactor iteration 2/5..."). Reset between iterations.
+- id: T-006
+  title: Integrate spinner into mr suggest command
+  priority: 6
+  status: done
+  notes: Show analyzing spinner during AI generation phase.
+- id: T-007
+  title: Integrate spinner into mr finalize command
+  priority: 7
+  status: done
+  notes: Show spinner during agent execution phase.
+- id: T-008
+  title: Integrate spinner into mr reindex command
+  priority: 8
+  status: done
+  notes: Show spinner during link verification agent call.
+- id: T-009
+  title: Add integration tests for spinner behavior
+  priority: 9
+  status: done
+  notes: Test that spinner is disabled in non-TTY environments and clears properly.
 ---
 
 # Summary
@@ -301,3 +296,15 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Test name: `test_spinner_clear_is_idempotent` verifies `finish_and_clear()` behavior
   - Workflow simulation tests (`test_spinner_run_task_simulation`, `test_spinner_refactor_iteration_simulation`, etc.) all call `finish_and_clear()` before proceeding
   - Implementation verified in `run.rs:428`, `refactor.rs:169`, `suggest.rs:77`, `prd_finalize.rs:363`, `reindex.rs:110` — all call `finish_and_clear()` before processing/displaying output
+
+---
+
+## 2026-01-26 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 9 tasks (T-001 through T-009)
+- **Outcome**: All tasks completed, acceptance tests passed (360/360 tests)
+- **Cleanup**: None required — no temporary files, debug statements, or stale TODOs found
+- **Summary**:
+  - Added `indicatif` spinner dependency and created `src/spinner.rs` utility module with TTY detection
+  - Integrated spinners into 5 long-running commands: `mr run`, `mr refactor`, `mr suggest`, `mr finalize`, `mr reindex`
+  - Added 12 comprehensive integration tests covering non-TTY behavior, idempotency, and workflow simulations
