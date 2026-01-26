@@ -56,7 +56,7 @@ tasks:
 - id: T-005
   title: "Fix suggest.rs selection parsing unwraps"
   priority: 2
-  status: todo
+  status: done
   notes: "Line 333 - two unwraps for char parsing, add proper validation"
 - id: T-006
   title: "Fix prd/index.rs Regex expect"
@@ -171,4 +171,18 @@ Affected production files:
   - Removed the TODO comment and `#[allow(clippy::unwrap_used)]` attribute from the function
   - UAT passed: 360 tests, all passing
 - **Rationale**: Using `unwrap_or_default()` handles the theoretical edge case of a path without a file name (which shouldn't occur with `read_dir` entries but is now safely handled).
+- **Constitution Compliance**: No violations. Changes were minimal and focused on the specific unwrap issue.
+
+---
+
+## 2026-01-26 — T-005 Completed
+- **Task**: Fix suggest.rs selection parsing unwraps
+- **Status**: ✅ Done
+- **Changes**:
+  - Refactored `parse_suggestions()` in `src/suggest.rs` to eliminate two chained unwraps on line 338
+  - Extracted first character and digit parsing into separate variables (`first_char`, `digit`) before the if-let block
+  - Used tuple destructuring `if let (Some(number), Some(rest)) = (...)` to safely combine digit validation with strip_prefix logic
+  - Removed the TODO comment and `#[allow(clippy::unwrap_used)]` attribute
+  - UAT passed: 360 tests, all passing
+- **Rationale**: The original code had logically safe unwraps (guaranteed by the strip_prefix check), but extracting the parsing upfront eliminates the unwraps entirely while maintaining the same logic.
 - **Constitution Compliance**: No violations. Changes were minimal and focused on the specific unwrap issue.

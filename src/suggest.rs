@@ -329,14 +329,15 @@ fn parse_suggestions(text: &str) -> Result<Vec<Suggestion>> {
         let line = lines[i].trim();
 
         // Look for numbered entries (e.g., "1. ").
-        if let Some(rest) = line
-            .strip_prefix(|c: char| c.is_numeric())
-            .and_then(|s| s.strip_prefix(". "))
-        {
-            // TODO(T-005): Add proper validation for char parsing.
-            #[allow(clippy::unwrap_used)]
-            let number = line.chars().next().unwrap().to_digit(10).unwrap() as usize;
+        // Extract the leading digit and validate it before consuming `rest`.
+        let first_char = line.chars().next();
+        let digit = first_char.and_then(|c| c.to_digit(10));
 
+        if let (Some(number), Some(rest)) = (
+            digit.map(|d| d as usize),
+            line.strip_prefix(|c: char| c.is_numeric())
+                .and_then(|s| s.strip_prefix(". ")),
+        ) {
             // Parse title and description from "Title — Description".
             let (title, description) = if let Some(sep_idx) = rest.find(" — ") {
                 // Use split_at with byte index, then collect after separator.
