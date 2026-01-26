@@ -149,6 +149,11 @@ enum Command {
         /// Stream runner output to stdout in real-time.
         #[arg(long)]
         stream: bool,
+
+        /// Do not instruct the agent to commit changes.
+        /// When set, prompts say "Do NOT commit" instead of commit instructions.
+        #[arg(long)]
+        no_commit: bool,
     },
 
     /// [3] Finalize a PRD after all tasks are complete.
@@ -321,9 +326,17 @@ fn main() -> Result<()> {
             one,
             model,
             stream,
+            no_commit,
         }) => {
-            tracing::info!(prd = ?prd, runner = %runner, one = %one, stream = %stream, "Running next task...");
-            cmd_run(prd.as_deref(), &runner, one, model.as_deref(), stream)?;
+            tracing::info!(prd = ?prd, runner = %runner, one = %one, stream = %stream, no_commit = %no_commit, "Running next task...");
+            cmd_run(
+                prd.as_deref(),
+                &runner,
+                one,
+                model.as_deref(),
+                stream,
+                no_commit,
+            )?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -1129,6 +1142,7 @@ fn cmd_run(
     one: bool,
     cli_model: Option<&str>,
     stream: bool,
+    cli_no_commit: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -1145,6 +1159,9 @@ fn cmd_run(
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
     let model = cfg.effective_model(cli_model);
+
+    // Compute effective no_commit setting (CLI flag supersedes config).
+    let _no_commit = cfg.effective_no_commit(if cli_no_commit { Some(true) } else { None });
 
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;

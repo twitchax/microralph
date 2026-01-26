@@ -32,6 +32,10 @@ pub const DEFAULT_CONFIG: &str = r#"# microralph configuration
 
 # Session timeout in minutes.
 # timeout_minutes = 30
+
+# Whether to instruct the agent NOT to commit changes.
+# When true, prompts say "Do NOT commit" instead of commit instructions.
+# no_commit = false
 "#;
 
 /// microralph configuration.
@@ -52,6 +56,11 @@ pub struct Config {
     /// Session timeout in minutes.
     #[serde(default)]
     pub timeout_minutes: Option<u32>,
+
+    /// Whether to instruct the agent NOT to commit changes.
+    /// When true, prompts say "Do NOT commit" instead of commit instructions.
+    #[serde(default)]
+    pub no_commit: Option<bool>,
 }
 
 impl Config {
@@ -92,6 +101,17 @@ impl Config {
             .map(|s| s.to_string())
             .or_else(|| self.model.clone())
     }
+
+    /// Returns the effective no_commit setting, with CLI flag taking precedence.
+    ///
+    /// Logic:
+    /// - If CLI flag is `Some(true)` (--no-commit passed), returns `true`.
+    /// - If CLI flag is `Some(false)` (explicit negation, if supported), returns `false`.
+    /// - If CLI flag is `None`, falls back to config value.
+    /// - If both are `None`, defaults to `false` (commit by default).
+    pub fn effective_no_commit(&self, cli_no_commit: Option<bool>) -> bool {
+        cli_no_commit.or(self.no_commit).unwrap_or(false)
+    }
 }
 
 /// Loads the constitution from `.mr/constitution.md`.
@@ -128,6 +148,7 @@ mod tests {
         assert!(config.model.is_none());
         assert!(config.permission_mode.is_none());
         assert!(config.timeout_minutes.is_none());
+        assert!(config.no_commit.is_none());
     }
 
     #[test]
@@ -261,6 +282,48 @@ timeout_minutes = 60
     #[test]
     fn test_default_config_parses() {
         let _config: Config = toml::from_str(DEFAULT_CONFIG).unwrap();
+    }
+
+    #[test]
+    fn test_effective_no_commit_cli_override() {
+        let config = Config {
+            no_commit: Some(false),
+            ..Default::default()
+        };
+
+        // CLI flag (true) supersedes config (false).
+        assert!(config.effective_no_commit(Some(true)));
+    }
+
+    #[test]
+    fn test_effective_no_commit_config_value() {
+        let config = Config {
+            no_commit: Some(true),
+            ..Default::default()
+        };
+
+        // No CLI flag, uses config value.
+        assert!(config.effective_no_commit(None));
+    }
+
+    #[test]
+    fn test_effective_no_commit_default_false() {
+        let config = Config::default();
+
+        // No CLI flag, no config value, defaults to false (commit by default).
+        assert!(!config.effective_no_commit(None));
+    }
+
+    #[test]
+    fn test_config_load_with_no_commit() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        std::fs::write(mr_dir.join("config.toml"), r#"no_commit = true"#).unwrap();
+
+        let config = Config::load(temp.path()).unwrap().unwrap();
+
+        assert_eq!(config.no_commit, Some(true));
     }
 
     #[test]

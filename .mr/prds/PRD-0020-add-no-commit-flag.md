@@ -1,7 +1,7 @@
 ---
 id: PRD-0020
 title: "Add No-Commit Flag"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-26
 updated: 2026-01-26
@@ -20,11 +20,11 @@ acceptance_tests:
 - id: uat-001
   name: CLI flag --no-commit is accepted by mr run
   command: cargo run -- run --help | grep -q "no-commit"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Config option no_commit is parsed from config.toml
   command: cargo make test
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: Prompts include "Do NOT commit" when flag is active
   command: cargo make uat
@@ -38,7 +38,7 @@ tasks:
 - id: T-001
   title: Add no_commit option to config.rs and CLI args
   priority: 1
-  status: todo
+  status: done
   notes: "Add `no_commit: Option<bool>` to Config struct with parsing and an `effective_no_commit()` method. Add `--no-commit` flag to Run command in main.rs."
 - id: T-002
   title: Add commit conditional to prompt templates
@@ -97,5 +97,21 @@ Currently, `mr run` and `mr finalize` prompts instruct the agent to commit chang
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Add no_commit option to config.rs and CLI args
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `no_commit: Option<bool>` field to `Config` struct in `src/config.rs`
+  - Added `effective_no_commit()` method to `Config` for precedence logic (CLI > config > default)
+  - Updated `DEFAULT_CONFIG` constant to include commented `no_commit` option
+  - Added `--no-commit` flag to Run command in `src/main.rs`
+  - Updated `cmd_run()` function to accept and compute effective no_commit value
+  - Added unit tests for config parsing and effective_no_commit precedence
+  - UAT passed: `cargo make uat` succeeded
+
+- **Opportunistic UAT Verification**:
+  - uat-001: Verified (`cargo run -- run --help | grep -q "no-commit"` passed)
+  - uat-002: Verified (config parsing tests pass, including `test_config_load_with_no_commit`)
 
 ---
