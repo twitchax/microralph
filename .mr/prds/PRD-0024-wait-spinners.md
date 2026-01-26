@@ -55,7 +55,7 @@ tasks:
   - id: T-003
     title: Integrate spinner into mr run command
     priority: 3
-    status: todo
+    status: done
     notes: Add spinner that shows task progress (e.g., "Running task 2/5..."). Only display when stream=false. Clear before showing output.
   - id: T-004
     title: Integrate spinner into mr run --loop mode
@@ -144,6 +144,19 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - When stdout is not a TTY (CI, piped output), spinner operations become no-ops
   - Added module declaration to `main.rs`
   - Includes 4 unit tests covering disabled/enabled spinners and static/dynamic messages
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-003 Completed
+- **Task**: Integrate spinner into mr run command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `use crate::spinner::start_spinner;` import to `src/run.rs`
+  - Integrated spinner in `run_task()` function that displays "Running task N/M..." during agent execution
+  - Spinner starts when `stream=false` (enabled via `!config.stream`)
+  - Spinner clears before output is displayed via `finish_and_clear()`
+  - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
   - UAT passed: 348 tests run, 348 passed
 
 ---

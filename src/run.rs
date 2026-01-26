@@ -18,6 +18,7 @@ use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::{Runner, RunnerOutput, UsageInfo};
+use crate::spinner::start_spinner;
 
 /// Configuration for `mr run`.
 #[derive(Debug)]
@@ -404,6 +405,12 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         "Invoking runner to execute task"
     );
 
+    // Start spinner when not streaming (streaming already provides visual feedback).
+    let spinner = start_spinner(
+        !config.stream,
+        format!("Running task {current_task_num}/{total_tasks}..."),
+    );
+
     let output: RunnerOutput = if config.stream {
         // Stream output to stdout in real-time.
         let mut stdout = std::io::stdout();
@@ -416,6 +423,9 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
             .execute(&prompt, config.root)
             .with_context(|| format!("Runner failed for task {task_id}"))?
     };
+
+    // Clear spinner before displaying output.
+    spinner.finish_and_clear();
 
     // Validate PRD frontmatter after agent edits.
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
