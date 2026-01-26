@@ -38,7 +38,7 @@ tasks:
   - id: T-003
     title: Update default constitution in src/init.rs with new rules
     priority: 3
-    status: todo
+    status: done
     notes: Keep under 10 rules, make generic/language-agnostic, expect users to customize
   - id: T-004
     title: Remove behavioral guidance from all prompt templates in src/init.rs
@@ -138,6 +138,23 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   | Follow existing patterns/style | Rule 5: Consistency |
   | Public API stability | Rule 6: Public API Stability (NEW) |
   | Root cause over workarounds | Rule 7: Root Cause Resolution (NEW) |
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
+
+## 2026-01-26 — T-003 Completed
+- **Task**: Update default constitution in src/init.rs with new rules
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `CONSTITUTION_TEMPLATE` in `src/init.rs` to include 6 comprehensive default rules
+  - Replaced commented-out example rules with actual actionable rules
+  - Rules included: Single Source of Truth (DRY), Separation of Concerns, Minimal Changes, Consistency, Public API Stability, Root Cause Resolution
+  - Updated `test_constitution_template_content()` to verify the 6 new rules
+  - Kept format generic/language-agnostic with customization comment at bottom
+
+- **Rule Count**: 6 rules (well under 10-rule limit)
+  - Note: Microralph's own constitution has 7 rules (includes "Prompt Management" which is project-specific)
+  - The default template has 6 generic rules suitable for any project
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations

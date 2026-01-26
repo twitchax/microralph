@@ -201,25 +201,17 @@ The constitution:
 
 ## Rules
 
-<!-- Example rules (uncomment and customize as needed):
+1. **Single Source of Truth**: Follow the DRY (Don't Repeat Yourself) principle. Avoid duplicating logic, data, or configuration across multiple files. When the same information must exist in multiple places, derive it from a single authoritative source.
 
-1. **Acceptance tests must be codified**: One-off acceptance tests are unacceptable. Every UAT must be implemented as a repeatable test in the codebase.
+2. **Separation of Concerns**: Follow SOC (Separation of Concerns) principles. Each module, function, and file should have a single, well-defined responsibility. Avoid mixing unrelated concerns in the same code unit.
 
-2. **Follow existing architecture patterns**: New features must align with established patterns in the codebase. Introduce new patterns only when necessary and document why.
+3. **Minimal Changes**: When making changes, modify only what is necessary to achieve the objective. Avoid unrelated refactoring, style changes, or "improvements" that are not directly related to the task at hand.
 
-3. **No breaking changes without migration path**: Breaking API changes require a clear migration guide and deprecation warnings.
+4. **Consistency**: Follow the existing code style, conventions, and patterns established in the codebase. Do not introduce new patterns without justification.
 
-4. **Security-first design**: All user inputs must be validated and sanitized. Authentication and authorization must be explicit.
+5. **Public API Stability**: Do not change public API signatures unless the task explicitly requires it. Breaking changes must be documented and justified in the PRD history.
 
-5. **Performance baselines**: New features must not degrade performance by more than 10% without explicit justification in the PRD.
-
-6. **Documentation requirements**: All public APIs must have docstrings. Complex logic must have inline comments explaining the "why".
-
-7. **Test coverage standards**: New code must maintain or improve test coverage. Aim for at least 80% line coverage.
-
-8. **Code review requirements**: All PRs require at least one approval. High-risk changes require two approvals.
-
--->
+6. **Root Cause Resolution**: Prefer fixing root causes over applying surface-level workarounds. When a workaround is necessary, document the underlying issue and rationale.
 
 <!-- Add your project-specific rules below: -->
 "#;
@@ -2061,9 +2053,13 @@ mod tests {
         assert!(CONSTITUTION_TEMPLATE.contains("# Constitution"));
         assert!(CONSTITUTION_TEMPLATE.contains("## Purpose"));
         assert!(CONSTITUTION_TEMPLATE.contains("## Rules"));
-        assert!(CONSTITUTION_TEMPLATE.contains("<!-- Example rules"));
-        // Check for numbered example rules
-        assert!(CONSTITUTION_TEMPLATE.contains("1. **Acceptance tests must be codified**"));
+        // Check for the comprehensive default rules
+        assert!(CONSTITUTION_TEMPLATE.contains("1. **Single Source of Truth**"));
+        assert!(CONSTITUTION_TEMPLATE.contains("2. **Separation of Concerns**"));
+        assert!(CONSTITUTION_TEMPLATE.contains("3. **Minimal Changes**"));
+        assert!(CONSTITUTION_TEMPLATE.contains("4. **Consistency**"));
+        assert!(CONSTITUTION_TEMPLATE.contains("5. **Public API Stability**"));
+        assert!(CONSTITUTION_TEMPLATE.contains("6. **Root Cause Resolution**"));
     }
 
     #[test]
