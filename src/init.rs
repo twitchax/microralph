@@ -557,10 +557,6 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
-## Constraints
-
-- **DRY (Don't Repeat Yourself)**: When planning tasks, ensure they don't duplicate work from existing PRDs. Reference or depend on completed work rather than re-implementing functionality.
-
 ## Output
 
 CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.
@@ -601,13 +597,12 @@ This project has a constitution that defines governance rules and constraints. Y
 1. **Study the README** at the repository root to understand the project's purpose, conventions, and development workflow.
 2. **Study the PRD** at `{{prd_path}}` and understand it fully, including goals, constraints, and task history.
 3. **Identify the task** `{{next_task_id}}` and its requirements.
-4. **Implement the task** as described, making minimal and focused changes.
-5. **Follow existing patterns** and conventions in the codebase.
-6. **Run `cargo make uat`** to verify all acceptance tests pass.
-7. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
-8. **Update the PRD file** (see below for details).
-9. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
-10. **Commit your work** with a descriptive commit message.
+4. **Implement the task** as described.
+5. **Run `cargo make uat`** to verify all acceptance tests pass.
+6. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
+7. **Update the PRD file** (see below for details).
+8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
+9. **Commit your work** with a descriptive commit message.
 
 ## Updating the PRD
 
@@ -672,11 +667,7 @@ This reduces work during the final UAT verification loop and catches issues earl
 
 ## Constraints
 
-- Do not modify unrelated code.
-- Do not change the public API unless the task requires it.
-- Prefer fixing root causes over surface workarounds.
 - Always update the PRD even if the task fails (document what was attempted).
-- **DRY (Don't Repeat Yourself)**: Extract common logic into reusable functions or modules. Avoid duplicating code across files or within the same file. If you find yourself copying code, consider creating a shared helper or abstraction.
 
 ## When All Tasks Are Done
 
@@ -893,9 +884,7 @@ Ensure these documents are up-to-date:
 
 - **No new features**: This is finalization only — polish and documentation
 - **No breaking changes**: The codebase should be in a releasable state
-- **Minimal changes**: Only make changes required for finalization
 - **Concise entries**: Changelog and history entries should be brief but complete
-- **DRY (Don't Repeat Yourself)**: When cleaning up, consolidate any duplicated code you find. Extract repeated patterns into reusable functions before finalizing.
 
 ---
 
@@ -999,9 +988,7 @@ Add a History entry documenting your verification attempt:
 
 - Focus on this single UAT (`{{uat_id}}`). Do not verify other UATs in this invocation.
 - Keep test code minimal — just enough to cover the acceptance criterion.
-- Do not modify unrelated code.
 - Always update the PRD even if opting out (document your reasoning).
-- **DRY (Don't Repeat Yourself)**: Use existing test helpers and fixtures where possible. Avoid duplicating test setup code across multiple tests.
 
 ## On Success
 
@@ -1063,7 +1050,6 @@ The user wants to modify the PRD at `{{prd_path}}`.
 2. **Analyze the PRD**: Review the current PRD content.
 3. **Apply changes**: Make the requested modifications.
 4. **Preserve structure**: Keep the YAML frontmatter valid and the Markdown body properly formatted.
-5. **Minimize changes**: Only modify what's necessary to fulfill the request.
 
 ## Constraints
 
@@ -1072,7 +1058,6 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
-- **DRY (Don't Repeat Yourself)**: When adding new tasks, check if similar work exists in other PRDs. Consider creating dependencies rather than duplicating implementation work.
 
 ## Output Format
 

@@ -43,7 +43,7 @@ tasks:
   - id: T-004
     title: Remove behavioral guidance from all prompt templates in src/init.rs
     priority: 4
-    status: todo
+    status: done
     notes: Keep prompts purely operational (workflow steps and constraints)
   - id: T-005
     title: Test updated prompts and constitution with mr restore
@@ -155,6 +155,21 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
 - **Rule Count**: 6 rules (well under 10-rule limit)
   - Note: Microralph's own constitution has 7 rules (includes "Prompt Management" which is project-specific)
   - The default template has 6 generic rules suitable for any project
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
+
+## 2026-01-26 — T-004 Completed
+- **Task**: Remove behavioral guidance from all prompt templates in src/init.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed DRY rule from `PROMPT_PRD_NEW_SYNTHESIZE` Constraints section
+  - Removed 4 behavioral constraints from `PROMPT_RUN_TASK`: "don't modify unrelated code", "don't change public API", "prefer root causes", and DRY
+  - Simplified `PROMPT_RUN_TASK` Required Actions from 10 steps to 9 by removing "Follow existing patterns" (now in constitution)
+  - Removed "Minimal changes" and DRY from `PROMPT_RUN_TASK_FINALIZE` Constraints
+  - Removed 2 constraints from `PROMPT_RUN_UAT_VERIFY`: "don't modify unrelated code" and DRY
+  - Removed "Minimize changes" step and DRY from `PROMPT_PRD_EDIT`
+  - Kept `STARTER_AGENTS` unchanged (agent guidance is appropriate in AGENTS.md file)
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations
