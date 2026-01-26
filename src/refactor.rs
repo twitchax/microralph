@@ -346,4 +346,41 @@ mod tests {
         // Prompt should be generated (uses fallback template).
         assert!(!prompt.is_empty());
     }
+
+    #[test]
+    fn test_refactor_loop_early_termination() {
+        use crate::runner::MockRunner;
+
+        let temp = tempfile::TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Create minimal .mr structure.
+        std::fs::create_dir_all(root.join(".mr/prompts")).unwrap();
+
+        let config = RefactorConfig {
+            root,
+            max_iterations: 5, // Set high so we can verify early termination
+            context: None,
+            path: None,
+            dry_run: false,
+            no_commit: false,
+            stream: false,
+        };
+
+        // Mock runner: first iteration applies a refactor, second signals no more.
+        let runner = MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Applied fix for DRY violation"),
+            crate::runner::RunnerOutput::success("NO-MORE-REFACTORS"),
+        ]);
+
+        let result = refactor(&config, &runner).unwrap();
+
+        // Should stop after 2 iterations, not 5.
+        assert_eq!(result.iterations, 2);
+        assert_eq!(result.applied_count, 1);
+        assert!(result.early_termination);
+
+        // Verify runner was only called twice.
+        assert_eq!(runner.recorded_prompts().len(), 2);
+    }
 }

@@ -39,7 +39,7 @@ acceptance_tests:
 - id: uat-005
   name: Loop stops early when agent reports no more refactors
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: Each iteration commits separately (respecting --no-commit)
   command: cargo make uat
@@ -193,3 +193,15 @@ Currently, improving code quality requires manual identification of refactoring 
   - Added important notes on iteration behavior and UAT gating
   - UAT: `cargo make uat` passes (340 tests)
 - **Constitution Compliance**: No violations. Documentation-only change.
+
+---
+
+## 2026-01-26 — uat-005 Verification
+- **UAT**: Loop stops early when agent reports no more refactors
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_refactor_loop_early_termination` in `src/refactor.rs`
+  - Test uses MockRunner to return "NO-MORE-REFACTORS" on second iteration
+  - Verifies: iterations=2, applied_count=1, early_termination=true
+  - UAT: `cargo make uat` passes (341 tests)
