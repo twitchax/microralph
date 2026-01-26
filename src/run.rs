@@ -30,6 +30,10 @@ pub struct RunConfig<'a> {
 
     /// Whether to stream runner output in real-time.
     pub stream: bool,
+
+    /// Whether to instruct the agent NOT to commit changes.
+    /// When true, prompts will say "Do NOT commit" instead of commit instructions.
+    pub no_commit: bool,
 }
 
 /// Result from running a task or checking run status.
@@ -279,7 +283,7 @@ fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<Option<(String, Prd, Path
 }
 
 /// Builds the prompt for the runner.
-fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str) -> String {
+fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str, no_commit: bool) -> String {
     let prompt_template = load_prompt_with_fallback(root, PromptKind::RunTask);
 
     let mut ctx = PlaceholderContext::new();
@@ -288,6 +292,11 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str) -> Strin
     ctx.insert("prd_id", prd.id());
     ctx.insert("prd_title", prd.title());
     ctx.insert("next_task_id", task_id);
+
+    // Add commit variable (inverted: commit = !no_commit).
+    // When commit is true, prompts include commit instructions.
+    // When commit is false, prompts say "Do NOT commit".
+    ctx.insert("commit", !no_commit);
 
     // Add task details if available.
     if let Some(tasks) = prd.tasks()
@@ -384,7 +393,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     );
 
     // Build and execute the prompt.
-    let prompt = build_prompt(config.root, &prd, &prd_path, &task_id);
+    let prompt = build_prompt(config.root, &prd, &prd_path, &task_id, config.no_commit);
 
     tracing::info!(
         prompt_len = prompt.len(),
@@ -861,6 +870,7 @@ mod tests {
             root: &root,
             prd_id: Some(&picked_prd),
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -906,6 +916,7 @@ mod tests {
             root: &root,
             prd_id: Some("PRD-0002"),
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -985,6 +996,7 @@ mod tests {
             root: &root,
             prd_id: None,
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner);
@@ -1020,10 +1032,254 @@ mod tests {
         let prd = Prd::new(frontmatter, "# Body\n".to_string());
         let prd_path = root.join(".mr/prds/PRD-0001.md");
 
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001");
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
 
         assert!(prompt.contains("T-001"));
         assert!(prompt.contains("PRD-0001.md"));
+    }
+
+    #[test]
+    fn test_build_prompt_commit_true() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a prompt template with commit conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r#"Execute task {{next_task_id}} from {{prd_path}}
+{{#if commit}}
+9. **Commit your work** with a descriptive commit message.
+{{else}}
+9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}"#,
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        // no_commit=false means commit=true.
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
+
+        // When commit=true, prompt should include commit instructions.
+        assert!(
+            prompt.contains("Commit your work"),
+            "Prompt should include commit instructions when no_commit=false"
+        );
+        // And should NOT contain "Do NOT commit".
+        assert!(
+            !prompt.contains("Do NOT commit"),
+            "Prompt should not contain 'Do NOT commit' when no_commit=false"
+        );
+    }
+
+    #[test]
+    fn test_build_prompt_commit_false() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a prompt template with commit conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r#"Execute task {{next_task_id}} from {{prd_path}}
+{{#if commit}}
+9. **Commit your work** with a descriptive commit message.
+{{else}}
+9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}"#,
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        // no_commit=true means commit=false.
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", true);
+
+        // When commit=false, prompt should include "Do NOT commit" instructions.
+        assert!(
+            prompt.contains("Do NOT commit"),
+            "Prompt should contain 'Do NOT commit' when no_commit=true"
+        );
+        // And should NOT contain commit instructions.
+        assert!(
+            !prompt.contains("Commit your work"),
+            "Prompt should not contain 'Commit your work' when no_commit=true"
+        );
+    }
+
+    #[test]
+    fn test_run_task_with_no_commit_sends_correct_prompt() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a run_task.md prompt with commit conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r#"Execute task {{next_task_id}} from {{prd_path}}
+{{#if commit}}
+**Commit your work** with a descriptive commit message.
+{{else}}
+**Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}"#,
+        )
+        .unwrap();
+
+        // Create a PRD with a task.
+        create_test_prd(
+            &prds_dir,
+            "PRD-0001",
+            PrdStatus::Active,
+            vec![make_task("T-001", 1, TaskStatus::Todo)],
+        );
+
+        // Create a mock runner that records prompts.
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success("Done.")]);
+
+        // Run the task with no_commit=true.
+        let config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+            no_commit: true,
+        };
+
+        let result = run_task(&config, &runner).unwrap();
+
+        // Verify task was executed.
+        match result {
+            RunResult::TaskExecuted {
+                prd_id, task_id, ..
+            } => {
+                assert_eq!(prd_id, "PRD-0001");
+                assert_eq!(task_id, "T-001");
+            }
+            _ => panic!("Expected TaskExecuted result"),
+        }
+
+        // Verify the prompt sent to the runner contains "Do NOT commit".
+        let prompts = runner.recorded_prompts();
+        assert_eq!(prompts.len(), 1);
+        assert!(
+            prompts[0].contains("Do NOT commit"),
+            "Prompt should contain 'Do NOT commit' when no_commit=true. Got: {}",
+            prompts[0]
+        );
+        assert!(
+            !prompts[0].contains("Commit your work"),
+            "Prompt should not contain 'Commit your work' when no_commit=true"
+        );
+    }
+
+    #[test]
+    fn test_run_task_without_no_commit_sends_commit_instructions() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a run_task.md prompt with commit conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r#"Execute task {{next_task_id}} from {{prd_path}}
+{{#if commit}}
+**Commit your work** with a descriptive commit message.
+{{else}}
+**Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}"#,
+        )
+        .unwrap();
+
+        // Create a PRD with a task.
+        create_test_prd(
+            &prds_dir,
+            "PRD-0001",
+            PrdStatus::Active,
+            vec![make_task("T-001", 1, TaskStatus::Todo)],
+        );
+
+        // Create a mock runner that records prompts.
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success("Done.")]);
+
+        // Run the task with no_commit=false (default behavior).
+        let config = RunConfig {
+            root: &root,
+            prd_id: Some("PRD-0001"),
+            stream: false,
+            no_commit: false,
+        };
+
+        let result = run_task(&config, &runner).unwrap();
+
+        // Verify task was executed.
+        match result {
+            RunResult::TaskExecuted {
+                prd_id, task_id, ..
+            } => {
+                assert_eq!(prd_id, "PRD-0001");
+                assert_eq!(task_id, "T-001");
+            }
+            _ => panic!("Expected TaskExecuted result"),
+        }
+
+        // Verify the prompt sent to the runner contains commit instructions.
+        let prompts = runner.recorded_prompts();
+        assert_eq!(prompts.len(), 1);
+        assert!(
+            prompts[0].contains("Commit your work"),
+            "Prompt should contain 'Commit your work' when no_commit=false. Got: {}",
+            prompts[0]
+        );
+        assert!(
+            !prompts[0].contains("Do NOT commit"),
+            "Prompt should not contain 'Do NOT commit' when no_commit=false"
+        );
     }
 
     #[test]
@@ -1065,6 +1321,7 @@ mod tests {
             root: &root,
             prd_id: Some("PRD-0001"),
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1121,6 +1378,7 @@ mod tests {
             root: &root,
             prd_id: Some("PRD-0001"),
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1164,6 +1422,7 @@ mod tests {
             root: &root,
             prd_id: Some("PRD-0001"),
             stream: false,
+            no_commit: false,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1527,6 +1786,7 @@ mod tests {
             root: &root,
             prd_id: Some("PRD-0001"),
             stream: false,
+            no_commit: false,
         };
 
         let run_result = run_task(&run_config, &run_runner).unwrap();
@@ -1732,7 +1992,7 @@ Project governance and best practices.
         let prd_path = root.join(".mr/prds/PRD-0001-test.md");
 
         // Build the prompt for the task.
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001");
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
 
         // Verify the constitution is included in the prompt.
         assert!(

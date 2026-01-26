@@ -195,6 +195,7 @@ mr status
 | `mr run`                           | Run the next task from the highest-priority active PRD                                 |
 | `mr run <id>`                      | Run the next task from a specific PRD                                                  |
 | `mr run --stream`                  | Run with real-time streaming output                                                    |
+| `mr run --no-commit`               | Run without instructing the agent to commit (for manual review)                        |
 | `mr reindex`                       | Regenerate index and verify/fix PRD interlinks                                         |
 | `mr status`                        | Show status of PRDs and tasks                                                          |
 
@@ -217,9 +218,10 @@ runner = "copilot"
 model = "claude-sonnet-4.5"
 permission_mode = "yolo"
 timeout_minutes = 30
+no_commit = false           # Set to true to prevent commit instructions in prompts
 ```
 
-CLI flags override config file settings.
+CLI flags override config file settings (e.g., `--no-commit` overrides `no_commit`).
 
 ### Dev Containers
 
@@ -553,6 +555,7 @@ runner = "claude"                 # Use Claude Code CLI
 model = "claude-sonnet-4.5"
 permission_mode = "yolo"          # Auto-approve all permissions (YOLO mode)
 timeout_minutes = 60
+no_commit = false                 # Set to true to review changes before committing
 EOF
 
 # Now `mr run` uses your config

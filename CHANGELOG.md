@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🔧 Changed
 
+- PRD-0020: Add No-Commit Flag — Added `--no-commit` CLI flag and `no_commit` config option to prevent agents from committing changes, allowing manual review before commit. CLI flag supersedes config; default behavior unchanged (commit by default).
 - PRD-0019: Tighten Prompts and Encourage Constitution — Consolidated behavioral guidance into constitution, tightened 16 prompt templates to be workflow-focused, established clear boundary between "what to do" (prompts) and "how to behave" (constitution)
 - PRD-0018: Prefer Edit-in-Place for Agent Actions — Shifted file-writing responsibilities from Rust code to agent prompts, removed `append_opt_out_history()` and `update_uat_status()` functions, added YAML frontmatter validation after agent edits
 

@@ -108,7 +108,7 @@ Currently, improving code quality requires manual identification of refactoring 
 4. Support `--path` flag to constrain scope (default: repo-wide).
 5. Support `--dry-run` flag to preview suggestions without applying.
 6. Allow agent to signal "no more impactful refactors" for early termination.
-7. Respect `--no-commit` flag (from PRD-0020) for commit behavior.
+7. Respect `--no-commit` flag (from [PRD-0020](./PRD-0020-add-no-commit-flag.md)) for commit behavior.
 8. Leave UAT failure handling to agent's discretion per iteration.
 
 ---

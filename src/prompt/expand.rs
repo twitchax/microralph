@@ -213,7 +213,7 @@ fn expand_simple_placeholders(template: &str, context: &PlaceholderContext) -> S
     result
 }
 
-/// Expands `{{#if variable}}...{{/if}}` blocks.
+/// Expands `{{#if variable}}...{{else}}...{{/if}}` blocks.
 fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
     let mut result = template.to_string();
 
@@ -244,7 +244,17 @@ fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
         let block_end = if_end + 7; // +7 to skip "{{/if}}"
 
         // Extract the content between {{#if}} and {{/if}}.
-        let content = &result[content_start..if_end];
+        let full_content = &result[content_start..if_end];
+
+        // Check for {{else}} block within the content.
+        let (true_content, false_content) = if let Some(else_pos) = full_content.find("{{else}}") {
+            (
+                &full_content[..else_pos],
+                &full_content[else_pos + 8..], // +8 to skip "{{else}}"
+            )
+        } else {
+            (full_content, "")
+        };
 
         // Determine whether to include the content based on the variable's value.
         // - Bool: use its truth value
@@ -259,11 +269,11 @@ fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
         };
 
         // Replace the entire block (from "{{#if" to "{{/if}}") with either
-        // the content (if true) or nothing (if false).
+        // the true content (if truthy) or the false content (if falsy).
         let replacement = if include {
-            content.to_string()
+            true_content.to_string()
         } else {
-            String::new()
+            false_content.to_string()
         };
 
         result = format!(
@@ -469,6 +479,28 @@ mod tests {
         let result = expand_placeholders(template, &ctx);
 
         assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_expand_if_with_else_true() {
+        let mut ctx = PlaceholderContext::new();
+        ctx.insert("show_details", true);
+
+        let template = "{{#if show_details}}Showing{{else}}Hidden{{/if}}";
+        let result = expand_placeholders(template, &ctx);
+
+        assert_eq!(result, "Showing");
+    }
+
+    #[test]
+    fn test_expand_if_with_else_false() {
+        let mut ctx = PlaceholderContext::new();
+        ctx.insert("show_details", false);
+
+        let template = "{{#if show_details}}Showing{{else}}Hidden{{/if}}";
+        let result = expand_placeholders(template, &ctx);
+
+        assert_eq!(result, "Hidden");
     }
 
     #[test]

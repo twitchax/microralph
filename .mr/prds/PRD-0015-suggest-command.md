@@ -98,7 +98,7 @@ Currently, users must manually identify opportunities for new PRDs by reviewing 
 3. Support seamless flow from suggestion selection into `mr new` with pre-filled context
 4. Balance strategic feature suggestions with quick-win improvements
 5. Analyze technical debt, dependency versions, TODO comments, test coverage, and ecosystem best practices
-6. Integrate naturally with existing CLI command structure following PRD-0009 patterns
+6. Integrate naturally with existing CLI command structure following [PRD-0009](./PRD-0009-cli-ergonomics-improvements.md) patterns
 
 ---
 

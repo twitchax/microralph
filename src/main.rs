@@ -1161,7 +1161,7 @@ fn cmd_run(
     let model = cfg.effective_model(cli_model);
 
     // Compute effective no_commit setting (CLI flag supersedes config).
-    let _no_commit = cfg.effective_no_commit(if cli_no_commit { Some(true) } else { None });
+    let no_commit = cfg.effective_no_commit(if cli_no_commit { Some(true) } else { None });
 
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
@@ -1186,6 +1186,7 @@ fn cmd_run(
             root: &cwd,
             prd_id: Some(&active_prd_id),
             stream,
+            no_commit,
         };
 
         let result = match run::run_task(&config, runner.as_ref()) {
