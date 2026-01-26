@@ -13,6 +13,7 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
+use crate::spinner::start_spinner;
 
 /// Result of reindexing operation.
 #[derive(Debug, Default)]
@@ -97,12 +98,16 @@ pub fn reindex(root: impl AsRef<Path>, runner: &dyn Runner, stream: bool) -> Res
     // Step 4: Run the runner with the prompt.
     tracing::info!("Invoking runner to verify and fix links...");
 
+    let spinner = start_spinner(!stream, "Verifying links...");
+
     let result = if stream {
         let mut stdout = std::io::stdout();
         runner.execute_streaming(&prompt, root, &mut stdout)?
     } else {
         runner.execute(&prompt, root)?
     };
+
+    spinner.finish_and_clear();
 
     let output = result.text;
 

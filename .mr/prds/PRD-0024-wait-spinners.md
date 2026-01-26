@@ -80,7 +80,7 @@ tasks:
   - id: T-008
     title: Integrate spinner into mr reindex command
     priority: 8
-    status: todo
+    status: done
     notes: Show spinner during link verification agent call.
   - id: T-009
     title: Add integration tests for spinner behavior
@@ -208,6 +208,19 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Added `use crate::spinner::start_spinner;` import to `src/prd_finalize.rs`
   - Integrated spinner in `finalize_prd()` function with message "Finalizing PRD..."
   - Spinner starts when `stream=false` (enabled via `!config.stream`)
+  - Spinner clears before processing output via `finish_and_clear()`
+  - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-008 Completed
+- **Task**: Integrate spinner into mr reindex command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `use crate::spinner::start_spinner;` import to `src/reindex.rs`
+  - Integrated spinner in `reindex()` function with message "Verifying links..."
+  - Spinner starts when `stream=false` (enabled via `!stream`)
   - Spinner clears before processing output via `finish_and_clear()`
   - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
   - UAT passed: 348 tests run, 348 passed
