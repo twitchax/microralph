@@ -43,7 +43,7 @@ tasks:
   - id: T-004
     title: Update prompts if needed to ensure agents edit files correctly
     priority: 4
-    status: todo
+    status: done
     notes: Review run_task.md, run_uat_verify.md, edit_prd.md, edit_constitution.md, and init.rs
   - id: T-005
     title: Run full UAT suite and verify no regressions
@@ -138,3 +138,21 @@ Currently, Rust code directly appends History entries, updates task status, and 
 - **Opportunistic UAT Verification**:
   - ✅ **uat-001** (Verify all existing UATs pass after refactoring): Verified via `cargo make uat` - all 324 tests passed
   - ✅ **uat-002** (Verify YAML frontmatter validation emits warnings on malformed PRDs): Verified via `cargo test validate` - 6 validation tests pass and warnings are correctly emitted for malformed frontmatter (visible with `--nocapture`)
+
+## 2026-01-26 — T-004 Completed
+- **Task**: Update prompts if needed to ensure agents edit files correctly
+- **Status**: ✅ Done
+- **Changes**:
+  - Reviewed all relevant prompt files: `run_task.md`, `run_uat_verify.md`, `prd_edit.md`, `constitution_edit.md`, `run_task_finalize.md`
+  - Verified prompt constants in `src/init.rs` are synchronized with `.mr/prompts/` files
+  - Confirmed all prompts correctly instruct agents to edit files in place:
+    - `run_task.md`: Updates PRD status, task status, appends History entries
+    - `run_uat_verify.md`: Updates UAT status in frontmatter, appends History
+    - `prd_edit.md`: Instructs agents to edit PRD directly with READY_TO_APPLY pattern
+    - `constitution_edit.md`: Instructs agents to edit constitution directly with EDIT_COMPLETE signal
+    - `run_task_finalize.md`: Appends finalization history, updates changelog
+  - **No changes needed**: All prompts already correctly implement edit-in-place pattern
+  - This aligns with PRD Non-Goals: "Rewriting run_task.md or run_uat_verify.md prompts (they already work correctly)"
+  - All UATs pass: `cargo make uat` exits with code 0 (324 tests passed)
+
+- **Constitution Compliance**: No violations. This was an audit/verification task that confirmed existing prompts are correctly implemented. No code changes were made, which aligns with Rule 4 (Minimal Changes).
