@@ -1,60 +1,60 @@
 ---
 id: PRD-0019
 title: Tighten Prompts and Encourage Constitution
-status: active
+status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
 principles:
-  - Prompts should be workflow-focused (what to do) without philosophy
-  - Constitution should contain all behavioral guidance (how to behave)
-  - Users should edit only the constitution to change overall agent behavior
-  - Reduce duplication of behavioral rules across multiple prompt files
+- Prompts should be workflow-focused (what to do) without philosophy
+- Constitution should contain all behavioral guidance (how to behave)
+- Users should edit only the constitution to change overall agent behavior
+- Reduce duplication of behavioral rules across multiple prompt files
 references: []
 acceptance_tests:
-  - id: uat-001
-    name: All scattered "don't modify unrelated code" instances removed from prompts
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: Constitution has comprehensive behavior rules (under 10 rules)
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-003
-    name: Prompts are workflow-focused with no philosophy or opinion
-    command: cargo make uat
-    uat_status: verified
+- id: uat-001
+  name: All scattered "don't modify unrelated code" instances removed from prompts
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Constitution has comprehensive behavior rules (under 10 rules)
+  command: cargo make uat
+  uat_status: verified
+- id: uat-003
+  name: Prompts are workflow-focused with no philosophy or opinion
+  command: cargo make uat
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: Audit all 16 prompt files for behavioral/philosophical guidance
-    priority: 1
-    status: done
-    notes: Identify all instances of "don't modify unrelated code", DRY, minimal changes, follow patterns, etc.
-  - id: T-002
-    title: Draft comprehensive constitutional rules covering identified themes
-    priority: 2
-    status: done
-    notes: Rules should include DRY, SOC, minimal changes, language best practices, public API stability, research expectations
-  - id: T-003
-    title: Update default constitution in src/init.rs with new rules
-    priority: 3
-    status: done
-    notes: Keep under 10 rules, make generic/language-agnostic, expect users to customize
-  - id: T-004
-    title: Remove behavioral guidance from all prompt templates in src/init.rs
-    priority: 4
-    status: done
-    notes: Keep prompts purely operational (workflow steps and constraints)
-  - id: T-005
-    title: Test updated prompts and constitution with mr restore
-    priority: 5
-    status: done
-    notes: Verify prompts are tighter and constitution is comprehensive
-  - id: T-006
-    title: Update AGENTS.md with new prompt/constitution philosophy if needed
-    priority: 6
-    status: done
-    notes: Document the "what to do vs how to behave" boundary
+- id: T-001
+  title: Audit all 16 prompt files for behavioral/philosophical guidance
+  priority: 1
+  status: done
+  notes: Identify all instances of "don't modify unrelated code", DRY, minimal changes, follow patterns, etc.
+- id: T-002
+  title: Draft comprehensive constitutional rules covering identified themes
+  priority: 2
+  status: done
+  notes: Rules should include DRY, SOC, minimal changes, language best practices, public API stability, research expectations
+- id: T-003
+  title: Update default constitution in src/init.rs with new rules
+  priority: 3
+  status: done
+  notes: Keep under 10 rules, make generic/language-agnostic, expect users to customize
+- id: T-004
+  title: Remove behavioral guidance from all prompt templates in src/init.rs
+  priority: 4
+  status: done
+  notes: Keep prompts purely operational (workflow steps and constraints)
+- id: T-005
+  title: Test updated prompts and constitution with mr restore
+  priority: 5
+  status: done
+  notes: Verify prompts are tighter and constitution is comprehensive
+- id: T-006
+  title: Update AGENTS.md with new prompt/constitution philosophy if needed
+  priority: 6
+  status: done
+  notes: Document the "what to do vs how to behave" boundary
 ---
 
 # Summary
@@ -235,3 +235,15 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - Test checks all 16 prompts for forbidden philosophical/behavioral terms
   - Forbidden patterns: "DRY", "Don't Repeat Yourself", "minimal change", "unrelated code", "how to behave"
   - All 326 tests passed (cargo make uat)
+
+## 2026-01-26 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 6 tasks (T-001 through T-006)
+- **Outcome**: All tasks completed, acceptance tests passed (326/326 tests)
+- **Changelog**: Entry added under [Changed] — Consolidated behavioral guidance into constitution
+- **Cleanup**: None required (no temp files or debug statements found)
+- **Summary**:
+  - Consolidated all behavioral rules (DRY, minimal changes, consistency, etc.) into constitution
+  - Tightened 16 prompt templates to be purely workflow-focused
+  - Added "Prompt vs Constitution Philosophy" documentation to AGENTS.md
+  - Default constitution now has 6 comprehensive rules; project constitution has 7 rules
