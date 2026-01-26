@@ -1,7 +1,7 @@
 ---
 id: PRD-0024
 title: "Add Progress Indicators for Long-Running Operations"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-26
 updated: 2026-01-26
@@ -45,7 +45,7 @@ tasks:
   - id: T-001
     title: Add indicatif dependency to Cargo.toml
     priority: 1
-    status: todo
+    status: done
     notes: Add indicatif crate with default features.
   - id: T-002
     title: Create spinner utility module
@@ -124,5 +124,12 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Add indicatif dependency to Cargo.toml
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `indicatif = "0.17"` to dependencies in Cargo.toml (alphabetically between clap and owo-colors)
+  - UAT passed: 344 tests run, 344 passed
 
 ---
