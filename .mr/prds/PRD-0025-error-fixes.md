@@ -61,7 +61,7 @@ tasks:
 - id: T-006
   title: "Fix prd/index.rs Regex expect"
   priority: 2
-  status: todo
+  status: done
   notes: "Line 109 - use lazy_static or propagate error"
 - id: T-007
   title: "Update function signatures to return Result where needed"
@@ -186,3 +186,17 @@ Affected production files:
   - UAT passed: 360 tests, all passing
 - **Rationale**: The original code had logically safe unwraps (guaranteed by the strip_prefix check), but extracting the parsing upfront eliminates the unwraps entirely while maintaining the same logic.
 - **Constitution Compliance**: No violations. Changes were minimal and focused on the specific unwrap issue.
+
+---
+
+## 2026-01-26 — T-006 Completed
+- **Task**: Fix prd/index.rs Regex expect
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `std::sync::LazyLock` import to `src/prd/index.rs`
+  - Created static `PRD_REFERENCE_PATTERN: LazyLock<Regex>` constant for pre-compiled regex pattern
+  - Updated `extract_prd_references()` function to use the static regex instead of inline compilation
+  - Removed the TODO comment and `#[allow(clippy::unwrap_used)]` attribute from the function
+  - UAT passed: 360 tests, all passing
+- **Rationale**: Using `LazyLock` ensures the regex is compiled exactly once at first use. The `expect()` on a known-valid pattern is acceptable since compilation failure is a programmer error (the pattern is constant and valid).
+- **Constitution Compliance**: No violations. Changes were minimal and focused on the specific expect issue.

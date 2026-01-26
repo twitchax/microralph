@@ -5,11 +5,16 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use regex::Regex;
 
 use super::{Prd, PrdStatus, UatStatus, parse_prd_file};
+
+/// Pre-compiled regex pattern for extracting PRD references (e.g., "PRD-0001").
+static PRD_REFERENCE_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"PRD-\d{4}").expect("PRD reference regex pattern is valid"));
 
 /// Summary of a PRD for the index.
 #[derive(Debug, Clone)]
@@ -106,13 +111,9 @@ impl PrdSummary {
 ///
 /// A sorted vector of unique PRD IDs found in the body.
 fn extract_prd_references(body: &str, self_id: &str) -> Vec<String> {
-    // TODO(T-006): Use lazy_static or propagate error.
-    #[allow(clippy::unwrap_used)]
-    let re = Regex::new(r"PRD-\d{4}").expect("Invalid regex pattern");
-
     let mut refs: HashSet<String> = HashSet::new();
 
-    for cap in re.find_iter(body) {
+    for cap in PRD_REFERENCE_PATTERN.find_iter(body) {
         let prd_id = cap.as_str().to_string();
 
         if prd_id != self_id {
