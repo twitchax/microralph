@@ -81,16 +81,16 @@ mr refactor --stream
 
 ### Flags Reference
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--max` | 3 | Maximum number of refactor iterations |
-| `--context` | None | Focus hint for the agent (takes priority over constitution) |
-| `--path` | None | Constrain scope to specific directory/file pattern |
-| `--dry-run` | false | Preview suggestions without applying changes |
-| `--no-commit` | false | Leave changes uncommitted for manual review |
-| `--runner` | copilot | Runner to use (copilot, claude) |
-| `--model` | None | Model override for the runner |
-| `--stream` | false | Stream runner output in real-time |
+| Flag          | Default | Description                                                 |
+| ------------- | ------- | ----------------------------------------------------------- |
+| `--max`       | 3       | Maximum number of refactor iterations                       |
+| `--context`   | None    | Focus hint for the agent (takes priority over constitution) |
+| `--path`      | None    | Constrain scope to specific directory/file pattern          |
+| `--dry-run`   | false   | Preview suggestions without applying changes                |
+| `--no-commit` | false   | Leave changes uncommitted for manual review                 |
+| `--runner`    | copilot | Runner to use (copilot, claude)                             |
+| `--model`     | None    | Model override for the runner                               |
+| `--stream`    | false   | Stream runner output in real-time                           |
 
 ### Termination Signals
 
@@ -290,20 +290,20 @@ cargo make github-release v0.1.0 --draft  # Create as draft
 
 ### Release Tasks Reference
 
-| Task                   | Description                                                              |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `release`              | Fully automated: CI → changelog → bump → commit → push → wait/download   |
-| `release-bump`         | Bumps version using cargo-release                                        |
-| `publish-all <tag>`    | Publishes to crates.io and creates GitHub release in one go              |
-| `changelog`            | Generates CHANGELOG.md from conventional commits                         |
-| `publish-crates`       | Publishes to crates.io with pre-publish checks                           |
-| `github-release <tag>` | Creates GitHub release with artifacts                                    |
-| `build-linux`          | Builds Linux x86_64 binary                                     |
-| `build-macos`          | Builds macOS ARM binary                                        |
-| `build-windows`        | Builds Windows x86_64 binary                                   |
-| `build-wasm`           | Builds WASM32-WASIP2 binary                                    |
-| `build-oci`            | Alias for build-wasm (for OCI publishing)                      |
-| `publish-oci`          | Publishes WASM binary to GitHub Container Registry             |
+| Task                   | Description                                                            |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `release`              | Fully automated: CI → changelog → bump → commit → push → wait/download |
+| `release-bump`         | Bumps version using cargo-release                                      |
+| `publish-all <tag>`    | Publishes to crates.io and creates GitHub release in one go            |
+| `changelog`            | Generates CHANGELOG.md from conventional commits                       |
+| `publish-crates`       | Publishes to crates.io with pre-publish checks                         |
+| `github-release <tag>` | Creates GitHub release with artifacts                                  |
+| `build-linux`          | Builds Linux x86_64 binary                                             |
+| `build-macos`          | Builds macOS ARM binary                                                |
+| `build-windows`        | Builds Windows x86_64 binary                                           |
+| `build-wasm`           | Builds WASM32-WASIP2 binary                                            |
+| `build-oci`            | Alias for build-wasm (for OCI publishing)                              |
+| `publish-oci`          | Publishes WASM binary to GitHub Container Registry                     |
 
 ## Dev Container Workflow
 
