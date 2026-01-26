@@ -60,6 +60,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update DEFAULT_CONFIG with commented no_commit option
 - Add unit tests for config parsing and precedence logic
 - Prd(PRD-0020)feat(T-002): Add commit conditional to prompt templates
+- Prd(PRD-0022)feat(T-001): Add Refactor subcommand to main.rs CLI
+
+- Add Refactor variant to Command enum with flags:
+  --max, --context, --path, --dry-run, --no-commit, --runner, --model, --stream
+- Add match arm and stub cmd_refactor() function
+- Add CLI parsing tests for refactor command
+- Opportunistically verify UATs 1-4 (all CLI flag tests pass)
+- Update PRD status to active, T-001 to done
+- Prd(PRD-0022)feat(T-002): implement refactor command loop logic
+
+- Create refactor.rs module with RefactorConfig, loop logic, and result types
+- Add Refactor variant to PromptKind enum
+- Add PROMPT_REFACTOR constant with constitution/context/path support
+- Implement early termination via NO-MORE-REFACTORS signal
+- Implement preview mode via PREVIEW-COMPLETE signal
+- Add unit tests for signal detection and prompt building
+- Wire up cmd_refactor in main.rs to use refactor::refactor()
+- Update file count assertions for new prompt (21→22 files, 16→17 prompts)
+
+Tasks completed: T-002, T-003, T-004, T-005, T-006
+UAT: cargo make uat passes (340 tests)
+- Prd(PRD-0022)feat(T-007): document refactor command workflow in AGENTS.md
+- Prd(PRD-0022)uat(uat-005): test early termination loop behavior
+- Prd(PRD-0022)uat(uat-006): verify --no-commit flag in refactor prompt
+
+- Add test_build_refactor_prompt_no_commit_true/false tests
+- Fix template bug: {{#unless}} not supported, use {{#if no_commit}}
+- Add no_commit variable to prompt context
+- All 343 tests pass
+- Prd(PRD-0022)uat(uat-007): verify CI passes after refactor implementation
+- Prd(PRD-0021)feat(T-001): Update README install to kord pattern with target triples
+- Prd(PRD-0021)feat(T-002): verify github-release attaches zipped artifacts
+- Prd(PRD-0021)feat(T-003): fix Windows PowerShell install instructions
+- Prd(PRD-0021)finalize: Complete binary zip release workflow
 
 ## [0.2.0] - 2026-01-25
 

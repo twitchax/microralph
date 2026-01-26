@@ -302,6 +302,7 @@ echo "  3. Commit changes: git add . && git commit -m \"chore: prepare release\"
 echo "  4. Push to trigger CI: git push"
 echo "  5. Download artifacts: gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
 echo "  6. Publish: cargo make publish-all <version-tag>"
+echo "  7. GH Release: cargo make github-release <version-tag> [--draft]"
 '''
 
 [tasks.publish-all]
