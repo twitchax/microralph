@@ -53,7 +53,7 @@ tasks:
   - id: T-006
     title: Update AGENTS.md with new prompt/constitution philosophy if needed
     priority: 6
-    status: todo
+    status: done
     notes: Document the "what to do vs how to behave" boundary
 ---
 
@@ -192,6 +192,18 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - `run_task_finalize.md` now has only workflow-specific constraints
   - `run_uat_verify.md` now has only workflow-specific constraints
   - `prd_edit.md` now has only structural constraints
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
+
+## 2026-01-26 — T-006 Completed
+- **Task**: Update AGENTS.md with new prompt/constitution philosophy if needed
+- **Status**: ✅ Done
+- **Changes**:
+  - Added new "Prompt vs Constitution Philosophy" section to AGENTS.md (before "Conventions for Agents")
+  - Documented the separation: prompts define "what to do" (workflow), constitution defines "how to behave" (behavioral rules)
+  - Added "Customization Guide" subsection explaining how to modify behavior globally vs per-workflow
+  - Explained the `mr restore` command for resetting to defaults
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations

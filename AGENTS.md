@@ -92,6 +92,21 @@ cargo make test
 cargo make ci
 ```
 
+## Prompt vs Constitution Philosophy
+
+microralph separates agent guidance into two distinct concerns:
+
+- **Prompts** (`.mr/prompts/`): Define **what to do** — workflow steps, required actions, and task-specific constraints. Prompts are operational and workflow-focused.
+- **Constitution** (`.mr/constitution.md`): Defines **how to behave** — behavioral rules, coding principles, and project-wide constraints like DRY, minimal changes, and consistency.
+
+This separation provides a single source of truth for agent behavior. To change how agents behave across all workflows, edit the constitution. Individual prompts remain focused on their specific workflow without duplicating behavioral guidance.
+
+### Customization Guide
+
+- **Change agent behavior globally**: Edit `.mr/constitution.md` only
+- **Change a specific workflow**: Edit the relevant prompt in `.mr/prompts/`
+- **Reset to defaults**: Run `mr restore` to overwrite prompts and templates with built-in defaults
+
 ## Conventions for Agents
 
 - Keep changes minimal and focused; avoid unrelated refactors.
