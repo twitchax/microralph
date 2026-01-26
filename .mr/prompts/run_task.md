@@ -35,7 +35,11 @@ This project has a constitution that defines governance rules and constraints. Y
 6. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
 7. **Update the PRD file** (see below for details).
 8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
+{{#if commit}}
 9. **Commit your work** with a descriptive commit message.
+{{else}}
+9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}
 
 ## Updating the PRD
 
@@ -119,7 +123,11 @@ If `cargo make uat` passes:
 1. Update task status to `done` in the PRD frontmatter.
 2. Append a success History entry.
 3. Regenerate `.mr/PRDS.md` to reflect new progress.
+{{#if commit}}
 4. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
+{{else}}
+4. Do NOT commit — leave changes for manual review.
+{{/if}}
 
 ## On Failure
 
@@ -127,7 +135,11 @@ If `cargo make uat` fails:
 1. Leave task status as `todo` or `in-progress`.
 2. Append a failure History entry describing what was attempted and what failed.
 3. Do NOT regenerate the index (status unchanged).
+{{#if commit}}
 4. Do NOT commit (leave changes for next attempt or manual review).
+{{else}}
+4. Leave changes uncommitted for next attempt or manual review.
+{{/if}}
 
 ## Output
 

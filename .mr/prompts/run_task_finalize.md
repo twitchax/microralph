@@ -131,11 +131,16 @@ After appending the history entry, print a summary to stdout for the user.
 ✅ Tasks: N tasks completed (T-001 through T-NNN)
 ✅ Changelog: Entry added under "[Category]" — Brief description
 ✅ Cleanup: [Summary of cleanup or "None required"]
+{{#if commit}}
 ✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+{{else}}
+⏸️ Commit: Skipped (--no-commit flag active) — changes left for manual review
+{{/if}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
+{{#if commit}}
 ### 6. Commit All Changes
 
 After all finalization steps are complete, commit the changes.
@@ -161,6 +166,19 @@ git commit -m "prd({{prd_id}})finalize: [brief description]"
 **Commit message format**: `prd({{prd_id}})finalize: [brief description]`
 
 Example: `prd(PRD-0001)finalize: Complete MVP build with finalization workflow`
+{{else}}
+### 6. Do NOT Commit Changes
+
+**CRITICAL**: Do NOT commit any changes. Leave all modifications staged or unstaged for manual review.
+
+The following files have been updated and should be reviewed before committing:
+1. `.mr/prds/{{prd_id}}-*.md` — The PRD file with your appended history entry
+2. `CHANGELOG.md` — With the new changelog entry you added
+3. `.mr/PRDS.md` — Auto-regenerated with updated PRD status
+4. Any other files you modified during cleanup
+
+The user will review and commit these changes manually.
+{{/if}}
 
 ---
 
@@ -196,7 +214,11 @@ After completing all steps, print a structured summary to stdout:
 ✅ Tasks: N tasks completed (T-001 through T-NNN)
 ✅ Changelog: Entry added under "[Category]" — Brief description
 ✅ Cleanup: [Summary of cleanup or "None required"]
+{{#if commit}}
 ✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+{{else}}
+⏸️ Commit: Skipped (--no-commit flag active) — changes left for manual review
+{{/if}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```

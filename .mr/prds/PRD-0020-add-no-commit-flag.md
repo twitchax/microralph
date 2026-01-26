@@ -43,7 +43,7 @@ tasks:
 - id: T-002
   title: Add commit conditional to prompt templates
   priority: 2
-  status: todo
+  status: done
   notes: Update run_task.md and run_task_finalize.md with `{{#if commit}}` blocks. When commit=true, show existing commit instructions. When commit=false, show "Do NOT commit" instructions.
 - id: T-003
   title: Thread no_commit flag through run module
@@ -113,5 +113,25 @@ Currently, `mr run` and `mr finalize` prompts instruct the agent to commit chang
 - **Opportunistic UAT Verification**:
   - uat-001: Verified (`cargo run -- run --help | grep -q "no-commit"` passed)
   - uat-002: Verified (config parsing tests pass, including `test_config_load_with_no_commit`)
+
+---
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Add commit conditional to prompt templates
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `.mr/prompts/run_task.md` with `{{#if commit}}` blocks:
+    - Step 9 (commit instruction) now conditionally shows commit or "Do NOT commit" instruction
+    - On Success section step 4 conditionally shows commit message format or "Do NOT commit"
+    - On Failure section step 4 updated with conditional wording
+  - Updated `.mr/prompts/run_task_finalize.md` with `{{#if commit}}` blocks:
+    - Step 5 summary format shows commit status or "Skipped" message
+    - Step 6 conditionally shows "Commit All Changes" or "Do NOT Commit Changes" section
+    - Output format at end shows commit status or "Skipped" message
+  - Updated `PROMPT_RUN_TASK` constant in `src/init.rs` to match prompts file
+  - Updated `PROMPT_RUN_TASK_FINALIZE` constant in `src/init.rs` to match prompts file
+  - UAT passed: `cargo make uat` succeeded (331 tests passed)
+
+- **Constitution Compliance**: No violations. Per rule 7, embedded prompts in `init.rs` were synchronized with `.mr/prompts/` files.
 
 ---

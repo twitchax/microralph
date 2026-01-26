@@ -632,7 +632,11 @@ This project has a constitution that defines governance rules and constraints. Y
 6. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
 7. **Update the PRD file** (see below for details).
 8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
+{{#if commit}}
 9. **Commit your work** with a descriptive commit message.
+{{else}}
+9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
+{{/if}}
 
 ## Updating the PRD
 
@@ -716,7 +720,11 @@ If `cargo make uat` passes:
 1. Update task status to `done` in the PRD frontmatter.
 2. Append a success History entry.
 3. Regenerate `.mr/PRDS.md` to reflect new progress.
+{{#if commit}}
 4. Commit all changes with message: `prd({{prd_id}})feat({{next_task_id}}): [brief description]`
+{{else}}
+4. Do NOT commit — leave changes for manual review.
+{{/if}}
 
 ## On Failure
 
@@ -724,7 +732,11 @@ If `cargo make uat` fails:
 1. Leave task status as `todo` or `in-progress`.
 2. Append a failure History entry describing what was attempted and what failed.
 3. Do NOT regenerate the index (status unchanged).
+{{#if commit}}
 4. Do NOT commit (leave changes for next attempt or manual review).
+{{else}}
+4. Leave changes uncommitted for next attempt or manual review.
+{{/if}}
 
 ## Output
 
@@ -869,11 +881,16 @@ After appending the history entry, print a summary to stdout for the user.
 ✅ Tasks: N tasks completed (T-001 through T-NNN)
 ✅ Changelog: Entry added under "[Category]" — Brief description
 ✅ Cleanup: [Summary of cleanup or "None required"]
+{{#if commit}}
 ✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+{{else}}
+⏸️ Commit: Skipped (--no-commit flag active) — changes left for manual review
+{{/if}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
+{{#if commit}}
 ### 6. Commit All Changes
 
 After all finalization steps are complete, commit the changes.
@@ -899,6 +916,19 @@ git commit -m "prd({{prd_id}})finalize: [brief description]"
 **Commit message format**: `prd({{prd_id}})finalize: [brief description]`
 
 Example: `prd(PRD-0001)finalize: Complete MVP build with finalization workflow`
+{{else}}
+### 6. Do NOT Commit Changes
+
+**CRITICAL**: Do NOT commit any changes. Leave all modifications staged or unstaged for manual review.
+
+The following files have been updated and should be reviewed before committing:
+1. `.mr/prds/{{prd_id}}-*.md` — The PRD file with your appended history entry
+2. `CHANGELOG.md` — With the new changelog entry you added
+3. `.mr/PRDS.md` — Auto-regenerated with updated PRD status
+4. Any other files you modified during cleanup
+
+The user will review and commit these changes manually.
+{{/if}}
 
 ---
 
@@ -934,7 +964,11 @@ After completing all steps, print a structured summary to stdout:
 ✅ Tasks: N tasks completed (T-001 through T-NNN)
 ✅ Changelog: Entry added under "[Category]" — Brief description
 ✅ Cleanup: [Summary of cleanup or "None required"]
+{{#if commit}}
 ✅ Commit: [commit_hash] — prd({{prd_id}})finalize: [description]
+{{else}}
+⏸️ Commit: Skipped (--no-commit flag active) — changes left for manual review
+{{/if}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
