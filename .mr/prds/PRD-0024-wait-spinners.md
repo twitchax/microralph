@@ -70,7 +70,7 @@ tasks:
   - id: T-006
     title: Integrate spinner into mr suggest command
     priority: 6
-    status: todo
+    status: done
     notes: Show analyzing spinner during AI generation phase.
   - id: T-007
     title: Integrate spinner into mr finalize command
@@ -185,6 +185,18 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Spinner clears before output is processed via `finish_and_clear()`
   - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
   - Architecture mirrors T-003: each iteration creates a fresh spinner, which automatically resets between iterations
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-006 Completed
+- **Task**: Integrate spinner into mr suggest command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `use crate::spinner::start_spinner;` import to `src/suggest.rs`
+  - Integrated spinner in `suggest()` function with message "Analyzing codebase..."
+  - Spinner always enabled (suggest command doesn't have streaming option; TTY detection handled by spinner module)
+  - Spinner clears before displaying parsed suggestions via `finish_and_clear()`
   - UAT passed: 348 tests run, 348 passed
 
 ---

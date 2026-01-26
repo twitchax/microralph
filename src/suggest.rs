@@ -16,6 +16,7 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
+use crate::spinner::start_spinner;
 
 /// A single PRD suggestion from the AI.
 #[derive(Debug, Clone)]
@@ -64,10 +65,16 @@ where
     println!("{}", colors::info("Generating suggestions..."));
     println!();
 
+    // Start spinner during AI generation phase (always enabled since suggest doesn't stream).
+    let spinner = start_spinner(true, "Analyzing codebase...");
+
     // Invoke the runner.
     let result = runner
         .execute(&expanded_prompt, root)
         .context("Runner failed during suggestion generation")?;
+
+    // Clear spinner before displaying output.
+    spinner.finish_and_clear();
 
     if !result.success {
         bail!("Runner failed to generate suggestions: {}", result.text);
