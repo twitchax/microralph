@@ -19,7 +19,7 @@ acceptance_tests:
   - id: uat-002
     name: Constitution has comprehensive behavior rules (under 10 rules)
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: Prompts are workflow-focused with no philosophy or opinion
     command: cargo make uat
@@ -215,3 +215,13 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - Searched .mr/prompts/ and src/init.rs for "don't modify unrelated" and "unrelated code" patterns
   - No matches found in any prompt files
   - All 324 tests passed (cargo make uat)
+
+## 2026-01-26 — uat-002 Verification
+- **UAT**: Constitution has comprehensive behavior rules (under 10 rules)
+- **Status**: ✅ Verified
+- **Method**: New test created
+- **Details**:
+  - Added `test_constitution_template_has_under_10_rules()` to `src/init.rs`
+  - Test counts numbered rules (pattern: "N. **Rule**") and verifies count > 0 and < 10
+  - Default template has 6 rules; project constitution has 7 rules
+  - All 325 tests passed (cargo make uat)

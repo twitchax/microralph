@@ -2048,6 +2048,25 @@ mod tests {
     }
 
     #[test]
+    fn test_constitution_template_has_under_10_rules() {
+        // UAT: Constitution has comprehensive behavior rules (under 10 rules)
+        // Count numbered rules in the template (pattern: "N. **Rule Name**")
+        let rule_count = CONSTITUTION_TEMPLATE
+            .lines()
+            .filter(|line| {
+                let trimmed = line.trim();
+                trimmed.starts_with(|c: char| c.is_ascii_digit()) && trimmed.contains(". **")
+            })
+            .count();
+
+        assert!(rule_count > 0, "Constitution should have at least one rule");
+        assert!(
+            rule_count < 10,
+            "Constitution should have fewer than 10 rules, found {rule_count}"
+        );
+    }
+
+    #[test]
     fn test_prompts_contain_placeholders() {
         // Round 1 questions should have slug placeholder.
         assert!(PROMPT_PRD_NEW_ROUND1.contains("{{slug}}"));
