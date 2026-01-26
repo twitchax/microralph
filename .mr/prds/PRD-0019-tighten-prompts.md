@@ -15,7 +15,7 @@ acceptance_tests:
   - id: uat-001
     name: All scattered "don't modify unrelated code" instances removed from prompts
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: Constitution has comprehensive behavior rules (under 10 rules)
     command: cargo make uat
@@ -207,3 +207,11 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations
+## 2026-01-26 — uat-001 Verification
+- **UAT**: All scattered "don't modify unrelated code" instances removed from prompts
+- **Status**: ✅ Verified
+- **Method**: Existing implementation verified via grep search
+- **Details**:
+  - Searched .mr/prompts/ and src/init.rs for "don't modify unrelated" and "unrelated code" patterns
+  - No matches found in any prompt files
+  - All 324 tests passed (cargo make uat)
