@@ -287,22 +287,82 @@ run_task = { name = [
 ], fork = false }
 
 [tasks.release]
+# Fully automated release: CI → changelog → bump → commit → push → wait for artifacts
 cwd = "."
 workspace = false
-dependencies = ["ci", "release-builds"]
+dependencies = ["ci", "changelog", "install-cargo-release"]
 script_runner = "@shell"
-script = '''
+script = '''#!/bin/bash
+set -e
+
 echo ""
-echo "✅ Release build complete!"
+echo "🚀 Starting automated release pipeline..."
+echo ""
+
+# Step 1: Version bump (cargo-release determines version from commits)
+echo "📦 Step 1/5: Bumping version..."
+cargo release --workspace --no-publish --execute
+
+# Step 2: Extract new version from Cargo.toml
+VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+echo "   → New version: v$VERSION"
+
+# Step 3: Commit changes
+echo ""
+echo "📝 Step 2/5: Committing changes..."
+git add .
+git commit -m "chore: release v$VERSION" || echo "   → No changes to commit (already committed by cargo-release)"
+
+# Step 4: Push to trigger CI
+echo ""
+echo "🚀 Step 3/5: Pushing to remote..."
+git push
+git push --tags
+
+# Step 5: Wait for CI and download artifacts
+echo ""
+echo "⏳ Step 4/5: Waiting for CI workflow to complete..."
+echo "   This may take a few minutes..."
+
+# Get the latest workflow run ID for the build workflow
+sleep 5  # Give GitHub a moment to register the push
+RUN_ID=""
+for i in {1..60}; do
+    RUN_ID=$(gh run list --branch main --workflow build.yml --limit 1 --json databaseId,status --jq '.[0] | select(.status != "completed") | .databaseId' 2>/dev/null || echo "")
+    if [ -n "$RUN_ID" ]; then
+        break
+    fi
+    sleep 2
+done
+
+if [ -z "$RUN_ID" ]; then
+    # Try to get the most recent completed run
+    RUN_ID=$(gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+fi
+
+if [ -n "$RUN_ID" ]; then
+    echo "   → Workflow run ID: $RUN_ID"
+    gh run watch "$RUN_ID" --exit-status || {
+        echo "❌ CI failed! Check the workflow at:"
+        echo "   https://github.com/twitchax/microralph/actions/runs/$RUN_ID"
+        exit 1
+    }
+    
+    echo ""
+    echo "📥 Step 5/5: Downloading artifacts..."
+    rm -rf release-artifacts
+    gh run download "$RUN_ID" --dir release-artifacts
+    echo "   → Artifacts downloaded to release-artifacts/"
+else
+    echo "⚠️  Could not find workflow run. Download artifacts manually with:"
+    echo "   gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
+fi
+
+echo ""
+echo "✅ Release pipeline complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Review CHANGELOG.md"
-echo "  2. Bump version: cargo make release-bump"
-echo "  3. Commit changes: git add . && git commit -m \"chore: prepare release\""
-echo "  4. Push to trigger CI: git push"
-echo "  5. Download artifacts: gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | xargs -I {} gh run download {} --dir release-artifacts"
-echo "  6. Publish: cargo make publish-all <version-tag>"
-echo "  7. GH Release: cargo make github-release <version-tag> [--draft]"
+echo "  1. Publish: cargo make publish-all v$VERSION"
 '''
 
 [tasks.publish-all]

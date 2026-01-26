@@ -242,28 +242,25 @@ cargo make devcontainer
 
 ## Release Workflow
 
-microralph uses a multi-step release process powered by cargo-make tasks. There are two main workflows: **unified** (recommended) and **manual** (for advanced scenarios).
+microralph uses a fully automated release process powered by cargo-make tasks.
 
-### Unified Release Workflow (Recommended)
+### Automated Release (Recommended)
 
 ```bash
-# Step 1: Prepare release (runs CI, builds all targets, generates changelog)
+# Single command: CI → changelog → bump → commit → push → wait for artifacts
 cargo make release
 
-# Step 2: Review CHANGELOG.md, bump version, commit and push
-cargo make release-bump   # Bumps version with cargo-release
-git add .
-git commit -m "chore: prepare release vX.Y.Z"
-git push
-
-# Step 3: Wait for CI to complete, then download artifacts
-gh run list --branch main --workflow build.yml --limit 1 --json databaseId --jq '.[0].databaseId' | \
-  xargs -I {} gh run download {} --dir release-artifacts
-
-# Step 4: Publish to crates.io and create GitHub release in one command
+# After artifacts are downloaded, publish:
 cargo make publish-all vX.Y.Z
-# Or create draft: cargo make publish-all vX.Y.Z --draft
 ```
+
+The `release` task automatically:
+1. Runs full CI pipeline (fmt, clippy, test)
+2. Generates changelog with git-cliff
+3. Bumps version using cargo-release
+4. Commits and pushes changes (including tags)
+5. Waits for GitHub Actions to complete
+6. Downloads artifacts to `release-artifacts/`
 
 ### Manual Release Workflow (Advanced)
 
@@ -293,14 +290,14 @@ cargo make github-release v0.1.0 --draft  # Create as draft
 
 ### Release Tasks Reference
 
-| Task                   | Description                                                    |
-| ---------------------- | -------------------------------------------------------------- |
-| `release`              | Unified task: runs CI, builds all targets, generates changelog |
-| `release-bump`         | Bumps version using cargo-release (formerly just `release`)    |
-| `publish-all <tag>`    | Publishes to crates.io and creates GitHub release in one go    |
-| `changelog`            | Generates CHANGELOG.md from conventional commits               |
-| `publish-crates`       | Publishes to crates.io with pre-publish checks                 |
-| `github-release <tag>` | Creates GitHub release with artifacts                          |
+| Task                   | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| `release`              | Fully automated: CI → changelog → bump → commit → push → wait/download   |
+| `release-bump`         | Bumps version using cargo-release                                        |
+| `publish-all <tag>`    | Publishes to crates.io and creates GitHub release in one go              |
+| `changelog`            | Generates CHANGELOG.md from conventional commits                         |
+| `publish-crates`       | Publishes to crates.io with pre-publish checks                           |
+| `github-release <tag>` | Creates GitHub release with artifacts                                    |
 | `build-linux`          | Builds Linux x86_64 binary                                     |
 | `build-macos`          | Builds macOS ARM binary                                        |
 | `build-windows`        | Builds Windows x86_64 binary                                   |
