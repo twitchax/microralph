@@ -253,6 +253,7 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

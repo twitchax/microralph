@@ -1,3 +1,7 @@
+// Deny unwrap_used in production code to ensure proper error handling.
+// Test code and mock runner are allowed to use unwrap via #[cfg(test)] and module-level allows.
+#![deny(clippy::unwrap_used)]
+
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::Path;
@@ -1834,6 +1838,7 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

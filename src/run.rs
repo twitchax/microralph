@@ -765,6 +765,7 @@ pub fn run_uat_verification_loop(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::prd::{PrdFrontmatter, Task};

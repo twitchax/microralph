@@ -168,6 +168,7 @@ pub fn load_prompt_with_fallback(root: impl AsRef<Path>, kind: PromptKind) -> St
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

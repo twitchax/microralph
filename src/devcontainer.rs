@@ -51,6 +51,7 @@ pub fn show_dev_container_warning() {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::env;

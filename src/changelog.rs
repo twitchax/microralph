@@ -70,6 +70,7 @@ pub fn ensure_changelog_exists(root: impl AsRef<Path>) -> Result<EnsureChangelog
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

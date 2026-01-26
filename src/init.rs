@@ -2075,6 +2075,7 @@ pub fn is_initialized(root: impl AsRef<Path>) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

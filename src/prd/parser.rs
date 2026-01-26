@@ -120,6 +120,7 @@ fn split_frontmatter(content: &str) -> Result<(String, String)> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::prd::types::{PrdStatus, TaskStatus};

@@ -172,6 +172,7 @@ fn extract_first_number(s: &str) -> Option<usize> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

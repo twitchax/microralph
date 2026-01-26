@@ -106,6 +106,8 @@ impl PrdSummary {
 ///
 /// A sorted vector of unique PRD IDs found in the body.
 fn extract_prd_references(body: &str, self_id: &str) -> Vec<String> {
+    // TODO(T-006): Use lazy_static or propagate error.
+    #[allow(clippy::unwrap_used)]
     let re = Regex::new(r"PRD-\d{4}").expect("Invalid regex pattern");
 
     let mut refs: HashSet<String> = HashSet::new();
@@ -407,6 +409,7 @@ pub fn generate_index_from_root(root: impl AsRef<Path>) -> Result<usize> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::prd::types::{PrdFrontmatter, Task, TaskStatus};

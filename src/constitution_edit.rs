@@ -223,6 +223,7 @@ fn build_constitution_edit_prompt(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::runner::MockRunner;

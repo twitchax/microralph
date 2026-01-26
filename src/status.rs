@@ -367,6 +367,7 @@ pub fn format_status(report: &StatusReport) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::prd::{PrdFrontmatter, Task, TaskStatus};

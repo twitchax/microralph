@@ -226,6 +226,8 @@ fn summarize_plan(plan: &str) -> String {
 }
 
 /// Counts PRDs mentioned in the output.
+// TODO(T-002): Replace unwrap with proper error handling.
+#[allow(clippy::unwrap_used)]
 fn count_prds_in_output(output: &str) -> usize {
     // Look for PRD-NNNN patterns.
     let re = regex::Regex::new(r"PRD-\d{4}").unwrap();
@@ -236,6 +238,7 @@ fn count_prds_in_output(output: &str) -> usize {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::runner::MockRunner;

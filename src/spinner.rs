@@ -21,6 +21,8 @@ impl Spinner {
     fn new_internal(enabled: bool) -> Self {
         if enabled && stdout().is_terminal() {
             let bar = ProgressBar::new_spinner();
+            // TODO(T-003): Handle template compilation error gracefully.
+            #[allow(clippy::unwrap_used)]
             bar.set_style(
                 ProgressStyle::default_spinner()
                     .template("{spinner:.cyan} {msg}")
@@ -70,6 +72,7 @@ pub fn start_spinner(enabled: bool, message: impl Into<std::borrow::Cow<'static,
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

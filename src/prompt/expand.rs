@@ -363,6 +363,7 @@ fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

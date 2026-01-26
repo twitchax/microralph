@@ -300,6 +300,7 @@ pub fn refactor(config: &RefactorConfig, runner: &dyn Runner) -> Result<Refactor
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

@@ -207,6 +207,8 @@ fn analyze_codebase(root: &Path) -> Result<String> {
     for entry in std::fs::read_dir(root).context("Failed to read repository directory")? {
         let entry = entry?;
         let path = entry.path();
+        // TODO(T-004): Handle missing file name with proper error.
+        #[allow(clippy::unwrap_used)]
         let name = path.file_name().unwrap().to_string_lossy();
 
         // Skip hidden files and target/build directories.
@@ -330,6 +332,8 @@ fn parse_suggestions(text: &str) -> Result<Vec<Suggestion>> {
             .strip_prefix(|c: char| c.is_numeric())
             .and_then(|s| s.strip_prefix(". "))
         {
+            // TODO(T-005): Add proper validation for char parsing.
+            #[allow(clippy::unwrap_used)]
             let number = line.chars().next().unwrap().to_digit(10).unwrap() as usize;
 
             // Parse title and description from "Title — Description".
@@ -440,6 +444,7 @@ fn generate_slug(title: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::init;

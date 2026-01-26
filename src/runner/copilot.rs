@@ -372,6 +372,7 @@ impl Runner for CopilotRunner {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

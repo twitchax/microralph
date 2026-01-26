@@ -136,6 +136,7 @@ pub fn load_constitution(root: &Path) -> Result<Option<String>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

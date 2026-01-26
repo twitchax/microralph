@@ -1,4 +1,7 @@
 //! Mock runner for testing.
+//!
+//! This module is test infrastructure, so unwrap usage is acceptable.
+#![allow(clippy::unwrap_used)]
 
 use std::collections::VecDeque;
 use std::path::Path;
