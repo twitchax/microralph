@@ -30,13 +30,12 @@ This project has a constitution that defines governance rules and constraints. Y
 1. **Study the README** at the repository root to understand the project's purpose, conventions, and development workflow.
 2. **Study the PRD** at `{{prd_path}}` and understand it fully, including goals, constraints, and task history.
 3. **Identify the task** `{{next_task_id}}` and its requirements.
-4. **Implement the task** as described, making minimal and focused changes.
-5. **Follow existing patterns** and conventions in the codebase.
-6. **Run `cargo make uat`** to verify all acceptance tests pass.
-7. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
-8. **Update the PRD file** (see below for details).
-9. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
-10. **Commit your work** with a descriptive commit message.
+4. **Implement the task** as described.
+5. **Run `cargo make uat`** to verify all acceptance tests pass.
+6. **Update AGENTS.md** if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
+7. **Update the PRD file** (see below for details).
+8. **Regenerate the index** by running: `cargo run -- list` (or manually update `.mr/PRDS.md`).
+9. **Commit your work** with a descriptive commit message.
 
 ## Updating the PRD
 
@@ -101,11 +100,7 @@ This reduces work during the final UAT verification loop and catches issues earl
 
 ## Constraints
 
-- Do not modify unrelated code.
-- Do not change the public API unless the task requires it.
-- Prefer fixing root causes over surface workarounds.
 - Always update the PRD even if the task fails (document what was attempted).
-- **DRY (Don't Repeat Yourself)**: Extract common logic into reusable functions or modules. Avoid duplicating code across files or within the same file. If you find yourself copying code, consider creating a shared helper or abstraction.
 
 ## When All Tasks Are Done
 

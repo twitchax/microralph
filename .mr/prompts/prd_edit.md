@@ -32,7 +32,6 @@ The user wants to modify the PRD at `{{prd_path}}`.
 2. **Analyze the PRD**: Review the current PRD content.
 3. **Apply changes**: Make the requested modifications.
 4. **Preserve structure**: Keep the YAML frontmatter valid and the Markdown body properly formatted.
-5. **Minimize changes**: Only modify what's necessary to fulfill the request.
 
 ## Constraints
 
@@ -41,7 +40,6 @@ The user wants to modify the PRD at `{{prd_path}}`.
 - Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
 - If adding tasks, assign appropriate IDs (T-NNN) and priorities.
 - If adding acceptance tests, assign appropriate IDs (uat-NNN).
-- **DRY (Don't Repeat Yourself)**: When adding new tasks, check if similar work exists in other PRDs. Consider creating dependencies rather than duplicating implementation work.
 
 ## Output Format
 

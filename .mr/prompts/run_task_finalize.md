@@ -178,9 +178,7 @@ Ensure these documents are up-to-date:
 
 - **No new features**: This is finalization only — polish and documentation
 - **No breaking changes**: The codebase should be in a releasable state
-- **Minimal changes**: Only make changes required for finalization
 - **Concise entries**: Changelog and history entries should be brief but complete
-- **DRY (Don't Repeat Yourself)**: When cleaning up, consolidate any duplicated code you find. Extract repeated patterns into reusable functions before finalizing.
 
 ---
 

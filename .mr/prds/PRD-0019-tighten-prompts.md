@@ -48,7 +48,7 @@ tasks:
   - id: T-005
     title: Test updated prompts and constitution with mr restore
     priority: 5
-    status: todo
+    status: done
     notes: Verify prompts are tighter and constitution is comprehensive
   - id: T-006
     title: Update AGENTS.md with new prompt/constitution philosophy if needed
@@ -170,6 +170,28 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - Removed 2 constraints from `PROMPT_RUN_UAT_VERIFY`: "don't modify unrelated code" and DRY
   - Removed "Minimize changes" step and DRY from `PROMPT_PRD_EDIT`
   - Kept `STARTER_AGENTS` unchanged (agent guidance is appropriate in AGENTS.md file)
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
+
+## 2026-01-26 — T-005 Completed
+- **Task**: Test updated prompts and constitution with mr restore
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `mr restore` command successfully (17 prompt and template files restored)
+  - Verified all prompts are now workflow-focused without behavioral guidance
+  - Confirmed no occurrences of "DRY", "minimal changes", or "unrelated code" in prompts
+  - Verified constitution template has 6 comprehensive default rules:
+    1. Single Source of Truth (DRY)
+    2. Separation of Concerns
+    3. Minimal Changes
+    4. Consistency
+    5. Public API Stability
+    6. Root Cause Resolution
+  - `run_task.md` Constraints reduced from 4-5 items to 1 item
+  - `run_task_finalize.md` now has only workflow-specific constraints
+  - `run_uat_verify.md` now has only workflow-specific constraints
+  - `prd_edit.md` now has only structural constraints
 
 - **UAT**: ✅ All 324 tests passed
 - **Constitution Compliance**: No violations
