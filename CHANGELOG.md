@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.2.0
 
+### 🔧 Changed
+
+- PRD-0018: Prefer Edit-in-Place for Agent Actions — Shifted file-writing responsibilities from Rust code to agent prompts, removed `append_opt_out_history()` and `update_uat_status()` functions, added YAML frontmatter validation after agent edits
+
 ### 🚀 Features
 
 - Implement static prompt library + placeholder system (T-005)

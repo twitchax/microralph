@@ -1,55 +1,55 @@
 ---
 id: PRD-0018
 title: Prefer Edit-in-Place for Agent Actions
-status: active
+status: done
 owner: microralph
 created: 2026-01-26
 updated: 2026-01-26
 principles:
-  - Agents should own file content; Rust code orchestrates workflows
-  - Index regeneration and init/bootstrap remain Rust-controlled
-  - Validation should warn, not block execution
-  - Existing prompts (run_task.md, run_uat_verify.md) already work correctly
+- Agents should own file content; Rust code orchestrates workflows
+- Index regeneration and init/bootstrap remain Rust-controlled
+- Validation should warn, not block execution
+- Existing prompts (run_task.md, run_uat_verify.md) already work correctly
 references:
-  - name: Constitution Rule on Minimal Changes
-    url: .mr/constitution.md
-  - name: PRD-0012 Enable Constitution
-    url: .mr/prds/enable-constitution.md
+- name: Constitution Rule on Minimal Changes
+  url: .mr/constitution.md
+- name: PRD-0012 Enable Constitution
+  url: .mr/prds/enable-constitution.md
 acceptance_tests:
-  - id: uat-001
-    name: Verify all existing UATs pass after refactoring
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: Verify YAML frontmatter validation emits warnings on malformed PRDs
-    command: cargo test -- --nocapture yaml_validation
-    uat_status: verified
+- id: uat-001
+  name: Verify all existing UATs pass after refactoring
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Verify YAML frontmatter validation emits warnings on malformed PRDs
+  command: cargo test -- --nocapture yaml_validation
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: Audit all runner commands (run, edit, etc.) for Rust-side file writes
-    priority: 1
-    status: done
-    notes: Check run.rs, edit.rs, constitution.rs, etc. for any append_history or similar writes
-  - id: T-002
-    title: Remove Rust code that appends History entries or updates task status
-    priority: 2
-    status: done
-    notes: Except index regeneration (keep) and init/bootstrap (keep)
-  - id: T-003
-    title: Add YAML frontmatter validation after agent edits
-    priority: 3
-    status: done
-    notes: Parse frontmatter, emit warnings if malformed; applies to PRDs and Constitution
-  - id: T-004
-    title: Update prompts if needed to ensure agents edit files correctly
-    priority: 4
-    status: done
-    notes: Review run_task.md, run_uat_verify.md, edit_prd.md, edit_constitution.md, and init.rs
-  - id: T-005
-    title: Run full UAT suite and verify no regressions
-    priority: 5
-    status: done
-    notes: Ensure History entries, task status updates, and UAT verification still work
+- id: T-001
+  title: Audit all runner commands (run, edit, etc.) for Rust-side file writes
+  priority: 1
+  status: done
+  notes: Check run.rs, edit.rs, constitution.rs, etc. for any append_history or similar writes
+- id: T-002
+  title: Remove Rust code that appends History entries or updates task status
+  priority: 2
+  status: done
+  notes: Except index regeneration (keep) and init/bootstrap (keep)
+- id: T-003
+  title: Add YAML frontmatter validation after agent edits
+  priority: 3
+  status: done
+  notes: Parse frontmatter, emit warnings if malformed; applies to PRDs and Constitution
+- id: T-004
+  title: Update prompts if needed to ensure agents edit files correctly
+  priority: 4
+  status: done
+  notes: Review run_task.md, run_uat_verify.md, edit_prd.md, edit_constitution.md, and init.rs
+- id: T-005
+  title: Run full UAT suite and verify no regressions
+  priority: 5
+  status: done
+  notes: Ensure History entries, task status updates, and UAT verification still work
 ---
 
 # Summary
@@ -167,3 +167,15 @@ Currently, Rust code directly appends History entries, updates task status, and 
   - No code changes required - this was a verification task confirming the refactoring from T-001 through T-004 is complete and functional
 
 - **Constitution Compliance**: No violations. This was a verification-only task with no code changes, which aligns with Rule 4 (Minimal Changes).
+
+## 2026-01-26 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 5 tasks (T-001 through T-005)
+- **Outcome**: All tasks completed, acceptance tests passed (324/324 tests)
+- **Changelog**: Entry added under [Changed] — Shifted file-writing to agent prompts, added YAML validation
+- **Cleanup**: None required — no temporary files or debug code found
+- **Summary**:
+  - Removed Rust-side PRD manipulation (`append_opt_out_history`, `update_uat_status`) in favor of agent-driven edits
+  - Added `src/validate.rs` module for YAML frontmatter validation with warning-only behavior
+  - Verified all prompts already correctly instruct agents to edit files in place
+  - All 324 UAT tests pass with no regressions
