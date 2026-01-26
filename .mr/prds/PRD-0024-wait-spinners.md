@@ -39,7 +39,7 @@ acceptance_tests:
   - id: uat-005
     name: Spinner clears before output is displayed
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 
 tasks:
   - id: T-001
@@ -289,3 +289,15 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Test names: `test_spinner_disabled_in_non_tty_environment`, `test_start_spinner_returns_disabled_in_non_tty`
   - These tests verify that `Spinner::new_internal(true)` returns a spinner with `bar: None` in non-TTY environments
   - The implementation in `src/spinner.rs:22` uses `stdout().is_terminal()` to detect TTY and disable spinner when not a TTY
+
+---
+
+## 2026-01-26 — uat-005 Verification
+- **UAT**: Spinner clears before output is displayed
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - Test file: `src/spinner.rs`
+  - Test name: `test_spinner_clear_is_idempotent` verifies `finish_and_clear()` behavior
+  - Workflow simulation tests (`test_spinner_run_task_simulation`, `test_spinner_refactor_iteration_simulation`, etc.) all call `finish_and_clear()` before proceeding
+  - Implementation verified in `run.rs:428`, `refactor.rs:169`, `suggest.rs:77`, `prd_finalize.rs:363`, `reindex.rs:110` — all call `finish_and_clear()` before processing/displaying output
