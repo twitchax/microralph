@@ -69,21 +69,6 @@ pub fn ensure_changelog_exists(root: impl AsRef<Path>) -> Result<EnsureChangelog
     })
 }
 
-/// Reads the contents of CHANGELOG.md.
-///
-/// # Arguments
-///
-/// * `root` - The project root directory.
-///
-/// # Returns
-///
-/// The contents of CHANGELOG.md, or `None` if it doesn't exist.
-pub fn read_changelog(root: impl AsRef<Path>) -> Option<String> {
-    let path = root.as_ref().join("CHANGELOG.md");
-
-    fs::read_to_string(&path).ok()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,24 +104,6 @@ mod tests {
         // Content should be unchanged.
         let content = fs::read_to_string(&changelog_path).unwrap();
         assert_eq!(content, existing_content);
-    }
-
-    #[test]
-    fn test_read_changelog_exists() {
-        let temp = TempDir::new().unwrap();
-        let changelog_path = temp.path().join("CHANGELOG.md");
-
-        fs::write(&changelog_path, "# Test Changelog").unwrap();
-
-        let content = read_changelog(temp.path());
-        assert_eq!(content, Some("# Test Changelog".to_string()));
-    }
-
-    #[test]
-    fn test_read_changelog_not_exists() {
-        let temp = TempDir::new().unwrap();
-        let content = read_changelog(temp.path());
-        assert!(content.is_none());
     }
 
     #[test]

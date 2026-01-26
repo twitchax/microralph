@@ -12,7 +12,7 @@ use thiserror::Error;
 #[cfg(test)]
 use std::io::Write;
 
-use crate::changelog::{ensure_changelog_exists, read_changelog};
+use crate::changelog::ensure_changelog_exists;
 use crate::prd::types::{AcceptanceTest, Task};
 use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
 use crate::prompt::{
@@ -166,11 +166,6 @@ fn build_finalize_prompt(root: &Path, prd: &Prd) -> String {
     ctx.insert("prd_title", prd.title());
     ctx.insert("prd_summary", prd.body.clone());
     ctx.insert("completed_tasks", format_completed_tasks(prd));
-
-    // Read the current changelog content for context.
-    let changelog_content =
-        read_changelog(root).unwrap_or_else(|| "(Changelog not found)".to_string());
-    ctx.insert("changelog_content", changelog_content);
 
     // Load constitution if it exists.
     if let Ok(Some(constitution)) = crate::config::load_constitution(root) {
@@ -648,52 +643,6 @@ mod tests {
         assert!(
             prompt.contains("Task T-001"),
             "Prompt should contain completed task title"
-        );
-    }
-
-    #[test]
-    fn test_build_finalize_prompt_with_changelog() {
-        let temp = tempfile::TempDir::new().unwrap();
-
-        // Create a changelog file.
-        std::fs::write(
-            temp.path().join("CHANGELOG.md"),
-            "# Changelog\n\n## [Unreleased]\n",
-        )
-        .unwrap();
-
-        let frontmatter = PrdFrontmatter {
-            id: "PRD-0002".to_string(),
-            title: "Second PRD".to_string(),
-            tasks: Some(vec![
-                make_task("T-001", TaskStatus::Done),
-                make_task("T-002", TaskStatus::Done),
-            ]),
-            ..Default::default()
-        };
-
-        let prd = Prd::new(frontmatter, "# Summary\n".to_string());
-
-        let prompt = build_finalize_prompt(temp.path(), &prd);
-
-        // Verify changelog content is included.
-        assert!(
-            prompt.contains("# Changelog"),
-            "Prompt should contain changelog content"
-        );
-        assert!(
-            prompt.contains("[Unreleased]"),
-            "Prompt should contain Unreleased section"
-        );
-
-        // Verify both completed tasks are listed.
-        assert!(
-            prompt.contains("**T-001**"),
-            "Prompt should contain first task"
-        );
-        assert!(
-            prompt.contains("**T-002**"),
-            "Prompt should contain second task"
         );
     }
 

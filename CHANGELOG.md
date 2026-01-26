@@ -5,13 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.2.0
+## [Unreleased]
 
-### 🔧 Changed
+### 🚀 Features
 
-- PRD-0020: Add No-Commit Flag — Added `--no-commit` CLI flag and `no_commit` config option to prevent agents from committing changes, allowing manual review before commit. CLI flag supersedes config; default behavior unchanged (commit by default).
-- PRD-0019: Tighten Prompts and Encourage Constitution — Consolidated behavioral guidance into constitution, tightened 16 prompt templates to be workflow-focused, established clear boundary between "what to do" (prompts) and "how to behave" (constitution)
-- PRD-0018: Prefer Edit-in-Place for Agent Actions — Shifted file-writing responsibilities from Rust code to agent prompts, removed `append_opt_out_history()` and `update_uat_status()` functions, added YAML frontmatter validation after agent edits
+- *prd_new*: Add hint about pressing Enter twice to complete answers
+
+### 🐛 Bug Fixes
+
+- *bootstrap*: Enforce numeric priority values in generated PRDs
+
+### 📋 PRD Tasks
+
+- Prd(PRD-0018)feat(T-001): Complete audit of Rust-side file writes
+
+- Audited all source files for file write operations
+- Identified append_opt_out_history() and update_uat_status() in run.rs as removal targets
+- Verified prd_edit.rs and constitution_edit.rs patterns are acceptable
+- Confirmed init/bootstrap and index regeneration remain out-of-scope
+- Updated PRD-0018 status to active, marked T-001 as done
+- All UATs pass with no regressions
+- Prd(PRD-0018)feat(T-002): Remove Rust code that manipulates PRD files
+
+- Removed append_opt_out_history() and update_uat_status() functions
+- Agents now fully responsible for History entries and UAT status updates
+- Updated 4 tests to reflect new agent-driven workflow
+- All UATs pass (318/318 tests)
+- Prd(PRD-0018)feat(T-003): Add YAML frontmatter validation after agent edits
+
+- Created src/validate.rs module with validation functions for PRD and Constitution files
+- Added validation calls in run.rs, prd_edit.rs, and constitution_edit.rs after agent edits
+- Validation emits warnings (not errors) for malformed YAML frontmatter
+- Added comprehensive unit tests for validation functions
+- All 324 UATs pass
+- Opportunistically verified both acceptance tests (uat-001 and uat-002)
+- Prd(PRD-0018)feat(T-004): verify prompts correctly support edit-in-place
+- Prd(PRD-0018)feat(T-005): Run full UAT suite and verify no regressions
+- Prd(PRD-0018)finalize: Prefer Edit-in-Place for Agent Actions
+- Prd(PRD-0019)feat(T-001): Audit prompts for behavioral guidance
+- Prd(PRD-0019)feat(T-002): add public API stability and root cause resolution rules to constitution
+- Prd(PRD-0019)feat(T-003): Update default constitution with 6 comprehensive rules
+- Prd(PRD-0019)feat(T-004): Remove behavioral guidance from prompt templates
+- Prd(PRD-0019)feat(T-005): Test updated prompts and constitution with mr restore
+- Prd(PRD-0019)feat(T-006): Add prompt/constitution philosophy to AGENTS.md
+- Prd(PRD-0019)uat(uat-001): verify no unrelated code guidance in prompts
+- Prd(PRD-0019)uat(uat-002): add test verifying constitution has under 10 rules
+- Prd(PRD-0019)uat(uat-003): Add test for workflow-focused prompts
+- Prd(PRD-0019)finalize: Tighten prompts and consolidate behavior in constitution
+- Prd(PRD-0020)feat(T-001): Add no_commit option to config and CLI args
+
+- Add no_commit: Option<bool> field to Config struct
+- Add effective_no_commit() method with CLI > config > default precedence
+- Add --no-commit flag to Run command in main.rs
+- Update DEFAULT_CONFIG with commented no_commit option
+- Add unit tests for config parsing and precedence logic
+- Prd(PRD-0020)feat(T-002): Add commit conditional to prompt templates
+
+## [0.2.0] - 2026-01-25
+
+## [0.1.0] - 2026-01-25
 
 ### 🚀 Features
 
