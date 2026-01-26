@@ -20,6 +20,7 @@ mod refactor;
 mod reindex;
 mod run;
 mod runner;
+mod spinner;
 mod status;
 mod suggest;
 mod validate;

@@ -50,7 +50,7 @@ tasks:
   - id: T-002
     title: Create spinner utility module
     priority: 2
-    status: todo
+    status: done
     notes: "Create src/spinner.rs with helper functions: start_spinner, update_message, finish_and_clear. Include TTY detection logic using std::io::stdout().is_terminal()."
   - id: T-003
     title: Integrate spinner into mr run command
@@ -131,5 +131,19 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
 - **Changes**:
   - Added `indicatif = "0.17"` to dependencies in Cargo.toml (alphabetically between clap and owo-colors)
   - UAT passed: 344 tests run, 344 passed
+
+---
+
+## 2026-01-26 — T-002 Completed
+- **Task**: Create spinner utility module
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/spinner.rs` with `Spinner` struct and `start_spinner()` function
+  - `Spinner` wraps indicatif's `ProgressBar` with automatic TTY detection via `std::io::stdout().is_terminal()`
+  - Provides `set_message()` and `finish_and_clear()` methods
+  - When stdout is not a TTY (CI, piped output), spinner operations become no-ops
+  - Added module declaration to `main.rs`
+  - Includes 4 unit tests covering disabled/enabled spinners and static/dynamic messages
+  - UAT passed: 348 tests run, 348 passed
 
 ---
