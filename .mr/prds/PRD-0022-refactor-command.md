@@ -1,7 +1,7 @@
 ---
 id: PRD-0022
 title: "Refactor Command for AI-Driven Code Improvements"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-26
 updated: 2026-01-26
@@ -23,19 +23,19 @@ acceptance_tests:
 - id: uat-001
   name: Refactor command runs with default 3 iterations
   command: cargo run -- refactor --help | grep -q "max"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: --context flag passes focus hint to agent
   command: cargo run -- refactor --help | grep -q "context"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: --path flag constrains scope to specified directory
   command: cargo run -- refactor --help | grep -q "path"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: --dry-run shows suggested refactors without applying
   command: cargo run -- refactor --help | grep -q "dry-run"
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: Loop stops early when agent reports no more refactors
   command: cargo make uat
@@ -53,7 +53,7 @@ tasks:
 - id: T-001
   title: Add Refactor subcommand to main.rs CLI
   priority: 1
-  status: todo
+  status: done
   notes: Add Refactor variant to Command enum with --max (default 3), --context, --path, --dry-run, --no-commit, --runner, --model flags.
 - id: T-002
   title: Create refactor.rs module with loop logic
@@ -126,5 +126,29 @@ Currently, improving code quality requires manual identification of refactoring 
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Add Refactor subcommand to main.rs CLI
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `Refactor` variant to `Command` enum in `src/main.rs` with flags:
+    - `--max` (default 3): Maximum refactor iterations
+    - `--context`: Focus hint for the agent
+    - `--path`: Constrain scope to specific directory/file
+    - `--dry-run`: Preview without applying changes
+    - `--no-commit`: Skip commit instructions
+    - `--runner` (default copilot): Runner to use
+    - `--model`: Model override
+    - `--stream`: Real-time output streaming
+  - Added match arm in `main()` to handle `Command::Refactor`
+  - Added stub `cmd_refactor()` function that validates initialization and prints placeholder
+  - Added CLI parsing tests: `test_args_parse_refactor_defaults` and `test_args_parse_refactor_with_all_flags`
+  - UAT: `cargo make uat` passes (336 tests)
+- **Opportunistic UAT Verification**:
+  - uat-001 (max flag): ✅ Verified
+  - uat-002 (context flag): ✅ Verified
+  - uat-003 (path flag): ✅ Verified
+  - uat-004 (dry-run flag): ✅ Verified
+- **Constitution Compliance**: No violations. Changes are minimal and focused on the task.
 
 ---

@@ -199,15 +199,52 @@ enum Command {
         model: Option<String>,
     },
 
-    /// [C] Dev container management commands.
+    /// [H] Run AI-driven iterative refactoring to improve codebase quality.
     #[command(display_order = 11)]
+    Refactor {
+        /// Maximum number of refactor iterations (default: 3).
+        #[arg(long, default_value = "3")]
+        max: u32,
+
+        /// Focus hint for the agent (e.g., "improve error handling", "reduce duplication").
+        /// When provided, prioritized over constitution-based discovery.
+        #[arg(long)]
+        context: Option<String>,
+
+        /// Constrain refactoring scope to a specific directory or file pattern.
+        #[arg(long)]
+        path: Option<String>,
+
+        /// Preview suggested refactors without applying changes.
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Do not instruct the agent to commit changes.
+        #[arg(long)]
+        no_commit: bool,
+
+        /// The runner to use for refactoring.
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner (e.g., "claude-sonnet-4.5").
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
+    },
+
+    /// [C] Dev container management commands.
+    #[command(display_order = 12)]
     Devcontainer {
         #[command(subcommand)]
         command: DevcontainerCommand,
     },
 
     /// [C] Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
-    #[command(display_order = 12)]
+    #[command(display_order = 13)]
     Reindex {
         /// The runner to use for link verification/fixing.
         #[arg(long, default_value = "copilot")]
@@ -223,7 +260,7 @@ enum Command {
     },
 
     /// [C] Constitution management commands.
-    #[command(display_order = 13)]
+    #[command(display_order = 14)]
     Constitution {
         #[command(subcommand)]
         command: ConstitutionCommand,
@@ -345,6 +382,37 @@ fn main() -> Result<()> {
         Some(Command::Suggest { runner, model }) => {
             tracing::info!(runner = %runner, "Generating PRD suggestions...");
             cmd_suggest(&runner, model.as_deref())?;
+        }
+        Some(Command::Refactor {
+            max,
+            context,
+            path,
+            dry_run,
+            no_commit,
+            runner,
+            model,
+            stream,
+        }) => {
+            tracing::info!(
+                runner = %runner,
+                max = %max,
+                context = ?context,
+                path = ?path,
+                dry_run = %dry_run,
+                no_commit = %no_commit,
+                stream = %stream,
+                "Running refactor loop..."
+            );
+            cmd_refactor(
+                max,
+                context.as_deref(),
+                path.as_deref(),
+                dry_run,
+                no_commit,
+                &runner,
+                model.as_deref(),
+                stream,
+            )?;
         }
         Some(Command::Devcontainer { command }) => match command {
             DevcontainerCommand::Generate { runner, model } => {
@@ -1602,6 +1670,57 @@ fn cmd_suggest(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Runs the `mr refactor` command.
+///
+/// Executes AI-driven iterative refactoring up to `max` iterations.
+/// Each iteration identifies one impactful refactor, applies it, verifies UATs, and commits.
+#[allow(clippy::too_many_arguments)]
+fn cmd_refactor(
+    max: u32,
+    context: Option<&str>,
+    path: Option<&str>,
+    dry_run: bool,
+    no_commit: bool,
+    runner_name: &str,
+    cli_model: Option<&str>,
+    stream: bool,
+) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    // Load config for model settings.
+    let cfg = config::Config::load_or_default(&cwd)?;
+    let model = cfg.effective_model(cli_model);
+
+    // Select runner based on name.
+    let _runner = create_runner(runner_name, model)?;
+
+    // TODO: T-002 will implement the actual refactor loop logic.
+    // For now, print a placeholder message.
+    println!("{}", colors::header("Refactor Command"));
+    println!();
+    println!("{}", colors::info(&format!("Max iterations: {}", max)));
+    if let Some(ctx) = context {
+        println!("{}", colors::info(&format!("Context: {}", ctx)));
+    }
+    if let Some(p) = path {
+        println!("{}", colors::info(&format!("Path constraint: {}", p)));
+    }
+    println!("{}", colors::info(&format!("Dry run: {}", dry_run)));
+    println!("{}", colors::info(&format!("No commit: {}", no_commit)));
+    println!("{}", colors::info(&format!("Stream: {}", stream)));
+    println!();
+    println!(
+        "{}",
+        colors::dim("Refactor loop logic will be implemented in T-002.")
+    );
+
+    Ok(())
+}
+
 /// Runs the `mr reindex` command.
 fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
@@ -2172,5 +2291,86 @@ Generate a devcontainer.json configuration for:
             result.unwrap_err().to_string().contains("not initialized"),
             "Error message should mention not initialized"
         );
+    }
+
+    #[test]
+    fn test_args_parse_refactor_defaults() {
+        // Verify refactor command parses with default values
+        let args = Args::try_parse_from(["mr", "refactor"]).unwrap();
+        if let Some(Command::Refactor {
+            max,
+            context,
+            path,
+            dry_run,
+            no_commit,
+            runner,
+            model,
+            stream,
+        }) = args.command
+        {
+            assert_eq!(max, 3, "Default max should be 3");
+            assert!(context.is_none(), "Context should be None by default");
+            assert!(path.is_none(), "Path should be None by default");
+            assert!(!dry_run, "Dry run should be false by default");
+            assert!(!no_commit, "No commit should be false by default");
+            assert_eq!(runner, "copilot", "Default runner should be copilot");
+            assert!(model.is_none(), "Model should be None by default");
+            assert!(!stream, "Stream should be false by default");
+        } else {
+            panic!("Expected Refactor command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_refactor_with_all_flags() {
+        // Verify refactor command parses with all flags set
+        let args = Args::try_parse_from([
+            "mr",
+            "refactor",
+            "--max",
+            "5",
+            "--context",
+            "improve error handling",
+            "--path",
+            "src/",
+            "--dry-run",
+            "--no-commit",
+            "--runner",
+            "claude",
+            "--model",
+            "claude-sonnet-4.5",
+            "--stream",
+        ])
+        .unwrap();
+        if let Some(Command::Refactor {
+            max,
+            context,
+            path,
+            dry_run,
+            no_commit,
+            runner,
+            model,
+            stream,
+        }) = args.command
+        {
+            assert_eq!(max, 5, "Max should be 5");
+            assert_eq!(
+                context,
+                Some("improve error handling".to_string()),
+                "Context should match"
+            );
+            assert_eq!(path, Some("src/".to_string()), "Path should match");
+            assert!(dry_run, "Dry run should be true");
+            assert!(no_commit, "No commit should be true");
+            assert_eq!(runner, "claude", "Runner should be claude");
+            assert_eq!(
+                model,
+                Some("claude-sonnet-4.5".to_string()),
+                "Model should match"
+            );
+            assert!(stream, "Stream should be true");
+        } else {
+            panic!("Expected Refactor command with all flags");
+        }
     }
 }
