@@ -23,7 +23,7 @@ acceptance_tests:
   - id: uat-003
     name: Prompts are workflow-focused with no philosophy or opinion
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: Audit all 16 prompt files for behavioral/philosophical guidance
@@ -225,3 +225,13 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
   - Test counts numbered rules (pattern: "N. **Rule**") and verifies count > 0 and < 10
   - Default template has 6 rules; project constitution has 7 rules
   - All 325 tests passed (cargo make uat)
+
+## 2026-01-26 — uat-003 Verification
+- **UAT**: Prompts are workflow-focused with no philosophy or opinion
+- **Status**: ✅ Verified
+- **Method**: New test created
+- **Details**:
+  - Added `test_prompts_are_workflow_focused_no_philosophy()` to `src/init.rs`
+  - Test checks all 16 prompts for forbidden philosophical/behavioral terms
+  - Forbidden patterns: "DRY", "Don't Repeat Yourself", "minimal change", "unrelated code", "how to behave"
+  - All 326 tests passed (cargo make uat)

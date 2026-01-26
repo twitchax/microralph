@@ -2067,6 +2067,56 @@ mod tests {
     }
 
     #[test]
+    fn test_prompts_are_workflow_focused_no_philosophy() {
+        // UAT: Prompts are workflow-focused with no philosophy or opinion
+        // Behavioral/philosophical terms should be in constitution, not prompts
+
+        let prompts: &[(&str, &str)] = &[
+            ("PROMPT_INIT", PROMPT_INIT),
+            ("PROMPT_BOOTSTRAP_PLAN", PROMPT_BOOTSTRAP_PLAN),
+            (
+                "PROMPT_BOOTSTRAP_GENERATE_PRDS",
+                PROMPT_BOOTSTRAP_GENERATE_PRDS,
+            ),
+            ("PROMPT_PRD_NEW_ROUND1", PROMPT_PRD_NEW_ROUND1),
+            ("PROMPT_PRD_NEW_ROUNDN", PROMPT_PRD_NEW_ROUNDN),
+            ("PROMPT_PRD_NEW_SYNTHESIZE", PROMPT_PRD_NEW_SYNTHESIZE),
+            ("PROMPT_RUN_TASK", PROMPT_RUN_TASK),
+            ("PROMPT_RUN_TASK_FINALIZE", PROMPT_RUN_TASK_FINALIZE),
+            ("PROMPT_RUN_UAT_VERIFY", PROMPT_RUN_UAT_VERIFY),
+            ("PROMPT_PRD_EDIT", PROMPT_PRD_EDIT),
+            ("PROMPT_CONSTITUTION_EDIT", PROMPT_CONSTITUTION_EDIT),
+            ("PROMPT_ADAPT_LANGUAGE", PROMPT_ADAPT_LANGUAGE),
+            ("PROMPT_REINDEX", PROMPT_REINDEX),
+            ("PROMPT_PICK_PRD", PROMPT_PICK_PRD),
+            ("PROMPT_DEVCONTAINER_GENERATE", PROMPT_DEVCONTAINER_GENERATE),
+            ("PROMPT_SUGGEST_GENERATE", PROMPT_SUGGEST_GENERATE),
+        ];
+
+        // Philosophical/behavioral terms that should only appear in constitution
+        // These are the patterns identified in PRD-0019 T-001 audit
+        let forbidden_patterns = [
+            "DRY",                   // Should be in constitution Rule 1
+            "Don't Repeat Yourself", // Expanded form of DRY
+            "minimal change",        // Should be in constitution Rule 3
+            "unrelated code",        // Part of minimal changes rule
+            "how to behave",         // Philosophical guidance
+        ];
+
+        for (name, prompt) in prompts {
+            let lowercase = prompt.to_lowercase();
+            for pattern in &forbidden_patterns {
+                let pattern_lower = pattern.to_lowercase();
+                assert!(
+                    !lowercase.contains(&pattern_lower),
+                    "Prompt {name} contains philosophical term '{pattern}'. \
+                     Behavioral guidance should be in constitution, not prompts."
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_prompts_contain_placeholders() {
         // Round 1 questions should have slug placeholder.
         assert!(PROMPT_PRD_NEW_ROUND1.contains("{{slug}}"));
