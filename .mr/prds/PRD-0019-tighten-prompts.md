@@ -1,7 +1,7 @@
 ---
 id: PRD-0019
 title: Tighten Prompts and Encourage Constitution
-status: draft
+status: active
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
@@ -28,7 +28,7 @@ tasks:
   - id: T-001
     title: Audit all 16 prompt files for behavioral/philosophical guidance
     priority: 1
-    status: todo
+    status: done
     notes: Identify all instances of "don't modify unrelated code", DRY, minimal changes, follow patterns, etc.
   - id: T-002
     title: Draft comprehensive constitutional rules covering identified themes
@@ -82,3 +82,39 @@ Currently, behavioral rules like "don't modify unrelated code", "follow DRY", "m
 - Implementing new prompt or constitution features beyond consolidation
 
 # History
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Audit all 16 prompt files for behavioral/philosophical guidance
+- **Status**: ✅ Done
+- **Changes**:
+  - Audited all 18 templates in `src/init.rs` (16 prompts + constitution + AGENTS)
+  - Identified 6 recurring behavioral themes requiring consolidation
+  - Documented findings with specific line numbers for each occurrence
+
+- **Audit Findings**:
+  
+  **Prompts with behavioral guidance to remove:**
+  1. `PROMPT_PRD_NEW_SYNTHESIZE` (line 570): DRY rule
+  2. `PROMPT_RUN_TASK` (lines 612, 683-687): Minimal changes, don't modify unrelated code, public API stability, root cause preference, DRY rule
+  3. `PROMPT_RUN_TASK_FINALIZE` (lines 902-906): No new features, no breaking changes, minimal changes, DRY rule
+  4. `PROMPT_RUN_UAT_VERIFY` (lines 1009-1012): Minimal test code, don't modify unrelated code, DRY rule
+  5. `PROMPT_PRD_EDIT` (lines 1074, 1083): Minimize changes, DRY rule
+  6. `STARTER_AGENTS` (lines 1580-1581): Minimal changes, follow existing style
+
+  **Themes identified for constitution rules:**
+  1. **DRY (Don't Repeat Yourself)** — 5 occurrences
+  2. **Minimal Changes** — 4 occurrences
+  3. **Don't modify unrelated code** — 3 occurrences
+  4. **Follow existing patterns/style** — 2 occurrences
+  5. **Public API stability** — 1 occurrence
+  6. **Root cause over workarounds** — 1 occurrence
+
+  **Prompts that are already clean (workflow-focused):**
+  - PROMPT_INIT, PROMPT_BOOTSTRAP_PLAN, PROMPT_BOOTSTRAP_GENERATE_PRDS
+  - PROMPT_PRD_NEW_ROUND1, PROMPT_PRD_NEW_ROUNDN
+  - PROMPT_CONSTITUTION_EDIT, PROMPT_ADAPT_LANGUAGE
+  - PROMPT_PICK_PRD, PROMPT_DEVCONTAINER_GENERATE, PROMPT_SUGGEST_GENERATE
+  - PROMPT_REINDEX (has task-specific constraints, which are appropriate)
+
+- **UAT**: ✅ All 324 tests passed
+- **Constitution Compliance**: No violations
