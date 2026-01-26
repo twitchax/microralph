@@ -58,27 +58,27 @@ tasks:
 - id: T-002
   title: Create refactor.rs module with loop logic
   priority: 2
-  status: todo
+  status: done
   notes: Implement refactor() function that loops up to max iterations, invoking runner each time. Handle early termination when agent signals "no more refactors".
 - id: T-003
   title: Create refactor prompt templates
   priority: 3
-  status: todo
+  status: done
   notes: Add refactor.md prompt to .mr/prompts/ and init.rs. Prompt should instruct agent to identify one impactful refactor, apply it, run UATs, and commit (unless --no-commit). Include constitution context and optional --context override.
 - id: T-004
   title: Implement --dry-run mode
   priority: 4
-  status: todo
+  status: done
   notes: In dry-run mode, runner should analyze and suggest refactors without applying changes. Output suggestions in a readable format.
 - id: T-005
   title: Implement --path scope constraint
   priority: 5
-  status: todo
+  status: done
   notes: When --path is provided, include it in the prompt to constrain agent focus to that directory/file pattern.
 - id: T-006
   title: Add tests for refactor command
   priority: 6
-  status: todo
+  status: done
   notes: Unit tests for CLI parsing, iteration logic, early termination detection, and prompt expansion.
 - id: T-007
   title: Update AGENTS.md with refactor workflow documentation
@@ -152,3 +152,30 @@ Currently, improving code quality requires manual identification of refactoring 
 - **Constitution Compliance**: No violations. Changes are minimal and focused on the task.
 
 ---
+
+## 2026-01-26 — T-002, T-003, T-004, T-005, T-006 Completed
+- **Task**: Create refactor.rs module with loop logic (and related tasks)
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/refactor.rs` module with:
+    - `RefactorConfig` struct for configuration
+    - `RefactorIterationResult` and `RefactorLoopResult` enums for results
+    - `refactor()` function that loops up to max iterations
+    - `run_iteration()` for single iteration execution
+    - `aggregate_usage()` for token tracking across iterations
+    - Early termination detection via `NO-MORE-REFACTORS` signal
+    - Preview mode detection via `PREVIEW-COMPLETE` signal
+  - Added `Refactor` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_REFACTOR` constant to `src/init.rs` with:
+    - Constitution context injection
+    - User-provided `--context` focus hint support
+    - `--path` scope constraint support
+    - Preview mode with structured suggestion format
+    - `--no-commit` mode support
+  - Updated `init()` and `init_prompts_and_templates()` to write `refactor.md`
+  - Updated `get_default_prompt()` in loader.rs to handle Refactor
+  - Wired up `cmd_refactor()` in main.rs to call `refactor::refactor()`
+  - Added unit tests for signal detection and prompt building
+  - Updated test assertions for new file counts (21→22 files, 16→17 prompts)
+  - UAT: `cargo make uat` passes (340 tests)
+- **Constitution Compliance**: No violations. All changes are focused on implementing the refactor command functionality.

@@ -1520,6 +1520,97 @@ Return the 5 suggestions in plain text using the format above. Do NOT use markdo
 Generate exactly 5 PRD suggestions now.
 "#;
 
+/// Default content for the refactor prompt.
+pub const PROMPT_REFACTOR: &str = r#"# microralph — Refactor Prompt
+
+## Objective
+
+Identify one impactful code improvement, apply it, verify UATs pass, and commit (if allowed).
+
+## Context
+
+You are performing iteration {{iteration}} of {{max_iterations}} in a refactor loop.
+
+{{#if context}}
+### Focus Hint
+
+The user has requested you focus on: **{{context}}**
+
+This takes priority over general constitution-based discovery.
+{{/if}}
+
+{{#if path}}
+### Scope Constraint
+
+Limit your changes to files within: `{{path}}`
+{{/if}}
+
+{{#if constitution}}
+### Constitution
+
+The project's constitution defines behavioral rules and constraints:
+
+```markdown
+{{constitution}}
+```
+
+Use these rules to guide your refactor selection when no specific focus hint is provided.
+{{/if}}
+
+## Task
+
+1. **Analyze** the codebase for one impactful refactor opportunity
+2. **Apply** the change with minimal modifications
+3. **Verify** by running `cargo make uat`
+4. **Commit** with message format: `refactor: [brief description]`
+
+{{#if preview}}
+### Preview Mode
+
+This is a **preview**. Do NOT apply changes.
+
+Instead, output your suggested refactor in this format:
+
+```
+REFACTOR SUGGESTION:
+File: [path/to/file.rs]
+Lines: [start-end]
+Description: [What would be changed and why]
+Impact: [Expected benefit]
+```
+
+After outputting the suggestion, respond with `PREVIEW-COMPLETE` on a new line.
+{{/if}}
+
+{{#unless commit}}
+### No-Commit Mode
+
+Do NOT commit changes. Leave them staged or unstaged for manual review.
+{{/unless}}
+
+## Early Termination
+
+If you find no impactful refactors remaining (codebase already adheres well to principles), respond with exactly:
+
+```
+NO-MORE-REFACTORS
+```
+
+This signals early termination of the refactor loop.
+
+## Constraints
+
+- Make **one** focused change per iteration
+- Keep changes minimal and surgical
+- Do not fix unrelated issues
+- Follow existing code style and conventions
+- Run UATs to verify changes don't break anything
+
+## Output
+
+After completing (or in preview mode, after suggesting), summarize what you did.
+"#;
+
 /// Default content for the empty PRDS.md index.
 pub const EMPTY_INDEX: &str = r#"# microralph — PRD Index
 
@@ -1753,6 +1844,11 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
         PROMPT_SUGGEST_GENERATE,
         &mut result,
     )?;
+    create_file_if_missing(
+        &prompts_dir.join("refactor.md"),
+        PROMPT_REFACTOR,
+        &mut result,
+    )?;
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
@@ -1876,6 +1972,11 @@ pub fn init_prompts_and_templates(root: impl AsRef<Path>) -> Result<InitResult> 
     create_file_always(
         &prompts_dir.join("suggest_generate.md"),
         PROMPT_SUGGEST_GENERATE,
+        &mut result,
+    )?;
+    create_file_always(
+        &prompts_dir.join("refactor.md"),
+        PROMPT_REFACTOR,
         &mut result,
     )?;
 
@@ -2013,6 +2114,7 @@ mod tests {
         assert!(root.join(".mr/prompts/reindex.md").exists());
         assert!(root.join(".mr/prompts/pick_prd.md").exists());
         assert!(root.join(".mr/prompts/suggest_generate.md").exists());
+        assert!(root.join(".mr/prompts/refactor.md").exists());
 
         // Check index exists.
         assert!(root.join(".mr/PRDS.md").exists());
@@ -2028,7 +2130,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 21); // 1 template + 16 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 22); // 1 template + 17 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -2039,13 +2141,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 21);
+        assert_eq!(result1.files_created, 22);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 21);
+        assert_eq!(result2.files_skipped, 22);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -2151,6 +2253,7 @@ mod tests {
             ("PROMPT_PICK_PRD", PROMPT_PICK_PRD),
             ("PROMPT_DEVCONTAINER_GENERATE", PROMPT_DEVCONTAINER_GENERATE),
             ("PROMPT_SUGGEST_GENERATE", PROMPT_SUGGEST_GENERATE),
+            ("PROMPT_REFACTOR", PROMPT_REFACTOR),
         ];
 
         // Philosophical/behavioral terms that should only appear in constitution

@@ -54,6 +54,9 @@ pub enum PromptKind {
 
     /// Suggest generation prompt for analyzing codebase and proposing PRDs.
     SuggestGenerate,
+
+    /// Refactor prompt for AI-driven code improvements.
+    Refactor,
 }
 
 impl PromptKind {
@@ -78,6 +81,7 @@ impl PromptKind {
             Self::PickPrd => "pick_prd.md",
             Self::DevcontainerGenerate => "devcontainer_generate.md",
             Self::SuggestGenerate => "suggest_generate.md",
+            Self::Refactor => "refactor.md",
         }
     }
 
@@ -100,6 +104,7 @@ impl PromptKind {
             Self::PickPrd,
             Self::DevcontainerGenerate,
             Self::SuggestGenerate,
+            Self::Refactor,
         ]
     }
 }
@@ -127,7 +132,7 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 16);
+        assert_eq!(all.len(), 17);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

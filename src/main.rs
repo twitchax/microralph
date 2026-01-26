@@ -16,6 +16,7 @@ mod prd_finalize;
 mod prd_new;
 mod prompt;
 mod qa_workflow;
+mod refactor;
 mod reindex;
 mod run;
 mod runner;
@@ -1696,27 +1697,86 @@ fn cmd_refactor(
     let model = cfg.effective_model(cli_model);
 
     // Select runner based on name.
-    let _runner = create_runner(runner_name, model)?;
+    let runner = create_runner(runner_name, model)?;
 
-    // TODO: T-002 will implement the actual refactor loop logic.
-    // For now, print a placeholder message.
+    // Build refactor config.
+    let config = refactor::RefactorConfig {
+        root: &cwd,
+        max_iterations: max,
+        context,
+        path,
+        dry_run,
+        no_commit,
+        stream,
+    };
+
+    // Display header.
     println!("{}", colors::header("Refactor Command"));
     println!();
     println!("{}", colors::info(&format!("Max iterations: {}", max)));
     if let Some(ctx) = context {
-        println!("{}", colors::info(&format!("Context: {}", ctx)));
+        println!("{}", colors::info(&format!("Focus: {}", ctx)));
     }
     if let Some(p) = path {
         println!("{}", colors::info(&format!("Path constraint: {}", p)));
     }
-    println!("{}", colors::info(&format!("Dry run: {}", dry_run)));
-    println!("{}", colors::info(&format!("No commit: {}", no_commit)));
-    println!("{}", colors::info(&format!("Stream: {}", stream)));
+    if dry_run {
+        println!(
+            "{}",
+            colors::dim("Mode: dry-run (no changes will be applied)")
+        );
+    }
+    if no_commit {
+        println!(
+            "{}",
+            colors::dim("Mode: no-commit (changes will not be committed)")
+        );
+    }
+    println!();
+
+    // Run the refactor loop.
+    let result = refactor::refactor(&config, runner.as_ref())?;
+
+    // Display summary.
+    println!();
+    println!("{}", colors::header("Refactor Summary"));
     println!();
     println!(
-        "{}",
-        colors::dim("Refactor loop logic will be implemented in T-002.")
+        "  {}",
+        colors::info(&format!("Iterations: {}", result.iterations))
     );
+
+    if dry_run {
+        println!(
+            "  {}",
+            colors::info(&format!("Suggestions: {}", result.suggested_count))
+        );
+    } else {
+        println!(
+            "  {}",
+            colors::success(&format!("Refactors applied: {}", result.applied_count))
+        );
+    }
+
+    if result.early_termination {
+        println!(
+            "  {}",
+            colors::dim("Early termination: no more impactful refactors found")
+        );
+    }
+
+    if let Some(usage) = &result.total_usage {
+        println!();
+        println!(
+            "  {}",
+            colors::dim(&format!(
+                "Tokens: {} in / {} out / {} total",
+                usage.input_tokens.unwrap_or(0),
+                usage.output_tokens.unwrap_or(0),
+                usage.total_tokens.unwrap_or(0)
+            ))
+        );
+    }
 
     Ok(())
 }
