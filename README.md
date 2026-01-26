@@ -82,35 +82,39 @@ Each `mr run` invocation:
 ### Pre-built Binaries (Recommended)
 
 Download pre-built binaries from [GitHub Releases](https://github.com/twitchax/microralph/releases). Available for:
-- **Linux x86_64** (`mr-linux`)
-- **macOS ARM** (`mr-macos`)
-- **Windows x86_64** (`mr-windows.exe`)
+- **Linux x86_64** (`mr_x86_64-unknown-linux-gnu.zip`)
+- **macOS ARM** (`mr_aarch64-apple-darwin.zip`)
+- **Windows x86_64** (`mr_x86_64-pc-windows-gnu.zip`)
 - **WASM32-WASIP2** (`mr.wasm`)
 
-#### Linux / macOS
+#### Linux
 
 ```bash
-# Download the latest release binary
-curl -L https://github.com/twitchax/microralph/releases/latest/download/mr-linux -o mr
-# or for macOS ARM:
-# curl -L https://github.com/twitchax/microralph/releases/latest/download/mr-macos -o mr
+$ curl -LO https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-unknown-linux-gnu.zip
+$ unzip mr_x86_64-unknown-linux-gnu.zip -d /usr/local/bin
+$ chmod a+x /usr/local/bin/mr
+```
 
-# Make it executable
-chmod +x mr
+#### Mac OS (Apple Silicon)
 
-# Move to a directory in your PATH
-sudo mv mr /usr/local/bin/
-
-# Verify installation
-mr -h
+```bash
+$ curl -LO https://github.com/twitchax/microralph/releases/latest/download/mr_aarch64-apple-darwin.zip
+$ unzip mr_aarch64-apple-darwin.zip -d /usr/local/bin
+$ chmod a+x /usr/local/bin/mr
 ```
 
 #### Windows
 
-1. Download `mr-windows.exe` from the [releases page](https://github.com/twitchax/microralph/releases)
-2. Rename to `mr.exe`
-3. Move to a directory in your PATH (e.g., `C:\Program Files\microralph\`)
-4. Open a new terminal and verify with `mr -h`
+```powershell
+$ iwr https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-pc-windows-gnu.zip
+$ Expand-Archive mr_x86_64-pc-windows-gnu.zip -DestinationPath C:\Users\%USERNAME%\AppData\Local\Programs\mr
+```
+
+#### Cargo
+
+```bash
+$ cargo install microralph
+```
 
 #### WebAssembly (via OCI Registry)
 
@@ -136,12 +140,6 @@ curl -L https://github.com/twitchax/microralph/releases/latest/download/mr.wasm 
 
 # Run with wasmtime
 wasmtime mr.wasm -h
-```
-
-### Cargo
-
-```bash
-cargo install microralph
 ```
 
 ### From Source

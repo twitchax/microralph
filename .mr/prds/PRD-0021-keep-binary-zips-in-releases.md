@@ -1,7 +1,7 @@
 ---
 id: PRD-0021
 title: "Keep Binary Zips in Releases"
-status: draft
+status: active
 owner: "twitchax"
 created: 2026-01-26
 updated: 2026-01-26
@@ -22,7 +22,7 @@ acceptance_tests:
 - id: uat-001
   name: README install instructions show curl/unzip/chmod workflow
   command: grep -q "unzip" README.md && grep -q "chmod" README.md
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: github-release task attaches artifacts from release-artifacts directory
   command: grep -q "release-artifacts" Makefile.toml
@@ -30,13 +30,13 @@ acceptance_tests:
 - id: uat-003
   name: README uses target triple naming convention
   command: grep -q "mr_x86_64-unknown-linux-gnu" README.md
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
   title: Update README install instructions to match kord pattern
   priority: 1
-  status: todo
+  status: done
   notes: Replace simple curl/chmod with curl/unzip/chmod pattern. Use target triple names like mr_x86_64-unknown-linux-gnu.zip, mr_aarch64-apple-darwin.zip, mr_x86_64-pc-windows-gnu.zip. Follow kord README format exactly.
 - id: T-002
   title: Verify github-release task downloads and attaches zipped artifacts
@@ -89,5 +89,19 @@ This inconsistency makes it harder for users familiar with kord to install micro
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Update README install instructions to match kord pattern
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `README.md` install section to use target triple naming (`mr_x86_64-unknown-linux-gnu.zip`, `mr_aarch64-apple-darwin.zip`, `mr_x86_64-pc-windows-gnu.zip`)
+  - Replaced simple `curl -L ... -o mr` pattern with kord-style `curl -LO` / `unzip` / `chmod a+x` workflow
+  - Added Windows PowerShell instructions with `iwr` and `Expand-Archive`
+  - Reorganized sections: separate Linux and Mac OS sections, moved Cargo under pre-built binaries, cleaned up duplicate sections
+  - UAT passed: 344 tests passed, acceptance tests (grep for "unzip", "chmod", target triple names) all verify
+
+- **Opportunistic UAT Verification**:
+  - **uat-001** (README install instructions show curl/unzip/chmod workflow): Verified ✅
+  - **uat-003** (README uses target triple naming convention): Verified ✅
 
 ---
