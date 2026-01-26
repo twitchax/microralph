@@ -227,6 +227,9 @@ pub fn pick_prd_via_runner(
 
     tracing::info!("Asking runner to pick the next PRD to work on...");
 
+    // Start spinner when not streaming.
+    let spinner = start_spinner(!stream, "Selecting PRD...");
+
     // Invoke the runner.
     let output: RunnerOutput = if stream {
         let mut stdout = std::io::stdout();
@@ -234,6 +237,9 @@ pub fn pick_prd_via_runner(
     } else {
         runner.execute(&prompt, root)?
     };
+
+    // Clear spinner.
+    spinner.finish_and_clear();
 
     // Parse the response to extract the PRD ID.
     let response = output.text.trim();
@@ -634,6 +640,11 @@ pub fn run_uat_verification_loop(
         // STATE: Execute Runner - Build verification prompt and invoke runner
         let prompt = build_uat_verify_prompt(config.root, &current_prd, &current_prd_path, uat);
 
+        let spinner = start_spinner(
+            !config.stream,
+            format!("Verifying UAT {}/{}...", current_uat_num, all_uats),
+        );
+
         let output = if config.stream {
             let mut stdout = std::io::stdout();
             runner
@@ -644,6 +655,8 @@ pub fn run_uat_verification_loop(
                 .execute(&prompt, config.root)
                 .with_context(|| format!("Runner failed for UAT {}", uat.id))?
         };
+
+        spinner.finish_and_clear();
 
         // Display output if not already streamed
         if !config.stream {

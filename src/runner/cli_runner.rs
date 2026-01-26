@@ -66,15 +66,12 @@ pub fn format_command_display<C: CliRunnerConfig + ?Sized>(
 /// Executes a CLI command and captures the output.
 ///
 /// This is the non-streaming version that waits for the command to complete.
+/// Note: Does NOT print command info to stdout (caller shows spinner instead).
 pub fn execute_cli<C: CliRunnerConfig + ?Sized>(
     config: &C,
     prompt: &str,
     working_dir: &Path,
 ) -> RunnerResult<RunnerOutput> {
-    // Display the command being invoked
-    let cmd_display = format_command_display(config, working_dir);
-    println!("\n🔧 Executing: {}", cmd_display);
-
     let args = config.build_args(prompt);
 
     tracing::debug!(
