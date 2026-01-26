@@ -379,6 +379,7 @@ if [ -z "$TAG" ]; then
     echo "Example: cargo make publish-all v0.1.0"
     exit 1
 fi
+shift  # Remove TAG from args, remaining args passed to github-release
 
 echo "🚀 Starting full release pipeline for $TAG..."
 echo ""
@@ -390,7 +391,7 @@ cargo make publish-crates
 # Step 2: Create GitHub release with artifacts
 echo ""
 echo "📦 Step 2/2: Creating GitHub release..."
-cargo make github-release "$TAG" "${@:2}"
+cargo make github-release "$TAG" "$@"
 
 echo ""
 echo "✅ Full release pipeline complete!"
