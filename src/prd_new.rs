@@ -152,6 +152,7 @@ where
         output,
         "Please answer the following questions to help create your PRD:"
     )?;
+    writeln!(output, "💡 Tip: Press Enter twice (blank line) to complete each answer")?;
     writeln!(output)?;
 
     // STATE: Round 1 - Answer Collection
@@ -217,6 +218,7 @@ where
 
         writeln!(output)?;
         writeln!(output, "A few more questions:")?;
+        writeln!(output, "💡 Tip: Press Enter twice (blank line) to complete each answer")?;
         writeln!(output)?;
 
         // Collect additional answers and append to Q/A history
