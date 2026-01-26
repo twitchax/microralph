@@ -1,7 +1,7 @@
 ---
 id: PRD-0018
 title: Prefer Edit-in-Place for Agent Actions
-status: draft
+status: active
 owner: microralph
 created: 2026-01-26
 updated: 2026-01-26
@@ -28,7 +28,7 @@ tasks:
   - id: T-001
     title: Audit all runner commands (run, edit, etc.) for Rust-side file writes
     priority: 1
-    status: todo
+    status: done
     notes: Check run.rs, edit.rs, constitution.rs, etc. for any append_history or similar writes
   - id: T-002
     title: Remove Rust code that appends History entries or updates task status
@@ -76,3 +76,19 @@ Currently, Rust code directly appends History entries, updates task status, and 
 - Enforcing strict validation that blocks execution on malformed files
 
 # History
+
+## 2026-01-26 — T-001 Completed
+- **Task**: Audit all runner commands (run, edit, etc.) for Rust-side file writes
+- **Status**: ✅ Done
+- **Changes**:
+  - Conducted comprehensive audit of all Rust source files for file write operations
+  - Identified two functions in `src/run.rs` that directly manipulate PRD files:
+    - `append_opt_out_history()` (lines 474-497): Appends opt-out History entries to PRDs
+    - `update_uat_status()` (lines 541-564): Updates UAT status in PRD frontmatter
+  - Confirmed `src/prd_edit.rs` writes are acceptable (orchestration, not content generation)
+  - Confirmed `src/constitution_edit.rs` already follows desired pattern (agent edits directly)
+  - Verified init/bootstrap, index regeneration, and other file writes are out-of-scope (per PRD)
+  - Created detailed audit report in session workspace: `/home/twitchax/.copilot/session-state/26032f88-bdae-4d1f-919d-bbb5839248f3/audit-findings.md`
+  - All UATs pass: `cargo make uat` exits with code 0
+
+- **Constitution Compliance**: No violations. This is an audit task that only reads and documents existing code structure without making changes.
