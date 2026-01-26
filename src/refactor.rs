@@ -12,6 +12,7 @@ use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::{Runner, RunnerOutput, UsageInfo};
+use crate::spinner::start_spinner;
 
 /// Configuration for `mr refactor`.
 #[derive(Debug)]
@@ -148,12 +149,24 @@ fn run_iteration(
         "Running refactor iteration"
     );
 
+    // Start spinner when not streaming (streaming already provides visual feedback).
+    let spinner = start_spinner(
+        !config.stream,
+        format!(
+            "Refactor iteration {}/{}...",
+            iteration, config.max_iterations
+        ),
+    );
+
     let output: RunnerOutput = if config.stream {
         let mut stdout = std::io::stdout();
         runner.execute_streaming(&prompt, config.root, &mut stdout)?
     } else {
         runner.execute(&prompt, config.root)?
     };
+
+    // Clear spinner before processing output.
+    spinner.finish_and_clear();
 
     let text = output.text.trim();
 

@@ -65,7 +65,7 @@ tasks:
   - id: T-005
     title: Integrate spinner into mr refactor command
     priority: 5
-    status: todo
+    status: done
     notes: Show iteration progress (e.g., "Refactor iteration 2/5..."). Reset between iterations.
   - id: T-006
     title: Integrate spinner into mr suggest command
@@ -171,6 +171,20 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
     - `finish_and_clear()` is called before output display, resetting the spinner for the next iteration
     - The loop in main.rs (line 1262) calls `run_task()` repeatedly, each time getting correct task numbers
   - No additional code changes required - the spinner automatically resets between iterations due to the architecture of one spinner per `run_task()` invocation
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-005 Completed
+- **Task**: Integrate spinner into mr refactor command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `use crate::spinner::start_spinner;` import to `src/refactor.rs`
+  - Integrated spinner in `run_iteration()` function that displays "Refactor iteration N/M..." during agent execution
+  - Spinner starts when `stream=false` (enabled via `!config.stream`)
+  - Spinner clears before output is processed via `finish_and_clear()`
+  - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
+  - Architecture mirrors T-003: each iteration creates a fresh spinner, which automatically resets between iterations
   - UAT passed: 348 tests run, 348 passed
 
 ---
