@@ -46,7 +46,7 @@ tasks:
 - id: T-003
   title: Update Windows install instructions for PowerShell
   priority: 3
-  status: todo
+  status: done
   notes: Follow kord's PowerShell pattern with iwr and Expand-Archive for Windows users.
 
 ---
@@ -119,5 +119,18 @@ This inconsistency makes it harder for users familiar with kord to install micro
 
 - **Opportunistic UAT Verification**:
   - **uat-002** (github-release task attaches artifacts from release-artifacts directory): Verified ✅ (`grep -q "release-artifacts" Makefile.toml` passes)
+
+---
+
+## 2026-01-26 — T-003 Completed
+- **Task**: Update Windows install instructions for PowerShell
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `README.md` Windows section with correct PowerShell syntax:
+    - Added `-OutFile mr_x86_64-pc-windows-gnu.zip` to `iwr` command (required to save the downloaded file)
+    - Changed `%USERNAME%` to `$env:USERNAME` (proper PowerShell variable syntax vs CMD batch syntax)
+  - UAT passed: 344 tests passed
+
+- **Constitution Compliance**: No violations.
 
 ---

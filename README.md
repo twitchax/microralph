@@ -106,8 +106,8 @@ $ chmod a+x /usr/local/bin/mr
 #### Windows
 
 ```powershell
-$ iwr https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-pc-windows-gnu.zip
-$ Expand-Archive mr_x86_64-pc-windows-gnu.zip -DestinationPath C:\Users\%USERNAME%\AppData\Local\Programs\mr
+$ iwr https://github.com/twitchax/microralph/releases/latest/download/mr_x86_64-pc-windows-gnu.zip -OutFile mr_x86_64-pc-windows-gnu.zip
+$ Expand-Archive mr_x86_64-pc-windows-gnu.zip -DestinationPath C:\Users\$env:USERNAME\AppData\Local\Programs\mr
 ```
 
 #### Cargo
