@@ -1,23 +1,20 @@
 ---
 id: PRD-0021
-title: "Keep Binary Zips in Releases"
-status: active
-owner: "twitchax"
+title: Keep Binary Zips in Releases
+status: done
+owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
-
 principles:
 - Follow kord's release pattern exactly for naming and structure
 - CI artifacts are already zipped on download—no additional zipping needed
 - Update README install instructions to match kord-style curl/unzip/chmod workflow
 - Keep WASM OCI publish workflow unchanged
-
 references:
 - name: kord README (reference pattern)
   url: https://github.com/twitchax/kord#install
 - name: GitHub Actions upload-artifact documentation
   url: https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
-
 acceptance_tests:
 - id: uat-001
   name: README install instructions show curl/unzip/chmod workflow
@@ -31,7 +28,6 @@ acceptance_tests:
   name: README uses target triple naming convention
   command: grep -q "mr_x86_64-unknown-linux-gnu" README.md
   uat_status: verified
-
 tasks:
 - id: T-001
   title: Update README install instructions to match kord pattern
@@ -48,7 +44,6 @@ tasks:
   priority: 3
   status: done
   notes: Follow kord's PowerShell pattern with iwr and Expand-Archive for Windows users.
-
 ---
 
 # Summary
@@ -134,3 +129,13 @@ This inconsistency makes it harder for users familiar with kord to install micro
 - **Constitution Compliance**: No violations.
 
 ---
+
+## 2026-01-26 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 3 tasks (T-001 through T-003)
+- **Outcome**: All tasks completed, acceptance tests passed (344/344 tests)
+- **Cleanup**: None required (no debug statements or temp files found)
+- **Summary**:
+  - Updated README install instructions to use kord-style curl/unzip/chmod workflow with target triple naming
+  - Verified github-release workflow correctly attaches downloaded CI artifacts from release-artifacts/
+  - Fixed Windows PowerShell install instructions with proper syntax (-OutFile, $env:USERNAME)
