@@ -38,7 +38,7 @@ The following governance rules and constraints apply to this project:
 
 1. Review the existing PRDs to understand context.
 2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
-3. Generate 3-5 clarifying questions to understand:
+3. Generate 3-7 clarifying questions to understand:
    - What problem does this PRD solve?
    - What are the success criteria?
    - What are the acceptance tests?

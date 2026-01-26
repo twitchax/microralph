@@ -402,7 +402,7 @@ The following governance rules and constraints apply to this project:
 
 1. Review the existing PRDs to understand context.
 2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
-3. Generate 3-5 clarifying questions to understand:
+3. Generate 3-7 clarifying questions to understand:
    - What problem does this PRD solve?
    - What are the success criteria?
    - What are the acceptance tests?
@@ -460,13 +460,13 @@ The following governance rules and constraints apply to this project:
 
 1. Review the Q/A history.
 2. Determine if you have enough information to synthesize a PRD.
-3. If more clarification is needed, ask 1-3 additional questions.
+3. If more clarification is needed, ask 1-5 additional questions.  IMPORTANT: lean toward asking questions if you think it will help the PRD quality.
 4. If ready, respond with exactly: `READY_TO_SYNTHESIZE`
 
 ## Output Format
 
 Either:
-- A numbered list of follow-up questions (1-3 max)
+- A numbered list of follow-up questions (1-5 max)
 - Or the exact text: `READY_TO_SYNTHESIZE`
 "#;
 

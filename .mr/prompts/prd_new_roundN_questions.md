@@ -36,11 +36,11 @@ The following governance rules and constraints apply to this project:
 
 1. Review the Q/A history.
 2. Determine if you have enough information to synthesize a PRD.
-3. If more clarification is needed, ask 1-3 additional questions.
+3. If more clarification is needed, ask 1-5 additional questions.  IMPORTANT: lean toward asking questions if you think it will help the PRD quality.
 4. If ready, respond with exactly: `READY_TO_SYNTHESIZE`
 
 ## Output Format
 
 Either:
-- A numbered list of follow-up questions (1-3 max)
+- A numbered list of follow-up questions (1-5 max)
 - Or the exact text: `READY_TO_SYNTHESIZE`
