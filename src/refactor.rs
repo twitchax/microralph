@@ -113,6 +113,7 @@ fn build_refactor_prompt(root: &Path, config: &RefactorConfig, iteration: u32) -
 
     ctx.insert("preview", config.dry_run);
     ctx.insert("commit", !config.no_commit);
+    ctx.insert("no_commit", config.no_commit);
 
     // Load constitution if available.
     if let Ok(Some(constitution)) = load_constitution(root) {
@@ -345,6 +346,70 @@ mod tests {
 
         // Prompt should be generated (uses fallback template).
         assert!(!prompt.is_empty());
+    }
+
+    #[test]
+    fn test_build_refactor_prompt_no_commit_true() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let root = temp.path();
+
+        std::fs::create_dir_all(root.join(".mr/prompts")).unwrap();
+
+        // Test with no_commit=true (should include "No-Commit Mode" instructions).
+        let config = RefactorConfig {
+            root,
+            max_iterations: 3,
+            context: None,
+            path: None,
+            dry_run: false,
+            no_commit: true,
+            stream: false,
+        };
+
+        let prompt = build_refactor_prompt(root, &config, 1);
+
+        // When no_commit=true, prompt should include "No-Commit Mode" section.
+        assert!(
+            prompt.contains("No-Commit Mode"),
+            "Prompt should contain 'No-Commit Mode' when no_commit=true. Got:\n{}",
+            prompt
+        );
+        assert!(
+            prompt.contains("Do NOT commit"),
+            "Prompt should contain 'Do NOT commit' when no_commit=true"
+        );
+    }
+
+    #[test]
+    fn test_build_refactor_prompt_no_commit_false() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let root = temp.path();
+
+        std::fs::create_dir_all(root.join(".mr/prompts")).unwrap();
+
+        // Test with no_commit=false (should include commit instructions).
+        let config = RefactorConfig {
+            root,
+            max_iterations: 3,
+            context: None,
+            path: None,
+            dry_run: false,
+            no_commit: false,
+            stream: false,
+        };
+
+        let prompt = build_refactor_prompt(root, &config, 1);
+
+        // When no_commit=false, prompt should NOT include "No-Commit Mode".
+        assert!(
+            !prompt.contains("No-Commit Mode"),
+            "Prompt should NOT contain 'No-Commit Mode' when no_commit=false. Got:\n{}",
+            prompt
+        );
+        assert!(
+            !prompt.contains("Do NOT commit changes"),
+            "Prompt should NOT contain 'Do NOT commit changes' when no_commit=false"
+        );
     }
 
     #[test]

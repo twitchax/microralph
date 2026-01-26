@@ -1582,11 +1582,11 @@ Impact: [Expected benefit]
 After outputting the suggestion, respond with `PREVIEW-COMPLETE` on a new line.
 {{/if}}
 
-{{#unless commit}}
+{{#if no_commit}}
 ### No-Commit Mode
 
 Do NOT commit changes. Leave them staged or unstaged for manual review.
-{{/unless}}
+{{/if}}
 
 ## Early Termination
 
