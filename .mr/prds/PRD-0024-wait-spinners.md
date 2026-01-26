@@ -75,7 +75,7 @@ tasks:
   - id: T-007
     title: Integrate spinner into mr finalize command
     priority: 7
-    status: todo
+    status: done
     notes: Show spinner during agent execution phase.
   - id: T-008
     title: Integrate spinner into mr reindex command
@@ -197,6 +197,19 @@ Currently, when running commands like `mr run`, `mr refactor`, or `mr suggest` w
   - Integrated spinner in `suggest()` function with message "Analyzing codebase..."
   - Spinner always enabled (suggest command doesn't have streaming option; TTY detection handled by spinner module)
   - Spinner clears before displaying parsed suggestions via `finish_and_clear()`
+  - UAT passed: 348 tests run, 348 passed
+
+---
+
+## 2026-01-26 — T-007 Completed
+- **Task**: Integrate spinner into mr finalize command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `use crate::spinner::start_spinner;` import to `src/prd_finalize.rs`
+  - Integrated spinner in `finalize_prd()` function with message "Finalizing PRD..."
+  - Spinner starts when `stream=false` (enabled via `!config.stream`)
+  - Spinner clears before processing output via `finish_and_clear()`
+  - Spinner automatically disabled in non-TTY environments (handled by spinner module's TTY detection)
   - UAT passed: 348 tests run, 348 passed
 
 ---

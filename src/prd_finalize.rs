@@ -19,6 +19,7 @@ use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::Runner;
+use crate::spinner::start_spinner;
 
 /// Errors that can occur during PRD finalization.
 #[derive(Debug, Error)]
@@ -343,6 +344,9 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         "Invoking runner for finalization"
     );
 
+    // Start spinner during agent execution phase (only when not streaming).
+    let spinner = start_spinner(!config.stream, "Finalizing PRD...");
+
     let output = if config.stream {
         let mut stdout = std::io::stdout();
 
@@ -354,6 +358,9 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
             .execute(&prompt, config.root)
             .with_context(|| format!("Runner failed during finalization of {}", config.prd_id))?
     };
+
+    // Clear spinner before processing output.
+    spinner.finish_and_clear();
 
     if !output.success {
         anyhow::bail!(
