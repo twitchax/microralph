@@ -41,9 +41,9 @@ The `mr suggest` command uses AI to analyze the codebase and generate PRD sugges
 
 Suggestions balance strategic features with quick wins. The command follows existing CLI patterns from PRD-0009.
 
-## Bootstrap Reconstruct Workflow
+## Bootstrap Workflow
 
-The `mr bootstrap --reconstruct` flag enables historical PRD reconstruction from git history:
+The `mr bootstrap` command reconstructs PRDs from git history by default:
 
 1. **Git Analysis**: LLM analyzes commits, tags, and major changes to identify historical milestones
 2. **PRD Creation**: Creates PRDs for each milestone with `status: done` and `reconstructed: true`
@@ -53,27 +53,33 @@ The `mr bootstrap --reconstruct` flag enables historical PRD reconstruction from
 ### Usage
 
 ```bash
-# Reconstruct PRDs from git history
-mr bootstrap --reconstruct
+# Reconstruct PRDs from git history (default behavior)
+mr bootstrap
 
 # With specific runner and model
-mr bootstrap --reconstruct --runner claude --model claude-sonnet-4.5
+mr bootstrap --runner claude --model claude-sonnet-4.5
 
 # With language hint
-mr bootstrap --reconstruct --language rust
+mr bootstrap --language rust
+
+# Scaffold mode: skip git history analysis and create an initial PRD for bootstrapping
+mr bootstrap --scaffold
 ```
 
 ### Flags Reference
 
-| Flag            | Default | Description                                           |
-| --------------- | ------- | ----------------------------------------------------- |
-| `--reconstruct` | false   | Enable historical PRD reconstruction from git history |
-| `--runner`      | copilot | Runner to use (copilot, claude)                       |
-| `--model`       | None    | Model override for the runner                         |
-| `--language`    | None    | Target language hint (rust, python, node, go, java)   |
+| Flag         | Default | Description                                                                      |
+| ------------ | ------- | -------------------------------------------------------------------------------- |
+| `--scaffold` | false   | Skip git history analysis; create an initial PRD for bootstrapping new projects |
+| `--runner`   | copilot | Runner to use (copilot, claude)                                                  |
+| `--model`    | None    | Model override for the runner                                                    |
+| `--language` | None    | Target language hint (rust, python, node, go, java)                              |
+| `--stream`   | false   | Stream runner output in real-time                                                |
 
 ### Important Notes
 
+- **Default is reconstruct**: Running `mr bootstrap` without flags analyzes git history to create PRDs for completed work
+- **Scaffold mode**: Use `--scaffold` for new projects or when you want to skip git history analysis and create a fresh starting PRD
 - **Reconstructed PRDs**: Created with `reconstructed: true` in frontmatter to distinguish from manually created PRDs
 - **Dependency inference**: Uses temporal ordering of commits/tags to infer `depends_on` relationships
 - **Existing PRD awareness**: Scans existing PRDs and avoids creating duplicates for already-documented work
@@ -335,7 +341,7 @@ PRDs are Markdown files with YAML frontmatter containing:
 - `title`: Human-readable title
 - `status`: draft | active | done | parked
 - `depends_on`: Optional list of PRD IDs this PRD depends on (e.g., `["PRD-0001", "PRD-0003"]`)
-- `reconstructed`: Optional boolean, true if PRD was created via `bootstrap --reconstruct`
+- `reconstructed`: Optional boolean, true if PRD was created via `mr bootstrap` (git history reconstruction)
 - `tasks`: List of tasks with id, title, priority, status
 
 History entries are appended by `mr run` at the bottom of the PRD.

@@ -59,7 +59,7 @@ tasks:
 - id: T-004
   title: "Update AGENTS.md Bootstrap documentation"
   priority: 4
-  status: todo
+  status: done
   notes: "Restructure Bootstrap Reconstruct Workflow section to show reconstruct as default, document new --scaffold flag."
 
 - id: T-005
@@ -164,5 +164,22 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused on updating the prompt to reflect new default behavior.
+
+---
+
+## 2026-01-27 — T-004 Completed
+- **Task**: Update AGENTS.md Bootstrap documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Renamed section from "Bootstrap Reconstruct Workflow" to "Bootstrap Workflow"
+  - Updated intro to state reconstruct is now the default behavior
+  - Updated usage examples: `mr bootstrap` for default (reconstruct), `mr bootstrap --scaffold` for scaffold mode
+  - Updated flags table: replaced `--reconstruct` with `--scaffold`, added `--stream` flag
+  - Added new "Important Notes" entries explaining default behavior and scaffold mode
+  - Updated PRD Format section: changed `bootstrap --reconstruct` reference to `mr bootstrap`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused on documentation updates.
 
 ---
