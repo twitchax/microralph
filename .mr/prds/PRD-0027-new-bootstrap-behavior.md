@@ -65,7 +65,7 @@ tasks:
 - id: T-005
   title: "Update init.rs embedded prompts"
   priority: 5
-  status: todo
+  status: done
   notes: "Ensure embedded prompt constants match the updated prompt files for consistency per constitution."
 
 - id: T-006
@@ -181,5 +181,18 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused on documentation updates.
+
+---
+
+## 2026-01-27 — T-005 Completed
+- **Task**: Update init.rs embedded prompts
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `PROMPT_BOOTSTRAP_RECONSTRUCT` constant in `src/init.rs` (line 1731): Changed `mr bootstrap --reconstruct` to `mr bootstrap` and added note that reconstruct mode is the default behavior
+  - Updated History template example (line 1837): Changed `mr bootstrap --reconstruct` to `mr bootstrap`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Per constitution rule #7 (Prompt Management), the embedded prompt constant now matches the updated `.mr/prompts/bootstrap_reconstruct.md` file.
 
 ---
