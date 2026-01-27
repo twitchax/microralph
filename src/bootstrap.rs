@@ -25,6 +25,7 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
+use crate::spinner::start_spinner;
 
 /// Default PRD budget when bootstrapping.
 const DEFAULT_PRD_BUDGET: u32 = 6;
@@ -44,6 +45,9 @@ pub struct BootstrapConfig<'a> {
 
     /// Whether to run reconstruct workflow (analyze git history).
     pub reconstruct: bool,
+
+    /// Whether to stream runner output in real-time.
+    pub stream: bool,
 }
 
 impl<'a> BootstrapConfig<'a> {
@@ -53,6 +57,7 @@ impl<'a> BootstrapConfig<'a> {
             root,
             prd_budget: DEFAULT_PRD_BUDGET,
             reconstruct: false,
+            stream: false,
         }
     }
 }
@@ -124,9 +129,29 @@ where
         "Invoking runner for bootstrap plan"
     );
 
-    let plan_output = runner
-        .execute(&plan_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed during plan: {e}"))?;
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&plan_prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
+    // Start spinner when not streaming.
+    let spinner = start_spinner(!config.stream, "Analyzing repository...");
+
+    let plan_output = if config.stream {
+        let mut stdout = std::io::stdout();
+        runner
+            .execute_streaming(&plan_prompt, config.root, &mut stdout)
+            .map_err(|e| anyhow::anyhow!("Runner failed during plan: {e}"))?
+    } else {
+        runner
+            .execute(&plan_prompt, config.root)
+            .map_err(|e| anyhow::anyhow!("Runner failed during plan: {e}"))?
+    };
+
+    // Clear spinner.
+    spinner.finish_and_clear();
 
     if !plan_output.success {
         bail!("Runner failed during bootstrap plan: {}", plan_output.text);
@@ -151,9 +176,29 @@ where
         "Invoking runner to generate PRDs from bootstrap plan"
     );
 
-    let generate_output = runner
-        .execute(&generate_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed during PRD generation: {e}"))?;
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&generate_prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
+    // Start spinner when not streaming.
+    let spinner = start_spinner(!config.stream, "Generating PRDs...");
+
+    let generate_output = if config.stream {
+        let mut stdout = std::io::stdout();
+        runner
+            .execute_streaming(&generate_prompt, config.root, &mut stdout)
+            .map_err(|e| anyhow::anyhow!("Runner failed during PRD generation: {e}"))?
+    } else {
+        runner
+            .execute(&generate_prompt, config.root)
+            .map_err(|e| anyhow::anyhow!("Runner failed during PRD generation: {e}"))?
+    };
+
+    // Clear spinner.
+    spinner.finish_and_clear();
 
     if !generate_output.success {
         bail!(
@@ -284,9 +329,29 @@ where
         "Invoking runner for git history reconstruction"
     );
 
-    let reconstruct_output = runner
-        .execute(&reconstruct_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed during reconstruction: {e}"))?;
+    // Print command info before spinner (only when not streaming).
+    if !config.stream
+        && let Some(cmd_display) = runner.format_command_display(&reconstruct_prompt, config.root)
+    {
+        println!("\n🔧 Executing: {}", cmd_display);
+    }
+
+    // Start spinner when not streaming.
+    let spinner = start_spinner(!config.stream, "Reconstructing from git history...");
+
+    let reconstruct_output = if config.stream {
+        let mut stdout = std::io::stdout();
+        runner
+            .execute_streaming(&reconstruct_prompt, config.root, &mut stdout)
+            .map_err(|e| anyhow::anyhow!("Runner failed during reconstruction: {e}"))?
+    } else {
+        runner
+            .execute(&reconstruct_prompt, config.root)
+            .map_err(|e| anyhow::anyhow!("Runner failed during reconstruction: {e}"))?
+    };
+
+    // Clear spinner.
+    spinner.finish_and_clear();
 
     if !reconstruct_output.success {
         bail!(

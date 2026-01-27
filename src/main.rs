@@ -96,6 +96,10 @@ enum Command {
         /// Creates PRDs with status: done, reconstructed: true, and inferred depends_on.
         #[arg(long)]
         reconstruct: bool,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
     },
 
     /// [0] Restore `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` to built-in defaults.
@@ -389,9 +393,16 @@ fn main() -> Result<()> {
             language,
             model,
             reconstruct,
+            stream,
         }) => {
-            tracing::info!(runner = %runner, language = ?language, reconstruct = reconstruct, "Bootstrapping repo...");
-            cmd_bootstrap(&runner, language.as_deref(), model.as_deref(), reconstruct)?;
+            tracing::info!(runner = %runner, language = ?language, reconstruct = reconstruct, stream = stream, "Bootstrapping repo...");
+            cmd_bootstrap(
+                &runner,
+                language.as_deref(),
+                model.as_deref(),
+                reconstruct,
+                stream,
+            )?;
         }
         Some(Command::Restore) => {
             tracing::info!("Restoring prompts and templates...");
@@ -734,6 +745,7 @@ fn cmd_bootstrap(
     language: Option<&str>,
     cli_model: Option<&str>,
     reconstruct: bool,
+    stream: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -762,6 +774,7 @@ fn cmd_bootstrap(
 
     let mut config = bootstrap::BootstrapConfig::new(&cwd);
     config.reconstruct = reconstruct;
+    config.stream = stream;
 
     if reconstruct {
         println!(
@@ -2186,12 +2199,14 @@ mod tests {
             language,
             model,
             reconstruct,
+            stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
             assert!(model.is_none());
             assert!(!reconstruct);
+            assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -2207,12 +2222,14 @@ mod tests {
             language,
             model,
             reconstruct,
+            stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert_eq!(language, Some("node".to_string()));
             assert!(model.is_none());
             assert!(!reconstruct);
+            assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -2234,12 +2251,14 @@ mod tests {
             language,
             model,
             reconstruct,
+            stream,
         }) = args.command
         {
             assert_eq!(runner, "copilot");
             assert!(language.is_none());
             assert_eq!(model, Some("claude-opus-4".to_string()));
             assert!(!reconstruct);
+            assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -2254,12 +2273,14 @@ mod tests {
             language,
             model,
             reconstruct,
+            stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
             assert!(model.is_none());
             assert!(reconstruct);
+            assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
         }
