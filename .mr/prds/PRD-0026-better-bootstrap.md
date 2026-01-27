@@ -99,7 +99,7 @@ tasks:
 - id: T-011
   title: "Implement graph dot subcommand"
   priority: 11
-  status: todo
+  status: done
   notes: "Output Graphviz DOT format. Use dashed style for missing refs."
 - id: T-012
   title: "Add graph command to CLI with subcommands"
@@ -317,5 +317,24 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 9 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, left-right direction, title truncation, node ID conversion
   - UAT passed: 393 tests run, 393 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns (mirrors ASCII rendering structure).
+
+---
+
+## 2026-01-27 — T-011 Completed
+- **Task**: Implement graph dot subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `DotConfig` struct with `show_titles`, `max_title_len`, and `direction` fields
+  - Added `DotDirection` enum with `TopBottom` and `LeftRight` variants
+  - Implemented `render_dot()` function that renders a `PrdGraph` as Graphviz DOT syntax
+  - Output is a valid `digraph` with `rankdir=TB` (or `LR` based on config)
+  - Node definitions use `node_id [label="label"]` format
+  - Missing nodes use `style=dashed color=red` for visual differentiation
+  - Valid dependencies rendered with solid arrows (`->`)
+  - Missing dependencies rendered with dashed style (`[style=dashed]`)
+  - Added helper functions: `dot_node_id()` (removes hyphens), `dot_node_label()` (formats label with title/status and escapes quotes)
+  - Added 9 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, left-right direction, title truncation, node ID conversion
+  - UAT passed: 402 tests run, 402 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns (mirrors Mermaid rendering structure).
 
 ---

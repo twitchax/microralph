@@ -535,6 +535,169 @@ fn mermaid_node_label(node: &GraphNode, config: &MermaidConfig) -> String {
     }
 }
 
+// ============================================================================
+// DOT Rendering (Graphviz)
+// ============================================================================
+
+/// Configuration for DOT (Graphviz) graph rendering.
+#[derive(Debug, Clone)]
+pub struct DotConfig {
+    /// Whether to show node titles in addition to IDs.
+    pub show_titles: bool,
+
+    /// Maximum title length before truncation.
+    pub max_title_len: usize,
+
+    /// Direction of the graph (TB = top-bottom, LR = left-right).
+    pub direction: DotDirection,
+}
+
+/// Direction for DOT graph rendering.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DotDirection {
+    /// Top to bottom (default).
+    TopBottom,
+    /// Left to right.
+    LeftRight,
+}
+
+impl Default for DotConfig {
+    fn default() -> Self {
+        Self {
+            show_titles: true,
+            max_title_len: 40,
+            direction: DotDirection::TopBottom,
+        }
+    }
+}
+
+impl DotConfig {
+    /// Creates a new config with defaults (show titles, max 40 chars, top-bottom).
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+/// Renders the graph as Graphviz DOT format.
+///
+/// The output is valid DOT syntax that can be rendered with Graphviz tools
+/// (dot, neato, etc.) or any DOT-compatible viewer.
+///
+/// Missing references are shown with dashed style (`style=dashed`) to indicate
+/// the dependency target does not exist.
+///
+/// Example output:
+/// ```text
+/// digraph PRD_Dependencies {
+///     rankdir=TB;
+///     node [shape=box];
+///
+///     PRD0001 [label="PRD-0001: First PRD (done)"];
+///     PRD0002 [label="PRD-0002: Second PRD (active)"];
+///     PRD0002 -> PRD0001;
+/// }
+/// ```
+///
+/// # Arguments
+///
+/// * `graph` - The dependency graph to render.
+/// * `config` - Configuration for rendering (optional).
+///
+/// # Returns
+///
+/// A string containing the DOT representation of the graph.
+pub fn render_dot(graph: &PrdGraph, config: Option<DotConfig>) -> String {
+    let config = config.unwrap_or_default();
+    let mut output = String::new();
+
+    // Graph header.
+    output.push_str("digraph PRD_Dependencies {\n");
+
+    // Graph direction.
+    let direction = match config.direction {
+        DotDirection::TopBottom => "TB",
+        DotDirection::LeftRight => "LR",
+    };
+    output.push_str(&format!("    rankdir={};\n", direction));
+
+    // Default node style.
+    output.push_str("    node [shape=box];\n\n");
+
+    // Quick check for empty graph.
+    if graph.nodes.is_empty() {
+        output.push_str("    empty [label=\"No PRDs found\"];\n");
+        output.push_str("}\n");
+        return output;
+    }
+
+    // Render node definitions.
+    for node in &graph.nodes {
+        let node_id = dot_node_id(&node.id);
+        let label = dot_node_label(node, &config);
+
+        if node.is_missing {
+            // Missing nodes use dashed style.
+            output.push_str(&format!(
+                "    {} [label=\"{}\" style=dashed color=red];\n",
+                node_id, label
+            ));
+        } else {
+            // Normal nodes use default style.
+            output.push_str(&format!("    {} [label=\"{}\"];\n", node_id, label));
+        }
+    }
+
+    // Add blank line between nodes and edges for readability.
+    if !graph.edges.is_empty() {
+        output.push('\n');
+    }
+
+    // Render edges.
+    for edge in &graph.edges {
+        let from_id = dot_node_id(&edge.from);
+        let to_id = dot_node_id(&edge.to);
+
+        if edge.is_missing {
+            // Dashed edge for missing references.
+            output.push_str(&format!("    {} -> {} [style=dashed];\n", from_id, to_id));
+        } else {
+            // Solid edge for valid references.
+            output.push_str(&format!("    {} -> {};\n", from_id, to_id));
+        }
+    }
+
+    output.push_str("}\n");
+
+    output
+}
+
+/// Converts a PRD ID to a valid DOT node ID.
+///
+/// DOT node IDs should not contain hyphens (they need quoting), so we remove them.
+fn dot_node_id(id: &str) -> String {
+    id.replace('-', "")
+}
+
+/// Creates a label for a DOT node.
+fn dot_node_label(node: &GraphNode, config: &DotConfig) -> String {
+    let status = format!("{}", node.status);
+
+    if config.show_titles {
+        let title = if node.title.len() > config.max_title_len {
+            format!("{}...", &node.title[..config.max_title_len - 3])
+        } else {
+            node.title.clone()
+        };
+
+        // Escape quotes in the title for DOT.
+        let title = title.replace('"', "\\\"");
+
+        format!("{}: {} ({})", node.id, title, status)
+    } else {
+        format!("{} ({})", node.id, status)
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -1208,5 +1371,207 @@ mod tests {
         assert_eq!(mermaid_node_id("PRD-0001"), "PRD0001");
         assert_eq!(mermaid_node_id("PRD-9999"), "PRD9999");
         assert_eq!(mermaid_node_id("no-hyphens-here"), "nohyphenshere");
+    }
+
+    // ========================================================================
+    // DOT Rendering Tests
+    // ========================================================================
+
+    #[test]
+    fn test_render_dot_empty_graph() {
+        let graph = PrdGraph {
+            nodes: vec![],
+            edges: vec![],
+            missing_refs: vec![],
+            warnings: vec![],
+        };
+
+        let output = render_dot(&graph, None);
+
+        assert!(output.contains("digraph PRD_Dependencies {"));
+        assert!(output.contains("No PRDs found"));
+        assert!(output.ends_with("}\n"));
+    }
+
+    #[test]
+    fn test_render_dot_single_node_no_deps() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        assert!(output.contains("digraph PRD_Dependencies {"));
+        assert!(output.contains("rankdir=TB;"));
+        assert!(output.contains("PRD0001 [label="));
+        assert!(output.contains("PRD-0001: First PRD (active)"));
+        // No edges.
+        assert!(!output.contains("->"));
+    }
+
+    #[test]
+    fn test_render_dot_with_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        assert!(output.contains("PRD0001 [label="));
+        assert!(output.contains("PRD0002 [label="));
+        // Solid edge for valid dependency.
+        assert!(output.contains("PRD0002 -> PRD0001;"));
+        // No dashed edges.
+        assert!(!output.contains("style=dashed"));
+    }
+
+    #[test]
+    fn test_render_dot_with_missing_refs() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "First PRD",
+                PrdStatus::Active,
+                Some(vec!["PRD-9999".to_string()]),
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        // Missing node should have dashed style and red color.
+        assert!(output.contains("PRD9999 [label="));
+        assert!(output.contains("style=dashed"));
+        assert!(output.contains("color=red"));
+        // Edge to missing node should be dashed.
+        assert!(output.contains("PRD0001 -> PRD9999 [style=dashed];"));
+    }
+
+    #[test]
+    fn test_render_dot_multiple_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd("PRD-0002", "Second PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Third PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        // Both edges should exist.
+        assert!(output.contains("PRD0003 -> PRD0001;"));
+        assert!(output.contains("PRD0003 -> PRD0002;"));
+    }
+
+    #[test]
+    fn test_render_dot_config_no_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = DotConfig {
+            show_titles: false,
+            max_title_len: 40,
+            direction: DotDirection::TopBottom,
+        };
+        let output = render_dot(&graph, Some(config));
+
+        assert!(output.contains("PRD0001 [label="));
+        // Should show ID and status but not title.
+        assert!(output.contains("PRD-0001 (active)"));
+        assert!(!output.contains("First PRD"));
+    }
+
+    #[test]
+    fn test_render_dot_config_left_right() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = DotConfig {
+            show_titles: true,
+            max_title_len: 40,
+            direction: DotDirection::LeftRight,
+        };
+        let output = render_dot(&graph, Some(config));
+
+        // Should use LR direction.
+        assert!(output.contains("rankdir=LR;"));
+    }
+
+    #[test]
+    fn test_render_dot_truncates_long_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "This is a very long title that should be truncated for display",
+                PrdStatus::Active,
+                None,
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = DotConfig {
+            show_titles: true,
+            max_title_len: 20,
+            direction: DotDirection::TopBottom,
+        };
+        let output = render_dot(&graph, Some(config));
+
+        // Title should be truncated with "...".
+        assert!(output.contains("This is a very lo..."));
+        assert!(!output.contains("truncated for display"));
+    }
+
+    #[test]
+    fn test_dot_node_id_removes_hyphens() {
+        assert_eq!(dot_node_id("PRD-0001"), "PRD0001");
+        assert_eq!(dot_node_id("PRD-9999"), "PRD9999");
+        assert_eq!(dot_node_id("no-hyphens-here"), "nohyphenshere");
     }
 }
