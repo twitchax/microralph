@@ -1577,4 +1577,526 @@ mod tests {
         assert_eq!(dot_node_id("PRD-9999"), "PRD9999");
         assert_eq!(dot_node_id("no-hyphens-here"), "nohyphenshere");
     }
+
+    // ========================================================================
+    // Additional Graph Building Tests
+    // ========================================================================
+
+    #[test]
+    fn test_build_graph_self_referential_dependency() {
+        // A PRD that depends on itself should be handled gracefully.
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "Self-referential PRD",
+                PrdStatus::Active,
+                Some(vec!["PRD-0001".to_string()]),
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        // Self-reference is a valid edge (not missing).
+        assert_eq!(graph.nodes.len(), 1);
+        assert_eq!(graph.edges.len(), 1);
+        assert!(!graph.has_missing_refs());
+
+        let edge = &graph.edges[0];
+        assert_eq!(edge.from, "PRD-0001");
+        assert_eq!(edge.to, "PRD-0001");
+        assert!(!edge.is_missing);
+    }
+
+    #[test]
+    fn test_build_graph_circular_dependencies() {
+        // PRD-0001 -> PRD-0002 -> PRD-0001 (circular).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd(
+                    "PRD-0001",
+                    "First PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        // Both edges should exist (circular is allowed).
+        assert_eq!(graph.nodes.len(), 2);
+        assert_eq!(graph.edges.len(), 2);
+        assert!(!graph.has_missing_refs());
+
+        // Both edges are valid (not missing).
+        for edge in &graph.edges {
+            assert!(!edge.is_missing);
+        }
+    }
+
+    #[test]
+    fn test_build_graph_empty_depends_on_array() {
+        // An empty depends_on array should behave like None.
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, Some(vec![])),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        assert_eq!(graph.nodes.len(), 1);
+        assert_eq!(graph.edges.len(), 0);
+        assert!(!graph.has_missing_refs());
+    }
+
+    #[test]
+    fn test_build_graph_nodes_sorted_by_id() {
+        // Nodes should be sorted alphabetically by ID.
+        let prds = vec![
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd("PRD-0003", "Third", PrdStatus::Active, None),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First", PrdStatus::Active, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd("PRD-0002", "Second", PrdStatus::Active, None),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        assert_eq!(graph.nodes[0].id, "PRD-0001");
+        assert_eq!(graph.nodes[1].id, "PRD-0002");
+        assert_eq!(graph.nodes[2].id, "PRD-0003");
+    }
+
+    #[test]
+    fn test_build_graph_edges_sorted() {
+        // Edges should be sorted by (from, to).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd("PRD-0002", "Second", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0004.md".to_string(),
+                make_test_prd(
+                    "PRD-0004",
+                    "Fourth",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0002".to_string(), "PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0004.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Third",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        // Edges should be sorted by (from, to).
+        assert_eq!(graph.edges.len(), 3);
+        assert_eq!(
+            (&graph.edges[0].from, &graph.edges[0].to),
+            (&"PRD-0003".to_string(), &"PRD-0001".to_string())
+        );
+        assert_eq!(
+            (&graph.edges[1].from, &graph.edges[1].to),
+            (&"PRD-0004".to_string(), &"PRD-0001".to_string())
+        );
+        assert_eq!(
+            (&graph.edges[2].from, &graph.edges[2].to),
+            (&"PRD-0004".to_string(), &"PRD-0002".to_string())
+        );
+    }
+
+    // ========================================================================
+    // PrdGraph Method Tests
+    // ========================================================================
+
+    #[test]
+    fn test_prd_graph_has_missing_refs_false() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        assert!(!graph.has_missing_refs());
+        assert!(graph.missing_refs.is_empty());
+    }
+
+    #[test]
+    fn test_prd_graph_edge_count() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+
+        assert_eq!(graph.edge_count(), 1);
+    }
+
+    // ========================================================================
+    // Config Default Tests
+    // ========================================================================
+
+    #[test]
+    fn test_ascii_config_new() {
+        let config = AsciiConfig::new();
+
+        assert!(config.show_titles);
+        assert_eq!(config.max_title_len, 40);
+    }
+
+    #[test]
+    fn test_mermaid_config_new() {
+        let config = MermaidConfig::new();
+
+        assert!(config.show_titles);
+        assert_eq!(config.max_title_len, 40);
+        assert_eq!(config.direction, MermaidDirection::TopDown);
+    }
+
+    #[test]
+    fn test_dot_config_new() {
+        let config = DotConfig::new();
+
+        assert!(config.show_titles);
+        assert_eq!(config.max_title_len, 40);
+        assert_eq!(config.direction, DotDirection::TopBottom);
+    }
+
+    // ========================================================================
+    // Rendering Edge Case Tests
+    // ========================================================================
+
+    #[test]
+    fn test_render_mermaid_escapes_quotes_in_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "Feature: Add \"quoted\" text",
+                PrdStatus::Active,
+                None,
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Mermaid uses #quot; to escape quotes.
+        assert!(output.contains("#quot;"));
+        assert!(!output.contains("\"quoted\""));
+    }
+
+    #[test]
+    fn test_render_dot_escapes_quotes_in_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "Feature: Add \"quoted\" text",
+                PrdStatus::Active,
+                None,
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        // DOT uses backslash-escaped quotes.
+        assert!(output.contains("\\\"quoted\\\""));
+    }
+
+    #[test]
+    fn test_render_ascii_chain_shows_all_levels() {
+        // PRD-0003 -> PRD-0002 -> PRD-0001 (chain).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "Root", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Middle",
+                    PrdStatus::Done,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Leaf",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        // All three nodes should be present.
+        assert!(output.contains("[PRD-0001]"));
+        assert!(output.contains("[PRD-0002]"));
+        assert!(output.contains("[PRD-0003]"));
+
+        // Dependencies should be shown.
+        assert!(output.contains("└── PRD-0001"));
+        assert!(output.contains("└── PRD-0002"));
+
+        // Summary should show correct counts.
+        assert!(output.contains("3 PRDs, 2 dependencies"));
+    }
+
+    #[test]
+    fn test_render_mermaid_chain_dependencies() {
+        // PRD-0003 -> PRD-0002 -> PRD-0001 (chain).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "Root", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Middle",
+                    PrdStatus::Done,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Leaf",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Chain edges.
+        assert!(output.contains("PRD0002 --> PRD0001"));
+        assert!(output.contains("PRD0003 --> PRD0002"));
+    }
+
+    #[test]
+    fn test_render_dot_chain_dependencies() {
+        // PRD-0003 -> PRD-0002 -> PRD-0001 (chain).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "Root", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Middle",
+                    PrdStatus::Done,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Leaf",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        // Chain edges.
+        assert!(output.contains("PRD0002 -> PRD0001;"));
+        assert!(output.contains("PRD0003 -> PRD0002;"));
+    }
+
+    #[test]
+    fn test_render_ascii_mixed_valid_and_missing_deps() {
+        // PRD-0002 depends on PRD-0001 (valid) and PRD-9999 (missing).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-9999".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        // Should show both valid nodes.
+        assert!(output.contains("[PRD-0001]"));
+        assert!(output.contains("[PRD-0002]"));
+
+        // Should show mixed dependencies.
+        assert!(output.contains("├── PRD-0001"));
+        assert!(output.contains("└── PRD-9999"));
+
+        // Missing reference section.
+        assert!(output.contains("--- Missing References ---"));
+        assert!(output.contains("- PRD-9999 -"));
+
+        // Stats.
+        assert!(output.contains("2 PRDs, 2 dependencies, 1 missing"));
+    }
+
+    #[test]
+    fn test_render_mermaid_mixed_valid_and_missing_deps() {
+        // PRD-0002 depends on PRD-0001 (valid) and PRD-9999 (missing).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-9999".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Valid edge (solid arrow).
+        assert!(output.contains("PRD0002 --> PRD0001"));
+
+        // Missing edge (dashed arrow).
+        assert!(output.contains("PRD0002 -.-> PRD9999"));
+
+        // Missing node styling.
+        assert!(output.contains("PRD9999{{"));
+        assert!(output.contains(":::missing"));
+    }
+
+    #[test]
+    fn test_render_dot_mixed_valid_and_missing_deps() {
+        // PRD-0002 depends on PRD-0001 (valid) and PRD-9999 (missing).
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-9999".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_dot(&graph, None);
+
+        // Valid edge (solid).
+        assert!(output.contains("PRD0002 -> PRD0001;"));
+
+        // Missing edge (dashed).
+        assert!(output.contains("PRD0002 -> PRD9999 [style=dashed];"));
+
+        // Missing node styling.
+        assert!(output.contains("PRD9999 [label="));
+        assert!(output.contains("style=dashed"));
+        assert!(output.contains("color=red"));
+    }
 }

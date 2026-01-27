@@ -124,7 +124,7 @@ tasks:
 - id: T-016
   title: "Add unit tests for graph building and rendering"
   priority: 16
-  status: todo
+  status: done
   notes: "Test graph construction, missing ref handling, and each output format."
 - id: T-017
   title: "Add integration tests for reconstruct and graph commands"
@@ -394,3 +394,16 @@ This makes it harder to onboard to existing projects and understand the logical 
 - **Constitution Compliance**: No violations. Minimal changes, follows existing index generation patterns.
 
 ---
+
+## 2026-01-27 — T-016 Completed
+- **Task**: Add unit tests for graph building and rendering
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 18 new unit tests to `src/graph.rs` covering:
+    - Graph building edge cases: self-referential dependencies, circular dependencies, empty `depends_on` array, node/edge sorting
+    - `PrdGraph` method tests: `has_missing_refs()`, `edge_count()`
+    - Config default tests: `AsciiConfig::new()`, `MermaidConfig::new()`, `DotConfig::new()`
+    - Rendering edge cases: quote escaping in Mermaid/DOT, chain dependencies, mixed valid/missing dependencies
+  - Test count increased from 420 to 438
+  - UAT passed: 438 tests run, 438 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing test patterns.
