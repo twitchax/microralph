@@ -31,7 +31,7 @@ acceptance_tests:
 - id: uat-003
   name: "graph mermaid outputs valid Mermaid flowchart"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: "graph dot outputs valid Graphviz DOT format"
   command: cargo make uat
@@ -469,4 +469,18 @@ This makes it harder to onboard to existing projects and understand the logical 
     - `test_render_ascii_with_dependencies` (line 1046): Unit test verifying dependency rendering
     - `test_render_ascii_chain_shows_all_levels` (line 1868): Unit test verifying chain dependencies render correctly
   - CLI test: `test_args_parse_graph_ascii_defaults` (main.rs line 2724): Verifies CLI parsing
+  - UAT passed: 450 tests run, 450 passed
+
+## 2026-01-27 — uat-003 Verification
+- **UAT**: graph mermaid outputs valid Mermaid flowchart
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/graph.rs`
+  - Tests verified:
+    - `test_graph_integration_mermaid_output_with_real_prds` (line 2263): Integration test that builds graph from disk PRD files and renders Mermaid flowchart output with proper syntax
+    - `test_render_mermaid_with_dependencies` (line 1215): Unit test verifying `flowchart TD`, node definitions, and solid arrow syntax (`-->`)
+    - `test_render_mermaid_with_missing_refs` (line 1247): Unit test verifying missing node syntax (`{{}}`), `:::missing` class, and dashed arrows (`-.->`)
+    - `test_render_mermaid_config_left_right` (line 1327): Unit test verifying `flowchart LR` direction
+  - CLI test: `test_args_parse_graph_mermaid_defaults` (main.rs line 2770): Verifies CLI parsing
   - UAT passed: 450 tests run, 450 passed
