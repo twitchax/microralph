@@ -89,7 +89,7 @@ tasks:
 - id: T-009
   title: "Implement graph ascii subcommand"
   priority: 9
-  status: todo
+  status: done
   notes: "Render ASCII art dependency graph to terminal. Show missing refs as dashed/special nodes with warning."
 - id: T-010
   title: "Implement graph mermaid subcommand"
@@ -280,5 +280,22 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Module uses `#[allow(dead_code)]` as public APIs will be consumed by T-009, T-010, T-011, T-012
   - UAT passed: 377 tests run, 377 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns.
+
+---
+
+## 2026-01-27 — T-009 Completed
+- **Task**: Implement graph ascii subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `AsciiConfig` struct to configure ASCII rendering (show_titles, max_title_len)
+  - Implemented custom `Default` trait for `AsciiConfig` with sensible defaults (show_titles: true, max 40 chars)
+  - Added `render_ascii()` function that renders a `PrdGraph` as ASCII art
+  - Output includes header, node listings with `[ID] Title (status)` format
+  - Dependencies shown with tree connectors (`├──` and `└──`)
+  - Missing references rendered in separate section with dashed format (`- PRD-XXXX -`) and warning about what references them
+  - Summary stats at bottom showing PRD count, edge count, and missing count
+  - Added 7 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, title truncation
+  - UAT passed: 384 tests run, 384 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns and conventions.
 
 ---

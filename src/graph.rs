@@ -202,6 +202,186 @@ pub fn build_graph_from_prds(
     })
 }
 
+// ============================================================================
+// ASCII Rendering
+// ============================================================================
+
+use std::collections::HashMap;
+
+/// Configuration for ASCII graph rendering.
+#[derive(Debug, Clone)]
+pub struct AsciiConfig {
+    /// Whether to show node titles in addition to IDs.
+    pub show_titles: bool,
+
+    /// Maximum title length before truncation.
+    pub max_title_len: usize,
+}
+
+impl Default for AsciiConfig {
+    fn default() -> Self {
+        Self {
+            show_titles: true,
+            max_title_len: 40,
+        }
+    }
+}
+
+impl AsciiConfig {
+    /// Creates a new config with defaults (show titles, max 40 chars).
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+/// Renders the graph as ASCII art.
+///
+/// The output shows each node with its dependencies listed below it.
+/// Missing nodes are shown with dashed borders: `- - -`.
+/// Normal nodes use solid borders: `[   ]`.
+///
+/// Example output:
+/// ```text
+/// PRD Dependency Graph
+/// ====================
+///
+/// [PRD-0001] First PRD (done)
+///
+/// [PRD-0002] Second PRD (active)
+///   └── PRD-0001
+///
+/// - PRD-9999 - (not found)
+///   ⚠ Referenced by: PRD-0002
+/// ```
+///
+/// # Arguments
+///
+/// * `graph` - The dependency graph to render.
+/// * `config` - Configuration for rendering (optional).
+///
+/// # Returns
+///
+/// A string containing the ASCII representation of the graph.
+pub fn render_ascii(graph: &PrdGraph, config: Option<AsciiConfig>) -> String {
+    let config = config.unwrap_or_default();
+    let mut output = String::new();
+
+    // Header.
+    output.push_str("PRD Dependency Graph\n");
+    output.push_str("====================\n\n");
+
+    // Quick check for empty graph.
+    if graph.nodes.is_empty() {
+        output.push_str("(no PRDs found)\n");
+        return output;
+    }
+
+    // Build a map of dependencies for each node (what it depends on).
+    let deps_map: HashMap<&str, Vec<&str>> =
+        graph.edges.iter().fold(HashMap::new(), |mut acc, edge| {
+            acc.entry(edge.from.as_str())
+                .or_default()
+                .push(edge.to.as_str());
+            acc
+        });
+
+    // Build a map of reverse dependencies (what depends on this node).
+    let reverse_deps_map: HashMap<&str, Vec<&str>> =
+        graph.edges.iter().fold(HashMap::new(), |mut acc, edge| {
+            acc.entry(edge.to.as_str())
+                .or_default()
+                .push(edge.from.as_str());
+            acc
+        });
+
+    // First, render non-missing nodes.
+    for node in graph.nodes.iter().filter(|n| !n.is_missing) {
+        render_node(&mut output, node, &deps_map, &config);
+    }
+
+    // Then, render missing nodes separately with warnings.
+    let missing_nodes: Vec<_> = graph.nodes.iter().filter(|n| n.is_missing).collect();
+    if !missing_nodes.is_empty() {
+        output.push_str("--- Missing References ---\n\n");
+
+        for node in missing_nodes {
+            render_missing_node(&mut output, node, &reverse_deps_map);
+        }
+    }
+
+    // Summary stats at the end.
+    output.push_str(&format!(
+        "---\n{} PRDs, {} dependencies",
+        graph.node_count(),
+        graph.edge_count()
+    ));
+
+    if graph.has_missing_refs() {
+        output.push_str(&format!(", {} missing", graph.missing_refs.len()));
+    }
+
+    output.push('\n');
+
+    output
+}
+
+/// Renders a single node with its dependencies.
+fn render_node(
+    output: &mut String,
+    node: &GraphNode,
+    deps_map: &HashMap<&str, Vec<&str>>,
+    config: &AsciiConfig,
+) {
+    // Node header: [PRD-XXXX] Title (status)
+    let title_display = if config.show_titles {
+        let title = if node.title.len() > config.max_title_len {
+            format!("{}...", &node.title[..config.max_title_len - 3])
+        } else {
+            node.title.clone()
+        };
+        format!(" {}", title)
+    } else {
+        String::new()
+    };
+
+    output.push_str(&format!(
+        "[{}]{} ({})\n",
+        node.id, title_display, node.status
+    ));
+
+    // List dependencies.
+    if let Some(deps) = deps_map.get(node.id.as_str()) {
+        let dep_count = deps.len();
+        for (i, dep) in deps.iter().enumerate() {
+            let connector = if i == dep_count - 1 {
+                "└──"
+            } else {
+                "├──"
+            };
+            output.push_str(&format!("  {} {}\n", connector, dep));
+        }
+    }
+
+    output.push('\n');
+}
+
+/// Renders a missing node with warning about what references it.
+fn render_missing_node(
+    output: &mut String,
+    node: &GraphNode,
+    reverse_deps_map: &HashMap<&str, Vec<&str>>,
+) {
+    // Missing node: - PRD-XXXX - (not found)
+    output.push_str(&format!("- {} - (not found)\n", node.id));
+
+    // Show what references this missing node.
+    if let Some(refs) = reverse_deps_map.get(node.id.as_str()) {
+        output.push_str(&format!("  ⚠ Referenced by: {}\n", refs.join(", ")));
+    }
+
+    output.push('\n');
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -504,5 +684,174 @@ mod tests {
 
         // We should have at least some PRDs.
         assert!(graph.node_count() > 0);
+    }
+
+    // ========================================================================
+    // ASCII Rendering Tests
+    // ========================================================================
+
+    #[test]
+    fn test_render_ascii_empty_graph() {
+        let graph = PrdGraph {
+            nodes: vec![],
+            edges: vec![],
+            missing_refs: vec![],
+            warnings: vec![],
+        };
+
+        let output = render_ascii(&graph, None);
+
+        assert!(output.contains("PRD Dependency Graph"));
+        assert!(output.contains("(no PRDs found)"));
+    }
+
+    #[test]
+    fn test_render_ascii_single_node_no_deps() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        assert!(output.contains("PRD Dependency Graph"));
+        assert!(output.contains("[PRD-0001]"));
+        assert!(output.contains("First PRD"));
+        assert!(output.contains("(active)"));
+        assert!(output.contains("1 PRDs, 0 dependencies"));
+    }
+
+    #[test]
+    fn test_render_ascii_with_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        assert!(output.contains("[PRD-0001]"));
+        assert!(output.contains("[PRD-0002]"));
+        assert!(output.contains("└── PRD-0001"));
+        assert!(output.contains("2 PRDs, 1 dependencies"));
+    }
+
+    #[test]
+    fn test_render_ascii_with_missing_refs() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "First PRD",
+                PrdStatus::Active,
+                Some(vec!["PRD-9999".to_string()]),
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        // Should show the missing reference section.
+        assert!(output.contains("--- Missing References ---"));
+        assert!(output.contains("- PRD-9999 -"));
+        assert!(output.contains("(not found)"));
+        assert!(output.contains("Referenced by: PRD-0001"));
+        assert!(output.contains("1 missing"));
+    }
+
+    #[test]
+    fn test_render_ascii_multiple_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd("PRD-0002", "Second PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Third PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_ascii(&graph, None);
+
+        // PRD-0003 should show both dependencies.
+        assert!(output.contains("├── PRD-0001"));
+        assert!(output.contains("└── PRD-0002"));
+        assert!(output.contains("3 PRDs, 2 dependencies"));
+    }
+
+    #[test]
+    fn test_render_ascii_config_no_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = AsciiConfig {
+            show_titles: false,
+            max_title_len: 40,
+        };
+        let output = render_ascii(&graph, Some(config));
+
+        assert!(output.contains("[PRD-0001]"));
+        // Title should not appear between ID and status.
+        assert!(output.contains("[PRD-0001] (active)"));
+    }
+
+    #[test]
+    fn test_render_ascii_truncates_long_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "This is a very long title that should be truncated for display",
+                PrdStatus::Active,
+                None,
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = AsciiConfig {
+            show_titles: true,
+            max_title_len: 20,
+        };
+        let output = render_ascii(&graph, Some(config));
+
+        // Title should be truncated with "...".
+        assert!(output.contains("This is a very lo..."));
+        assert!(!output.contains("truncated for display"));
     }
 }
