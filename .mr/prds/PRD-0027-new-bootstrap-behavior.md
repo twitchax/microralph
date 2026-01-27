@@ -1,0 +1,118 @@
+---
+id: PRD-0027
+title: "Swap Bootstrap Default Behavior"
+status: draft
+owner: "Agent"
+created: 2026-01-27
+updated: 2026-01-27
+
+depends_on:
+- PRD-0026
+
+principles:
+- Reconstruct mode becomes the default behavior for bootstrap
+- New --scaffold flag enables the current default (non-reconstruct) behavior
+- All documentation and prompts must be updated to reflect the change
+- Tests should be updated to reflect the new default
+
+references:
+- name: Bootstrap Reconstruct Workflow (AGENTS.md)
+  url: ./AGENTS.md#bootstrap-reconstruct-workflow
+
+acceptance_tests:
+- id: uat-001
+  name: "Running mr bootstrap without flags uses reconstruct behavior"
+  command: cargo make uat
+  uat_status: unverified
+- id: uat-002
+  name: "Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior"
+  command: cargo make uat
+  uat_status: unverified
+- id: uat-003
+  name: "Help text reflects new default and --scaffold flag"
+  command: cargo run -- bootstrap --help
+  uat_status: unverified
+- id: uat-004
+  name: "All prompts and documentation updated to reflect new behavior"
+  command: cargo make uat
+  uat_status: unverified
+
+tasks:
+- id: T-001
+  title: "Update CLI flag definitions in main.rs"
+  priority: 1
+  status: todo
+  notes: "Remove --reconstruct flag, add --scaffold flag. The default behavior (no flags) should now run reconstruct workflow."
+
+- id: T-002
+  title: "Update BootstrapConfig and bootstrap logic"
+  priority: 2
+  status: todo
+  notes: "Invert the boolean logic in BootstrapConfig. Default should be reconstruct=true, --scaffold sets it to false."
+
+- id: T-003
+  title: "Update bootstrap_reconstruct.md prompt"
+  priority: 3
+  status: todo
+  notes: "Remove references to --reconstruct flag, update context to reflect reconstruct is now the default behavior."
+
+- id: T-004
+  title: "Update AGENTS.md Bootstrap documentation"
+  priority: 4
+  status: todo
+  notes: "Restructure Bootstrap Reconstruct Workflow section to show reconstruct as default, document new --scaffold flag."
+
+- id: T-005
+  title: "Update init.rs embedded prompts"
+  priority: 5
+  status: todo
+  notes: "Ensure embedded prompt constants match the updated prompt files for consistency per constitution."
+
+- id: T-006
+  title: "Update existing tests to reflect new default"
+  priority: 6
+  status: todo
+  notes: "Tests that explicitly set reconstruct=true should be updated; tests for scaffold behavior should use --scaffold."
+
+- id: T-007
+  title: "Verify all --reconstruct references are removed"
+  priority: 7
+  status: todo
+  notes: "Grep codebase for any remaining references to --reconstruct and update or remove them."
+
+---
+
+# Summary
+
+This PRD swaps the default behavior of `mr bootstrap`. Currently, reconstruct mode (analyzing git history to create PRDs for completed work) requires the `--reconstruct` flag. After this change, reconstruct becomes the default behavior, and a new `--scaffold` flag enables the current default behavior (standard bootstrap without git history analysis).
+
+---
+
+# Problem
+
+The current `mr bootstrap` default behavior is designed for new projects with no history, but `mr init` already serves this purpose. The `--reconstruct` flag, which analyzes git history to create PRDs for existing work, is actually the more common use case for `bootstrap` since it targets existing repositories with development history. Users must currently remember to add `--reconstruct` every time they want the git history analysis, which is counterintuitive.
+
+---
+
+# Goals
+
+1. Make `--reconstruct` behavior the default when running `mr bootstrap` without flags.
+2. Introduce `--scaffold` flag to enable the current default (non-reconstruct) behavior.
+3. Update all prompts, documentation, and tests to reflect the new behavior.
+4. Maintain consistency between embedded prompts in `init.rs` and `.mr/prompts/` files.
+
+---
+
+# Non-Goals (MVP)
+
+- Automatic detection of git history presence to suggest appropriate mode.
+- Combined mode that runs both reconstruct and scaffold sequentially.
+- Deprecation warnings or transition period for old behavior.
+
+---
+
+# History
+
+(Entries appended by `mr run` will go below this line.)
+
+---
