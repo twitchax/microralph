@@ -1,142 +1,137 @@
 ---
 id: PRD-0026
-title: "Better Bootstrap: Reconstruct, depends_on, and Graph Command"
-status: active
+title: 'Better Bootstrap: Reconstruct, depends_on, and Graph Command'
+status: done
 owner: Aaron Roney
 created: 2026-01-27
 updated: 2026-01-27
-
 principles:
-- "depends_on represents directed edges: 'this PRD should be done after the dependencies'"
-- "Graph output formats are separate subcommands for SOC (ascii, mermaid, dot)"
-- "Reconstruct infers major milestones from git history, not incremental bug fixes"
-- "LLM-driven dependency inference and fixing during reindex"
-- "Minimal schema changes: add depends_on and reconstructed fields to frontmatter"
-
+- 'depends_on represents directed edges: ''this PRD should be done after the dependencies'''
+- Graph output formats are separate subcommands for SOC (ascii, mermaid, dot)
+- Reconstruct infers major milestones from git history, not incremental bug fixes
+- LLM-driven dependency inference and fixing during reindex
+- 'Minimal schema changes: add depends_on and reconstructed fields to frontmatter'
 references:
 - name: Mermaid Flowchart Syntax
   url: https://mermaid.js.org/syntax/flowchart.html
 - name: Graphviz DOT Language
   url: https://graphviz.org/doc/info/lang.html
-
 acceptance_tests:
 - id: uat-001
-  name: "bootstrap --reconstruct creates PRDs from git history with depends_on"
+  name: bootstrap --reconstruct creates PRDs from git history with depends_on
   command: cargo make uat
   uat_status: verified
 - id: uat-002
-  name: "graph ascii renders dependency graph in terminal"
+  name: graph ascii renders dependency graph in terminal
   command: cargo make uat
   uat_status: verified
 - id: uat-003
-  name: "graph mermaid outputs valid Mermaid flowchart"
+  name: graph mermaid outputs valid Mermaid flowchart
   command: cargo make uat
   uat_status: verified
 - id: uat-004
-  name: "graph dot outputs valid Graphviz DOT format"
+  name: graph dot outputs valid Graphviz DOT format
   command: cargo make uat
   uat_status: verified
 - id: uat-005
-  name: "reindex auto-fixes depends_on using LLM"
+  name: reindex auto-fixes depends_on using LLM
   command: cargo make uat
   uat_status: verified
 - id: uat-006
-  name: "graph warns and renders dashed nodes for missing depends_on references"
+  name: graph warns and renders dashed nodes for missing depends_on references
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
-  title: "Add depends_on field to PrdFrontmatter struct"
+  title: Add depends_on field to PrdFrontmatter struct
   priority: 1
   status: done
-  notes: "Add `depends_on: Option<Vec<String>>` to src/prd/types.rs. List of PRD IDs (e.g., ['PRD-0001', 'PRD-0003'])."
+  notes: 'Add `depends_on: Option<Vec<String>>` to src/prd/types.rs. List of PRD IDs (e.g., [''PRD-0001'', ''PRD-0003'']).'
 - id: T-002
-  title: "Add reconstructed field to PrdFrontmatter struct"
+  title: Add reconstructed field to PrdFrontmatter struct
   priority: 2
   status: done
-  notes: "Add `reconstructed: Option<bool>` to mark PRDs created via --reconstruct."
+  notes: 'Add `reconstructed: Option<bool>` to mark PRDs created via --reconstruct.'
 - id: T-003
-  title: "Update PRD template to include depends_on field"
+  title: Update PRD template to include depends_on field
   priority: 3
   status: done
-  notes: "Add optional depends_on field to .mr/templates/prd.md and init.rs embedded template."
+  notes: Add optional depends_on field to .mr/templates/prd.md and init.rs embedded template.
 - id: T-004
-  title: "Implement --reconstruct flag for bootstrap command"
+  title: Implement --reconstruct flag for bootstrap command
   priority: 4
   status: done
-  notes: "Add flag to main.rs CLI, update BootstrapConfig. When set, runs reconstruct workflow instead of normal bootstrap."
+  notes: Add flag to main.rs CLI, update BootstrapConfig. When set, runs reconstruct workflow instead of normal bootstrap.
 - id: T-005
-  title: "Create bootstrap_reconstruct.md prompt"
+  title: Create bootstrap_reconstruct.md prompt
   priority: 5
   status: done
-  notes: "Agent-driven prompt that analyzes commits, tags, major changes to infer historical PRDs. Add to init.rs and PromptKind."
+  notes: Agent-driven prompt that analyzes commits, tags, major changes to infer historical PRDs. Add to init.rs and PromptKind.
 - id: T-006
-  title: "Implement reconstruct logic in bootstrap.rs"
+  title: Implement reconstruct logic in bootstrap.rs
   priority: 6
   status: done
-  notes: "New function that invokes runner with reconstruct prompt. Infers depends_on relationships from temporal order. Sets status: done and reconstructed: true."
+  notes: 'New function that invokes runner with reconstruct prompt. Infers depends_on relationships from temporal order. Sets status: done and reconstructed: true.'
 - id: T-007
-  title: "Handle idempotency for --reconstruct with existing PRDs"
+  title: Handle idempotency for --reconstruct with existing PRDs
   priority: 7
   status: done
-  notes: "Skip/merge with existing PRDs. Only create new PRDs for work not covered by existing ones."
+  notes: Skip/merge with existing PRDs. Only create new PRDs for work not covered by existing ones.
 - id: T-008
-  title: "Create graph module with shared graph-building logic"
+  title: Create graph module with shared graph-building logic
   priority: 8
   status: done
-  notes: "New src/graph.rs with GraphNode, GraphEdge structs and build_graph(root) function. Handle missing depends_on refs as warnings."
+  notes: New src/graph.rs with GraphNode, GraphEdge structs and build_graph(root) function. Handle missing depends_on refs as warnings.
 - id: T-009
-  title: "Implement graph ascii subcommand"
+  title: Implement graph ascii subcommand
   priority: 9
   status: done
-  notes: "Render ASCII art dependency graph to terminal. Show missing refs as dashed/special nodes with warning."
+  notes: Render ASCII art dependency graph to terminal. Show missing refs as dashed/special nodes with warning.
 - id: T-010
-  title: "Implement graph mermaid subcommand"
+  title: Implement graph mermaid subcommand
   priority: 10
   status: done
-  notes: "Output Mermaid flowchart syntax for GitHub rendering. Use dashed lines for missing refs."
+  notes: Output Mermaid flowchart syntax for GitHub rendering. Use dashed lines for missing refs.
 - id: T-011
-  title: "Implement graph dot subcommand"
+  title: Implement graph dot subcommand
   priority: 11
   status: done
-  notes: "Output Graphviz DOT format. Use dashed style for missing refs."
+  notes: Output Graphviz DOT format. Use dashed style for missing refs.
 - id: T-012
-  title: "Add graph command to CLI with subcommands"
+  title: Add graph command to CLI with subcommands
   priority: 12
   status: done
-  notes: "Add to main.rs: `mr graph ascii`, `mr graph mermaid`, `mr graph dot`."
+  notes: 'Add to main.rs: `mr graph ascii`, `mr graph mermaid`, `mr graph dot`.'
 - id: T-013
-  title: "Enhance reindex to auto-fix depends_on using LLM"
+  title: Enhance reindex to auto-fix depends_on using LLM
   priority: 13
   status: done
-  notes: "Update reindex.rs to invoke runner with prompt that analyzes PRDs and infers/fixes depends_on relationships. Write changes in-place."
+  notes: Update reindex.rs to invoke runner with prompt that analyzes PRDs and infers/fixes depends_on relationships. Write changes in-place.
 - id: T-014
-  title: "Create reindex_depends_on.md prompt"
+  title: Create reindex_depends_on.md prompt
   priority: 14
   status: done
-  notes: "Prompt for LLM to analyze PRD summaries/dates and infer dependencies. Add to init.rs and PromptKind."
+  notes: Prompt for LLM to analyze PRD summaries/dates and infer dependencies. Add to init.rs and PromptKind.
 - id: T-015
-  title: "Update PRDS.md index generation to include depends_on info"
+  title: Update PRDS.md index generation to include depends_on info
   priority: 15
   status: done
-  notes: "Show dependency relationships in the index if present."
+  notes: Show dependency relationships in the index if present.
 - id: T-016
-  title: "Add unit tests for graph building and rendering"
+  title: Add unit tests for graph building and rendering
   priority: 16
   status: done
-  notes: "Test graph construction, missing ref handling, and each output format."
+  notes: Test graph construction, missing ref handling, and each output format.
 - id: T-017
-  title: "Add integration tests for reconstruct and graph commands"
+  title: Add integration tests for reconstruct and graph commands
   priority: 17
   status: done
-  notes: "Test full workflow with mock runner."
+  notes: Test full workflow with mock runner.
 - id: T-018
-  title: "Update AGENTS.md with graph and reconstruct documentation"
+  title: Update AGENTS.md with graph and reconstruct documentation
   priority: 18
   status: done
-  notes: "Document new commands, flags, and workflows."
-
+  notes: Document new commands, flags, and workflows.
 ---
 
 # Summary
@@ -524,3 +519,17 @@ This makes it harder to onboard to existing projects and understand the logical 
     - `test_render_mermaid_with_missing_refs` (line 1247): Unit test verifying Mermaid output uses dashed arrows (`-.->`) and `:::missing` class for missing nodes
     - `test_render_dot_with_missing_refs` (line 1450): Unit test verifying DOT output uses `style=dashed color=red` for missing nodes and `[style=dashed]` for edges
   - UAT passed: 452 tests run, 452 passed
+
+---
+
+## 2026-01-27 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 18 tasks (T-001 through T-018)
+- **Outcome**: All tasks completed, acceptance tests passed (452/452 tests)
+- **Cleanup**: None required — no temporary files or debug code found
+- **Summary**:
+  - Added `depends_on` field to PRD frontmatter for expressing dependencies between PRDs
+  - Implemented `--reconstruct` flag for bootstrap command to create PRDs from git history
+  - Added `graph` command with `ascii`, `mermaid`, and `dot` subcommands for visualizing PRD dependencies
+  - Enhanced `reindex` to auto-fix `depends_on` relationships using LLM analysis
+  - Added comprehensive test coverage (92+ new tests) and updated AGENTS.md documentation
