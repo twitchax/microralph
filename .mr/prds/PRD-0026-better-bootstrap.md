@@ -23,7 +23,7 @@ acceptance_tests:
 - id: uat-001
   name: "bootstrap --reconstruct creates PRDs from git history with depends_on"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: "graph ascii renders dependency graph in terminal"
   command: cargo make uat
@@ -444,3 +444,16 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added usage examples, flags reference tables, and output examples for all new commands
   - UAT passed: 450 tests run, 450 passed
 - **Constitution Compliance**: No violations. Documentation-only changes.
+
+---
+
+## 2026-01-27 — uat-001 Verification
+- **UAT**: bootstrap --reconstruct creates PRDs from git history with depends_on
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/bootstrap.rs`
+  - Tests verified:
+    - `test_reconstruct_integration_creates_prds_from_git_history` (line 744): Integration test that verifies reconstruct workflow creates PRDs from git history with depends_on relationships
+    - `test_reconstruct_integration_with_depends_on_inference` (line 856): Integration test that verifies reconstruct prompt supports depends_on inference
+  - UAT passed: 450 tests run, 450 passed
