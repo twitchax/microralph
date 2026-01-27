@@ -438,6 +438,8 @@ mod tests {
         let config = BootstrapConfig::new(temp.path());
 
         assert_eq!(config.prd_budget, DEFAULT_PRD_BUDGET);
+        // PRD-0027 uat-001: Default behavior is reconstruct (not scaffold).
+        assert!(config.reconstruct, "Default should be reconstruct mode");
     }
 
     #[test]

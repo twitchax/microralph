@@ -23,7 +23,7 @@ acceptance_tests:
 - id: uat-001
   name: "Running mr bootstrap without flags uses reconstruct behavior"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: "Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior"
   command: cargo make uat
@@ -234,3 +234,15 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Per constitution rule #7 (Prompt Management), the embedded prompt constant in `src/init.rs` matches the updated `.mr/prompts/prd_new_roundN_questions.md` file.
+
+---
+
+## 2026-01-27 — uat-001 Verification
+- **UAT**: Running mr bootstrap without flags uses reconstruct behavior
+- **Status**: ✅ Verified
+- **Method**: Existing test enhanced
+- **Details**:
+  - Test file: `src/bootstrap.rs`
+  - Test name: `test_bootstrap_config_defaults`
+  - Added assertion `assert!(config.reconstruct, "Default should be reconstruct mode")` to explicitly verify that `BootstrapConfig::new()` defaults to reconstruct=true
+  - Additional coverage from `test_bootstrap_reconstruct_workflow` which exercises the full reconstruct workflow using default config
