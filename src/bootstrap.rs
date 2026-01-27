@@ -704,8 +704,8 @@ Test PRD.
             "Reconstructed PRD-0001, PRD-0002, and PRD-0003 from git history.",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -734,8 +734,8 @@ Test PRD.
             "Reconstructed PRD-0001 from commits.",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -753,8 +753,8 @@ Test PRD.
             "Error analyzing git",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner);
 
@@ -869,8 +869,8 @@ Test PRD for idempotency testing.
             "Analyzed git history. Created PRD-0001 and PRD-0002 with depends_on relationships.",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -930,8 +930,8 @@ An existing PRD that should not be duplicated.
             "Created PRD-0002 and PRD-0003. Skipped existing PRD as it already exists.",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -995,8 +995,8 @@ Created PRD-0002 (status: done, reconstructed: true, depends_on: [PRD-0001]).
 Created PRD-0003 (status: done, reconstructed: true, depends_on: [PRD-0001, PRD-0002])."#,
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -1021,8 +1021,8 @@ Created PRD-0003 (status: done, reconstructed: true, depends_on: [PRD-0001, PRD-
             "Reconstructed project history. Created PRD-0001, PRD-0002.",
         )]);
 
-        let mut config = BootstrapConfig::new(temp.path());
-        config.reconstruct = true;
+        let config = BootstrapConfig::new(temp.path());
+        // reconstruct is true by default, no need to set explicitly
 
         let result = bootstrap(&config, &runner).unwrap();
 

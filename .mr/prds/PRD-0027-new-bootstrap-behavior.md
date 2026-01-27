@@ -71,7 +71,7 @@ tasks:
 - id: T-006
   title: "Update existing tests to reflect new default"
   priority: 6
-  status: todo
+  status: done
   notes: "Tests that explicitly set reconstruct=true should be updated; tests for scaffold behavior should use --scaffold."
 
 - id: T-007
@@ -196,3 +196,23 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **Constitution Compliance**: No violations. Per constitution rule #7 (Prompt Management), the embedded prompt constant now matches the updated `.mr/prompts/bootstrap_reconstruct.md` file.
 
 ---
+
+## 2026-01-27 — T-006 Completed
+- **Task**: Update existing tests to reflect new default
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd/types.rs:376`: Changed doc comment from "via `--reconstruct`" to "via reconstruct mode"
+  - Updated `src/graph.rs:2591`: Changed test comment from "mr bootstrap --reconstruct" to "mr bootstrap"
+  - Updated `src/bootstrap.rs`: Removed 7 redundant `config.reconstruct = true` lines from tests since reconstruct is now the default:
+    - `test_bootstrap_reconstruct_workflow` (line 708)
+    - `test_bootstrap_reconstruct_skips_init_if_exists` (line 738)
+    - `test_bootstrap_reconstruct_runner_failure` (line 757)
+    - `test_reconstruct_integration_creates_mr_structure` (line 873)
+    - `test_reconstruct_integration_idempotent_with_existing_prds` (line 934)
+    - `test_reconstruct_integration_with_depends_on_inference` (line 999)
+    - `test_reconstruct_integration_full_workflow_with_index_regeneration` (line 1025)
+  - Changed `config` from mutable to immutable in these tests, added clarifying comments
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused on updating tests to reflect the new default behavior.

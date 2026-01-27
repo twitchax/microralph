@@ -2588,7 +2588,7 @@ Leaf.
         let prds_dir = temp.path().join(".mr/prds");
         std::fs::create_dir_all(&prds_dir).unwrap();
 
-        // Create reconstructed PRDs (simulating output from `mr bootstrap --reconstruct`).
+        // Create reconstructed PRDs (simulating output from `mr bootstrap`).
         let prd1 = r#"---
 id: PRD-0001
 title: "Initial Release"
