@@ -1,7 +1,7 @@
 ---
 id: PRD-0027
 title: "Swap Bootstrap Default Behavior"
-status: draft
+status: active
 owner: "Agent"
 created: 2026-01-27
 updated: 2026-01-27
@@ -41,7 +41,7 @@ tasks:
 - id: T-001
   title: "Update CLI flag definitions in main.rs"
   priority: 1
-  status: todo
+  status: done
   notes: "Remove --reconstruct flag, add --scaffold flag. The default behavior (no flags) should now run reconstruct workflow."
 
 - id: T-002
@@ -114,5 +114,20 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-27 — T-001 Completed
+- **Task**: Update CLI flag definitions in main.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced `--reconstruct` flag with `--scaffold` flag in Command::Bootstrap enum
+  - Updated help text: scaffold is now documented as the flag to skip git history analysis
+  - Updated cmd_bootstrap function to accept `scaffold: bool` and set `config.reconstruct = !scaffold`
+  - Updated all 4 bootstrap-related tests to use `scaffold` instead of `reconstruct`
+  - Renamed test `test_args_parse_bootstrap_with_reconstruct` to `test_args_parse_bootstrap_with_scaffold`
+  - Verified help text shows correct new behavior via `cargo run -- bootstrap --help`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused on the flag rename.
 
 ---

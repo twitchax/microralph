@@ -92,10 +92,10 @@ enum Command {
         #[arg(long)]
         model: Option<String>,
 
-        /// Reconstruct PRDs from git history (tags, major milestones).
-        /// Creates PRDs with status: done, reconstructed: true, and inferred depends_on.
+        /// Scaffold mode: skip git history analysis and create an initial PRD for bootstrapping.
+        /// Default behavior (without this flag) reconstructs PRDs from git history.
         #[arg(long)]
-        reconstruct: bool,
+        scaffold: bool,
 
         /// Stream runner output to stdout in real-time.
         #[arg(long)]
@@ -392,15 +392,15 @@ fn main() -> Result<()> {
             runner,
             language,
             model,
-            reconstruct,
+            scaffold,
             stream,
         }) => {
-            tracing::info!(runner = %runner, language = ?language, reconstruct = reconstruct, stream = stream, "Bootstrapping repo...");
+            tracing::info!(runner = %runner, language = ?language, scaffold = scaffold, stream = stream, "Bootstrapping repo...");
             cmd_bootstrap(
                 &runner,
                 language.as_deref(),
                 model.as_deref(),
-                reconstruct,
+                scaffold,
                 stream,
             )?;
         }
@@ -744,7 +744,7 @@ fn cmd_bootstrap(
     runner_name: &str,
     language: Option<&str>,
     cli_model: Option<&str>,
-    reconstruct: bool,
+    scaffold: bool,
     stream: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
@@ -772,17 +772,18 @@ fn cmd_bootstrap(
     // Select runner based on name.
     let runner = create_runner(runner_name, model.clone())?;
 
+    // Default behavior is reconstruct (scaffold=false means reconstruct=true).
     let mut config = bootstrap::BootstrapConfig::new(&cwd);
-    config.reconstruct = reconstruct;
+    config.reconstruct = !scaffold;
     config.stream = stream;
 
-    if reconstruct {
+    if scaffold {
+        println!("{}", colors::info("Scaffolding repository..."));
+    } else {
         println!(
             "{}",
             colors::info("Reconstructing PRDs from git history...")
         );
-    } else {
-        println!("{}", colors::info("Bootstrapping repository..."));
     }
     println!("{}", colors::info(&format!("Detected language: {}", lang)));
     println!();
@@ -2198,14 +2199,14 @@ mod tests {
             runner,
             language,
             model,
-            reconstruct,
+            scaffold,
             stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
             assert!(model.is_none());
-            assert!(!reconstruct);
+            assert!(!scaffold);
             assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
@@ -2221,14 +2222,14 @@ mod tests {
             runner,
             language,
             model,
-            reconstruct,
+            scaffold,
             stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert_eq!(language, Some("node".to_string()));
             assert!(model.is_none());
-            assert!(!reconstruct);
+            assert!(!scaffold);
             assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
@@ -2250,14 +2251,14 @@ mod tests {
             runner,
             language,
             model,
-            reconstruct,
+            scaffold,
             stream,
         }) = args.command
         {
             assert_eq!(runner, "copilot");
             assert!(language.is_none());
             assert_eq!(model, Some("claude-opus-4".to_string()));
-            assert!(!reconstruct);
+            assert!(!scaffold);
             assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
@@ -2265,21 +2266,21 @@ mod tests {
     }
 
     #[test]
-    fn test_args_parse_bootstrap_with_reconstruct() {
+    fn test_args_parse_bootstrap_with_scaffold() {
         let args =
-            Args::try_parse_from(["mr", "bootstrap", "--runner", "mock", "--reconstruct"]).unwrap();
+            Args::try_parse_from(["mr", "bootstrap", "--runner", "mock", "--scaffold"]).unwrap();
         if let Some(Command::Bootstrap {
             runner,
             language,
             model,
-            reconstruct,
+            scaffold,
             stream,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
             assert!(model.is_none());
-            assert!(reconstruct);
+            assert!(scaffold);
             assert!(!stream);
         } else {
             panic!("Expected Bootstrap command");
