@@ -84,7 +84,7 @@ tasks:
 - id: T-008
   title: "Create graph module with shared graph-building logic"
   priority: 8
-  status: todo
+  status: done
   notes: "New src/graph.rs with GraphNode, GraphEdge structs and build_graph(root) function. Handle missing depends_on refs as warnings."
 - id: T-009
   title: "Implement graph ascii subcommand"
@@ -261,5 +261,24 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 2 new unit tests: `test_build_reconstruct_prompt_includes_existing_prds`, `test_build_reconstruct_prompt_no_existing_prds`
   - UAT passed: 367 tests run, 367 passed
 - **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
+
+---
+
+## 2026-01-27 — T-008 Completed
+- **Task**: Create graph module with shared graph-building logic
+- **Status**: ✅ Done
+- **Changes**:
+  - Created new `src/graph.rs` module with PRD dependency graph data structures and functions
+  - Added `GraphNode` struct with fields: `id`, `title`, `status`, `is_missing`
+  - Added `GraphEdge` struct with fields: `from`, `to`, `is_missing` for directed dependency edges
+  - Added `PrdGraph` struct aggregating nodes, edges, missing_refs, and warnings
+  - Implemented `build_graph(root)` function that scans PRDs and builds dependency graph from `depends_on` fields
+  - Implemented `build_graph_from_prds()` function for direct PRD slice input (useful for testing)
+  - Missing `depends_on` references are handled as warnings (logged via `tracing::warn!`) and represented as placeholder nodes with `is_missing: true`
+  - Added `from_summary()` and `missing()` constructors for `GraphNode`
+  - Added 10 unit tests covering: no dependencies, valid dependencies, missing dependencies, multiple/chain dependencies, deduplication, and actual repo integration test
+  - Module uses `#[allow(dead_code)]` as public APIs will be consumed by T-009, T-010, T-011, T-012
+  - UAT passed: 377 tests run, 377 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns.
 
 ---

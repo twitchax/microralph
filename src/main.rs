@@ -13,6 +13,7 @@ mod colors;
 mod config;
 mod constitution_edit;
 mod devcontainer;
+mod graph;
 mod init;
 mod prd;
 mod prd_edit;
