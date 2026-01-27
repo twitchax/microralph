@@ -382,6 +382,159 @@ fn render_missing_node(
     output.push('\n');
 }
 
+// ============================================================================
+// Mermaid Rendering
+// ============================================================================
+
+/// Configuration for Mermaid graph rendering.
+#[derive(Debug, Clone)]
+pub struct MermaidConfig {
+    /// Whether to show node titles in addition to IDs.
+    pub show_titles: bool,
+
+    /// Maximum title length before truncation.
+    pub max_title_len: usize,
+
+    /// Direction of the flowchart (TD = top-down, LR = left-right).
+    pub direction: MermaidDirection,
+}
+
+/// Direction for Mermaid flowchart rendering.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MermaidDirection {
+    /// Top to bottom (default).
+    TopDown,
+    /// Left to right.
+    LeftRight,
+}
+
+impl Default for MermaidConfig {
+    fn default() -> Self {
+        Self {
+            show_titles: true,
+            max_title_len: 40,
+            direction: MermaidDirection::TopDown,
+        }
+    }
+}
+
+impl MermaidConfig {
+    /// Creates a new config with defaults (show titles, max 40 chars, top-down).
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+/// Renders the graph as Mermaid flowchart syntax.
+///
+/// The output is valid Mermaid syntax that can be rendered in GitHub Markdown,
+/// documentation sites, or any Mermaid-compatible viewer.
+///
+/// Missing references are shown with dashed lines (`-.->`) to indicate
+/// the dependency target does not exist.
+///
+/// Example output:
+/// ```text
+/// flowchart TD
+///     PRD0001["PRD-0001: First PRD (done)"]
+///     PRD0002["PRD-0002: Second PRD (active)"]
+///     PRD0002 --> PRD0001
+/// ```
+///
+/// # Arguments
+///
+/// * `graph` - The dependency graph to render.
+/// * `config` - Configuration for rendering (optional).
+///
+/// # Returns
+///
+/// A string containing the Mermaid flowchart representation of the graph.
+pub fn render_mermaid(graph: &PrdGraph, config: Option<MermaidConfig>) -> String {
+    let config = config.unwrap_or_default();
+    let mut output = String::new();
+
+    // Flowchart header with direction.
+    let direction = match config.direction {
+        MermaidDirection::TopDown => "TD",
+        MermaidDirection::LeftRight => "LR",
+    };
+    output.push_str(&format!("flowchart {}\n", direction));
+
+    // Quick check for empty graph.
+    if graph.nodes.is_empty() {
+        output.push_str("    empty[\"No PRDs found\"]\n");
+        return output;
+    }
+
+    // Render node definitions.
+    for node in &graph.nodes {
+        let node_id = mermaid_node_id(&node.id);
+        let label = mermaid_node_label(node, &config);
+
+        if node.is_missing {
+            // Missing nodes use dashed/different shape.
+            output.push_str(&format!("    {}{{{{\"{}\"}}}}:::missing\n", node_id, label));
+        } else {
+            // Normal nodes use rectangle shape.
+            output.push_str(&format!("    {}[\"{}\"]\n", node_id, label));
+        }
+    }
+
+    // Add blank line between nodes and edges for readability.
+    if !graph.edges.is_empty() {
+        output.push('\n');
+    }
+
+    // Render edges.
+    for edge in &graph.edges {
+        let from_id = mermaid_node_id(&edge.from);
+        let to_id = mermaid_node_id(&edge.to);
+
+        if edge.is_missing {
+            // Dashed arrow for missing references.
+            output.push_str(&format!("    {} -.-> {}\n", from_id, to_id));
+        } else {
+            // Solid arrow for valid references.
+            output.push_str(&format!("    {} --> {}\n", from_id, to_id));
+        }
+    }
+
+    // Add styling for missing nodes.
+    if graph.has_missing_refs() {
+        output.push('\n');
+        output.push_str("    classDef missing fill:#ffcccc,stroke:#cc0000,stroke-dasharray: 5 5\n");
+    }
+
+    output
+}
+
+/// Converts a PRD ID to a valid Mermaid node ID.
+///
+/// Mermaid node IDs cannot contain hyphens, so we remove them.
+fn mermaid_node_id(id: &str) -> String {
+    id.replace('-', "")
+}
+
+/// Creates a label for a Mermaid node.
+fn mermaid_node_label(node: &GraphNode, config: &MermaidConfig) -> String {
+    let status = format!("{}", node.status);
+
+    if config.show_titles {
+        let title = if node.title.len() > config.max_title_len {
+            format!("{}...", &node.title[..config.max_title_len - 3])
+        } else {
+            node.title.clone()
+        };
+
+        // Escape quotes in the title for Mermaid.
+        let title = title.replace('"', "#quot;");
+
+        format!("{}: {} ({})", node.id, title, status)
+    } else {
+        format!("{} ({})", node.id, status)
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -853,5 +1006,207 @@ mod tests {
         // Title should be truncated with "...".
         assert!(output.contains("This is a very lo..."));
         assert!(!output.contains("truncated for display"));
+    }
+
+    // ========================================================================
+    // Mermaid Rendering Tests
+    // ========================================================================
+
+    #[test]
+    fn test_render_mermaid_empty_graph() {
+        let graph = PrdGraph {
+            nodes: vec![],
+            edges: vec![],
+            missing_refs: vec![],
+            warnings: vec![],
+        };
+
+        let output = render_mermaid(&graph, None);
+
+        assert!(output.contains("flowchart TD"));
+        assert!(output.contains("No PRDs found"));
+    }
+
+    #[test]
+    fn test_render_mermaid_single_node_no_deps() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        assert!(output.contains("flowchart TD"));
+        assert!(output.contains("PRD0001["));
+        assert!(output.contains("PRD-0001: First PRD (active)"));
+        // No edges.
+        assert!(!output.contains("-->"));
+    }
+
+    #[test]
+    fn test_render_mermaid_with_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd(
+                    "PRD-0002",
+                    "Second PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        assert!(output.contains("flowchart TD"));
+        assert!(output.contains("PRD0001["));
+        assert!(output.contains("PRD0002["));
+        // Solid arrow for valid dependency.
+        assert!(output.contains("PRD0002 --> PRD0001"));
+        // No dashed arrows.
+        assert!(!output.contains("-.->"));
+    }
+
+    #[test]
+    fn test_render_mermaid_with_missing_refs() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "First PRD",
+                PrdStatus::Active,
+                Some(vec!["PRD-9999".to_string()]),
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Should show missing node with special shape.
+        assert!(output.contains("PRD9999{{"));
+        assert!(output.contains(":::missing"));
+        // Dashed arrow for missing dependency.
+        assert!(output.contains("PRD0001 -.-> PRD9999"));
+        // Should have classDef for missing style.
+        assert!(output.contains("classDef missing"));
+    }
+
+    #[test]
+    fn test_render_mermaid_multiple_dependencies() {
+        let prds = vec![
+            (
+                "PRD-0001.md".to_string(),
+                make_test_prd("PRD-0001", "First PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0001.md"),
+            ),
+            (
+                "PRD-0002.md".to_string(),
+                make_test_prd("PRD-0002", "Second PRD", PrdStatus::Done, None),
+                std::path::PathBuf::from("prds/PRD-0002.md"),
+            ),
+            (
+                "PRD-0003.md".to_string(),
+                make_test_prd(
+                    "PRD-0003",
+                    "Third PRD",
+                    PrdStatus::Active,
+                    Some(vec!["PRD-0001".to_string(), "PRD-0002".to_string()]),
+                ),
+                std::path::PathBuf::from("prds/PRD-0003.md"),
+            ),
+        ];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Both edges should exist.
+        assert!(output.contains("PRD0003 --> PRD0001"));
+        assert!(output.contains("PRD0003 --> PRD0002"));
+    }
+
+    #[test]
+    fn test_render_mermaid_config_no_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = MermaidConfig {
+            show_titles: false,
+            max_title_len: 40,
+            direction: MermaidDirection::TopDown,
+        };
+        let output = render_mermaid(&graph, Some(config));
+
+        assert!(output.contains("PRD0001["));
+        // Should show ID and status but not title.
+        assert!(output.contains("PRD-0001 (active)"));
+        assert!(!output.contains("First PRD"));
+    }
+
+    #[test]
+    fn test_render_mermaid_config_left_right() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd("PRD-0001", "First PRD", PrdStatus::Active, None),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = MermaidConfig {
+            show_titles: true,
+            max_title_len: 40,
+            direction: MermaidDirection::LeftRight,
+        };
+        let output = render_mermaid(&graph, Some(config));
+
+        // Should use LR direction.
+        assert!(output.contains("flowchart LR"));
+    }
+
+    #[test]
+    fn test_render_mermaid_truncates_long_titles() {
+        let prds = vec![(
+            "PRD-0001.md".to_string(),
+            make_test_prd(
+                "PRD-0001",
+                "This is a very long title that should be truncated for display",
+                PrdStatus::Active,
+                None,
+            ),
+            std::path::PathBuf::from("prds/PRD-0001.md"),
+        )];
+
+        let graph = build_graph_from_prds(&prds).unwrap();
+        let config = MermaidConfig {
+            show_titles: true,
+            max_title_len: 20,
+            direction: MermaidDirection::TopDown,
+        };
+        let output = render_mermaid(&graph, Some(config));
+
+        // Title should be truncated with "...".
+        assert!(output.contains("This is a very lo..."));
+        assert!(!output.contains("truncated for display"));
+    }
+
+    #[test]
+    fn test_mermaid_node_id_removes_hyphens() {
+        assert_eq!(mermaid_node_id("PRD-0001"), "PRD0001");
+        assert_eq!(mermaid_node_id("PRD-9999"), "PRD9999");
+        assert_eq!(mermaid_node_id("no-hyphens-here"), "nohyphenshere");
     }
 }

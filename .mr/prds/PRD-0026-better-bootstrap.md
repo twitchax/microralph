@@ -94,7 +94,7 @@ tasks:
 - id: T-010
   title: "Implement graph mermaid subcommand"
   priority: 10
-  status: todo
+  status: done
   notes: "Output Mermaid flowchart syntax for GitHub rendering. Use dashed lines for missing refs."
 - id: T-011
   title: "Implement graph dot subcommand"
@@ -297,5 +297,25 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 7 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, title truncation
   - UAT passed: 384 tests run, 384 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns and conventions.
+
+---
+
+## 2026-01-27 — T-010 Completed
+- **Task**: Implement graph mermaid subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `MermaidConfig` struct with `show_titles`, `max_title_len`, and `direction` fields
+  - Added `MermaidDirection` enum with `TopDown` and `LeftRight` variants
+  - Implemented `render_mermaid()` function that renders a `PrdGraph` as Mermaid flowchart syntax
+  - Output starts with `flowchart TD` (or `LR` based on config)
+  - Node definitions use `ID["label"]` format with ID: Title (status) labels
+  - Missing nodes use `{{double braces}}` shape with `:::missing` class styling
+  - Valid dependencies rendered with solid arrows (`-->`)
+  - Missing dependencies rendered with dashed arrows (`-.->`)
+  - Added `classDef missing` for visual differentiation (red dashed outline)
+  - Added helper functions: `mermaid_node_id()` (removes hyphens), `mermaid_node_label()` (formats label with title/status)
+  - Added 9 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, left-right direction, title truncation, node ID conversion
+  - UAT passed: 393 tests run, 393 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns (mirrors ASCII rendering structure).
 
 ---
