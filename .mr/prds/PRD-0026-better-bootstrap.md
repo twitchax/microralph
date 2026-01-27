@@ -129,7 +129,7 @@ tasks:
 - id: T-017
   title: "Add integration tests for reconstruct and graph commands"
   priority: 17
-  status: todo
+  status: done
   notes: "Test full workflow with mock runner."
 - id: T-018
   title: "Update AGENTS.md with graph and reconstruct documentation"
@@ -406,4 +406,28 @@ This makes it harder to onboard to existing projects and understand the logical 
     - Rendering edge cases: quote escaping in Mermaid/DOT, chain dependencies, mixed valid/missing dependencies
   - Test count increased from 420 to 438
   - UAT passed: 438 tests run, 438 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing test patterns.
+
+---
+
+## 2026-01-27 — T-017 Completed
+- **Task**: Add integration tests for reconstruct and graph commands
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 4 integration tests to `src/bootstrap.rs` for reconstruct workflow:
+    - `test_reconstruct_integration_creates_prds_from_git_history`: Full workflow with mock git repo
+    - `test_reconstruct_integration_idempotent_with_existing_prds`: Verifies existing PRDs are passed to prompt
+    - `test_reconstruct_integration_with_depends_on_inference`: Tests depends_on guidance in prompt
+    - `test_reconstruct_integration_full_workflow_with_index_regeneration`: End-to-end with index
+  - Added 8 integration tests to `src/graph.rs` for graph commands:
+    - `test_graph_integration_build_from_real_prds`: Build graph from disk PRD files
+    - `test_graph_integration_ascii_output_with_real_prds`: Full ASCII rendering
+    - `test_graph_integration_mermaid_output_with_real_prds`: Full Mermaid rendering
+    - `test_graph_integration_dot_output_with_real_prds`: Full DOT rendering
+    - `test_graph_integration_missing_dependency_warning`: Missing ref handling
+    - `test_graph_integration_empty_repository`: Empty .mr/prds handling
+    - `test_graph_integration_complex_dependency_chain`: Multi-layer dependency graph
+    - `test_graph_integration_with_reconstructed_prds`: Works with reconstructed PRDs
+  - Test count increased from 438 to 450
+  - UAT passed: 450 tests run, 450 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing test patterns.

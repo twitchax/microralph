@@ -2099,4 +2099,551 @@ mod tests {
         assert!(output.contains("style=dashed"));
         assert!(output.contains("color=red"));
     }
+
+    // ========================================================================
+    // Integration Tests for Graph Commands (T-017)
+    // ========================================================================
+
+    #[test]
+    fn test_graph_integration_build_from_real_prds() {
+        // Integration test: Build graph from PRD files on disk.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create PRD-0001 (no dependencies).
+        let prd1_content = r#"---
+id: PRD-0001
+title: "Core Module"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup"
+  priority: 1
+  status: done
+---
+
+# Summary
+
+The core module.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-core.md"), prd1_content).unwrap();
+
+        // Create PRD-0002 (depends on PRD-0001).
+        let prd2_content = r#"---
+id: PRD-0002
+title: "Feature Module"
+status: active
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Implement"
+  priority: 1
+  status: todo
+---
+
+# Summary
+
+Feature that depends on core.
+"#;
+        std::fs::write(prds_dir.join("PRD-0002-feature.md"), prd2_content).unwrap();
+
+        // Build graph from disk.
+        let graph = build_graph(temp.path()).unwrap();
+
+        // Verify graph structure.
+        assert_eq!(graph.nodes.len(), 2);
+        assert_eq!(graph.edges.len(), 1);
+        assert!(!graph.has_missing_refs());
+
+        // Verify edge direction.
+        let edge = &graph.edges[0];
+        assert_eq!(edge.from, "PRD-0002");
+        assert_eq!(edge.to, "PRD-0001");
+        assert!(!edge.is_missing);
+    }
+
+    #[test]
+    fn test_graph_integration_ascii_output_with_real_prds() {
+        // Integration test: Full ASCII rendering from disk PRDs.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create PRDs with dependencies.
+        let prd1 = r#"---
+id: PRD-0001
+title: "Base Infrastructure"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup"
+  priority: 1
+  status: done
+---
+# Summary
+Base infrastructure.
+"#;
+        let prd2 = r#"---
+id: PRD-0002
+title: "API Layer"
+status: done
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Build API"
+  priority: 1
+  status: done
+---
+# Summary
+API layer.
+"#;
+        let prd3 = r#"---
+id: PRD-0003
+title: "CLI Interface"
+status: active
+owner: Test
+created: 2026-01-03
+updated: 2026-01-03
+depends_on:
+  - PRD-0001
+  - PRD-0002
+tasks:
+- id: T-001
+  title: "Build CLI"
+  priority: 1
+  status: todo
+---
+# Summary
+CLI interface.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-infra.md"), prd1).unwrap();
+        std::fs::write(prds_dir.join("PRD-0002-api.md"), prd2).unwrap();
+        std::fs::write(prds_dir.join("PRD-0003-cli.md"), prd3).unwrap();
+
+        // Build and render graph.
+        let graph = build_graph(temp.path()).unwrap();
+        let output = render_ascii(&graph, None);
+
+        // Verify output contains expected elements.
+        assert!(output.contains("PRD Dependency Graph"));
+        assert!(output.contains("PRD-0001"));
+        assert!(output.contains("PRD-0002"));
+        assert!(output.contains("PRD-0003"));
+        assert!(output.contains("Base Infrastructure"));
+        assert!(output.contains("API Layer"));
+        assert!(output.contains("CLI Interface"));
+
+        // Verify dependency indicators.
+        assert!(
+            output.contains("└──") || output.contains("├──"),
+            "Should show dependency tree connectors"
+        );
+    }
+
+    #[test]
+    fn test_graph_integration_mermaid_output_with_real_prds() {
+        // Integration test: Full Mermaid rendering from disk PRDs.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a PRD chain.
+        let prd1 = r#"---
+id: PRD-0001
+title: "Foundation"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup"
+  priority: 1
+  status: done
+---
+# Summary
+Foundation.
+"#;
+        let prd2 = r#"---
+id: PRD-0002
+title: "Building Blocks"
+status: active
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Build"
+  priority: 1
+  status: todo
+---
+# Summary
+Building blocks.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-foundation.md"), prd1).unwrap();
+        std::fs::write(prds_dir.join("PRD-0002-blocks.md"), prd2).unwrap();
+
+        // Build and render graph.
+        let graph = build_graph(temp.path()).unwrap();
+        let output = render_mermaid(&graph, None);
+
+        // Verify Mermaid syntax.
+        assert!(output.starts_with("flowchart TD"));
+        assert!(output.contains("PRD0001["));
+        assert!(output.contains("PRD0002["));
+        assert!(output.contains("PRD0002 --> PRD0001"));
+    }
+
+    #[test]
+    fn test_graph_integration_dot_output_with_real_prds() {
+        // Integration test: Full DOT rendering from disk PRDs.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a PRD with dependency.
+        let prd1 = r#"---
+id: PRD-0001
+title: "Core"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup"
+  priority: 1
+  status: done
+---
+# Summary
+Core.
+"#;
+        let prd2 = r#"---
+id: PRD-0002
+title: "Extension"
+status: active
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Extend"
+  priority: 1
+  status: todo
+---
+# Summary
+Extension.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-core.md"), prd1).unwrap();
+        std::fs::write(prds_dir.join("PRD-0002-ext.md"), prd2).unwrap();
+
+        // Build and render graph.
+        let graph = build_graph(temp.path()).unwrap();
+        let output = render_dot(&graph, None);
+
+        // Verify DOT syntax.
+        assert!(output.contains("digraph PRD_Dependencies"));
+        assert!(output.contains("rankdir=TB"));
+        assert!(output.contains("PRD0001 [label="));
+        assert!(output.contains("PRD0002 [label="));
+        assert!(output.contains("PRD0002 -> PRD0001;"));
+    }
+
+    #[test]
+    fn test_graph_integration_missing_dependency_warning() {
+        // Integration test: Verify missing dependencies are handled.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a PRD with missing dependency.
+        let prd = r#"---
+id: PRD-0001
+title: "Orphan Feature"
+status: active
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+depends_on:
+  - PRD-9999
+tasks:
+- id: T-001
+  title: "Build"
+  priority: 1
+  status: todo
+---
+# Summary
+Feature with missing dependency.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-orphan.md"), prd).unwrap();
+
+        // Build graph.
+        let graph = build_graph(temp.path()).unwrap();
+
+        // Verify missing reference is detected.
+        assert!(graph.has_missing_refs());
+        assert_eq!(graph.missing_refs, vec!["PRD-9999"]);
+
+        // Verify ASCII output shows missing ref.
+        let ascii = render_ascii(&graph, None);
+        assert!(ascii.contains("PRD-9999"));
+        assert!(ascii.contains("not found") || ascii.contains("Missing"));
+
+        // Verify Mermaid output uses dashed arrow.
+        let mermaid = render_mermaid(&graph, None);
+        assert!(mermaid.contains("-.->"));
+        assert!(mermaid.contains(":::missing"));
+
+        // Verify DOT output uses dashed style.
+        let dot = render_dot(&graph, None);
+        assert!(dot.contains("[style=dashed]"));
+        assert!(dot.contains("color=red"));
+    }
+
+    #[test]
+    fn test_graph_integration_empty_repository() {
+        // Integration test: Handle empty .mr/prds directory.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create empty .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Build graph.
+        let graph = build_graph(temp.path()).unwrap();
+
+        // Verify empty graph.
+        assert_eq!(graph.nodes.len(), 0);
+        assert_eq!(graph.edges.len(), 0);
+        assert!(!graph.has_missing_refs());
+
+        // Verify ASCII output handles empty case.
+        let ascii = render_ascii(&graph, None);
+        assert!(ascii.contains("no PRDs found") || ascii.contains("PRD Dependency Graph"));
+
+        // Verify Mermaid output handles empty case.
+        let mermaid = render_mermaid(&graph, None);
+        assert!(mermaid.contains("No PRDs found") || mermaid.contains("empty"));
+    }
+
+    #[test]
+    fn test_graph_integration_complex_dependency_chain() {
+        // Integration test: Complex dependency graph with multiple layers.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create a complex dependency graph:
+        // PRD-0001 (root)
+        //   ├── PRD-0002 (depends on 0001)
+        //   │     └── PRD-0004 (depends on 0002)
+        //   └── PRD-0003 (depends on 0001)
+        //         └── PRD-0004 (depends on 0003 too)
+
+        let prds = vec![
+            (
+                "PRD-0001-root.md",
+                r#"---
+id: PRD-0001
+title: "Root Module"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup"
+  priority: 1
+  status: done
+---
+# Summary
+Root.
+"#,
+            ),
+            (
+                "PRD-0002-branch-a.md",
+                r#"---
+id: PRD-0002
+title: "Branch A"
+status: done
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Build A"
+  priority: 1
+  status: done
+---
+# Summary
+Branch A.
+"#,
+            ),
+            (
+                "PRD-0003-branch-b.md",
+                r#"---
+id: PRD-0003
+title: "Branch B"
+status: done
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Build B"
+  priority: 1
+  status: done
+---
+# Summary
+Branch B.
+"#,
+            ),
+            (
+                "PRD-0004-leaf.md",
+                r#"---
+id: PRD-0004
+title: "Leaf Node"
+status: active
+owner: Test
+created: 2026-01-03
+updated: 2026-01-03
+depends_on:
+  - PRD-0002
+  - PRD-0003
+tasks:
+- id: T-001
+  title: "Complete"
+  priority: 1
+  status: todo
+---
+# Summary
+Leaf.
+"#,
+            ),
+        ];
+
+        for (filename, content) in prds {
+            std::fs::write(prds_dir.join(filename), content).unwrap();
+        }
+
+        // Build graph.
+        let graph = build_graph(temp.path()).unwrap();
+
+        // Verify structure.
+        assert_eq!(graph.nodes.len(), 4);
+        assert_eq!(graph.edges.len(), 4); // 0002->0001, 0003->0001, 0004->0002, 0004->0003
+        assert!(!graph.has_missing_refs());
+
+        // Verify ASCII output shows all nodes.
+        let ascii = render_ascii(&graph, None);
+        assert!(ascii.contains("PRD-0001"));
+        assert!(ascii.contains("PRD-0002"));
+        assert!(ascii.contains("PRD-0003"));
+        assert!(ascii.contains("PRD-0004"));
+        assert!(ascii.contains("Root Module"));
+        assert!(ascii.contains("Leaf Node"));
+    }
+
+    #[test]
+    fn test_graph_integration_with_reconstructed_prds() {
+        // Integration test: Graph works with PRDs marked as reconstructed.
+        let temp = tempfile::TempDir::new().unwrap();
+
+        // Create .mr/prds directory.
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        // Create reconstructed PRDs (simulating output from `mr bootstrap --reconstruct`).
+        let prd1 = r#"---
+id: PRD-0001
+title: "Initial Release"
+status: done
+owner: Test
+created: 2025-01-01
+updated: 2025-12-31
+reconstructed: true
+tasks:
+- id: T-001
+  title: "v1.0 Release"
+  priority: 1
+  status: done
+---
+# Summary
+Initial release reconstructed from git history.
+"#;
+        let prd2 = r#"---
+id: PRD-0002
+title: "Feature Update"
+status: done
+owner: Test
+created: 2025-06-01
+updated: 2026-01-01
+reconstructed: true
+depends_on:
+  - PRD-0001
+tasks:
+- id: T-001
+  title: "Feature work"
+  priority: 1
+  status: done
+---
+# Summary
+Feature update reconstructed from git history.
+"#;
+        std::fs::write(prds_dir.join("PRD-0001-initial.md"), prd1).unwrap();
+        std::fs::write(prds_dir.join("PRD-0002-feature.md"), prd2).unwrap();
+
+        // Build graph.
+        let graph = build_graph(temp.path()).unwrap();
+
+        // Verify graph handles reconstructed PRDs.
+        assert_eq!(graph.nodes.len(), 2);
+        assert_eq!(graph.edges.len(), 1);
+
+        // Verify edge from reconstructed PRD.
+        let edge = &graph.edges[0];
+        assert_eq!(edge.from, "PRD-0002");
+        assert_eq!(edge.to, "PRD-0001");
+        assert!(!edge.is_missing);
+
+        // Verify rendering works.
+        let ascii = render_ascii(&graph, None);
+        assert!(ascii.contains("Initial Release"));
+        assert!(ascii.contains("Feature Update"));
+    }
 }
