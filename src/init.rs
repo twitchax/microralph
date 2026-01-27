@@ -464,7 +464,7 @@ The following governance rules and constraints apply to this project:
 
 1. Review the Q/A history.
 2. Determine if you have enough information to synthesize a PRD.
-3. If more clarification is needed, ask 1-5 additional questions.  IMPORTANT: lean toward asking questions if you think it will help the PRD quality.
+3. If more clarification is needed, ask 1-5 additional **genuine questions** that require new information from the user.
 4. If ready, respond with exactly: `READY_TO_SYNTHESIZE`
 
 ## Output Format
@@ -472,6 +472,19 @@ The following governance rules and constraints apply to this project:
 Either:
 - A numbered list of follow-up questions (1-5 max)
 - Or the exact text: `READY_TO_SYNTHESIZE`
+
+## CRITICAL: What Counts as a Question
+
+**DO NOT** output confirmations, summaries, or restatements of previous answers. These are NOT questions:
+- "**`--reconstruct` flag**: Uses hybrid detection..." ❌ (This is a summary)
+- "**Feature X**: Confirmed as discussed" ❌ (This is a confirmation)
+
+**DO** ask questions that require the user to provide NEW information:
+- "What error behavior should occur if X fails?" ✓
+- "Should this feature support Y use case?" ✓
+- "How should the system handle edge case Z?" ✓
+
+If you have no genuine questions requiring new information, output `READY_TO_SYNTHESIZE`.
 "#;
 
 /// Default content for the PRD new synthesize prompt.

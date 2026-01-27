@@ -137,13 +137,13 @@ where
         println!("\n🔧 Executing: {}", cmd_display);
     }
 
-    let spinner = start_spinner(!config.stream, "Generating questions...");
-
     tracing::info!(
         runner = %runner.name(),
         slug = %config.slug,
         "Invoking runner for PRD creation round 1"
     );
+
+    let spinner = start_spinner(!config.stream, "Generating questions...");
 
     let round1_output = runner
         .execute(&round1_prompt, config.root)
@@ -204,16 +204,16 @@ where
             println!("\n🔧 Executing: {}", cmd_display);
         }
 
-        let spinner = start_spinner(
-            !config.stream,
-            format!("Generating follow-up questions (round {})...", rounds),
-        );
-
         tracing::info!(
             runner = %runner.name(),
             round = rounds,
             slug = %config.slug,
             "Invoking runner for PRD creation follow-up round"
+        );
+
+        let spinner = start_spinner(
+            !config.stream,
+            format!("Generating follow-up questions (round {})...", rounds),
         );
 
         let round_n_output = runner
@@ -276,13 +276,13 @@ where
         println!("\n🔧 Executing: {}", cmd_display);
     }
 
-    let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
-
     tracing::info!(
         runner = %runner.name(),
         slug = %config.slug,
         "Invoking runner to synthesize PRD"
     );
+
+    let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
 
     let synthesize_output = runner
         .execute(&synthesize_prompt, config.root)
