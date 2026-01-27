@@ -373,6 +373,10 @@ pub struct PrdFrontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,
 
+    /// Whether this PRD was created via `--reconstruct` from git history.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reconstructed: Option<bool>,
+
     /// Acceptance tests.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceptance_tests: Option<Vec<AcceptanceTest>>,

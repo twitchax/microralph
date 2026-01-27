@@ -54,7 +54,7 @@ tasks:
 - id: T-002
   title: "Add reconstructed field to PrdFrontmatter struct"
   priority: 2
-  status: todo
+  status: done
   notes: "Add `reconstructed: Option<bool>` to mark PRDs created via --reconstruct."
 - id: T-003
   title: "Update PRD template to include depends_on field"
@@ -188,6 +188,18 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added `depends_on: Option<Vec<String>>` field to `PrdFrontmatter` struct in `src/prd/types.rs`
   - Field includes doc comment explaining it represents PRD IDs that this PRD depends on
   - Uses `#[serde(skip_serializing_if = "Option::is_none")]` to follow existing conventions
+  - UAT passed: 360 tests run, 360 passed
+
+---
+
+## 2026-01-27 — T-002 Completed
+- **Task**: Add reconstructed field to PrdFrontmatter struct
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `reconstructed: Option<bool>` field to `PrdFrontmatter` struct in `src/prd/types.rs`
+  - Field includes doc comment explaining it marks PRDs created via `--reconstruct` from git history
+  - Uses `#[serde(skip_serializing_if = "Option::is_none")]` to follow existing conventions
+  - Field placed after `depends_on` and before `acceptance_tests` for logical grouping
   - UAT passed: 360 tests run, 360 passed
 
 ---
