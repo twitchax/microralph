@@ -368,6 +368,11 @@ pub struct PrdFrontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 
+    /// PRD IDs that this PRD depends on (e.g., ["PRD-0001", "PRD-0003"]).
+    /// Represents directed edges: "this PRD should be done after the dependencies".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub depends_on: Option<Vec<String>>,
+
     /// Acceptance tests.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceptance_tests: Option<Vec<AcceptanceTest>>,

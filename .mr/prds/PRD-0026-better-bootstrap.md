@@ -1,7 +1,7 @@
 ---
 id: PRD-0026
 title: "Better Bootstrap: Reconstruct, depends_on, and Graph Command"
-status: draft
+status: active
 owner: Aaron Roney
 created: 2026-01-27
 updated: 2026-01-27
@@ -49,7 +49,7 @@ tasks:
 - id: T-001
   title: "Add depends_on field to PrdFrontmatter struct"
   priority: 1
-  status: todo
+  status: done
   notes: "Add `depends_on: Option<Vec<String>>` to src/prd/types.rs. List of PRD IDs (e.g., ['PRD-0001', 'PRD-0003'])."
 - id: T-002
   title: "Add reconstructed field to PrdFrontmatter struct"
@@ -180,5 +180,14 @@ This makes it harder to onboard to existing projects and understand the logical 
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-01-27 — T-001 Completed
+- **Task**: Add depends_on field to PrdFrontmatter struct
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `depends_on: Option<Vec<String>>` field to `PrdFrontmatter` struct in `src/prd/types.rs`
+  - Field includes doc comment explaining it represents PRD IDs that this PRD depends on
+  - Uses `#[serde(skip_serializing_if = "Option::is_none")]` to follow existing conventions
+  - UAT passed: 360 tests run, 360 passed
 
 ---
