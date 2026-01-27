@@ -453,4 +453,149 @@ More content follows here.
         let summary = extract_summary(body);
         assert_eq!(summary, "(no summary available)");
     }
+
+    #[test]
+    fn test_reindex_integration_depends_on_autofix() {
+        // Integration test: Verify reindex invokes depends_on auto-fix via runner.
+        use crate::runner::{MockRunner, RunnerOutput};
+        use tempfile::TempDir;
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Initialize .mr structure.
+        crate::init::init(root).unwrap();
+
+        // Create test PRDs without depends_on for the runner to fix.
+        let prd1 = r#"---
+id: PRD-0001
+title: "Initial Setup"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Setup task"
+  priority: 1
+  status: done
+---
+
+# Summary
+
+Initial project setup that other PRDs depend on.
+"#;
+
+        let prd2 = r#"---
+id: PRD-0002
+title: "Add Auth"
+status: done
+owner: Test
+created: 2026-01-02
+updated: 2026-01-02
+tasks:
+- id: T-001
+  title: "Auth task"
+  priority: 1
+  status: done
+---
+
+# Summary
+
+Authentication feature that builds on initial setup.
+"#;
+
+        let prds_dir = root.join(".mr/prds");
+        std::fs::write(prds_dir.join("PRD-0001-initial-setup.md"), prd1).unwrap();
+        std::fs::write(prds_dir.join("PRD-0002-add-auth.md"), prd2).unwrap();
+
+        // Mock runner returns responses for both link verification and depends_on fix.
+        // First call: link verification. Second call: depends_on auto-fix.
+        let runner = MockRunner::new(vec![
+            RunnerOutput::success("Links verified: 3\nLinks fixed: 0"),
+            RunnerOutput::success(
+                "Analyzed PRD dependencies.\ndepends_on relationships added: 1\ndepends_on fixed: 0",
+            ),
+        ]);
+
+        let result = reindex(root, &runner, false).unwrap();
+
+        // Verify reindex completed with expected counts.
+        assert_eq!(result.prds_indexed, 2);
+        assert_eq!(result.links_verified, 3);
+        assert_eq!(result.links_fixed, 0);
+        assert_eq!(result.depends_on_added, 1);
+        assert_eq!(result.depends_on_fixed, 0);
+
+        // Verify runner was called twice (link + depends_on phases).
+        let prompts = runner.recorded_prompts();
+        assert_eq!(prompts.len(), 2);
+
+        // Second prompt should be for depends_on analysis.
+        assert!(
+            prompts[1].contains("depends_on") || prompts[1].contains("dependency"),
+            "Second prompt should be for depends_on analysis"
+        );
+    }
+
+    #[test]
+    fn test_reindex_integration_depends_on_with_existing_deps() {
+        // Integration test: Verify reindex handles PRDs that already have depends_on.
+        use crate::runner::{MockRunner, RunnerOutput};
+        use tempfile::TempDir;
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Initialize .mr structure.
+        crate::init::init(root).unwrap();
+
+        // Create a PRD with existing depends_on.
+        let prd_with_deps = r#"---
+id: PRD-0003
+title: "Feature with Dependencies"
+status: active
+owner: Test
+created: 2026-01-03
+updated: 2026-01-03
+depends_on:
+- PRD-0001
+- PRD-0002
+tasks:
+- id: T-001
+  title: "Feature task"
+  priority: 1
+  status: todo
+---
+
+# Summary
+
+A feature that depends on PRD-0001 and PRD-0002.
+"#;
+
+        let prds_dir = root.join(".mr/prds");
+        std::fs::write(prds_dir.join("PRD-0003-feature.md"), prd_with_deps).unwrap();
+
+        // Mock runner: link phase + depends_on phase (may fix invalid refs).
+        let runner = MockRunner::new(vec![
+            RunnerOutput::success("Links verified: 1\nLinks fixed: 0"),
+            RunnerOutput::success(
+                "Analyzed dependencies.\ndepends_on relationships added: 0\nRemoved 2 invalid depends_on refs.",
+            ),
+        ]);
+
+        let result = reindex(root, &runner, false).unwrap();
+
+        // Verify the result includes depends_on fixed count.
+        assert_eq!(result.prds_indexed, 1);
+        assert_eq!(result.depends_on_added, 0);
+        assert_eq!(result.depends_on_fixed, 2);
+
+        // Verify the depends_on prompt includes existing dependency info.
+        let prompts = runner.recorded_prompts();
+        assert!(
+            prompts[1].contains("PRD-0001") && prompts[1].contains("PRD-0002"),
+            "Depends_on prompt should include existing dependency info"
+        );
+    }
 }

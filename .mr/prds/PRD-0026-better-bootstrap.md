@@ -39,7 +39,7 @@ acceptance_tests:
 - id: uat-005
   name: "reindex auto-fixes depends_on using LLM"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: "graph warns and renders dashed nodes for missing depends_on references"
   command: cargo make uat
@@ -499,3 +499,15 @@ This makes it harder to onboard to existing projects and understand the logical 
     - `test_render_dot_escapes_quotes_in_titles` (line 1848): Unit test verifying quote escaping in labels
   - CLI test: `test_args_parse_graph_dot_defaults` (main.rs): Verifies CLI parsing
   - UAT passed: 450 tests run, 450 passed
+
+## 2026-01-27 — uat-005 Verification
+- **UAT**: reindex auto-fixes depends_on using LLM
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Test file: `src/reindex.rs`
+  - Tests created:
+    - `test_reindex_integration_depends_on_autofix`: Integration test verifying reindex invokes depends_on auto-fix via runner and returns correct counts
+    - `test_reindex_integration_depends_on_with_existing_deps`: Integration test verifying reindex handles PRDs with existing depends_on fields and fixes invalid refs
+  - Tests verify: runner called twice (link phase + depends_on phase), prompt includes PRD info, result struct includes `depends_on_added` and `depends_on_fixed` counts
+  - UAT passed: 452 tests run, 452 passed
