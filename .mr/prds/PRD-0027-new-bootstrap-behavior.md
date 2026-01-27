@@ -1,85 +1,73 @@
 ---
 id: PRD-0027
-title: "Swap Bootstrap Default Behavior"
-status: active
-owner: "Agent"
+title: Swap Bootstrap Default Behavior
+status: done
+owner: Agent
 created: 2026-01-27
 updated: 2026-01-27
-
-depends_on:
-- PRD-0026
-
 principles:
 - Reconstruct mode becomes the default behavior for bootstrap
 - New --scaffold flag enables the current default (non-reconstruct) behavior
 - All documentation and prompts must be updated to reflect the change
 - Tests should be updated to reflect the new default
-
 references:
 - name: Bootstrap Reconstruct Workflow (AGENTS.md)
   url: ./AGENTS.md#bootstrap-reconstruct-workflow
-
+depends_on:
+- PRD-0026
 acceptance_tests:
 - id: uat-001
-  name: "Running mr bootstrap without flags uses reconstruct behavior"
+  name: Running mr bootstrap without flags uses reconstruct behavior
   command: cargo make uat
   uat_status: verified
 - id: uat-002
-  name: "Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior"
+  name: Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior
   command: cargo make uat
   uat_status: verified
 - id: uat-003
-  name: "Help text reflects new default and --scaffold flag"
+  name: Help text reflects new default and --scaffold flag
   command: cargo run -- bootstrap --help
   uat_status: verified
 - id: uat-004
-  name: "All prompts and documentation updated to reflect new behavior"
+  name: All prompts and documentation updated to reflect new behavior
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
-  title: "Update CLI flag definitions in main.rs"
+  title: Update CLI flag definitions in main.rs
   priority: 1
   status: done
-  notes: "Remove --reconstruct flag, add --scaffold flag. The default behavior (no flags) should now run reconstruct workflow."
-
+  notes: Remove --reconstruct flag, add --scaffold flag. The default behavior (no flags) should now run reconstruct workflow.
 - id: T-002
-  title: "Update BootstrapConfig and bootstrap logic"
+  title: Update BootstrapConfig and bootstrap logic
   priority: 2
   status: done
-  notes: "Invert the boolean logic in BootstrapConfig. Default should be reconstruct=true, --scaffold sets it to false."
-
+  notes: Invert the boolean logic in BootstrapConfig. Default should be reconstruct=true, --scaffold sets it to false.
 - id: T-003
-  title: "Update bootstrap_reconstruct.md prompt"
+  title: Update bootstrap_reconstruct.md prompt
   priority: 3
   status: done
-  notes: "Remove references to --reconstruct flag, update context to reflect reconstruct is now the default behavior."
-
+  notes: Remove references to --reconstruct flag, update context to reflect reconstruct is now the default behavior.
 - id: T-004
-  title: "Update AGENTS.md Bootstrap documentation"
+  title: Update AGENTS.md Bootstrap documentation
   priority: 4
   status: done
-  notes: "Restructure Bootstrap Reconstruct Workflow section to show reconstruct as default, document new --scaffold flag."
-
+  notes: Restructure Bootstrap Reconstruct Workflow section to show reconstruct as default, document new --scaffold flag.
 - id: T-005
-  title: "Update init.rs embedded prompts"
+  title: Update init.rs embedded prompts
   priority: 5
   status: done
-  notes: "Ensure embedded prompt constants match the updated prompt files for consistency per constitution."
-
+  notes: Ensure embedded prompt constants match the updated prompt files for consistency per constitution.
 - id: T-006
-  title: "Update existing tests to reflect new default"
+  title: Update existing tests to reflect new default
   priority: 6
   status: done
-  notes: "Tests that explicitly set reconstruct=true should be updated; tests for scaffold behavior should use --scaffold."
-
+  notes: Tests that explicitly set reconstruct=true should be updated; tests for scaffold behavior should use --scaffold.
 - id: T-007
-  title: "Verify all --reconstruct references are removed"
+  title: Verify all --reconstruct references are removed
   priority: 7
   status: done
-  notes: "Grep codebase for any remaining references to --reconstruct and update or remove them."
-
+  notes: Grep codebase for any remaining references to --reconstruct and update or remove them.
 ---
 
 # Summary
@@ -275,3 +263,15 @@ The current `mr bootstrap` default behavior is designed for new projects with no
   - Remaining `--reconstruct` references are in historical PRD entries (PRD-0026, PRD-0027) documenting past work, which should NOT be changed
   - Automated test is not feasible: testing "documentation correctness" would require maintaining expected content patterns that become stale
   - Verified on 2026-01-27: `grep -rn "--reconstruct" --include="*.rs" --include="*.md"` returns no matches outside historical PRD entries
+
+---
+
+## 2026-01-27 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 7 tasks (T-001 through T-007)
+- **Outcome**: All tasks completed, acceptance tests passed (451/451 tests)
+- **Cleanup**: None required — no temporary files, debug statements, or resolved TODOs found
+- **Summary**:
+  - Swapped `mr bootstrap` default behavior: reconstruct mode is now the default
+  - Introduced `--scaffold` flag to enable previous default (non-reconstruct) behavior
+  - Updated all CLI flags, prompts, embedded constants, documentation, and tests for consistency
