@@ -27,7 +27,7 @@ acceptance_tests:
 - id: uat-002
   name: "Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: "Help text reflects new default and --scaffold flag"
   command: cargo run -- bootstrap --help
@@ -246,3 +246,12 @@ The current `mr bootstrap` default behavior is designed for new projects with no
   - Test name: `test_bootstrap_config_defaults`
   - Added assertion `assert!(config.reconstruct, "Default should be reconstruct mode")` to explicitly verify that `BootstrapConfig::new()` defaults to reconstruct=true
   - Additional coverage from `test_bootstrap_reconstruct_workflow` which exercises the full reconstruct workflow using default config
+
+## 2026-01-27 — uat-002 Verification
+- **UAT**: Running mr bootstrap --scaffold uses scaffold (non-reconstruct) behavior
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - Test file: `src/main.rs`, test name: `test_args_parse_bootstrap_with_scaffold` - Verifies CLI parsing of `--scaffold` flag
+  - Test file: `src/bootstrap.rs`, tests: `test_bootstrap_plan_generated`, `test_bootstrap_prds_generated`, `test_bootstrap_runner_failure_plan`, `test_bootstrap_runner_failure_generate` - All test scaffold behavior with `config.reconstruct = false`
+  - These tests comprehensively cover the scaffold (non-reconstruct) behavior path
