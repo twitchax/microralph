@@ -74,7 +74,7 @@ tasks:
 - id: T-006
   title: "Implement reconstruct logic in bootstrap.rs"
   priority: 6
-  status: todo
+  status: done
   notes: "New function that invokes runner with reconstruct prompt. Infers depends_on relationships from temporal order. Sets status: done and reconstructed: true."
 - id: T-007
   title: "Handle idempotency for --reconstruct with existing PRDs"
@@ -164,6 +164,7 @@ This makes it harder to onboard to existing projects and understand the logical 
 4. Enhance `reindex` to auto-fix `depends_on` relationships using LLM analysis of PRD content and dates.
 5. Handle missing `depends_on` references gracefully in graph rendering (warn and show as dashed/special nodes).
 6. Ensure `--reconstruct` is idempotent with existing PRDs (skip/merge, only add new ones for uncovered work).
+7. All "decisions" should be made by LLM agent.  No Rust code should be editing these files.  We just want the agent to make the updates in place.
 
 ---
 
@@ -232,5 +233,19 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Updated test counts: 17 → 18 prompts across `PromptKind::all()`, `test_init_creates_structure`, `test_init_is_idempotent`, and `test_prompt_loader_missing_prompts`
   - UAT passed: 361 tests run, 361 passed
 - **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
+
+---
+
+## 2026-01-27 — T-006 Completed
+- **Task**: Implement reconstruct logic in bootstrap.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated module doc comment in `src/bootstrap.rs` to describe reconstruct mode
+  - Modified `bootstrap()` function to branch on `config.reconstruct` flag and call `bootstrap_reconstruct()`
+  - Added `bootstrap_reconstruct()` function that invokes runner with `PromptKind::BootstrapReconstruct` prompt
+  - Added `build_reconstruct_prompt()` helper function to load and expand the reconstruct prompt template
+  - Added 4 new unit tests: `test_bootstrap_reconstruct_workflow`, `test_bootstrap_reconstruct_skips_init_if_exists`, `test_bootstrap_reconstruct_runner_failure`, `test_build_reconstruct_prompt`
+  - UAT passed: 365 tests run, 365 passed
+- **Constitution Compliance**: No violations. Minimal changes to existing code, reused existing patterns.
 
 ---

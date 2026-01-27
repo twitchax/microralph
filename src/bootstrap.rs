@@ -5,6 +5,11 @@
 //! - Invokes runner with `bootstrap_plan.md` to analyze the repo
 //! - Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 //! - Updates `.mr/PRDS.md` index
+//!
+//! Also supports `--reconstruct` mode which:
+//! - Analyzes git history to infer major milestones
+//! - Creates PRDs with `status: done` and `reconstructed: true`
+//! - Infers `depends_on` relationships from temporal order
 
 use std::path::Path;
 use std::sync::LazyLock;
@@ -77,6 +82,8 @@ pub struct BootstrapResult {
 /// 2. Invokes runner with `bootstrap_plan.md` to analyze the repo
 /// 3. Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 /// 4. Updates `.mr/PRDS.md` index
+///
+/// If `config.reconstruct` is true, runs the reconstruct workflow instead.
 pub fn bootstrap<R>(config: &BootstrapConfig, runner: &R) -> Result<BootstrapResult>
 where
     R: Runner + ?Sized,
@@ -97,6 +104,13 @@ where
 
         result.initialized = true;
     }
+
+    // Branch based on reconstruct flag.
+    if config.reconstruct {
+        return bootstrap_reconstruct(config, runner, result);
+    }
+
+    // Normal bootstrap flow continues here.
 
     // Step 2: Run bootstrap plan.
     tracing::info!("Analyzing repository...");
@@ -242,6 +256,76 @@ fn count_prds_in_output(output: &str) -> usize {
         PRD_PATTERN.find_iter(output).map(|m| m.as_str()).collect();
 
     matches.len()
+}
+
+/// Runs the reconstruct bootstrap workflow.
+///
+/// This workflow:
+/// 1. Analyzes git history (commits, tags, major changes)
+/// 2. Infers major development milestones as PRDs
+/// 3. Creates PRDs with `status: done` and `reconstructed: true`
+/// 4. Infers `depends_on` relationships from temporal order
+/// 5. Regenerates the PRD index
+fn bootstrap_reconstruct<R>(
+    config: &BootstrapConfig,
+    runner: &R,
+    mut result: BootstrapResult,
+) -> Result<BootstrapResult>
+where
+    R: Runner + ?Sized,
+{
+    tracing::info!("Running reconstruct workflow...");
+
+    let reconstruct_prompt = build_reconstruct_prompt(config);
+
+    tracing::info!(
+        runner = %runner.name(),
+        "Invoking runner for git history reconstruction"
+    );
+
+    let reconstruct_output = runner
+        .execute(&reconstruct_prompt, config.root)
+        .map_err(|e| anyhow::anyhow!("Runner failed during reconstruction: {e}"))?;
+
+    if !reconstruct_output.success {
+        bail!(
+            "Runner failed during git history reconstruction: {}",
+            reconstruct_output.text
+        );
+    }
+
+    // For reconstruct, we skip the plan phase and go directly to PRD generation.
+    result.plan_generated = true;
+    result.plan_summary = "Reconstructed from git history".to_string();
+    result.prds_generated = true;
+
+    // Count PRDs created from the reconstruct output.
+    result.prds_created = count_prds_in_output(&reconstruct_output.text);
+
+    tracing::debug!(
+        output_len = reconstruct_output.text.len(),
+        prds_created = result.prds_created,
+        "Reconstruction completed"
+    );
+
+    // Regenerate index.
+    tracing::info!("Regenerating PRD index...");
+
+    generate_index_from_root(config.root)?;
+
+    Ok(result)
+}
+
+/// Builds the bootstrap reconstruct prompt.
+fn build_reconstruct_prompt(config: &BootstrapConfig) -> String {
+    let template = load_prompt_with_fallback(config.root, PromptKind::BootstrapReconstruct);
+
+    let mut ctx = PlaceholderContext::new();
+
+    // Add owner placeholder if available (defaults to empty).
+    ctx.insert("owner", "");
+
+    expand_placeholders(&template, &ctx)
 }
 
 #[cfg(test)]
@@ -490,5 +574,86 @@ mod tests {
         assert!(constitution_content.contains("# Constitution"));
         assert!(constitution_content.contains("## Purpose"));
         assert!(constitution_content.contains("## Rules"));
+    }
+
+    #[test]
+    fn test_bootstrap_reconstruct_workflow() {
+        let temp = setup_test_repo();
+
+        // Mock runner for reconstruct (single call).
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(
+            "Reconstructed PRD-0001, PRD-0002, and PRD-0003 from git history.",
+        )]);
+
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = true;
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Verify reconstruct completed.
+        assert!(result.initialized);
+        assert!(result.plan_generated);
+        assert!(result.prds_generated);
+        assert_eq!(result.prds_created, 3);
+
+        // Verify summary is set for reconstruct.
+        assert!(result.plan_summary.contains("git history"));
+
+        // Verify runner was called once (reconstruct is single call).
+        assert_eq!(runner.recorded_prompts().len(), 1);
+    }
+
+    #[test]
+    fn test_bootstrap_reconstruct_skips_init_if_exists() {
+        let temp = setup_test_repo();
+
+        // Initialize first.
+        init::init(temp.path()).unwrap();
+
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(
+            "Reconstructed PRD-0001 from commits.",
+        )]);
+
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = true;
+
+        let result = bootstrap(&config, &runner).unwrap();
+
+        // Should not have initialized.
+        assert!(!result.initialized);
+        assert_eq!(result.prds_created, 1);
+    }
+
+    #[test]
+    fn test_bootstrap_reconstruct_runner_failure() {
+        let temp = setup_test_repo();
+
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::failure(
+            "Error analyzing git",
+        )]);
+
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = true;
+
+        let result = bootstrap(&config, &runner);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("reconstruction"));
+    }
+
+    #[test]
+    fn test_build_reconstruct_prompt() {
+        let temp = setup_test_repo();
+
+        // Initialize to have prompts available.
+        init::init(temp.path()).unwrap();
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let prompt = build_reconstruct_prompt(&config);
+
+        // Should contain content from the bootstrap_reconstruct.md template.
+        assert!(prompt.contains("Objective") || prompt.contains("objective"));
+        assert!(prompt.contains("git") || prompt.contains("Git"));
     }
 }
