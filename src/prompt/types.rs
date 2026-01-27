@@ -57,6 +57,9 @@ pub enum PromptKind {
 
     /// Refactor prompt for AI-driven code improvements.
     Refactor,
+
+    /// Bootstrap reconstruct prompt for analyzing git history to create PRDs.
+    BootstrapReconstruct,
 }
 
 impl PromptKind {
@@ -82,6 +85,7 @@ impl PromptKind {
             Self::DevcontainerGenerate => "devcontainer_generate.md",
             Self::SuggestGenerate => "suggest_generate.md",
             Self::Refactor => "refactor.md",
+            Self::BootstrapReconstruct => "bootstrap_reconstruct.md",
         }
     }
 
@@ -105,6 +109,7 @@ impl PromptKind {
             Self::DevcontainerGenerate,
             Self::SuggestGenerate,
             Self::Refactor,
+            Self::BootstrapReconstruct,
         ]
     }
 }
@@ -133,7 +138,7 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 17);
+        assert_eq!(all.len(), 18);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

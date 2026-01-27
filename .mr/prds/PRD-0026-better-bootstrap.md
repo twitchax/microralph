@@ -69,7 +69,7 @@ tasks:
 - id: T-005
   title: "Create bootstrap_reconstruct.md prompt"
   priority: 5
-  status: todo
+  status: done
   notes: "Agent-driven prompt that analyzes commits, tags, major changes to infer historical PRDs. Add to init.rs and PromptKind."
 - id: T-006
   title: "Implement reconstruct logic in bootstrap.rs"
@@ -217,5 +217,20 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Updated existing bootstrap tests to include the new field in pattern matches
   - UAT passed: 361 tests run, 361 passed
 - **Constitution Compliance**: No violations. Changes were minimal and surgical.
+
+---
+
+## 2026-01-27 — T-005 Completed
+- **Task**: Create bootstrap_reconstruct.md prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `BootstrapReconstruct` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_BOOTSTRAP_RECONSTRUCT` constant in `src/init.rs` with comprehensive prompt for analyzing git history
+  - Added mapping in `get_default_prompt()` in `src/prompt/loader.rs`
+  - Added prompt file creation in both `init()` and `init_prompts_and_templates()` functions in `src/init.rs`
+  - Created physical `.mr/prompts/bootstrap_reconstruct.md` file synchronized with the embedded constant
+  - Updated test counts: 17 → 18 prompts across `PromptKind::all()`, `test_init_creates_structure`, `test_init_is_idempotent`, and `test_prompt_loader_missing_prompts`
+  - UAT passed: 361 tests run, 361 passed
+- **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
 
 ---
