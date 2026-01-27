@@ -41,6 +41,126 @@ The `mr suggest` command uses AI to analyze the codebase and generate PRD sugges
 
 Suggestions balance strategic features with quick wins. The command follows existing CLI patterns from PRD-0009.
 
+## Bootstrap Reconstruct Workflow
+
+The `mr bootstrap --reconstruct` flag enables historical PRD reconstruction from git history:
+
+1. **Git Analysis**: LLM analyzes commits, tags, and major changes to identify historical milestones
+2. **PRD Creation**: Creates PRDs for each milestone with `status: done` and `reconstructed: true`
+3. **Dependency Inference**: Infers `depends_on` relationships from temporal order
+4. **Idempotency**: Skips existing PRDs to avoid duplication
+
+### Usage
+
+```bash
+# Reconstruct PRDs from git history
+mr bootstrap --reconstruct
+
+# With specific runner and model
+mr bootstrap --reconstruct --runner claude --model claude-sonnet-4.5
+
+# With language hint
+mr bootstrap --reconstruct --language rust
+```
+
+### Flags Reference
+
+| Flag            | Default | Description                                           |
+| --------------- | ------- | ----------------------------------------------------- |
+| `--reconstruct` | false   | Enable historical PRD reconstruction from git history |
+| `--runner`      | copilot | Runner to use (copilot, claude)                       |
+| `--model`       | None    | Model override for the runner                         |
+| `--language`    | None    | Target language hint (rust, python, node, go, java)   |
+
+### Important Notes
+
+- **Reconstructed PRDs**: Created with `reconstructed: true` in frontmatter to distinguish from manually created PRDs
+- **Dependency inference**: Uses temporal ordering of commits/tags to infer `depends_on` relationships
+- **Existing PRD awareness**: Scans existing PRDs and avoids creating duplicates for already-documented work
+
+## Graph Command Workflow
+
+The `mr graph` command visualizes PRD dependencies in multiple output formats:
+
+1. **Graph Building**: Scans all PRDs and builds a dependency graph from `depends_on` fields
+2. **Missing Reference Handling**: References to non-existent PRDs are shown as dashed/special nodes with warnings
+3. **Format Rendering**: Outputs graph in chosen format (ASCII, Mermaid, or DOT)
+
+### Usage
+
+```bash
+# Render ASCII art graph in terminal
+mr graph ascii
+
+# Render Mermaid flowchart syntax (for GitHub/GitLab rendering)
+mr graph mermaid
+
+# Render Graphviz DOT format
+mr graph dot
+
+# Left-to-right layout (Mermaid and DOT only)
+mr graph mermaid --lr
+mr graph dot --lr
+
+# Hide titles, show only PRD IDs
+mr graph ascii --no-titles
+
+# Limit title length
+mr graph ascii --max-title-len 20
+```
+
+### Subcommands
+
+| Subcommand | Description                                       |
+| ---------- | ------------------------------------------------- |
+| `ascii`    | Render as ASCII art for terminal viewing          |
+| `mermaid`  | Output Mermaid flowchart syntax for GitHub/GitLab |
+| `dot`      | Output Graphviz DOT format for external tools     |
+
+### Flags Reference
+
+| Flag              | Default | Subcommands      | Description                                     |
+| ----------------- | ------- | ---------------- | ----------------------------------------------- |
+| `--no-titles`     | false   | all              | Show only PRD IDs, hide titles                  |
+| `--max-title-len` | 40      | all              | Maximum title length before truncation          |
+| `--lr`            | false   | mermaid, dot     | Render left-to-right instead of top-to-bottom   |
+
+### Output Examples
+
+**ASCII output** shows nodes with dependencies indented:
+```
+PRD Dependency Graph
+====================
+[PRD-0001] Initial Setup (done)
+├── [PRD-0002] Add Auth (done)
+└── [PRD-0003] Add API (active)
+    └── [PRD-0004] Add Tests (todo)
+```
+
+**Mermaid output** can be embedded in GitHub READMEs:
+```mermaid
+flowchart TD
+    PRD0001["PRD-0001: Initial Setup (done)"]
+    PRD0002["PRD-0002: Add Auth (done)"]
+    PRD0002 --> PRD0001
+```
+
+**DOT output** can be rendered with Graphviz:
+```dot
+digraph PRDs {
+    rankdir=TB;
+    PRD0001 [label="PRD-0001: Initial Setup (done)"]
+    PRD0002 [label="PRD-0002: Add Auth (done)"]
+    PRD0002 -> PRD0001
+}
+```
+
+### Important Notes
+
+- **Missing references**: If a PRD references a non-existent `depends_on` ID, it appears as a dashed node with a warning
+- **PRDS.md integration**: The index now includes a Dependencies section showing `depends_on` relationships
+- **Reindex enhancement**: Running `mr reindex` will auto-fix `depends_on` relationships using LLM analysis
+
 ## Refactor Command Workflow
 
 The `mr refactor` command runs an iterative AI-driven loop to improve code quality:
@@ -214,6 +334,8 @@ PRDs are Markdown files with YAML frontmatter containing:
 - `id`: Unique identifier (e.g., PRD-0001)
 - `title`: Human-readable title
 - `status`: draft | active | done | parked
+- `depends_on`: Optional list of PRD IDs this PRD depends on (e.g., `["PRD-0001", "PRD-0003"]`)
+- `reconstructed`: Optional boolean, true if PRD was created via `bootstrap --reconstruct`
 - `tasks`: List of tasks with id, title, priority, status
 
 History entries are appended by `mr run` at the bottom of the PRD.

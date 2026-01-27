@@ -134,7 +134,7 @@ tasks:
 - id: T-018
   title: "Update AGENTS.md with graph and reconstruct documentation"
   priority: 18
-  status: todo
+  status: done
   notes: "Document new commands, flags, and workflows."
 
 ---
@@ -431,3 +431,16 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Test count increased from 438 to 450
   - UAT passed: 450 tests run, 450 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing test patterns.
+
+---
+
+## 2026-01-27 — T-018 Completed
+- **Task**: Update AGENTS.md with graph and reconstruct documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Added "Bootstrap Reconstruct Workflow" section documenting `--reconstruct` flag functionality
+  - Added "Graph Command Workflow" section documenting `mr graph` subcommands (ascii, mermaid, dot)
+  - Updated "PRD Format" section to include `depends_on` and `reconstructed` fields
+  - Added usage examples, flags reference tables, and output examples for all new commands
+  - UAT passed: 450 tests run, 450 passed
+- **Constitution Compliance**: No violations. Documentation-only changes.
