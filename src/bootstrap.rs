@@ -11,6 +11,7 @@
 //! - Creates PRDs with `status: done` and `reconstructed: true`
 //! - Infers `depends_on` relationships from temporal order
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -18,7 +19,7 @@ use anyhow::{Context, Result, bail};
 use regex::Regex;
 
 use crate::init;
-use crate::prd::generate_index_from_root;
+use crate::prd::{generate_index_from_root, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
@@ -317,6 +318,8 @@ where
 }
 
 /// Builds the bootstrap reconstruct prompt.
+///
+/// Includes existing PRD information to ensure idempotency (T-007).
 fn build_reconstruct_prompt(config: &BootstrapConfig) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::BootstrapReconstruct);
 
@@ -324,6 +327,24 @@ fn build_reconstruct_prompt(config: &BootstrapConfig) -> String {
 
     // Add owner placeholder if available (defaults to empty).
     ctx.insert("owner", "");
+
+    // Add existing PRDs for idempotency (skip/merge with existing PRDs).
+    let existing_prds = scan_prd_summaries(config.root).unwrap_or_default();
+
+    let prd_list: Vec<HashMap<String, String>> = existing_prds
+        .iter()
+        .map(|p| {
+            [
+                ("id".to_string(), p.id.clone()),
+                ("title".to_string(), p.title.clone()),
+                ("status".to_string(), p.status.to_string()),
+            ]
+            .into_iter()
+            .collect()
+        })
+        .collect();
+
+    ctx.insert("existing_prds", PlaceholderValue::List(prd_list));
 
     expand_placeholders(&template, &ctx)
 }
@@ -655,5 +676,63 @@ mod tests {
         // Should contain content from the bootstrap_reconstruct.md template.
         assert!(prompt.contains("Objective") || prompt.contains("objective"));
         assert!(prompt.contains("git") || prompt.contains("Git"));
+    }
+
+    #[test]
+    fn test_build_reconstruct_prompt_includes_existing_prds() {
+        let temp = setup_test_repo();
+
+        // Initialize to have prompts and prds directory available.
+        init::init(temp.path()).unwrap();
+
+        // Create a test PRD file.
+        let prd_content = r#"---
+id: PRD-0001
+title: "Test Existing PRD"
+status: done
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Task"
+  priority: 1
+  status: done
+---
+
+# Summary
+
+Test PRD for idempotency testing.
+"#;
+
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), prd_content).unwrap();
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let prompt = build_reconstruct_prompt(&config);
+
+        // Should contain the existing PRD information.
+        assert!(prompt.contains("PRD-0001"));
+        assert!(prompt.contains("Test Existing PRD"));
+        assert!(prompt.contains("done"));
+        // Should contain the "Do Not Duplicate" section.
+        assert!(prompt.contains("Do Not Duplicate") || prompt.contains("Do NOT create"));
+    }
+
+    #[test]
+    fn test_build_reconstruct_prompt_no_existing_prds() {
+        let temp = setup_test_repo();
+
+        // Initialize to have prompts available (but no PRDs).
+        init::init(temp.path()).unwrap();
+
+        let config = BootstrapConfig::new(temp.path());
+
+        let prompt = build_reconstruct_prompt(&config);
+
+        // Should contain the "No existing PRDs" message.
+        assert!(prompt.contains("No existing PRDs found"));
     }
 }

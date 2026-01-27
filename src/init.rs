@@ -1663,6 +1663,21 @@ You are running `mr bootstrap --reconstruct` on an existing repository that has 
    - Review README, CHANGELOG, and documentation for feature descriptions
    - Look at module structure to understand architectural evolution
 
+## Existing PRDs (Do Not Duplicate)
+
+{{#if existing_prds}}
+The following PRDs already exist in this repository. **Do NOT create new PRDs that duplicate their scope.** Only create new PRDs for completed work not already covered by these:
+
+{{#each existing_prds}}
+- **{{id}}**: {{title}} ({{status}})
+{{/each}}
+
+When inferring dependencies for new PRDs, you may reference these existing PRD IDs in the `depends_on` field.
+{{/if}}
+{{#unless existing_prds}}
+No existing PRDs found. You may create PRDs for all significant completed work.
+{{/unless}}
+
 ## Output Format
 
 For each inferred PRD, create a file in `.mr/prds/` with:

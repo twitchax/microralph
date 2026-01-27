@@ -79,7 +79,7 @@ tasks:
 - id: T-007
   title: "Handle idempotency for --reconstruct with existing PRDs"
   priority: 7
-  status: todo
+  status: done
   notes: "Skip/merge with existing PRDs. Only create new PRDs for work not covered by existing ones."
 - id: T-008
   title: "Create graph module with shared graph-building logic"
@@ -247,5 +247,19 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 4 new unit tests: `test_bootstrap_reconstruct_workflow`, `test_bootstrap_reconstruct_skips_init_if_exists`, `test_bootstrap_reconstruct_runner_failure`, `test_build_reconstruct_prompt`
   - UAT passed: 365 tests run, 365 passed
 - **Constitution Compliance**: No violations. Minimal changes to existing code, reused existing patterns.
+
+---
+
+## 2026-01-27 — T-007 Completed
+- **Task**: Handle idempotency for --reconstruct with existing PRDs
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `build_reconstruct_prompt()` in `src/bootstrap.rs` to scan for existing PRDs using `scan_prd_summaries()` and include them in the prompt context
+  - Added `HashMap` import and `PlaceholderValue::List` for existing PRD data
+  - Updated `PROMPT_BOOTSTRAP_RECONSTRUCT` constant in `src/init.rs` to include "Existing PRDs (Do Not Duplicate)" section with `{{#if existing_prds}}` and `{{#each existing_prds}}` placeholders
+  - Synchronized `.mr/prompts/bootstrap_reconstruct.md` with the updated constant
+  - Added 2 new unit tests: `test_build_reconstruct_prompt_includes_existing_prds`, `test_build_reconstruct_prompt_no_existing_prds`
+  - UAT passed: 367 tests run, 367 passed
+- **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
 
 ---
