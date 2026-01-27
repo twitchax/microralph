@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-24
 updated: 2026-01-25
+depends_on: ["PRD-0001", "PRD-0009"]
 principles:
 - Focus on strategic feature suggestions but include quick wins
 - Leverage both internal codebase analysis and external research

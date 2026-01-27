@@ -5,6 +5,7 @@ status: done
 owner: Aaron Roney
 created: 2026-01-27
 updated: 2026-01-27
+depends_on: ["PRD-0001"]
 principles:
 - 'depends_on represents directed edges: ''this PRD should be done after the dependencies'''
 - Graph output formats are separate subcommands for SOC (ascii, mermaid, dot)

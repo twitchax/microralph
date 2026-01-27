@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-25
 updated: 2026-01-25
+depends_on: ["PRD-0001"]
 principles:
 - Leverage existing `mr init` logic to avoid code duplication
 - Don't auto-commit—let users review changes via Git workflow

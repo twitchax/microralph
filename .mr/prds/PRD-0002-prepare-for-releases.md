@@ -5,6 +5,7 @@ status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-25
+depends_on: ["PRD-0001"]
 principles:
 - Follow kord patterns for release infrastructure and CI/CD.
 - All release workflows should route through cargo-make tasks.

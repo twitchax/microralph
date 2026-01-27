@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-24
 updated: 2026-01-25
+depends_on: ["PRD-0001", "PRD-0007"]
 principles:
 - Mirror CopilotRunner surface area for consistency across runners
 - Default to non-interactive mode with yolo permissions for autonomous operation

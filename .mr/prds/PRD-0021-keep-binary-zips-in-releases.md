@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0002"]
 principles:
 - Follow kord's release pattern exactly for naming and structure
 - CI artifacts are already zipped on download—no additional zipping needed

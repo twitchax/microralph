@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0012"]
 principles:
 - Prompts should be workflow-focused (what to do) without philosophy
 - Constitution should contain all behavioral guidance (how to behave)

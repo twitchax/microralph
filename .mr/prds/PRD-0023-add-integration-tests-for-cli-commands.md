@@ -5,7 +5,7 @@ status: draft
 owner: ""
 created: 2026-01-26
 updated: 2026-01-26
-
+depends_on: ["PRD-0001"]
 principles:
   - Each test runs in its own temp directory with complete isolation
   - Use dependency injection to provide MockRunner to commands

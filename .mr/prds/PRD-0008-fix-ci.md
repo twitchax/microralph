@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-25
+depends_on: ["PRD-0002"]
 principles:
 - Fix must be simple and targeted; avoid over-engineering
 - CI should work reliably on cache hit and cache miss scenarios

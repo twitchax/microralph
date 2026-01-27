@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-24
 updated: 2026-01-24
+depends_on: ["PRD-0001"]
 acceptance_tests:
 - id: uat-001
   name: Success messages display in green with emoji prefix

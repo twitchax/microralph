@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0001"]
 principles:
 - CLI flag supersedes config.toml option
 - Default behavior unchanged (commit by default)

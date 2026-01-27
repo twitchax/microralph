@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0001"]
 principles:
 - Spinners display only when --stream is false (streaming already provides feedback)
 - Automatically disable spinners when stdout is not a TTY (CI, redirected output)

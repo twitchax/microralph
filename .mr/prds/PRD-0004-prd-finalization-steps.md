@@ -5,7 +5,7 @@ status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
-
+depends_on: ["PRD-0001"]
 principles:
 - Finalization is explicit; no auto-finalization when tasks complete.
 - All tasks must be done before finalization can proceed.

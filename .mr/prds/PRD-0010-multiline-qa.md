@@ -5,6 +5,7 @@ status: done
 owner: ''
 created: 2026-01-24
 updated: 2026-01-24
+depends_on: ["PRD-0003"]
 principles:
 - Keep implementation simple; avoid complex formatting if it adds significant complexity
 - Detect newline characters in model output for questions

@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0012"]
 principles:
 - Agents should own file content; Rust code orchestrates workflows
 - Index regeneration and init/bootstrap remain Rust-controlled

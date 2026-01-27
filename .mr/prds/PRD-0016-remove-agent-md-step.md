@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-25
 updated: 2026-01-25
+depends_on: ["PRD-0001"]
 principles:
 - Simplify the task execution pipeline by removing redundant automation
 - Empower agents to make holistic documentation updates without artificial constraints

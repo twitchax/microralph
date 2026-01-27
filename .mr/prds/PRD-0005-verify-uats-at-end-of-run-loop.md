@@ -5,7 +5,7 @@ status: done
 owner: Aaron Roney
 created: 2026-01-24
 updated: 2026-01-24
-
+depends_on: ["PRD-0001", "PRD-0004"]
 principles:
 - UAT verification is a loop, not a single pass.
 - The model can opt-out of verification with an explanation.

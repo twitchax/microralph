@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-24
 updated: 2026-01-25
+depends_on: ["PRD-0001"]
 principles:
 - Extract clearly duplicated logic (e.g., handlebars helpers) to shared modules
 - Reduce clones where practical, especially in high-density areas like run.rs

@@ -5,6 +5,7 @@ status: done
 owner: twitchax
 created: 2026-01-26
 updated: 2026-01-26
+depends_on: ["PRD-0012", "PRD-0020"]
 principles:
 - 'Each iteration is self-contained: identify one refactor, apply it, verify UATs, commit'
 - 'Agent autonomy within iteration: agent decides how to handle UAT failures'

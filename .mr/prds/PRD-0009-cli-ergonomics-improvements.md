@@ -5,6 +5,7 @@ status: done
 owner: microralph
 created: 2026-01-24
 updated: 2026-01-24
+depends_on: ["PRD-0001"]
 principles:
 - Make common workflows more ergonomic by reducing keystrokes
 - Flatten command hierarchy by moving PRD subcommands to top level
