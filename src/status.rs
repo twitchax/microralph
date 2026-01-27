@@ -564,6 +564,7 @@ Test PRD.
                 total_uats: 0,
                 relative_path: "prds/PRD-0001.md".to_string(),
                 references: vec![],
+                depends_on: vec![],
             }],
             next_task: Some(NextTaskInfo {
                 prd_id: "PRD-0001".to_string(),

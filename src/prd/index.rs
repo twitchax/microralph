@@ -45,6 +45,9 @@ pub struct PrdSummary {
 
     /// IDs of other PRDs referenced in this PRD's body.
     pub references: Vec<String>,
+
+    /// PRD IDs this PRD depends on (from frontmatter depends_on field).
+    pub depends_on: Vec<String>,
 }
 
 impl PrdSummary {
@@ -78,6 +81,9 @@ impl PrdSummary {
 
         let references = extract_prd_references(&searchable_text, prd.id());
 
+        // Extract depends_on from frontmatter.
+        let depends_on = prd.frontmatter.depends_on.clone().unwrap_or_default();
+
         Self {
             id: prd.id().to_string(),
             title: prd.title().to_string(),
@@ -88,6 +94,7 @@ impl PrdSummary {
             total_uats,
             relative_path,
             references,
+            depends_on,
         }
     }
 
@@ -238,9 +245,12 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     }
     output.push('\n');
 
-    // Cross-References section.
+    // Dependencies section (from frontmatter depends_on).
     let mut all_summaries: Vec<&PrdSummary> = by_status.values().flat_map(|v| v.iter()).collect();
     all_summaries.sort_by_key(|s| &s.id); // Sort by ID for deterministic ordering
+    output.push_str(&generate_dependencies_section(&all_summaries));
+
+    // Cross-References section.
     output.push_str(&generate_cross_references_section(&all_summaries));
 
     // Statistics.
@@ -287,6 +297,55 @@ fn generate_prd_table(summaries: &[PrdSummary]) -> String {
             summary.progress()
         ));
     }
+
+    output
+}
+
+/// Generates the Dependencies section showing PRD dependencies from frontmatter.
+///
+/// Lists which PRDs depend on other PRDs via the `depends_on` frontmatter field.
+fn generate_dependencies_section(summaries: &[&PrdSummary]) -> String {
+    let mut output = String::new();
+
+    output.push_str("## Dependencies\n\n");
+
+    // Collect all PRDs that have depends_on.
+    let with_deps: Vec<_> = summaries
+        .iter()
+        .filter(|s| !s.depends_on.is_empty())
+        .collect();
+
+    if with_deps.is_empty() {
+        output.push_str("*No PRD dependencies defined.*\n");
+    } else {
+        // Create a lookup map for relative paths.
+        let path_map: HashMap<&str, &str> = summaries
+            .iter()
+            .map(|s| (s.id.as_str(), s.relative_path.as_str()))
+            .collect();
+
+        for summary in with_deps {
+            let deps_formatted: Vec<String> = summary
+                .depends_on
+                .iter()
+                .map(|dep_id| {
+                    if let Some(path) = path_map.get(dep_id.as_str()) {
+                        format!("[{}]({})", dep_id, path)
+                    } else {
+                        dep_id.clone()
+                    }
+                })
+                .collect();
+
+            output.push_str(&format!(
+                "- [{}]({}) depends on {}\n",
+                summary.id,
+                summary.relative_path,
+                deps_formatted.join(", ")
+            ));
+        }
+    }
+    output.push('\n');
 
     output
 }
@@ -481,6 +540,7 @@ mod tests {
                 total_uats: 0,
                 relative_path: "prds/PRD-0001.md".to_string(),
                 references: vec![],
+                depends_on: vec![],
             },
             PrdSummary {
                 id: "PRD-0002".to_string(),
@@ -492,6 +552,7 @@ mod tests {
                 total_uats: 0,
                 relative_path: "prds/PRD-0002.md".to_string(),
                 references: vec![],
+                depends_on: vec![],
             },
         ];
 
@@ -515,6 +576,7 @@ mod tests {
         assert!(index.contains("*No draft PRDs.*"));
         assert!(index.contains("*No completed PRDs.*"));
         assert!(index.contains("*No parked PRDs.*"));
+        assert!(index.contains("*No PRD dependencies defined.*"));
         assert!(index.contains("**Total PRDs**: 0"));
     }
 
@@ -651,6 +713,7 @@ mod tests {
             total_uats: 0,
             relative_path: "prds/PRD-0001.md".to_string(),
             references: vec![],
+            depends_on: vec![],
         };
 
         let section = generate_cross_references_section(&[&summary]);
@@ -671,6 +734,7 @@ mod tests {
             total_uats: 0,
             relative_path: "prds/PRD-0001.md".to_string(),
             references: vec!["PRD-0002".to_string()],
+            depends_on: vec![],
         };
         let summary2 = PrdSummary {
             id: "PRD-0002".to_string(),
@@ -682,6 +746,7 @@ mod tests {
             total_uats: 0,
             relative_path: "prds/PRD-0002.md".to_string(),
             references: vec![],
+            depends_on: vec![],
         };
 
         let section = generate_cross_references_section(&[&summary1, &summary2]);
@@ -702,5 +767,138 @@ mod tests {
         let summary = PrdSummary::from_prd(&prd, "prds/PRD-0001.md".to_string());
 
         assert_eq!(summary.references, vec!["PRD-0002"]);
+    }
+
+    #[test]
+    fn test_prd_summary_extracts_depends_on() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0003".to_string(),
+            title: "Test PRD".to_string(),
+            depends_on: Some(vec!["PRD-0001".to_string(), "PRD-0002".to_string()]),
+            ..Default::default()
+        };
+        let prd = Prd::new(frontmatter, "No body references.".to_string());
+        let summary = PrdSummary::from_prd(&prd, "prds/PRD-0003.md".to_string());
+
+        assert_eq!(
+            summary.depends_on,
+            vec!["PRD-0001".to_string(), "PRD-0002".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_prd_summary_depends_on_empty() {
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            ..Default::default()
+        };
+        let prd = Prd::new(frontmatter, "Body text.".to_string());
+        let summary = PrdSummary::from_prd(&prd, "prds/PRD-0001.md".to_string());
+
+        assert!(summary.depends_on.is_empty());
+    }
+
+    #[test]
+    fn test_generate_dependencies_no_deps() {
+        let summary = PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 0,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0001.md".to_string(),
+            references: vec![],
+            depends_on: vec![],
+        };
+
+        let section = generate_dependencies_section(&[&summary]);
+
+        assert!(section.contains("## Dependencies"));
+        assert!(section.contains("*No PRD dependencies defined.*"));
+    }
+
+    #[test]
+    fn test_generate_dependencies_with_deps() {
+        let summary1 = PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "First PRD".to_string(),
+            status: PrdStatus::Done,
+            completed_tasks: 1,
+            total_tasks: 1,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0001.md".to_string(),
+            references: vec![],
+            depends_on: vec![],
+        };
+        let summary2 = PrdSummary {
+            id: "PRD-0002".to_string(),
+            title: "Second PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 2,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0002.md".to_string(),
+            references: vec![],
+            depends_on: vec!["PRD-0001".to_string()],
+        };
+
+        let section = generate_dependencies_section(&[&summary1, &summary2]);
+
+        assert!(section.contains("## Dependencies"));
+        assert!(
+            section
+                .contains("[PRD-0002](prds/PRD-0002.md) depends on [PRD-0001](prds/PRD-0001.md)")
+        );
+        assert!(!section.contains("*No PRD dependencies"));
+    }
+
+    #[test]
+    fn test_generate_dependencies_multiple_deps() {
+        let summary1 = PrdSummary {
+            id: "PRD-0001".to_string(),
+            title: "First PRD".to_string(),
+            status: PrdStatus::Done,
+            completed_tasks: 1,
+            total_tasks: 1,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0001.md".to_string(),
+            references: vec![],
+            depends_on: vec![],
+        };
+        let summary2 = PrdSummary {
+            id: "PRD-0002".to_string(),
+            title: "Second PRD".to_string(),
+            status: PrdStatus::Done,
+            completed_tasks: 1,
+            total_tasks: 1,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0002.md".to_string(),
+            references: vec![],
+            depends_on: vec![],
+        };
+        let summary3 = PrdSummary {
+            id: "PRD-0003".to_string(),
+            title: "Third PRD".to_string(),
+            status: PrdStatus::Active,
+            completed_tasks: 0,
+            total_tasks: 3,
+            verified_uats: 0,
+            total_uats: 0,
+            relative_path: "prds/PRD-0003.md".to_string(),
+            references: vec![],
+            depends_on: vec!["PRD-0001".to_string(), "PRD-0002".to_string()],
+        };
+
+        let section = generate_dependencies_section(&[&summary1, &summary2, &summary3]);
+
+        assert!(section.contains("## Dependencies"));
+        assert!(section.contains("[PRD-0003](prds/PRD-0003.md) depends on [PRD-0001](prds/PRD-0001.md), [PRD-0002](prds/PRD-0002.md)"));
     }
 }

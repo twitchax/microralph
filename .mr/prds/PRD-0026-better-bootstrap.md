@@ -119,7 +119,7 @@ tasks:
 - id: T-015
   title: "Update PRDS.md index generation to include depends_on info"
   priority: 15
-  status: todo
+  status: done
   notes: "Show dependency relationships in the index if present."
 - id: T-016
   title: "Add unit tests for graph building and rendering"
@@ -375,5 +375,22 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 8 new unit tests for `parse_depends_on_counts()` and `extract_summary()` functions
   - UAT passed: 415 tests run, 415 passed
 - **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
+
+---
+
+## 2026-01-27 — T-015 Completed
+- **Task**: Update PRDS.md index generation to include depends_on info
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `depends_on: Vec<String>` field to `PrdSummary` struct in `src/prd/index.rs`
+  - Updated `PrdSummary::from_prd()` to extract `depends_on` from frontmatter
+  - Added `generate_dependencies_section()` function to render Dependencies section in PRDS.md
+  - Dependencies section shows PRDs with depends_on relationships as "PRD-X depends on PRD-Y, PRD-Z"
+  - Section placed between "Parked PRDs" and "Cross-References" sections
+  - Updated all test files (`graph.rs`, `status.rs`, `suggest.rs`, `prd_new.rs`) to include new `depends_on` field
+  - Added 5 new tests: `test_prd_summary_extracts_depends_on`, `test_prd_summary_depends_on_empty`, `test_generate_dependencies_no_deps`, `test_generate_dependencies_with_deps`, `test_generate_dependencies_multiple_deps`
+  - Updated `test_generate_index_empty` to verify "No PRD dependencies defined" message
+  - UAT passed: 420 tests run, 420 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing index generation patterns.
 
 ---

@@ -683,6 +683,7 @@ mod tests {
                 verified_uats: 0,
                 total_uats: 0,
                 references: vec![],
+                depends_on: vec![],
             },
             PrdSummary {
                 id: "PRD-0003".to_string(),
@@ -694,6 +695,7 @@ mod tests {
                 verified_uats: 0,
                 total_uats: 0,
                 references: vec![],
+                depends_on: vec![],
             },
         ];
 

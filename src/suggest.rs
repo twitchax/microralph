@@ -681,6 +681,7 @@ Based on my analysis, here are 5 PRD suggestions:
             total_uats: 0,
             relative_path: "prds/PRD-0001-test.md".to_string(),
             references: vec![],
+            depends_on: vec![],
         }];
 
         let snapshot = "Sample codebase info";
