@@ -90,6 +90,11 @@ enum Command {
         /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
+
+        /// Reconstruct PRDs from git history (tags, major milestones).
+        /// Creates PRDs with status: done, reconstructed: true, and inferred depends_on.
+        #[arg(long)]
+        reconstruct: bool,
     },
 
     /// [0] Restore `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` to built-in defaults.
@@ -331,9 +336,10 @@ fn main() -> Result<()> {
             runner,
             language,
             model,
+            reconstruct,
         }) => {
-            tracing::info!(runner = %runner, language = ?language, "Bootstrapping repo...");
-            cmd_bootstrap(&runner, language.as_deref(), model.as_deref())?;
+            tracing::info!(runner = %runner, language = ?language, reconstruct = reconstruct, "Bootstrapping repo...");
+            cmd_bootstrap(&runner, language.as_deref(), model.as_deref(), reconstruct)?;
         }
         Some(Command::Restore) => {
             tracing::info!("Restoring prompts and templates...");
@@ -646,7 +652,12 @@ fn adapt_language(
 }
 
 /// Runs the `mr bootstrap` command.
-fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&str>) -> Result<()> {
+fn cmd_bootstrap(
+    runner_name: &str,
+    language: Option<&str>,
+    cli_model: Option<&str>,
+    reconstruct: bool,
+) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     // Show dev container warning for safety.
@@ -672,9 +683,17 @@ fn cmd_bootstrap(runner_name: &str, language: Option<&str>, cli_model: Option<&s
     // Select runner based on name.
     let runner = create_runner(runner_name, model.clone())?;
 
-    let config = bootstrap::BootstrapConfig::new(&cwd);
+    let mut config = bootstrap::BootstrapConfig::new(&cwd);
+    config.reconstruct = reconstruct;
 
-    println!("{}", colors::info("Bootstrapping repository..."));
+    if reconstruct {
+        println!(
+            "{}",
+            colors::info("Reconstructing PRDs from git history...")
+        );
+    } else {
+        println!("{}", colors::info("Bootstrapping repository..."));
+    }
     println!("{}", colors::info(&format!("Detected language: {}", lang)));
     println!();
 
@@ -1968,11 +1987,13 @@ mod tests {
             runner,
             language,
             model,
+            reconstruct,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert!(language.is_none());
             assert!(model.is_none());
+            assert!(!reconstruct);
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -1987,11 +2008,13 @@ mod tests {
             runner,
             language,
             model,
+            reconstruct,
         }) = args.command
         {
             assert_eq!(runner, "mock");
             assert_eq!(language, Some("node".to_string()));
             assert!(model.is_none());
+            assert!(!reconstruct);
         } else {
             panic!("Expected Bootstrap command");
         }
@@ -2012,11 +2035,33 @@ mod tests {
             runner,
             language,
             model,
+            reconstruct,
         }) = args.command
         {
             assert_eq!(runner, "copilot");
             assert!(language.is_none());
             assert_eq!(model, Some("claude-opus-4".to_string()));
+            assert!(!reconstruct);
+        } else {
+            panic!("Expected Bootstrap command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_bootstrap_with_reconstruct() {
+        let args =
+            Args::try_parse_from(["mr", "bootstrap", "--runner", "mock", "--reconstruct"]).unwrap();
+        if let Some(Command::Bootstrap {
+            runner,
+            language,
+            model,
+            reconstruct,
+        }) = args.command
+        {
+            assert_eq!(runner, "mock");
+            assert!(language.is_none());
+            assert!(model.is_none());
+            assert!(reconstruct);
         } else {
             panic!("Expected Bootstrap command");
         }

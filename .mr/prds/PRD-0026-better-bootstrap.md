@@ -64,7 +64,7 @@ tasks:
 - id: T-004
   title: "Implement --reconstruct flag for bootstrap command"
   priority: 4
-  status: todo
+  status: done
   notes: "Add flag to main.rs CLI, update BootstrapConfig. When set, runs reconstruct workflow instead of normal bootstrap."
 - id: T-005
   title: "Create bootstrap_reconstruct.md prompt"
@@ -202,5 +202,20 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Placed after `updated:` date field and before `principles:` section for logical grouping
   - Both sources are now synchronized per the constitution's Prompt Management rule
   - UAT passed: 360 tests run, 360 passed
+
+---
+
+## 2026-01-27 — T-004 Completed
+- **Task**: Implement --reconstruct flag for bootstrap command
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `--reconstruct` flag to Bootstrap command in `src/main.rs`
+  - Added `reconstruct: bool` field to `BootstrapConfig` struct in `src/bootstrap.rs`
+  - Updated `cmd_bootstrap` function to accept and pass the reconstruct flag
+  - Added conditional output message when reconstruct mode is enabled
+  - Added new test `test_args_parse_bootstrap_with_reconstruct` to verify flag parsing
+  - Updated existing bootstrap tests to include the new field in pattern matches
+  - UAT passed: 361 tests run, 361 passed
+- **Constitution Compliance**: No violations. Changes were minimal and surgical.
 
 ---

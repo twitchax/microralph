@@ -35,6 +35,9 @@ pub struct BootstrapConfig<'a> {
 
     /// Maximum number of PRDs to generate.
     pub prd_budget: u32,
+
+    /// Whether to run reconstruct workflow (analyze git history).
+    pub reconstruct: bool,
 }
 
 impl<'a> BootstrapConfig<'a> {
@@ -43,6 +46,7 @@ impl<'a> BootstrapConfig<'a> {
         Self {
             root,
             prd_budget: DEFAULT_PRD_BUDGET,
+            reconstruct: false,
         }
     }
 }
