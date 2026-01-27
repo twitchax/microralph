@@ -1929,6 +1929,14 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
         "  {}",
         colors::dim(&format!("Links fixed: {}", result.links_fixed))
     );
+    println!(
+        "  {}",
+        colors::dim(&format!("depends_on added: {}", result.depends_on_added))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("depends_on fixed: {}", result.depends_on_fixed))
+    );
 
     Ok(())
 }

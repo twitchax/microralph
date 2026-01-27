@@ -117,6 +117,7 @@ fn get_default_prompt(kind: PromptKind) -> &'static str {
         PromptKind::SuggestGenerate => init::PROMPT_SUGGEST_GENERATE,
         PromptKind::Refactor => init::PROMPT_REFACTOR,
         PromptKind::BootstrapReconstruct => init::PROMPT_BOOTSTRAP_RECONSTRUCT,
+        PromptKind::ReindexDependsOn => init::PROMPT_REINDEX_DEPENDS_ON,
     }
 }
 
@@ -272,13 +273,13 @@ mod tests {
         let missing = loader.missing_prompts();
 
         // All should be missing initially.
-        assert_eq!(missing.len(), 18);
+        assert_eq!(missing.len(), 19);
 
         // Create one prompt file.
         std::fs::write(prompts_dir.join("init.md"), "test").unwrap();
 
         let missing = loader.missing_prompts();
-        assert_eq!(missing.len(), 17);
+        assert_eq!(missing.len(), 18);
         assert!(!missing.contains(&PromptKind::Init));
     }
 

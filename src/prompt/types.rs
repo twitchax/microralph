@@ -60,6 +60,9 @@ pub enum PromptKind {
 
     /// Bootstrap reconstruct prompt for analyzing git history to create PRDs.
     BootstrapReconstruct,
+
+    /// Reindex depends_on prompt for inferring and fixing dependency relationships.
+    ReindexDependsOn,
 }
 
 impl PromptKind {
@@ -86,6 +89,7 @@ impl PromptKind {
             Self::SuggestGenerate => "suggest_generate.md",
             Self::Refactor => "refactor.md",
             Self::BootstrapReconstruct => "bootstrap_reconstruct.md",
+            Self::ReindexDependsOn => "reindex_depends_on.md",
         }
     }
 
@@ -110,6 +114,7 @@ impl PromptKind {
             Self::SuggestGenerate,
             Self::Refactor,
             Self::BootstrapReconstruct,
+            Self::ReindexDependsOn,
         ]
     }
 }
@@ -138,7 +143,7 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 18);
+        assert_eq!(all.len(), 19);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

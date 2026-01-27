@@ -109,12 +109,12 @@ tasks:
 - id: T-013
   title: "Enhance reindex to auto-fix depends_on using LLM"
   priority: 13
-  status: todo
+  status: done
   notes: "Update reindex.rs to invoke runner with prompt that analyzes PRDs and infers/fixes depends_on relationships. Write changes in-place."
 - id: T-014
   title: "Create reindex_depends_on.md prompt"
   priority: 14
-  status: todo
+  status: done
   notes: "Prompt for LLM to analyze PRD summaries/dates and infer dependencies. Add to init.rs and PromptKind."
 - id: T-015
   title: "Update PRDS.md index generation to include depends_on info"
@@ -353,5 +353,27 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 6 CLI parsing tests: ascii defaults, ascii with flags, mermaid defaults, mermaid with lr, dot defaults, dot with all flags
   - UAT passed: 408 tests run, 408 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing CLI patterns.
+
+---
+
+## 2026-01-27 — T-013 & T-014 Completed
+- **Task**: Enhance reindex to auto-fix depends_on using LLM & Create reindex_depends_on.md prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `ReindexDependsOn` variant to `PromptKind` enum in `src/prompt/types.rs`
+  - Added `PROMPT_REINDEX_DEPENDS_ON` constant in `src/init.rs` with comprehensive prompt for analyzing PRDs and inferring `depends_on` relationships
+  - Added mapping in `get_default_prompt()` in `src/prompt/loader.rs`
+  - Added prompt file creation in both `init()` and `init_prompts_and_templates()` functions in `src/init.rs`
+  - Created physical `.mr/prompts/reindex_depends_on.md` file synchronized with the embedded constant
+  - Updated `ReindexResult` struct in `src/reindex.rs` with `depends_on_added` and `depends_on_fixed` fields
+  - Added `PrdDependsOnInfo` struct for extended PRD info in depends_on analysis
+  - Implemented `run_depends_on_fix()` function that invokes runner with `PromptKind::ReindexDependsOn` prompt
+  - Added `extract_summary()` helper function to extract brief summary from PRD body text
+  - Added `parse_depends_on_counts()` function to parse runner output for depends_on counts
+  - Updated `cmd_reindex()` in `src/main.rs` to display new depends_on statistics
+  - Updated test counts: 18 → 19 prompts across `PromptKind::all()`, `test_init_creates_structure`, `test_init_is_idempotent`, and `test_prompt_loader_missing_prompts`
+  - Added 8 new unit tests for `parse_depends_on_counts()` and `extract_summary()` functions
+  - UAT passed: 415 tests run, 415 passed
+- **Constitution Compliance**: No violations. Prompt Management rule followed — prompt defined in `init.rs` and materialized to `.mr/prompts/`.
 
 ---
