@@ -27,7 +27,7 @@ acceptance_tests:
 - id: uat-002
   name: "graph ascii renders dependency graph in terminal"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: "graph mermaid outputs valid Mermaid flowchart"
   command: cargo make uat
@@ -456,4 +456,17 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Tests verified:
     - `test_reconstruct_integration_creates_prds_from_git_history` (line 744): Integration test that verifies reconstruct workflow creates PRDs from git history with depends_on relationships
     - `test_reconstruct_integration_with_depends_on_inference` (line 856): Integration test that verifies reconstruct prompt supports depends_on inference
+  - UAT passed: 450 tests run, 450 passed
+
+## 2026-01-27 — uat-002 Verification
+- **UAT**: graph ascii renders dependency graph in terminal
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/graph.rs`
+  - Tests verified:
+    - `test_graph_integration_ascii_output_with_real_prds` (line 2176): Integration test that builds graph from disk PRD files and renders ASCII output with dependency tree connectors
+    - `test_render_ascii_with_dependencies` (line 1046): Unit test verifying dependency rendering
+    - `test_render_ascii_chain_shows_all_levels` (line 1868): Unit test verifying chain dependencies render correctly
+  - CLI test: `test_args_parse_graph_ascii_defaults` (main.rs line 2724): Verifies CLI parsing
   - UAT passed: 450 tests run, 450 passed
