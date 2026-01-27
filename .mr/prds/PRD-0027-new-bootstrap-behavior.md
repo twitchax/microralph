@@ -77,7 +77,7 @@ tasks:
 - id: T-007
   title: "Verify all --reconstruct references are removed"
   priority: 7
-  status: todo
+  status: done
   notes: "Grep codebase for any remaining references to --reconstruct and update or remove them."
 
 ---
@@ -216,3 +216,21 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused on updating tests to reflect the new default behavior.
+
+---
+
+## 2026-01-27 — T-007 Completed
+- **Task**: Verify all --reconstruct references are removed
+- **Status**: ✅ Done
+- **Changes**:
+  - Searched codebase for all remaining `--reconstruct` flag references
+  - Found 2 remaining references in example text (bad summary style examples):
+    - `.mr/prompts/prd_new_roundN_questions.md` (line 56)
+    - `src/init.rs` (line 483) - embedded constant matching above
+  - Updated both files: Changed `--reconstruct` to `--scaffold` in the example text
+  - Verified PRD-0026 history entries (historical documentation) do not need updates
+  - All code, prompts, and embedded constants now consistently use `--scaffold` instead of `--reconstruct`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Per constitution rule #7 (Prompt Management), the embedded prompt constant in `src/init.rs` matches the updated `.mr/prompts/prd_new_roundN_questions.md` file.

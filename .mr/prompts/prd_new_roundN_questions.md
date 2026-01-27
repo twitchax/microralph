@@ -53,7 +53,7 @@ Either:
 ## CRITICAL: What Counts as a Question
 
 **DO NOT** output confirmations, summaries, or restatements of previous answers. These are NOT questions:
-- "**`--reconstruct` flag**: Uses hybrid detection..." ❌ (This is a summary)
+- "**`--scaffold` flag**: Uses hybrid detection..." ❌ (This is a summary)
 - "**Feature X**: Confirmed as discussed" ❌ (This is a confirmation)
 
 **DO** ask questions that require the user to provide NEW information:
