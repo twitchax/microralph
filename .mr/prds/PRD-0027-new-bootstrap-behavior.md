@@ -31,7 +31,7 @@ acceptance_tests:
 - id: uat-003
   name: "Help text reflects new default and --scaffold flag"
   command: cargo run -- bootstrap --help
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: "All prompts and documentation updated to reflect new behavior"
   command: cargo make uat
@@ -255,3 +255,12 @@ The current `mr bootstrap` default behavior is designed for new projects with no
   - Test file: `src/main.rs`, test name: `test_args_parse_bootstrap_with_scaffold` - Verifies CLI parsing of `--scaffold` flag
   - Test file: `src/bootstrap.rs`, tests: `test_bootstrap_plan_generated`, `test_bootstrap_prds_generated`, `test_bootstrap_runner_failure_plan`, `test_bootstrap_runner_failure_generate` - All test scaffold behavior with `config.reconstruct = false`
   - These tests comprehensively cover the scaffold (non-reconstruct) behavior path
+## 2026-01-27 — uat-003 Verification
+- **UAT**: Help text reflects new default and --scaffold flag
+- **Status**: ✅ Verified
+- **Method**: Command execution verification
+- **Details**:
+  - Executed `cargo run -- bootstrap --help`
+  - Verified `--reconstruct` flag is no longer present in help output
+  - Verified `--scaffold` flag is present with description: "Scaffold mode: skip git history analysis and create an initial PRD for bootstrapping. Default behavior (without this flag) reconstructs PRDs from git history"
+  - Help text correctly documents that default behavior (no flags) uses reconstruct mode
