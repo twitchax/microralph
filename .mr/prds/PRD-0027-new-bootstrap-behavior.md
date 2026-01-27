@@ -53,7 +53,7 @@ tasks:
 - id: T-003
   title: "Update bootstrap_reconstruct.md prompt"
   priority: 3
-  status: todo
+  status: done
   notes: "Remove references to --reconstruct flag, update context to reflect reconstruct is now the default behavior."
 
 - id: T-004
@@ -151,5 +151,18 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused on inverting the default boolean.
+
+---
+
+## 2026-01-27 — T-003 Completed
+- **Task**: Update bootstrap_reconstruct.md prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `.mr/prompts/bootstrap_reconstruct.md` Context section (line 9): Changed `mr bootstrap --reconstruct` to `mr bootstrap` and added note that reconstruct mode is the default behavior
+  - Updated History template example (line 115): Changed `mr bootstrap --reconstruct` to `mr bootstrap`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused on updating the prompt to reflect new default behavior.
 
 ---
