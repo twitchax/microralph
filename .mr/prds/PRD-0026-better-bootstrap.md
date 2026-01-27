@@ -35,7 +35,7 @@ acceptance_tests:
 - id: uat-004
   name: "graph dot outputs valid Graphviz DOT format"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: "reindex auto-fixes depends_on using LLM"
   command: cargo make uat
@@ -483,4 +483,19 @@ This makes it harder to onboard to existing projects and understand the logical 
     - `test_render_mermaid_with_missing_refs` (line 1247): Unit test verifying missing node syntax (`{{}}`), `:::missing` class, and dashed arrows (`-.->`)
     - `test_render_mermaid_config_left_right` (line 1327): Unit test verifying `flowchart LR` direction
   - CLI test: `test_args_parse_graph_mermaid_defaults` (main.rs line 2770): Verifies CLI parsing
+  - UAT passed: 450 tests run, 450 passed
+
+## 2026-01-27 — uat-004 Verification
+- **UAT**: graph dot outputs valid Graphviz DOT format
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/graph.rs`
+  - Tests verified:
+    - `test_graph_integration_dot_output_with_real_prds` (line 2321): Integration test that builds graph from disk PRD files and renders DOT output with valid Graphviz syntax (`digraph PRD_Dependencies`, `rankdir=TB`, node definitions, edge arrows)
+    - `test_render_dot_with_dependencies` (line 1419): Unit test verifying `digraph` syntax, node labels, and edge arrows (`->`)
+    - `test_render_dot_with_missing_refs` (line 1450): Unit test verifying missing node styling (`style=dashed color=red`) and dashed edge syntax
+    - `test_render_dot_config_left_right` (line 1529): Unit test verifying `rankdir=LR` direction
+    - `test_render_dot_escapes_quotes_in_titles` (line 1848): Unit test verifying quote escaping in labels
+  - CLI test: `test_args_parse_graph_dot_defaults` (main.rs): Verifies CLI parsing
   - UAT passed: 450 tests run, 450 passed
