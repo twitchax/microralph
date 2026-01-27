@@ -43,7 +43,7 @@ acceptance_tests:
 - id: uat-006
   name: "graph warns and renders dashed nodes for missing depends_on references"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -510,4 +510,17 @@ This makes it harder to onboard to existing projects and understand the logical 
     - `test_reindex_integration_depends_on_autofix`: Integration test verifying reindex invokes depends_on auto-fix via runner and returns correct counts
     - `test_reindex_integration_depends_on_with_existing_deps`: Integration test verifying reindex handles PRDs with existing depends_on fields and fixes invalid refs
   - Tests verify: runner called twice (link phase + depends_on phase), prompt includes PRD info, result struct includes `depends_on_added` and `depends_on_fixed` counts
+  - UAT passed: 452 tests run, 452 passed
+
+## 2026-01-27 — uat-006 Verification
+- **UAT**: graph warns and renders dashed nodes for missing depends_on references
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test file: `src/graph.rs`
+  - Tests verified:
+    - `test_graph_integration_missing_dependency_warning` (line 2380): Integration test verifying missing dependencies are detected, and all three output formats (ASCII, Mermaid, DOT) render dashed nodes/arrows for missing refs
+    - `test_render_ascii_with_missing_refs` (line 1075): Unit test verifying ASCII output shows "--- Missing References ---" section with dashed format (`- PRD-9999 -`) and "Referenced by" warning
+    - `test_render_mermaid_with_missing_refs` (line 1247): Unit test verifying Mermaid output uses dashed arrows (`-.->`) and `:::missing` class for missing nodes
+    - `test_render_dot_with_missing_refs` (line 1450): Unit test verifying DOT output uses `style=dashed color=red` for missing nodes and `[style=dashed]` for edges
   - UAT passed: 452 tests run, 452 passed
