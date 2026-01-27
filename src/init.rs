@@ -129,6 +129,10 @@ owner: "{{owner}}"
 created: {{date}}
 updated: {{date}}
 
+# depends_on:                 # Optional: List of PRD IDs this PRD depends on
+# - PRD-0001                  # (uncomment and add dependencies as needed)
+# - PRD-0003
+
 principles:
 - Principle 1 (guiding constraint or design decision)
 - Principle 2

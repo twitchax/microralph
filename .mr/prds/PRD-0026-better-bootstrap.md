@@ -59,7 +59,7 @@ tasks:
 - id: T-003
   title: "Update PRD template to include depends_on field"
   priority: 3
-  status: todo
+  status: done
   notes: "Add optional depends_on field to .mr/templates/prd.md and init.rs embedded template."
 - id: T-004
   title: "Implement --reconstruct flag for bootstrap command"
@@ -192,14 +192,15 @@ This makes it harder to onboard to existing projects and understand the logical 
 
 ---
 
-## 2026-01-27 — T-002 Completed
-- **Task**: Add reconstructed field to PrdFrontmatter struct
+## 2026-01-27 — T-003 Completed
+- **Task**: Update PRD template to include depends_on field
 - **Status**: ✅ Done
 - **Changes**:
-  - Added `reconstructed: Option<bool>` field to `PrdFrontmatter` struct in `src/prd/types.rs`
-  - Field includes doc comment explaining it marks PRDs created via `--reconstruct` from git history
-  - Uses `#[serde(skip_serializing_if = "Option::is_none")]` to follow existing conventions
-  - Field placed after `depends_on` and before `acceptance_tests` for logical grouping
+  - Added commented `depends_on` field to PRD template in `src/init.rs` (`PRD_TEMPLATE` constant)
+  - Updated `.mr/templates/prd.md` with the same commented `depends_on` field
+  - Field is commented out by default with example PRD IDs and usage instructions
+  - Placed after `updated:` date field and before `principles:` section for logical grouping
+  - Both sources are now synchronized per the constitution's Prompt Management rule
   - UAT passed: 360 tests run, 360 passed
 
 ---
