@@ -4,9 +4,6 @@
 //! from PRD `depends_on` fields. The graph is used by rendering commands
 //! (ascii, mermaid, dot) to visualize PRD relationships.
 
-// Allow dead code: public APIs will be used by graph rendering commands in T-009, T-010, T-011, T-012.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -32,6 +29,7 @@ pub struct GraphNode {
 
 impl GraphNode {
     /// Creates a node from a PrdSummary.
+    #[allow(dead_code)] // Kept for public API completeness.
     pub fn from_summary(summary: &PrdSummary) -> Self {
         Self {
             id: summary.id.clone(),
@@ -81,6 +79,7 @@ pub struct PrdGraph {
     pub missing_refs: Vec<String>,
 
     /// Warnings generated during graph construction.
+    #[allow(dead_code)] // Kept for public API completeness.
     pub warnings: Vec<String>,
 }
 
@@ -229,6 +228,7 @@ impl Default for AsciiConfig {
 
 impl AsciiConfig {
     /// Creates a new config with defaults (show titles, max 40 chars).
+    #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
     }
@@ -420,6 +420,7 @@ impl Default for MermaidConfig {
 
 impl MermaidConfig {
     /// Creates a new config with defaults (show titles, max 40 chars, top-down).
+    #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
     }
@@ -573,6 +574,7 @@ impl Default for DotConfig {
 
 impl DotConfig {
     /// Creates a new config with defaults (show titles, max 40 chars, top-bottom).
+    #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
     }

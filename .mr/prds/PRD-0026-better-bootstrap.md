@@ -104,7 +104,7 @@ tasks:
 - id: T-012
   title: "Add graph command to CLI with subcommands"
   priority: 12
-  status: todo
+  status: done
   notes: "Add to main.rs: `mr graph ascii`, `mr graph mermaid`, `mr graph dot`."
 - id: T-013
   title: "Enhance reindex to auto-fix depends_on using LLM"
@@ -336,5 +336,22 @@ This makes it harder to onboard to existing projects and understand the logical 
   - Added 9 unit tests: empty graph, single node, with dependencies, missing refs, multiple deps, config no titles, left-right direction, title truncation, node ID conversion
   - UAT passed: 402 tests run, 402 passed
 - **Constitution Compliance**: No violations. Minimal changes, follows existing module patterns (mirrors Mermaid rendering structure).
+
+---
+## 2026-01-27 — T-012 Completed
+- **Task**: Add graph command to CLI with subcommands
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `GraphCommand` enum with three subcommands: `Ascii`, `Mermaid`, `Dot`
+  - Each subcommand has `--no-titles`, `--max-title-len` flags; Mermaid and Dot also have `--lr` flag for left-to-right layout
+  - Added `Graph` variant to `Command` enum with `#[command(subcommand)]`
+  - Added match arm in `main()` to handle Graph command and its subcommands
+  - Implemented `cmd_graph_ascii()`, `cmd_graph_mermaid()`, `cmd_graph_dot()` functions
+  - Each function builds the PRD graph via `graph::build_graph()`, configures rendering, and prints output
+  - Warnings printed if missing `depends_on` references detected
+  - Removed `#![allow(dead_code)]` module attribute from graph.rs (now used), kept attribute on individual items for API completeness
+  - Added 6 CLI parsing tests: ascii defaults, ascii with flags, mermaid defaults, mermaid with lr, dot defaults, dot with all flags
+  - UAT passed: 408 tests run, 408 passed
+- **Constitution Compliance**: No violations. Minimal changes, follows existing CLI patterns.
 
 ---

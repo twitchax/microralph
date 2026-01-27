@@ -286,6 +286,13 @@ enum Command {
         #[command(subcommand)]
         command: ConstitutionCommand,
     },
+
+    /// [H] Visualize PRD dependency graph in various formats.
+    #[command(display_order = 15)]
+    Graph {
+        #[command(subcommand)]
+        command: GraphCommand,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -316,6 +323,50 @@ enum ConstitutionCommand {
         /// Model to use with the runner (e.g., "claude-sonnet-4.5").
         #[arg(long)]
         model: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum GraphCommand {
+    /// Render the PRD dependency graph as ASCII art.
+    Ascii {
+        /// Hide node titles (show only IDs).
+        #[arg(long)]
+        no_titles: bool,
+
+        /// Maximum title length before truncation.
+        #[arg(long, default_value = "40")]
+        max_title_len: usize,
+    },
+
+    /// Render the PRD dependency graph as Mermaid flowchart syntax.
+    Mermaid {
+        /// Hide node titles (show only IDs).
+        #[arg(long)]
+        no_titles: bool,
+
+        /// Maximum title length before truncation.
+        #[arg(long, default_value = "40")]
+        max_title_len: usize,
+
+        /// Render graph left-to-right instead of top-to-bottom.
+        #[arg(long)]
+        lr: bool,
+    },
+
+    /// Render the PRD dependency graph as Graphviz DOT format.
+    Dot {
+        /// Hide node titles (show only IDs).
+        #[arg(long)]
+        no_titles: bool,
+
+        /// Maximum title length before truncation.
+        #[arg(long, default_value = "40")]
+        max_title_len: usize,
+
+        /// Render graph left-to-right instead of top-to-bottom.
+        #[arg(long)]
+        lr: bool,
     },
 }
 
@@ -462,6 +513,31 @@ fn main() -> Result<()> {
             tracing::info!(runner = %runner, stream = %stream, "Reindexing PRDs...");
             cmd_reindex(&runner, model.as_deref(), stream)?;
         }
+        Some(Command::Graph { command }) => match command {
+            GraphCommand::Ascii {
+                no_titles,
+                max_title_len,
+            } => {
+                tracing::info!(no_titles = %no_titles, max_title_len = %max_title_len, "Rendering ASCII graph...");
+                cmd_graph_ascii(!no_titles, max_title_len)?;
+            }
+            GraphCommand::Mermaid {
+                no_titles,
+                max_title_len,
+                lr,
+            } => {
+                tracing::info!(no_titles = %no_titles, max_title_len = %max_title_len, lr = %lr, "Rendering Mermaid graph...");
+                cmd_graph_mermaid(!no_titles, max_title_len, lr)?;
+            }
+            GraphCommand::Dot {
+                no_titles,
+                max_title_len,
+                lr,
+            } => {
+                tracing::info!(no_titles = %no_titles, max_title_len = %max_title_len, lr = %lr, "Rendering DOT graph...");
+                cmd_graph_dot(!no_titles, max_title_len, lr)?;
+            }
+        },
         None => {
             println!(
                 "{}",
@@ -1857,6 +1933,119 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
     Ok(())
 }
 
+/// Renders the PRD dependency graph as ASCII art.
+fn cmd_graph_ascii(show_titles: bool, max_title_len: usize) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    let prd_graph = graph::build_graph(&cwd)?;
+
+    let config = graph::AsciiConfig {
+        show_titles,
+        max_title_len,
+    };
+
+    let output = graph::render_ascii(&prd_graph, Some(config));
+    print!("{output}");
+
+    // Print warnings if there are missing references.
+    if prd_graph.has_missing_refs() {
+        println!();
+        println!(
+            "{}",
+            colors::warning(&format!(
+                "⚠ {} missing PRD reference(s) detected",
+                prd_graph.missing_refs.len()
+            ))
+        );
+    }
+
+    Ok(())
+}
+
+/// Renders the PRD dependency graph as Mermaid flowchart syntax.
+fn cmd_graph_mermaid(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    let prd_graph = graph::build_graph(&cwd)?;
+
+    let direction = if lr {
+        graph::MermaidDirection::LeftRight
+    } else {
+        graph::MermaidDirection::TopDown
+    };
+
+    let config = graph::MermaidConfig {
+        show_titles,
+        max_title_len,
+        direction,
+    };
+
+    let output = graph::render_mermaid(&prd_graph, Some(config));
+    print!("{output}");
+
+    // Print warnings if there are missing references.
+    if prd_graph.has_missing_refs() {
+        eprintln!();
+        eprintln!(
+            "{}",
+            colors::warning(&format!(
+                "⚠ {} missing PRD reference(s) detected",
+                prd_graph.missing_refs.len()
+            ))
+        );
+    }
+
+    Ok(())
+}
+
+/// Renders the PRD dependency graph as Graphviz DOT format.
+fn cmd_graph_dot(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+
+    if !init::is_initialized(&cwd) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+
+    let prd_graph = graph::build_graph(&cwd)?;
+
+    let direction = if lr {
+        graph::DotDirection::LeftRight
+    } else {
+        graph::DotDirection::TopBottom
+    };
+
+    let config = graph::DotConfig {
+        show_titles,
+        max_title_len,
+        direction,
+    };
+
+    let output = graph::render_dot(&prd_graph, Some(config));
+    print!("{output}");
+
+    // Print warnings if there are missing references.
+    if prd_graph.has_missing_refs() {
+        eprintln!();
+        eprintln!(
+            "{}",
+            colors::warning(&format!(
+                "⚠ {} missing PRD reference(s) detected",
+                prd_graph.missing_refs.len()
+            ))
+        );
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -2520,6 +2709,145 @@ Generate a devcontainer.json configuration for:
             assert!(stream, "Stream should be true");
         } else {
             panic!("Expected Refactor command with all flags");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_ascii_defaults() {
+        let args = Args::try_parse_from(["mr", "graph", "ascii"]).unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Ascii {
+                no_titles,
+                max_title_len,
+            } = command
+            {
+                assert!(!no_titles, "no_titles should be false by default");
+                assert_eq!(max_title_len, 40, "max_title_len should be 40 by default");
+            } else {
+                panic!("Expected Ascii subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_ascii_with_flags() {
+        let args = Args::try_parse_from([
+            "mr",
+            "graph",
+            "ascii",
+            "--no-titles",
+            "--max-title-len",
+            "20",
+        ])
+        .unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Ascii {
+                no_titles,
+                max_title_len,
+            } = command
+            {
+                assert!(no_titles, "no_titles should be true");
+                assert_eq!(max_title_len, 20, "max_title_len should be 20");
+            } else {
+                panic!("Expected Ascii subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_mermaid_defaults() {
+        let args = Args::try_parse_from(["mr", "graph", "mermaid"]).unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Mermaid {
+                no_titles,
+                max_title_len,
+                lr,
+            } = command
+            {
+                assert!(!no_titles, "no_titles should be false by default");
+                assert_eq!(max_title_len, 40, "max_title_len should be 40 by default");
+                assert!(!lr, "lr should be false by default");
+            } else {
+                panic!("Expected Mermaid subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_mermaid_with_lr() {
+        let args = Args::try_parse_from(["mr", "graph", "mermaid", "--lr"]).unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Mermaid {
+                no_titles,
+                max_title_len,
+                lr,
+            } = command
+            {
+                assert!(!no_titles, "no_titles should be false");
+                assert_eq!(max_title_len, 40, "max_title_len should be 40");
+                assert!(lr, "lr should be true");
+            } else {
+                panic!("Expected Mermaid subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_dot_defaults() {
+        let args = Args::try_parse_from(["mr", "graph", "dot"]).unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Dot {
+                no_titles,
+                max_title_len,
+                lr,
+            } = command
+            {
+                assert!(!no_titles, "no_titles should be false by default");
+                assert_eq!(max_title_len, 40, "max_title_len should be 40 by default");
+                assert!(!lr, "lr should be false by default");
+            } else {
+                panic!("Expected Dot subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_graph_dot_with_all_flags() {
+        let args = Args::try_parse_from([
+            "mr",
+            "graph",
+            "dot",
+            "--no-titles",
+            "--max-title-len",
+            "60",
+            "--lr",
+        ])
+        .unwrap();
+        if let Some(Command::Graph { command }) = args.command {
+            if let GraphCommand::Dot {
+                no_titles,
+                max_title_len,
+                lr,
+            } = command
+            {
+                assert!(no_titles, "no_titles should be true");
+                assert_eq!(max_title_len, 60, "max_title_len should be 60");
+                assert!(lr, "lr should be true");
+            } else {
+                panic!("Expected Dot subcommand");
+            }
+        } else {
+            panic!("Expected Graph command");
         }
     }
 }
