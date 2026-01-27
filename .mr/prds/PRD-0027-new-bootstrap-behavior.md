@@ -47,7 +47,7 @@ tasks:
 - id: T-002
   title: "Update BootstrapConfig and bootstrap logic"
   priority: 2
-  status: todo
+  status: done
   notes: "Invert the boolean logic in BootstrapConfig. Default should be reconstruct=true, --scaffold sets it to false."
 
 - id: T-003
@@ -129,5 +129,27 @@ The current `mr bootstrap` default behavior is designed for new projects with no
 - **UAT**: ✅ All 451 tests passed via `cargo make uat`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused on the flag rename.
+
+---
+
+## 2026-01-27 — T-002 Completed
+- **Task**: Update BootstrapConfig and bootstrap logic
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `BootstrapConfig::new()` in `src/bootstrap.rs` to default `reconstruct: true`
+  - Updated module-level doc comment to document reconstruct as the default behavior
+  - Updated `reconstruct` field doc comment to note it defaults to true
+  - Updated `bootstrap()` function doc comment to document both modes
+  - Updated 5 tests to explicitly set `config.reconstruct = false` for scaffold behavior testing:
+    - `test_bootstrap_plan_generated`
+    - `test_bootstrap_prds_generated`
+    - `test_bootstrap_runner_failure_plan`
+    - `test_bootstrap_runner_failure_generate`
+    - `test_full_bootstrap_flow`
+    - `test_bootstrap_creates_constitution`
+
+- **UAT**: ✅ All 451 tests passed via `cargo make uat`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused on inverting the default boolean.
 
 ---

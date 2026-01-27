@@ -1,15 +1,16 @@
 //! Bootstrap command implementation for `mr bootstrap`.
 //!
-//! Ingests an existing repository into PRDs:
+//! Default behavior (reconstruct mode):
+//! - Analyzes git history to infer major milestones
+//! - Creates PRDs with `status: done` and `reconstructed: true`
+//! - Infers `depends_on` relationships from temporal order
+//! - Updates `.mr/PRDS.md` index
+//!
+//! With `--scaffold` flag (scaffold mode):
 //! - Ensures `.mr/` structure exists
 //! - Invokes runner with `bootstrap_plan.md` to analyze the repo
 //! - Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 //! - Updates `.mr/PRDS.md` index
-//!
-//! Also supports `--reconstruct` mode which:
-//! - Analyzes git history to infer major milestones
-//! - Creates PRDs with `status: done` and `reconstructed: true`
-//! - Infers `depends_on` relationships from temporal order
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -38,6 +39,7 @@ pub struct BootstrapConfig<'a> {
     pub prd_budget: u32,
 
     /// Whether to run reconstruct workflow (analyze git history).
+    /// Defaults to true; set to false via `--scaffold` flag.
     pub reconstruct: bool,
 
     /// Whether to stream runner output in real-time.
@@ -46,11 +48,14 @@ pub struct BootstrapConfig<'a> {
 
 impl<'a> BootstrapConfig<'a> {
     /// Creates a new bootstrap configuration with defaults.
+    ///
+    /// Default behavior is reconstruct mode (analyze git history).
+    /// Use `--scaffold` flag to enable scaffold mode instead.
     pub fn new(root: &'a Path) -> Self {
         Self {
             root,
             prd_budget: DEFAULT_PRD_BUDGET,
-            reconstruct: false,
+            reconstruct: true,
             stream: false,
         }
     }
@@ -77,13 +82,17 @@ pub struct BootstrapResult {
 
 /// Runs the bootstrap process.
 ///
-/// This function:
+/// Default behavior (reconstruct=true):
+/// 1. Ensures `.mr/` structure exists (runs init if needed)
+/// 2. Analyzes git history to infer major milestones
+/// 3. Creates PRDs with `status: done` and `reconstructed: true`
+/// 4. Updates `.mr/PRDS.md` index
+///
+/// With `--scaffold` flag (reconstruct=false):
 /// 1. Ensures `.mr/` structure exists (runs init if needed)
 /// 2. Invokes runner with `bootstrap_plan.md` to analyze the repo
 /// 3. Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 /// 4. Updates `.mr/PRDS.md` index
-///
-/// If `config.reconstruct` is true, runs the reconstruct workflow instead.
 pub fn bootstrap<R>(config: &BootstrapConfig, runner: &R) -> Result<BootstrapResult>
 where
     R: Runner + ?Sized,
@@ -483,7 +492,8 @@ mod tests {
             crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002."),
         ]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -500,7 +510,8 @@ mod tests {
             crate::runner::RunnerOutput::success("Generated PRD-0001, PRD-0002, and PRD-0003."),
         ]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -517,7 +528,8 @@ mod tests {
             "Error analyzing repo",
         )]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner);
 
@@ -534,7 +546,8 @@ mod tests {
             crate::runner::RunnerOutput::failure("Error generating PRDs"),
         ]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner);
 
@@ -630,7 +643,8 @@ Test PRD.
             crate::runner::RunnerOutput::success("Created PRD-0001 and PRD-0002 successfully."),
         ]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner).unwrap();
 
@@ -662,7 +676,8 @@ Test PRD.
             crate::runner::RunnerOutput::success("Created PRD-0001."),
         ]);
 
-        let config = BootstrapConfig::new(temp.path());
+        let mut config = BootstrapConfig::new(temp.path());
+        config.reconstruct = false; // Test scaffold behavior
 
         let result = bootstrap(&config, &runner).unwrap();
 
