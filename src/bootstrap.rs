@@ -13,10 +13,8 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::LazyLock;
 
 use anyhow::{Context, Result, bail};
-use regex::Regex;
 
 use crate::init;
 use crate::prd::{generate_index_from_root, scan_prd_summaries};
@@ -29,10 +27,6 @@ use crate::spinner::start_spinner;
 
 /// Default PRD budget when bootstrapping.
 const DEFAULT_PRD_BUDGET: u32 = 6;
-
-/// Regex pattern for matching PRD identifiers (PRD-NNNN).
-static PRD_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"PRD-\d{4}").expect("PRD regex pattern is valid"));
 
 /// Configuration for the bootstrap command.
 #[derive(Debug)]
@@ -168,6 +162,9 @@ where
     // Step 3: Generate PRDs.
     tracing::info!("Generating PRDs...");
 
+    // Count PRDs before generation to calculate delta.
+    let prds_before = count_prd_files(config.root);
+
     let generate_prompt = build_generate_prompt(config, &plan_output.text);
 
     tracing::info!(
@@ -209,8 +206,9 @@ where
 
     result.prds_generated = true;
 
-    // Count PRDs created (look for PRD-NNNN patterns in output).
-    result.prds_created = count_prds_in_output(&generate_output.text);
+    // Count PRDs after generation and calculate how many were created.
+    let prds_after = count_prd_files(config.root);
+    result.prds_created = prds_after.saturating_sub(prds_before);
 
     // Step 4: Regenerate index.
     tracing::info!("Regenerating PRD index...");
@@ -295,13 +293,9 @@ fn summarize_plan(plan: &str) -> String {
     }
 }
 
-/// Counts PRDs mentioned in the output.
-fn count_prds_in_output(output: &str) -> usize {
-    // Look for PRD-NNNN patterns using the pre-compiled static regex.
-    let matches: std::collections::HashSet<&str> =
-        PRD_PATTERN.find_iter(output).map(|m| m.as_str()).collect();
-
-    matches.len()
+/// Counts actual PRD files on disk.
+fn count_prd_files(root: &Path) -> usize {
+    scan_prd_summaries(root).unwrap_or_default().len()
 }
 
 /// Runs the reconstruct bootstrap workflow.
@@ -321,6 +315,9 @@ where
     R: Runner + ?Sized,
 {
     tracing::info!("Running reconstruct workflow...");
+
+    // Count PRDs before reconstruction to calculate delta.
+    let prds_before = count_prd_files(config.root);
 
     let reconstruct_prompt = build_reconstruct_prompt(config);
 
@@ -365,8 +362,9 @@ where
     result.plan_summary = "Reconstructed from git history".to_string();
     result.prds_generated = true;
 
-    // Count PRDs created from the reconstruct output.
-    result.prds_created = count_prds_in_output(&reconstruct_output.text);
+    // Count PRDs after reconstruction and calculate how many were created.
+    let prds_after = count_prd_files(config.root);
+    result.prds_created = prds_after.saturating_sub(prds_before);
 
     tracing::debug!(
         output_len = reconstruct_output.text.len(),
@@ -507,7 +505,8 @@ mod tests {
         let result = bootstrap(&config, &runner).unwrap();
 
         assert!(result.prds_generated);
-        assert_eq!(result.prds_created, 3);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
     }
 
     #[test]
@@ -544,21 +543,39 @@ mod tests {
     }
 
     #[test]
-    fn test_count_prds_in_output() {
-        let output = "Created PRD-0001, PRD-0002, and PRD-0003. Also updated PRD-0001.";
+    fn test_count_prd_files() {
+        let temp = setup_test_repo();
 
-        let count = count_prds_in_output(output);
+        // Initialize to create .mr structure.
+        init::init(temp.path()).unwrap();
 
-        assert_eq!(count, 3); // Unique PRDs only.
-    }
+        // Initially no PRDs.
+        assert_eq!(count_prd_files(temp.path()), 0);
 
-    #[test]
-    fn test_count_prds_in_output_none() {
-        let output = "No PRDs created.";
+        // Create a PRD file.
+        let prd_content = r#"---
+id: PRD-0001
+title: "Test PRD"
+status: draft
+owner: Test
+created: 2026-01-01
+updated: 2026-01-01
+tasks:
+- id: T-001
+  title: "Task"
+  priority: 1
+  status: todo
+---
 
-        let count = count_prds_in_output(output);
+# Summary
 
-        assert_eq!(count, 0);
+Test PRD.
+"#;
+        let prds_dir = temp.path().join(".mr/prds");
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), prd_content).unwrap();
+
+        // Now one PRD.
+        assert_eq!(count_prd_files(temp.path()), 1);
     }
 
     #[test]
@@ -621,7 +638,8 @@ mod tests {
         assert!(result.initialized);
         assert!(result.plan_generated);
         assert!(result.prds_generated);
-        assert_eq!(result.prds_created, 2);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
 
         // Verify runner was called 2 times (plan, generate).
         assert_eq!(runner.recorded_prompts().len(), 2);
@@ -680,7 +698,8 @@ mod tests {
         assert!(result.initialized);
         assert!(result.plan_generated);
         assert!(result.prds_generated);
-        assert_eq!(result.prds_created, 3);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
 
         // Verify summary is set for reconstruct.
         assert!(result.plan_summary.contains("git history"));
@@ -707,7 +726,8 @@ mod tests {
 
         // Should not have initialized.
         assert!(!result.initialized);
-        assert_eq!(result.prds_created, 1);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
     }
 
     #[test]
@@ -843,7 +863,8 @@ Test PRD for idempotency testing.
         assert!(result.initialized);
         assert!(result.plan_generated);
         assert!(result.prds_generated);
-        assert_eq!(result.prds_created, 2);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
 
         // Verify .mr/ structure exists.
         assert!(temp.path().join(".mr/prds").exists());
@@ -890,7 +911,6 @@ An existing PRD that should not be duplicated.
         std::fs::write(prds_dir.join("PRD-0001-existing.md"), prd_content).unwrap();
 
         // Mock runner that should receive context about existing PRDs.
-        // Note: Don't mention PRD-0001 in output since count_prds_in_output counts all unique PRD IDs.
         let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(
             "Created PRD-0002 and PRD-0003. Skipped existing PRD as it already exists.",
         )]);
@@ -902,7 +922,8 @@ An existing PRD that should not be duplicated.
 
         // Verify reconstruct completed without re-initialization.
         assert!(!result.initialized);
-        assert_eq!(result.prds_created, 2);
+        // MockRunner doesn't create actual files. Started with 1 PRD, still 1 PRD.
+        assert_eq!(result.prds_created, 0);
 
         // Verify the prompt included existing PRD info.
         let prompts = runner.recorded_prompts();
@@ -964,7 +985,8 @@ Created PRD-0003 (status: done, reconstructed: true, depends_on: [PRD-0001, PRD-
 
         let result = bootstrap(&config, &runner).unwrap();
 
-        assert_eq!(result.prds_created, 3);
+        // MockRunner doesn't create actual files, so prds_created is 0.
+        assert_eq!(result.prds_created, 0);
 
         // Verify the reconstruct prompt contains guidance about depends_on.
         let prompts = runner.recorded_prompts();
