@@ -2386,6 +2386,14 @@ pub fn is_initialized(root: impl AsRef<Path>) -> bool {
         && mr_dir.join("PRDS.md").exists()
 }
 
+/// Ensures the project is initialized, returning an error if not.
+pub fn ensure_initialized(root: impl AsRef<Path>) -> Result<()> {
+    if !is_initialized(root) {
+        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {

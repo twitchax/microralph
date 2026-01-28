@@ -845,9 +845,7 @@ fn cmd_bootstrap(
 ///
 /// This is separated from `cmd_restore` to allow testing without changing cwd.
 fn restore_impl(root: &Path) -> Result<()> {
-    if !init::is_initialized(root) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(root)?;
 
     println!("{}", colors::info("Restoring prompts and templates..."));
 
@@ -914,9 +912,7 @@ fn cmd_prd_new(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Show dev container warning for safety.
     devcontainer::show_dev_container_warning();
@@ -975,9 +971,7 @@ fn cmd_prd_edit(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1029,9 +1023,7 @@ fn cmd_prd_edit(
 fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1082,9 +1074,7 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
 fn cmd_prd_list(include_done: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Regenerate the index file.
     prd::generate_index_from_root(&cwd)?;
@@ -1241,9 +1231,7 @@ fn cmd_prd_finalize(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1345,9 +1333,7 @@ fn cmd_run(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Show dev container warning for safety.
     devcontainer::show_dev_container_warning();
@@ -1768,9 +1754,7 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
 fn cmd_status() -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     let report = status::get_status(&cwd)?;
     let output = status::format_status(&report);
@@ -1784,9 +1768,7 @@ fn cmd_status() -> Result<()> {
 fn cmd_suggest(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1818,9 +1800,7 @@ fn cmd_refactor(
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1915,9 +1895,7 @@ fn cmd_refactor(
 fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
@@ -1959,9 +1937,7 @@ fn cmd_reindex(runner_name: &str, cli_model: Option<&str>, stream: bool) -> Resu
 fn cmd_graph_ascii(show_titles: bool, max_title_len: usize) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     let prd_graph = graph::build_graph(&cwd)?;
 
@@ -1992,9 +1968,7 @@ fn cmd_graph_ascii(show_titles: bool, max_title_len: usize) -> Result<()> {
 fn cmd_graph_mermaid(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     let prd_graph = graph::build_graph(&cwd)?;
 
@@ -2032,9 +2006,7 @@ fn cmd_graph_mermaid(show_titles: bool, max_title_len: usize, lr: bool) -> Resul
 fn cmd_graph_dot(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
-    if !init::is_initialized(&cwd) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
-    }
+    init::ensure_initialized(&cwd)?;
 
     let prd_graph = graph::build_graph(&cwd)?;
 
