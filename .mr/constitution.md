@@ -25,3 +25,5 @@ The constitution:
 6. **Root Cause Resolution**: Prefer fixing root causes over applying surface-level workarounds. When a workaround is necessary, document the underlying issue and rationale.
 
 <!-- Add your project-specific rules below: -->
+
+7. **Prompt Management**: All prompt templates and default content must be defined in `src/init.rs` (as embedded constants) and materialized to `.mr/prompts/` during initialization. These two sources must remain consistent and synchronized.
