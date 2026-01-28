@@ -115,27 +115,40 @@ impl ClaudeRunner {
         Self { config }
     }
 
+    /// Appends common configuration flags to the provided args vector.
+    ///
+    /// This is the single source of truth for flag generation, used by both
+    /// `build_args` and `format_display_parts_impl` to avoid duplication.
+    fn append_config_flags(&self, args: &mut Vec<String>) {
+        // Permission flags.
+        match self.config.permission_mode {
+            ClaudePermissionMode::Yolo => {
+                args.push("--dangerously-skip-permissions".to_string());
+            }
+            #[cfg(test)]
+            ClaudePermissionMode::Manual => {
+                // No permission flags.
+            }
+        }
+
+        // Disable ask_user tool for autonomous operation via permission mode.
+        if self.config.no_ask_user {
+            args.push("--permission-mode".to_string());
+            args.push("dontAsk".to_string());
+        }
+
+        // Model selection.
+        if let Some(ref model) = self.config.model {
+            args.push("--model".to_string());
+            args.push(model.clone());
+        }
+    }
+
     /// Builds display parts for format_command_display.
     fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
         let mut parts = vec![self.config.claude_path.clone()];
 
-        match self.config.permission_mode {
-            ClaudePermissionMode::Yolo => {
-                parts.push("--dangerously-skip-permissions".to_string());
-            }
-            #[cfg(test)]
-            ClaudePermissionMode::Manual => {}
-        }
-
-        if self.config.no_ask_user {
-            parts.push("--permission-mode".to_string());
-            parts.push("dontAsk".to_string());
-        }
-
-        if let Some(ref model) = self.config.model {
-            parts.push("--model".to_string());
-            parts.push(model.clone());
-        }
+        self.append_config_flags(&mut parts);
 
         parts.push("-p".to_string());
         parts.push("<prompt>".to_string());
@@ -250,28 +263,7 @@ impl CliRunnerConfig for ClaudeRunner {
         args.push("-p".to_string());
         args.push(prompt.to_string());
 
-        // Permission flags.
-        match self.config.permission_mode {
-            ClaudePermissionMode::Yolo => {
-                args.push("--dangerously-skip-permissions".to_string());
-            }
-            #[cfg(test)]
-            ClaudePermissionMode::Manual => {
-                // No permission flags.
-            }
-        }
-
-        // Disable ask_user tool for autonomous operation via permission mode.
-        if self.config.no_ask_user {
-            args.push("--permission-mode".to_string());
-            args.push("dontAsk".to_string());
-        }
-
-        // Model selection.
-        if let Some(ref model) = self.config.model {
-            args.push("--model".to_string());
-            args.push(model.clone());
-        }
+        self.append_config_flags(&mut args);
 
         // Request JSON output format for token usage parsing.
         args.push("--output-format".to_string());
