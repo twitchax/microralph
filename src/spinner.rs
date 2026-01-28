@@ -99,6 +99,13 @@ mod tests {
     #[test]
     fn test_spinner_with_static_message() {
         let spinner = start_spinner(true, "Static message");
+
+        // In non-TTY (test) environment, bar should be None.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled in non-TTY environment"
+        );
+
         spinner.set_message("Another static");
         spinner.finish_and_clear();
     }
@@ -106,6 +113,13 @@ mod tests {
     #[test]
     fn test_spinner_with_dynamic_message() {
         let spinner = start_spinner(true, format!("Task {}/{}", 1, 5));
+
+        // Verify spinner is correctly disabled in test environment.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled in non-TTY environment"
+        );
+
         spinner.set_message(format!("Task {}/{}", 2, 5));
         spinner.finish_and_clear();
     }
@@ -177,6 +191,13 @@ mod tests {
             let spinner =
                 start_spinner(true, format!("Running task {}/{}...", task_idx, task_count));
 
+            // Verify each spinner is correctly disabled in test/CI environment.
+            assert!(
+                spinner.bar.is_none(),
+                "Spinner {} should be disabled in non-TTY environment",
+                task_idx
+            );
+
             // Simulate some work...
             spinner.set_message(format!("Processing task {}...", task_idx));
 
@@ -195,6 +216,13 @@ mod tests {
                 format!("Refactor iteration {}/{}...", iteration, max_iterations),
             );
 
+            // Verify each iteration's spinner is disabled in test environment.
+            assert!(
+                spinner.bar.is_none(),
+                "Iteration {} spinner should be disabled in non-TTY",
+                iteration
+            );
+
             spinner.set_message(format!("Analyzing codebase (iteration {})...", iteration));
 
             // Clear before showing output.
@@ -206,6 +234,12 @@ mod tests {
     fn test_spinner_suggest_workflow_simulation() {
         // Simulate the suggest workflow: spinner during AI generation.
         let spinner = start_spinner(true, "Analyzing codebase...");
+
+        // Verify spinner is disabled in test environment.
+        assert!(
+            spinner.bar.is_none(),
+            "Suggest workflow spinner should be disabled in non-TTY"
+        );
 
         // Simulate AI work...
         spinner.set_message("Generating suggestions...");
@@ -219,6 +253,12 @@ mod tests {
         // Simulate the finalize workflow: spinner during agent execution.
         let spinner = start_spinner(true, "Finalizing PRD...");
 
+        // Verify spinner is disabled in test environment.
+        assert!(
+            spinner.bar.is_none(),
+            "Finalize workflow spinner should be disabled in non-TTY"
+        );
+
         // Simulate agent execution...
         spinner.set_message("Verifying changes...");
 
@@ -231,6 +271,12 @@ mod tests {
         // Simulate the reindex workflow: spinner during link verification.
         let spinner = start_spinner(true, "Verifying links...");
 
+        // Verify spinner is disabled in test environment.
+        assert!(
+            spinner.bar.is_none(),
+            "Reindex workflow spinner should be disabled in non-TTY"
+        );
+
         // Simulate link verification...
         spinner.set_message("Updating index...");
 
@@ -241,6 +287,13 @@ mod tests {
     #[test]
     fn test_disabled_spinner_set_message_empty_string() {
         let spinner = start_spinner(false, "");
+
+        // Explicitly disabled spinner should have no bar.
+        assert!(
+            spinner.bar.is_none(),
+            "Explicitly disabled spinner should have no bar"
+        );
+
         spinner.set_message("");
         spinner.finish_and_clear();
     }
