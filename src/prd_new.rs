@@ -543,19 +543,10 @@ fn build_round_n_prompt(
     }
 
     // Build Q/A history.
-    let qa_list: Vec<HashMap<String, String>> = qa_history
-        .iter()
-        .map(|qa| {
-            [
-                ("question".to_string(), qa.question.clone()),
-                ("answer".to_string(), qa.answer.clone()),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .collect();
-
-    ctx.insert("qa_history", PlaceholderValue::List(qa_list));
+    ctx.insert(
+        "qa_history",
+        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
+    );
 
     expand_placeholders(&template, &ctx)
 }
@@ -582,19 +573,10 @@ fn build_synthesize_prompt(
     }
 
     // Build Q/A history.
-    let qa_list: Vec<HashMap<String, String>> = qa_history
-        .iter()
-        .map(|qa| {
-            [
-                ("question".to_string(), qa.question.clone()),
-                ("answer".to_string(), qa.answer.clone()),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .collect();
-
-    ctx.insert("qa_history", PlaceholderValue::List(qa_list));
+    ctx.insert(
+        "qa_history",
+        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
+    );
 
     // Build existing PRDs list.
     let prd_list: Vec<HashMap<String, String>> = existing_prds

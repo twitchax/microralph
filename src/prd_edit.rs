@@ -3,7 +3,6 @@
 //! This module implements `mr edit` which allows quick modifications to
 //! existing PRDs via a runner Q/A session.
 
-use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 
@@ -257,19 +256,10 @@ fn build_edit_prompt(config: &PrdEditConfig, prd_content: &str, qa_history: &[Qa
     ctx.insert("prd_content", prd_content);
 
     // Build Q/A history.
-    let qa_list: Vec<HashMap<String, String>> = qa_history
-        .iter()
-        .map(|qa| {
-            [
-                ("question".to_string(), qa.question.clone()),
-                ("answer".to_string(), qa.answer.clone()),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .collect();
-
-    ctx.insert("qa_history", PlaceholderValue::List(qa_list));
+    ctx.insert(
+        "qa_history",
+        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
+    );
 
     expand_placeholders(&template, &ctx)
 }

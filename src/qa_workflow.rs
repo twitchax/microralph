@@ -3,6 +3,7 @@
 //! This module contains common types and functions used across `prd_new`, `prd_edit`,
 //! and other commands that follow a question/answer workflow with AI runners.
 
+use std::collections::HashMap;
 use std::io::{BufRead, Write};
 
 use anyhow::Result;
@@ -14,6 +15,23 @@ use crate::runner::CopilotRunner;
 pub struct QaPair {
     pub question: String,
     pub answer: String,
+}
+
+/// Converts a slice of Q/A pairs to a list format suitable for placeholder expansion.
+///
+/// This is the standard format used by prompt templates that reference `{{qa_history}}`.
+pub fn to_placeholder_list(qa_history: &[QaPair]) -> Vec<HashMap<String, String>> {
+    qa_history
+        .iter()
+        .map(|qa| {
+            [
+                ("question".to_string(), qa.question.clone()),
+                ("answer".to_string(), qa.answer.clone()),
+            ]
+            .into_iter()
+            .collect()
+        })
+        .collect()
 }
 
 /// Extracts PRD content from runner output.

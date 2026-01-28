@@ -3,7 +3,6 @@
 //! This module implements `mr constitution edit` which allows intelligent updates
 //! to the project constitution via a runner Q/A session.
 
-use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 
@@ -13,7 +12,7 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::qa_workflow::{QaPair, parse_questions};
+use crate::qa_workflow::{self, QaPair, parse_questions};
 use crate::runner::Runner;
 
 /// Maximum number of Q/A rounds before forcing application.
@@ -205,18 +204,10 @@ fn build_constitution_edit_prompt(
     context.insert("constitution_content", constitution_content);
 
     if !qa_history.is_empty() {
-        let qa_list: Vec<HashMap<String, String>> = qa_history
-            .iter()
-            .map(|qa| {
-                [
-                    ("question".to_string(), qa.question.clone()),
-                    ("answer".to_string(), qa.answer.clone()),
-                ]
-                .into_iter()
-                .collect()
-            })
-            .collect();
-        context.insert("qa_history", PlaceholderValue::List(qa_list));
+        context.insert(
+            "qa_history",
+            PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
+        );
     }
 
     expand_placeholders(&prompt_template, &context)
