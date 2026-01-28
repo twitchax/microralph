@@ -7,6 +7,186 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📋 PRD Tasks
+
+- Prd(PRD-0024)feat(T-001): Add indicatif dependency for spinners
+- Prd(PRD-0024)feat(T-002): Add spinner utility module
+- Prd(PRD-0024)feat(T-003): Integrate spinner into mr run command
+- Prd(PRD-0024)feat(T-004): verify spinner resets between loop iterations
+- Prd(PRD-0024)feat(T-005): integrate spinner into mr refactor command
+- Prd(PRD-0024)feat(T-006): integrate spinner into mr suggest command
+- Prd(PRD-0024)feat(T-007): Add spinner to finalize command
+- Prd(PRD-0024)feat(T-008): integrate spinner into mr reindex command
+- Prd(PRD-0024)feat(T-009): add integration tests for spinner behavior
+- Prd(PRD-0024)uat(uat-001): verify spinner displays during mr run
+- Prd(PRD-0024)uat(uat-002): verify refactor spinner test
+- Prd(PRD-0024)uat(uat-003): verify spinner displays during mr suggest
+- Prd(PRD-0024)uat(uat-004): verify spinner hidden in non-TTY
+- Prd(PRD-0024)uat(uat-005): verify spinner clears before output
+- Prd(PRD-0024)finalize: Add progress spinners for long-running operations
+- Prd(PRD-0025)feat(T-001): Add clippy lint to deny unwrap_used in production code
+
+- Add #[allow(clippy::unwrap_used)] to all test modules (28 files)
+- Add temporary inline allows with TODO comments for production unwraps
+  (T-002 through T-006 will remove these)
+- All 360 tests pass
+- Prd(PRD-0025)feat(T-002): Fix bootstrap.rs Regex::new unwrap with LazyLock
+- Prd(PRD-0025)feat(T-003): use LazyLock for spinner template
+- Prd(PRD-0025)feat(T-004): fix suggest.rs file_name unwrap
+
+Replace unwrap() with map().unwrap_or_default() pattern in
+analyze_codebase() to gracefully handle edge case of path
+without file name component.
+- Prd(PRD-0025)feat(T-005): fix suggest.rs selection parsing unwraps
+- Prd(PRD-0025)feat(T-006): fix prd/index.rs regex expect with LazyLock
+- Prd(PRD-0025)feat(T-007): Verify function signatures already complete
+- Prd(PRD-0025)finalize: Complete unwrap elimination with clippy lint
+- Prd(PRD-0026)feat(T-001): Add depends_on field to PrdFrontmatter struct
+- Prd(PRD-0026)feat(T-002): Add reconstructed field to PrdFrontmatter
+- Prd(PRD-0026)feat(T-003): Add depends_on field to PRD template
+- Prd(PRD-0026)feat(T-004): add --reconstruct flag to bootstrap command
+- Prd(PRD-0026)feat(T-005): Create bootstrap_reconstruct.md prompt
+
+- Add BootstrapReconstruct variant to PromptKind enum
+- Add PROMPT_BOOTSTRAP_RECONSTRUCT constant in init.rs
+- Add bootstrap_reconstruct.md to .mr/prompts/
+- Update prompt count in tests (17 -> 18)
+- Prd(PRD-0026)feat(T-006): Implement reconstruct logic in bootstrap.rs
+- Prd(PRD-0026)feat(T-007): Handle idempotency for --reconstruct with existing PRDs
+
+- Updated build_reconstruct_prompt() to scan for existing PRDs and include
+  them in the prompt context using PlaceholderValue::List
+- Added 'Existing PRDs (Do Not Duplicate)' section to bootstrap_reconstruct
+  prompt with {{#if existing_prds}} and {{#each existing_prds}} placeholders
+- Synchronized .mr/prompts/bootstrap_reconstruct.md with init.rs constant
+- Added 2 unit tests for idempotency behavior
+
+UAT: 367 tests passed
+- Prd(PRD-0026)feat(T-008): Create graph module with shared graph-building logic
+- Prd(PRD-0026)feat(T-009): implement ASCII graph rendering
+
+- Add AsciiConfig struct for rendering configuration
+- Implement render_ascii() function for dependency graph visualization
+- Show nodes with [ID] Title (status) format
+- Display dependencies with tree connectors (├── and └──)
+- Render missing refs in separate section with warnings
+- Add summary stats (PRD count, edges, missing count)
+- Add 7 unit tests for ASCII rendering
+- Prd(PRD-0026)feat(T-010): implement mermaid graph rendering
+- Prd(PRD-0026)feat(T-011): Implement graph dot subcommand
+- Prd(PRD-0026)feat(T-012): Add graph command to CLI with subcommands
+
+- Added GraphCommand enum with ascii, mermaid, dot subcommands
+- Each has --no-titles, --max-title-len flags; mermaid/dot have --lr
+- Implemented cmd_graph_ascii, cmd_graph_mermaid, cmd_graph_dot functions
+- Added 6 CLI parsing tests for graph command
+- Removed module-level dead_code allow from graph.rs
+- UAT passed: 408 tests run, 408 passed
+- Prd(PRD-0026)feat(T-013,T-014): enhance reindex with LLM-driven depends_on auto-fix
+
+- Add ReindexDependsOn prompt kind for analyzing PRD dependencies
+- Update reindex.rs with run_depends_on_fix() for second phase analysis
+- Add PROMPT_REINDEX_DEPENDS_ON constant and physical prompt file
+- Update ReindexResult with depends_on_added/fixed fields
+- Add helper functions: extract_summary(), parse_depends_on_counts()
+- Update cmd_reindex() to display new depends_on statistics
+- Add 8 unit tests for new functions
+- All 415 tests pass
+- Prd(PRD-0026)feat(T-015): add depends_on field to PRDS.md index
+
+- Add depends_on field to PrdSummary struct
+- Generate Dependencies section in PRDS.md showing PRD dependency relationships
+- Add 5 unit tests for dependency extraction and section generation
+- Update all files constructing PrdSummary to include new field
+- Prd(PRD-0026)feat(T-016): Add unit tests for graph building and rendering
+- Prd(PRD-0026)feat(T-017): Add integration tests for reconstruct and graph commands
+
+- Added 4 integration tests to bootstrap.rs for reconstruct workflow
+  - Test full workflow with mock git repo
+  - Test idempotency with existing PRDs
+  - Test depends_on inference guidance
+  - Test end-to-end with index regeneration
+
+- Added 8 integration tests to graph.rs for graph commands
+  - Test graph building from disk PRD files
+  - Test ASCII, Mermaid, DOT rendering with real PRDs
+  - Test missing dependency warning handling
+  - Test empty repository handling
+  - Test complex dependency chains
+  - Test with reconstructed PRDs
+
+Test count: 438 → 450 (12 new tests)
+- Prd(PRD-0026)feat(T-018): Add graph and reconstruct documentation to AGENTS.md
+- Prd(PRD-0026)uat(uat-001): verify reconstruct creates PRDs with depends_on
+- Prd(PRD-0026)uat(uat-002): verify graph ascii renders dependency graph
+- Prd(PRD-0026)uat(uat-003): verify mermaid flowchart output tests
+- Prd(PRD-0026)uat(uat-004): verify graph dot outputs valid Graphviz DOT format
+- Prd(PRD-0026)uat(uat-005): add integration tests for reindex depends_on auto-fix
+- Prd(PRD-0026)uat(uat-006): verify graph warns and renders dashed nodes for missing depends_on
+- Prd(PRD-0026)finalize: Complete bootstrap reconstruct, depends_on, and graph command
+- Prd(PRD-0027)feat(T-001): Replace --reconstruct with --scaffold flag
+- Prd(PRD-0027)feat(T-002): Update BootstrapConfig default to reconstruct=true
+
+- Changed BootstrapConfig::new() to default reconstruct to true
+- Updated module and function doc comments to reflect new default
+- Updated tests to explicitly set reconstruct=false for scaffold behavior
+- Prd(PRD-0027)feat(T-003): Update bootstrap_reconstruct.md prompt for new default
+- Prd(PRD-0027)feat(T-004): Update AGENTS.md Bootstrap documentation
+- Prd(PRD-0027)feat(T-005): Update init.rs embedded prompts to match updated prompt files
+- Prd(PRD-0027)feat(T-006): Update tests to reflect reconstruct as default
+
+- Update src/prd/types.rs doc comment for reconstructed field
+- Update src/graph.rs test comment to use 'mr bootstrap' without flag
+- Remove redundant config.reconstruct=true from 7 bootstrap tests
+- All 451 tests pass
+- Prd(PRD-0027)feat(T-007): verify all --reconstruct references removed
+- Prd(PRD-0027)uat(uat-001): verify default reconstruct behavior
+- Prd(PRD-0027)uat(uat-002): verify scaffold behavior with existing tests
+- Prd(PRD-0027)uat(uat-003): verify help text shows --scaffold flag
+- Prd(PRD-0027)uat(uat-004): verify documentation updates via manual grep analysis
+- Prd(PRD-0027)finalize: Swap bootstrap default to reconstruct mode
+- Prd(PRD-0028)feat(T-001): Add Technical Approach section to PRD template
+- Prd(PRD-0028)feat(T-002): Add Assumptions section to PRD template
+- Prd(PRD-0028)feat(T-003): Add Constraints section to PRD template
+- Prd(PRD-0028)feat(T-004): Add References to Code section to PRD template
+- Prd(PRD-0028)feat(T-005): Update Round1 prompt to elicit technical approach details
+- Prd(PRD-0028)feat(T-006): Update synthesize prompt with new PRD sections
+- Prd(PRD-0028)feat(T-007): sync prompts and templates via mr restore
+- Prd(PRD-0028)feat(T-008): Verify all UATs pass
+- Prd(PRD-0028)finalize: Enhanced PRD exposition with Technical Approach, Assumptions, Constraints, and References sections
+
+### 🚜 Refactor
+
+- Extract add_optional helper to reduce DRY violation in aggregate_usage
+- Move UsageInfo aggregation to impl block for DRY
+- Fix off-by-one bug in output tokens regex capture group
+- Rename PermissionMode to runner-specific names for clarity
+- Extract shared NodeDisplayConfig for graph renderers
+- Extract ensure_initialized helper to eliminate DRY violation
+- Consolidate Runner impl via blanket impl for CliRunnerConfig
+- Extract shared PRD link formatting helpers to eliminate DRY violation
+- Embed NodeDisplayConfig in graph config structs to eliminate DRY violation
+- Extract read_stream_lines helper to reduce duplication in CLI streaming
+- Extract analyze_codebase into separate helper functions
+- Extract helper functions from parse_suggestions
+- Improve spinner tests to verify spinner state
+- Remove redundant assertions from spinner simulation tests
+- Improve colors.rs tests to validate actual behavior
+- Improve spinner tests with meaningful assertions
+- Improve devcontainer tests to actually verify behavior
+- Improve tautological test_build_refactor_prompt_with_context test
+- Improve test_spinner_cow_static_vs_owned with meaningful assertions
+- Improve tautological test_spinner_run_task_simulation test
+- Improve tautological spinner tests with meaningful assertions
+- Improve tautological spinner tests to test actual contracts
+- Extract common flag-building logic in CopilotRunner to eliminate duplication
+- Extract to_placeholder_list() for QaPair formatting
+- Extract common flag-building logic in ClaudeRunner to eliminate duplication
+- Move aggregate_usage to UsageInfo::aggregate method
+- Simplify RunnerOutput construction by directly assigning usage field
+
+## [0.3.1] - 2026-01-26
+
 ## [0.3.0] - 2026-01-26
 
 ### 🚀 Features
