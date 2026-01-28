@@ -51,6 +51,22 @@ impl UsageInfo {
     pub fn has_data(&self) -> bool {
         self.input_tokens.is_some() || self.output_tokens.is_some() || self.total_tokens.is_some()
     }
+
+    /// Adds two optional u64 values, returning None only if both are None.
+    fn add_optional(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+        match (a, b) {
+            (Some(x), Some(y)) => Some(x + y),
+            (Some(x), None) | (None, Some(x)) => Some(x),
+            (None, None) => None,
+        }
+    }
+
+    /// Merges another UsageInfo into this one, summing token counts.
+    pub fn merge(&mut self, other: &UsageInfo) {
+        self.input_tokens = Self::add_optional(self.input_tokens, other.input_tokens);
+        self.output_tokens = Self::add_optional(self.output_tokens, other.output_tokens);
+        self.total_tokens = Self::add_optional(self.total_tokens, other.total_tokens);
+    }
 }
 
 /// Output from a runner invocation.
@@ -158,5 +174,90 @@ pub trait Runner: Send + Sync {
     /// Checks if the runner is available/configured.
     fn is_available(&self) -> bool {
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_usage_info_merge_both_some() {
+        let mut total = UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: Some(50),
+            total_tokens: Some(150),
+        };
+
+        let other = UsageInfo {
+            input_tokens: Some(200),
+            output_tokens: Some(100),
+            total_tokens: Some(300),
+        };
+
+        total.merge(&other);
+
+        assert_eq!(total.input_tokens, Some(300));
+        assert_eq!(total.output_tokens, Some(150));
+        assert_eq!(total.total_tokens, Some(450));
+    }
+
+    #[test]
+    fn test_usage_info_merge_partial() {
+        let mut total = UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: None,
+            total_tokens: None,
+        };
+
+        let other = UsageInfo {
+            input_tokens: None,
+            output_tokens: Some(50),
+            total_tokens: Some(50),
+        };
+
+        total.merge(&other);
+
+        assert_eq!(total.input_tokens, Some(100));
+        assert_eq!(total.output_tokens, Some(50));
+        assert_eq!(total.total_tokens, Some(50));
+    }
+
+    #[test]
+    fn test_usage_info_merge_both_none() {
+        let mut total = UsageInfo {
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        };
+
+        let other = UsageInfo {
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        };
+
+        total.merge(&other);
+
+        assert_eq!(total.input_tokens, None);
+        assert_eq!(total.output_tokens, None);
+        assert_eq!(total.total_tokens, None);
+    }
+
+    #[test]
+    fn test_usage_info_has_data() {
+        let empty = UsageInfo {
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        };
+        assert!(!empty.has_data());
+
+        let with_input = UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: None,
+            total_tokens: None,
+        };
+        assert!(with_input.has_data());
     }
 }
