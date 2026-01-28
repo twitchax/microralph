@@ -81,7 +81,7 @@ tasks:
 - id: T-006
   title: "Update PROMPT_PRD_NEW_SYNTHESIZE to populate new sections"
   priority: 6
-  status: todo
+  status: done
   notes: "Modify the synthesize prompt in src/init.rs to instruct the agent to fill in the new sections. Include guidance to encourage architecture diagrams when appropriate."
 - id: T-007
   title: "Run mr restore to update .mr/prompts and .mr/templates"
@@ -262,15 +262,17 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
 
 ---
 
-## 2026-01-28 — T-005 Completed
-- **Task**: Update PROMPT_PRD_NEW_ROUND1 to elicit new section content
-- **Status**: ✅ Done
-- **Changes**:
-  - Modified `src/init.rs` to add four new bullet points to the Round1 questions prompt "Required Actions" section
-  - Added questions about: high-level technical approach, assumptions/preconditions, constraints, and architecture diagrams
-  - Updated the example questions to include technical approach and assumptions examples
-  - UAT passed: 451 tests run, all passed
-
 - **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
 
 ---
+
+## 2026-01-28 — T-006 Completed
+- **Task**: Update PROMPT_PRD_NEW_SYNTHESIZE to populate new sections
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/init.rs` to update the "Markdown Body" section in `PROMPT_PRD_NEW_SYNTHESIZE`
+  - Added four new sections to the documentation: Technical Approach, Assumptions, Constraints, References to Code
+  - Added "Technical Approach Guidance" paragraph encouraging ASCII or Mermaid diagrams for complex component interactions
+  - UAT passed: 451 tests run, all passed
+
+- **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
