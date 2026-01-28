@@ -1,99 +1,94 @@
 ---
 id: PRD-0028
-title: "PRDs Need More Exposition"
-status: active
+title: PRDs Need More Exposition
+status: done
 owner: twitchax
 created: 2026-01-27
 updated: 2026-01-27
-
 principles:
-- "Prompts define what to do; constitution defines how to behave"
-- "Single Source of Truth: PRD template in src/init.rs is the authoritative source"
-- "Exposition should help AI agents during mr run understand implementation strategy"
-- "Tasks reference main body details for implementation hints rather than duplicating information"
-
+- Prompts define what to do; constitution defines how to behave
+- 'Single Source of Truth: PRD template in src/init.rs is the authoritative source'
+- Exposition should help AI agents during mr run understand implementation strategy
+- Tasks reference main body details for implementation hints rather than duplicating information
 references:
-- name: "PRD Template (src/init.rs)"
-  url: "file://src/init.rs#L124-L191"
-- name: "PRD New Round1 Prompt (src/init.rs)"
-  url: "file://src/init.rs#L368-L425"
-- name: "PRD New Synthesize Prompt (src/init.rs)"
-  url: "file://src/init.rs#L495-L612"
-- name: ".mr/templates/prd.md"
-  url: "file://.mr/templates/prd.md"
-- name: ".mr/prompts/prd_new_round1_questions.md"
-  url: "file://.mr/prompts/prd_new_round1_questions.md"
-- name: ".mr/prompts/prd_new_synthesize_prd.md"
-  url: "file://.mr/prompts/prd_new_synthesize_prd.md"
-
+- name: PRD Template (src/init.rs)
+  url: file://src/init.rs#L124-L191
+- name: PRD New Round1 Prompt (src/init.rs)
+  url: file://src/init.rs#L368-L425
+- name: PRD New Synthesize Prompt (src/init.rs)
+  url: file://src/init.rs#L495-L612
+- name: .mr/templates/prd.md
+  url: file://.mr/templates/prd.md
+- name: .mr/prompts/prd_new_round1_questions.md
+  url: file://.mr/prompts/prd_new_round1_questions.md
+- name: .mr/prompts/prd_new_synthesize_prd.md
+  url: file://.mr/prompts/prd_new_synthesize_prd.md
 acceptance_tests:
 - id: uat-001
-  name: "PRD template contains Technical Approach section"
+  name: PRD template contains Technical Approach section
   command: cargo make uat
   uat_status: verified
 - id: uat-002
-  name: "PRD template contains Assumptions section"
+  name: PRD template contains Assumptions section
   command: cargo make uat
   uat_status: verified
 - id: uat-003
-  name: "PRD template contains Constraints section"
+  name: PRD template contains Constraints section
   command: cargo make uat
   uat_status: verified
 - id: uat-004
-  name: "PRD template contains References to Code section"
+  name: PRD template contains References to Code section
   command: cargo make uat
   uat_status: verified
 - id: uat-005
-  name: "Round1 questions prompt elicits technical approach details"
+  name: Round1 questions prompt elicits technical approach details
   command: cargo make uat
   uat_status: verified
 - id: uat-006
-  name: "Synthesize prompt instructs agent to populate new sections"
+  name: Synthesize prompt instructs agent to populate new sections
   command: cargo make uat
   uat_status: verified
-
 tasks:
 - id: T-001
-  title: "Add Technical Approach section to PRD template"
+  title: Add Technical Approach section to PRD template
   priority: 1
   status: done
-  notes: "Update PRD_TEMPLATE in src/init.rs to include a new '# Technical Approach' section between Goals and Non-Goals. This section outlines the implementation strategy."
+  notes: Update PRD_TEMPLATE in src/init.rs to include a new '# Technical Approach' section between Goals and Non-Goals. This section outlines the implementation strategy.
 - id: T-002
-  title: "Add Assumptions section to PRD template"
+  title: Add Assumptions section to PRD template
   priority: 2
   status: done
-  notes: "Add '# Assumptions' section to PRD_TEMPLATE after Technical Approach. Lists preconditions and assumptions the implementation depends on."
+  notes: Add '# Assumptions' section to PRD_TEMPLATE after Technical Approach. Lists preconditions and assumptions the implementation depends on.
 - id: T-003
-  title: "Add Constraints section to PRD template"
+  title: Add Constraints section to PRD template
   priority: 3
   status: done
-  notes: "Add '# Constraints' section to PRD_TEMPLATE. Documents technical or scope constraints that limit implementation options."
+  notes: Add '# Constraints' section to PRD_TEMPLATE. Documents technical or scope constraints that limit implementation options.
 - id: T-004
-  title: "Add References to Code section to PRD template"
+  title: Add References to Code section to PRD template
   priority: 4
   status: done
-  notes: "Add '# References to Code' section to PRD_TEMPLATE. Lists specific files, modules, or patterns relevant to this PRD."
+  notes: Add '# References to Code' section to PRD_TEMPLATE. Lists specific files, modules, or patterns relevant to this PRD.
 - id: T-005
-  title: "Update PROMPT_PRD_NEW_ROUND1 to elicit new section content"
+  title: Update PROMPT_PRD_NEW_ROUND1 to elicit new section content
   priority: 5
   status: done
-  notes: "Modify the Round1 questions prompt in src/init.rs to ask about technical approach, assumptions, constraints, and code references. See T-001 through T-004 for section definitions."
+  notes: Modify the Round1 questions prompt in src/init.rs to ask about technical approach, assumptions, constraints, and code references. See T-001 through T-004 for section definitions.
 - id: T-006
-  title: "Update PROMPT_PRD_NEW_SYNTHESIZE to populate new sections"
+  title: Update PROMPT_PRD_NEW_SYNTHESIZE to populate new sections
   priority: 6
   status: done
-  notes: "Modify the synthesize prompt in src/init.rs to instruct the agent to fill in the new sections. Include guidance to encourage architecture diagrams when appropriate."
+  notes: Modify the synthesize prompt in src/init.rs to instruct the agent to fill in the new sections. Include guidance to encourage architecture diagrams when appropriate.
 - id: T-007
-  title: "Run mr restore to update .mr/prompts and .mr/templates"
+  title: Run mr restore to update .mr/prompts and .mr/templates
   priority: 7
   status: done
-  notes: "After updating src/init.rs, run 'cargo run -- restore' to synchronize .mr/prompts/ and .mr/templates/ with the new embedded defaults."
+  notes: After updating src/init.rs, run 'cargo run -- restore' to synchronize .mr/prompts/ and .mr/templates/ with the new embedded defaults.
 - id: T-008
-  title: "Verify all UATs pass"
+  title: Verify all UATs pass
   priority: 8
   status: done
-  notes: "Run 'cargo make uat' to verify all acceptance tests pass."
-
+  notes: Run 'cargo make uat' to verify all acceptance tests pass.
 ---
 
 # Summary
@@ -307,3 +302,15 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
   - Updated all UAT statuses to `verified` in frontmatter
 
 - **Constitution Compliance**: No violations. All tasks for this PRD are now complete.
+
+---
+
+## 2026-01-28 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 8 tasks (T-001 through T-008)
+- **Outcome**: All tasks completed, acceptance tests passed (451/451 tests)
+- **Cleanup**: None required — no temporary files or resolved TODOs found
+- **Summary**:
+  - Added four new PRD body sections: Technical Approach, Assumptions, Constraints, References to Code
+  - Updated Round1 and Synthesize prompts to elicit and populate new sections
+  - Synchronized .mr/prompts/ and .mr/templates/ via `mr restore`
