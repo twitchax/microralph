@@ -6,11 +6,38 @@
 //! Types implementing `CliRunnerConfig` automatically get a `Runner` implementation
 //! via the blanket impl, eliminating boilerplate in individual runner modules.
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
 use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
+
+/// Reads lines from a stream, writes them to output, and captures them.
+///
+/// This helper function handles the common pattern of reading from a process
+/// stream (stdout or stderr), writing each line to an output writer for
+/// real-time display, and accumulating the lines into a captured string.
+fn read_stream_lines<R: Read>(reader: R, output: &mut dyn Write, captured: &mut String) {
+    let buf_reader = BufReader::new(reader);
+
+    for line in buf_reader.lines() {
+        match line {
+            Ok(line) => {
+                let _ = writeln!(output, "{}", line);
+                let _ = output.flush();
+
+                if !captured.is_empty() {
+                    captured.push('\n');
+                }
+                captured.push_str(&line);
+            }
+            Err(e) => {
+                tracing::warn!("Error reading stream: {}", e);
+                break;
+            }
+        }
+    }
+}
 
 /// Trait for CLI-based runners that share common execution logic.
 ///
@@ -175,51 +202,12 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
 
     // Stream stdout in real-time
     if let Some(stdout) = child.stdout.take() {
-        let reader = BufReader::new(stdout);
-
-        for line in reader.lines() {
-            match line {
-                Ok(line) => {
-                    // Write to the output stream
-                    let _ = writeln!(output, "{}", line);
-                    let _ = output.flush();
-
-                    // Capture for return value
-                    if !captured_output.is_empty() {
-                        captured_output.push('\n');
-                    }
-                    captured_output.push_str(&line);
-                }
-                Err(e) => {
-                    tracing::warn!("Error reading stdout: {}", e);
-                    break;
-                }
-            }
-        }
+        read_stream_lines(stdout, output, &mut captured_output);
     }
 
     // Capture any stderr after stdout is done
     if let Some(stderr) = child.stderr.take() {
-        let reader = BufReader::new(stderr);
-
-        for line in reader.lines() {
-            match line {
-                Ok(line) => {
-                    // Write stderr to output stream as well
-                    let _ = writeln!(output, "{}", line);
-                    let _ = output.flush();
-
-                    if !captured_output.is_empty() {
-                        captured_output.push('\n');
-                    }
-                    captured_output.push_str(&line);
-                }
-                Err(e) => {
-                    tracing::warn!("Error reading stderr: {}", e);
-                    break;
-                }
-            }
-        }
+        read_stream_lines(stderr, output, &mut captured_output);
     }
 
     // Wait for the process to complete
@@ -352,5 +340,55 @@ mod tests {
 
         assert!(result.success);
         assert!(result.text.contains("hello"));
+    }
+
+    #[test]
+    fn test_read_stream_lines_single_line() {
+        let input = b"hello world";
+        let mut output = Vec::new();
+        let mut captured = String::new();
+
+        read_stream_lines(&input[..], &mut output, &mut captured);
+
+        assert_eq!(captured, "hello world");
+        assert!(String::from_utf8_lossy(&output).contains("hello world"));
+    }
+
+    #[test]
+    fn test_read_stream_lines_multiple_lines() {
+        let input = b"line1\nline2\nline3";
+        let mut output = Vec::new();
+        let mut captured = String::new();
+
+        read_stream_lines(&input[..], &mut output, &mut captured);
+
+        assert_eq!(captured, "line1\nline2\nline3");
+
+        let output_str = String::from_utf8_lossy(&output);
+        assert!(output_str.contains("line1"));
+        assert!(output_str.contains("line2"));
+        assert!(output_str.contains("line3"));
+    }
+
+    #[test]
+    fn test_read_stream_lines_empty() {
+        let input = b"";
+        let mut output = Vec::new();
+        let mut captured = String::new();
+
+        read_stream_lines(&input[..], &mut output, &mut captured);
+
+        assert!(captured.is_empty());
+    }
+
+    #[test]
+    fn test_read_stream_lines_appends_to_existing() {
+        let input = b"new line";
+        let mut output = Vec::new();
+        let mut captured = String::from("existing");
+
+        read_stream_lines(&input[..], &mut output, &mut captured);
+
+        assert_eq!(captured, "existing\nnew line");
     }
 }
