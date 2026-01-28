@@ -318,11 +318,43 @@ mod tests {
 
     #[test]
     fn test_spinner_cow_static_vs_owned() {
-        // Test both Cow::Borrowed (static) and Cow::Owned (String) paths.
+        // Test that both Cow::Borrowed (static &str) and Cow::Owned (String) paths
+        // correctly keep the spinner in a disabled state in non-TTY environments.
+        // This verifies no accidental state mutation occurs during message type transitions.
         let spinner = start_spinner(true, "Static &str");
+
+        // Verify initial state is disabled (bar is None).
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled after static message init"
+        );
+
+        // Set an owned String message.
         spinner.set_message(String::from("Owned String"));
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after Cow::Owned message"
+        );
+
+        // Set another static &str message.
         spinner.set_message("Another static");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after Cow::Borrowed message"
+        );
+
+        // Set a formatted String (also Cow::Owned).
         spinner.set_message(format!("Formatted {}", "string"));
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after formatted message"
+        );
+
+        // Clear and verify final state.
         spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after finish_and_clear"
+        );
     }
 }
