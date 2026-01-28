@@ -202,6 +202,43 @@ pub fn build_graph_from_prds(
 }
 
 // ============================================================================
+// Shared Config
+// ============================================================================
+
+/// Common display configuration shared by all graph renderers.
+///
+/// This struct contains settings that control how node labels are displayed
+/// across all output formats (ASCII, Mermaid, DOT).
+#[derive(Debug, Clone)]
+pub struct NodeDisplayConfig {
+    /// Whether to show node titles in addition to IDs.
+    pub show_titles: bool,
+
+    /// Maximum title length before truncation.
+    pub max_title_len: usize,
+}
+
+impl Default for NodeDisplayConfig {
+    fn default() -> Self {
+        Self {
+            show_titles: true,
+            max_title_len: 40,
+        }
+    }
+}
+
+impl NodeDisplayConfig {
+    /// Truncates a title to the configured max length, adding "..." if truncated.
+    pub fn truncate_title(&self, title: &str) -> String {
+        if title.len() > self.max_title_len {
+            format!("{}...", &title[..self.max_title_len - 3])
+        } else {
+            title.to_string()
+        }
+    }
+}
+
+// ============================================================================
 // ASCII Rendering
 // ============================================================================
 
@@ -231,6 +268,14 @@ impl AsciiConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Returns a NodeDisplayConfig view of this config.
+    fn display_config(&self) -> NodeDisplayConfig {
+        NodeDisplayConfig {
+            show_titles: self.show_titles,
+            max_title_len: self.max_title_len,
+        }
     }
 }
 
@@ -333,13 +378,9 @@ fn render_node(
     config: &AsciiConfig,
 ) {
     // Node header: [PRD-XXXX] Title (status)
-    let title_display = if config.show_titles {
-        let title = if node.title.len() > config.max_title_len {
-            format!("{}...", &node.title[..config.max_title_len - 3])
-        } else {
-            node.title.clone()
-        };
-        format!(" {}", title)
+    let display = config.display_config();
+    let title_display = if display.show_titles {
+        format!(" {}", display.truncate_title(&node.title))
     } else {
         String::new()
     };
@@ -423,6 +464,14 @@ impl MermaidConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Returns a NodeDisplayConfig view of this config.
+    fn display_config(&self) -> NodeDisplayConfig {
+        NodeDisplayConfig {
+            show_titles: self.show_titles,
+            max_title_len: self.max_title_len,
+        }
     }
 }
 
@@ -519,13 +568,10 @@ fn mermaid_node_id(id: &str) -> String {
 /// Creates a label for a Mermaid node.
 fn mermaid_node_label(node: &GraphNode, config: &MermaidConfig) -> String {
     let status = format!("{}", node.status);
+    let display = config.display_config();
 
-    if config.show_titles {
-        let title = if node.title.len() > config.max_title_len {
-            format!("{}...", &node.title[..config.max_title_len - 3])
-        } else {
-            node.title.clone()
-        };
+    if display.show_titles {
+        let title = display.truncate_title(&node.title);
 
         // Escape quotes in the title for Mermaid.
         let title = title.replace('"', "#quot;");
@@ -577,6 +623,14 @@ impl DotConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Returns a NodeDisplayConfig view of this config.
+    fn display_config(&self) -> NodeDisplayConfig {
+        NodeDisplayConfig {
+            show_titles: self.show_titles,
+            max_title_len: self.max_title_len,
+        }
     }
 }
 
@@ -683,13 +737,10 @@ fn dot_node_id(id: &str) -> String {
 /// Creates a label for a DOT node.
 fn dot_node_label(node: &GraphNode, config: &DotConfig) -> String {
     let status = format!("{}", node.status);
+    let display = config.display_config();
 
-    if config.show_titles {
-        let title = if node.title.len() > config.max_title_len {
-            format!("{}...", &node.title[..config.max_title_len - 3])
-        } else {
-            node.title.clone()
-        };
+    if display.show_titles {
+        let title = display.truncate_title(&node.title);
 
         // Escape quotes in the title for DOT.
         let title = title.replace('"', "\\\"");
