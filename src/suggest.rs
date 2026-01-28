@@ -343,6 +343,107 @@ fn build_suggestion_prompt(
     expand_placeholders(template, &ctx)
 }
 
+/// Parsed numbered entry from a suggestion line.
+struct NumberedEntry {
+    number: usize,
+    rest: String,
+}
+
+/// Parses a numbered entry line like "1. Title — Description".
+///
+/// Returns `Some(NumberedEntry)` if the line starts with a digit followed by ". ",
+/// otherwise returns `None`.
+fn parse_numbered_entry(line: &str) -> Option<NumberedEntry> {
+    let trimmed = line.trim();
+    let first_char = trimmed.chars().next()?;
+    let digit = first_char.to_digit(10)?;
+
+    let rest = trimmed
+        .strip_prefix(|c: char| c.is_numeric())?
+        .strip_prefix(". ")?;
+
+    Some(NumberedEntry {
+        number: digit as usize,
+        rest: rest.to_string(),
+    })
+}
+
+/// Parses "Title — Description" into separate title and description.
+///
+/// If the em dash separator is not found, returns the entire string as title
+/// with an empty description.
+fn parse_title_description(text: &str) -> (String, String) {
+    if let Some(sep_idx) = text.find(" — ") {
+        let (title_part, rest_part) = text.split_at(sep_idx);
+        let desc_part = &rest_part[" — ".len()..];
+        (title_part.trim().to_string(), desc_part.trim().to_string())
+    } else {
+        (text.trim().to_string(), String::new())
+    }
+}
+
+/// Metadata extracted from suggestion lines.
+struct SuggestionMetadata {
+    category: String,
+    effort: String,
+    rationale: String,
+}
+
+/// Checks if a line looks like the start of a new numbered entry.
+fn is_numbered_entry_start(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_numeric() && trimmed.contains(". "))
+}
+
+/// Parses metadata lines (Category, Effort, Rationale) following a suggestion header.
+///
+/// Consumes lines from the iterator until an empty line or next numbered entry is found.
+/// Returns the extracted metadata and the number of lines consumed.
+fn parse_suggestion_metadata(lines: &[&str], start_index: usize) -> (SuggestionMetadata, usize) {
+    let mut category = String::new();
+    let mut effort = String::new();
+    let mut rationale = String::new();
+    let mut consumed = 0;
+    let mut i = start_index;
+
+    while i < lines.len() {
+        let meta_line = lines[i].trim();
+
+        if meta_line.is_empty() {
+            consumed += 1;
+            break;
+        }
+
+        if let Some(cat) = meta_line.strip_prefix("Category:") {
+            category = cat.trim().to_string();
+        } else if let Some(eff) = meta_line.strip_prefix("Effort:") {
+            effort = eff.trim().to_string();
+        } else if let Some(rat) = meta_line.strip_prefix("Rationale:") {
+            rationale = rat.trim().to_string();
+        }
+
+        consumed += 1;
+        i += 1;
+
+        // Stop if we hit the next numbered entry.
+        if lines.get(i).is_some_and(|l| is_numbered_entry_start(l)) {
+            break;
+        }
+    }
+
+    (
+        SuggestionMetadata {
+            category,
+            effort,
+            rationale,
+        },
+        consumed,
+    )
+}
+
 /// Parses the runner's response to extract exactly 5 suggestions.
 ///
 /// Expected format:
@@ -358,69 +459,20 @@ fn parse_suggestions(text: &str) -> Result<Vec<Suggestion>> {
     let mut i = 0;
 
     while i < lines.len() {
-        let line = lines[i].trim();
-
-        // Look for numbered entries (e.g., "1. ").
-        // Extract the leading digit and validate it before consuming `rest`.
-        let first_char = line.chars().next();
-        let digit = first_char.and_then(|c| c.to_digit(10));
-
-        if let (Some(number), Some(rest)) = (
-            digit.map(|d| d as usize),
-            line.strip_prefix(|c: char| c.is_numeric())
-                .and_then(|s| s.strip_prefix(". ")),
-        ) {
-            // Parse title and description from "Title — Description".
-            let (title, description) = if let Some(sep_idx) = rest.find(" — ") {
-                // Use split_at with byte index, then collect after separator.
-                let (title_part, rest_part) = rest.split_at(sep_idx);
-                let desc_part = &rest_part[" — ".len()..];
-                (title_part.trim().to_string(), desc_part.trim().to_string())
-            } else {
-                (rest.trim().to_string(), String::new())
-            };
-
-            // Parse subsequent lines for Category, Effort, Rationale.
-            let mut category = String::new();
-            let mut effort = String::new();
-            let mut rationale = String::new();
+        if let Some(entry) = parse_numbered_entry(lines[i]) {
+            let (title, description) = parse_title_description(&entry.rest);
 
             i += 1;
-            while i < lines.len() {
-                let meta_line = lines[i].trim();
-
-                if meta_line.is_empty() {
-                    i += 1;
-                    break;
-                }
-
-                if let Some(cat) = meta_line.strip_prefix("Category:") {
-                    category = cat.trim().to_string();
-                } else if let Some(eff) = meta_line.strip_prefix("Effort:") {
-                    effort = eff.trim().to_string();
-                } else if let Some(rat) = meta_line.strip_prefix("Rationale:") {
-                    rationale = rat.trim().to_string();
-                }
-
-                i += 1;
-
-                // Stop if we hit the next numbered entry.
-                if lines
-                    .get(i)
-                    .and_then(|l| l.trim().chars().next())
-                    .is_some_and(|c| c.is_numeric() && lines[i].trim().contains(". "))
-                {
-                    break;
-                }
-            }
+            let (metadata, consumed) = parse_suggestion_metadata(&lines, i);
+            i += consumed;
 
             suggestions.push(Suggestion {
-                number,
+                number: entry.number,
                 title,
                 description,
-                category,
-                effort,
-                rationale,
+                category: metadata.category,
+                effort: metadata.effort,
+                rationale: metadata.rationale,
             });
         } else {
             i += 1;
@@ -1055,5 +1107,127 @@ Based on my analysis, here are 5 PRD suggestions:
                 valid_categories
             );
         }
+    }
+
+    // =========================================================================
+    // Tests for parse_suggestions helper functions
+    // =========================================================================
+
+    /// Tests parse_numbered_entry with valid numbered lines.
+    #[test]
+    fn test_parse_numbered_entry_valid() {
+        let result = parse_numbered_entry("1. Add Logging Framework");
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.number, 1);
+        assert_eq!(entry.rest, "Add Logging Framework");
+
+        let result = parse_numbered_entry("5. Last Suggestion");
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.number, 5);
+        assert_eq!(entry.rest, "Last Suggestion");
+    }
+
+    /// Tests parse_numbered_entry with leading/trailing whitespace.
+    #[test]
+    fn test_parse_numbered_entry_whitespace() {
+        let result = parse_numbered_entry("  3. Trimmed Entry  ");
+        assert!(result.is_some());
+        let entry = result.unwrap();
+        assert_eq!(entry.number, 3);
+        // Trailing whitespace is trimmed by the outer trim() call
+        assert_eq!(entry.rest, "Trimmed Entry");
+    }
+
+    /// Tests parse_numbered_entry with invalid lines.
+    #[test]
+    fn test_parse_numbered_entry_invalid() {
+        // No number
+        assert!(parse_numbered_entry("Add Logging").is_none());
+
+        // Missing ". " separator
+        assert!(parse_numbered_entry("1 Add Logging").is_none());
+        assert!(parse_numbered_entry("1.Add Logging").is_none());
+
+        // Empty line
+        assert!(parse_numbered_entry("").is_none());
+
+        // Just number with period (no content after dot-space) - fails because trim() removes trailing space
+        assert!(parse_numbered_entry("1. ").is_none());
+    }
+
+    /// Tests parse_title_description with em dash separator.
+    #[test]
+    fn test_parse_title_description_with_separator() {
+        let (title, desc) = parse_title_description("Add Logging — Implement tracing-subscriber");
+        assert_eq!(title, "Add Logging");
+        assert_eq!(desc, "Implement tracing-subscriber");
+    }
+
+    /// Tests parse_title_description without em dash separator.
+    #[test]
+    fn test_parse_title_description_no_separator() {
+        let (title, desc) = parse_title_description("Just a title");
+        assert_eq!(title, "Just a title");
+        assert_eq!(desc, "");
+    }
+
+    /// Tests parse_title_description with extra whitespace.
+    #[test]
+    fn test_parse_title_description_whitespace() {
+        let (title, desc) = parse_title_description("  Title  —  Description  ");
+        assert_eq!(title, "Title");
+        assert_eq!(desc, "Description");
+    }
+
+    /// Tests is_numbered_entry_start detection.
+    #[test]
+    fn test_is_numbered_entry_start() {
+        assert!(is_numbered_entry_start("1. Add Logging"));
+        assert!(is_numbered_entry_start("  5. With indent  "));
+        assert!(!is_numbered_entry_start("Category: Testing"));
+        assert!(!is_numbered_entry_start(""));
+        assert!(!is_numbered_entry_start("No number here"));
+    }
+
+    /// Tests parse_suggestion_metadata with complete metadata.
+    #[test]
+    fn test_parse_suggestion_metadata_complete() {
+        let lines = vec![
+            "   Category: Infrastructure",
+            "   Effort: Medium (1-2 days)",
+            "   Rationale: Improve debugging",
+            "",
+        ];
+        let (metadata, consumed) = parse_suggestion_metadata(&lines, 0);
+
+        assert_eq!(metadata.category, "Infrastructure");
+        assert_eq!(metadata.effort, "Medium (1-2 days)");
+        assert_eq!(metadata.rationale, "Improve debugging");
+        assert_eq!(consumed, 4); // 3 metadata lines + 1 empty line
+    }
+
+    /// Tests parse_suggestion_metadata with partial metadata.
+    #[test]
+    fn test_parse_suggestion_metadata_partial() {
+        let lines = vec!["   Category: Testing", ""];
+        let (metadata, consumed) = parse_suggestion_metadata(&lines, 0);
+
+        assert_eq!(metadata.category, "Testing");
+        assert_eq!(metadata.effort, "");
+        assert_eq!(metadata.rationale, "");
+        assert_eq!(consumed, 2);
+    }
+
+    /// Tests parse_suggestion_metadata stops at next numbered entry.
+    #[test]
+    fn test_parse_suggestion_metadata_stops_at_next_entry() {
+        let lines = vec!["   Category: UX", "   Effort: Low", "2. Next Suggestion"];
+        let (metadata, consumed) = parse_suggestion_metadata(&lines, 0);
+
+        assert_eq!(metadata.category, "UX");
+        assert_eq!(metadata.effort, "Low");
+        assert_eq!(consumed, 2); // Should stop before "2. Next Suggestion"
     }
 }
