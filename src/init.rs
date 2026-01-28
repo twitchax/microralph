@@ -194,6 +194,12 @@ tasks:
 
 ---
 
+# References to Code
+
+{{references_to_code}}
+
+---
+
 # Non-Goals (MVP)
 
 - Non-goal 1
