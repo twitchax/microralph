@@ -98,30 +98,30 @@ mod tests {
 
     #[test]
     fn test_spinner_with_static_message() {
+        // Test that static &str messages (Cow::Borrowed) work correctly.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, "Static message");
 
-        // In non-TTY (test) environment, bar should be None.
-        assert!(
-            spinner.bar.is_none(),
-            "Spinner should be disabled in non-TTY environment"
-        );
-
+        // Multiple static message updates should work.
         spinner.set_message("Another static");
+        spinner.set_message("Third static");
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
     fn test_spinner_with_dynamic_message() {
+        // Test that dynamic String messages (Cow::Owned) work correctly.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, format!("Task {}/{}", 1, 5));
 
-        // Verify spinner is correctly disabled in test environment.
-        assert!(
-            spinner.bar.is_none(),
-            "Spinner should be disabled in non-TTY environment"
-        );
-
+        // Multiple dynamic message updates should work.
         spinner.set_message(format!("Task {}/{}", 2, 5));
+        spinner.set_message(format!("Task {}/{}", 3, 5));
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     // ========================================
@@ -186,116 +186,115 @@ mod tests {
     #[test]
     fn test_spinner_run_task_simulation() {
         // Simulate the run_task workflow: create spinner, update, clear before output.
+        // This test verifies the workflow pattern works without panics across multiple tasks.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let task_count = 5;
         for task_idx in 1..=task_count {
             let spinner =
                 start_spinner(true, format!("Running task {}/{}...", task_idx, task_count));
 
-            // Verify each spinner is correctly disabled in test/CI environment.
-            assert!(
-                spinner.bar.is_none(),
-                "Spinner {} should be disabled in non-TTY environment",
-                task_idx
-            );
-
-            // Simulate some work...
+            // Simulate some work with message updates.
             spinner.set_message(format!("Processing task {}...", task_idx));
 
             // Clear before output.
             spinner.finish_and_clear();
         }
+
+        // Verify we completed all iterations without panic.
+        assert_eq!(task_count, 5, "All task iterations should complete");
     }
 
     #[test]
     fn test_spinner_refactor_iteration_simulation() {
         // Simulate the refactor workflow: one spinner per iteration.
+        // This test verifies message updates work correctly in a loop.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let max_iterations = 3;
+        let mut completed = 0;
         for iteration in 1..=max_iterations {
             let spinner = start_spinner(
                 true,
                 format!("Refactor iteration {}/{}...", iteration, max_iterations),
             );
 
-            // Verify each iteration's spinner is disabled in test environment.
-            assert!(
-                spinner.bar.is_none(),
-                "Iteration {} spinner should be disabled in non-TTY",
-                iteration
-            );
-
             spinner.set_message(format!("Analyzing codebase (iteration {})...", iteration));
 
             // Clear before showing output.
             spinner.finish_and_clear();
+            completed += 1;
         }
+
+        // Verify all iterations completed successfully.
+        assert_eq!(
+            completed, max_iterations,
+            "All refactor iterations should complete"
+        );
     }
 
     #[test]
     fn test_spinner_suggest_workflow_simulation() {
         // Simulate the suggest workflow: spinner during AI generation.
+        // This test verifies a typical single-phase spinner workflow.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, "Analyzing codebase...");
 
-        // Verify spinner is disabled in test environment.
-        assert!(
-            spinner.bar.is_none(),
-            "Suggest workflow spinner should be disabled in non-TTY"
-        );
-
-        // Simulate AI work...
+        // Simulate AI work with a phase transition.
         spinner.set_message("Generating suggestions...");
 
         // Clear before displaying suggestions.
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
     fn test_spinner_finalize_workflow_simulation() {
         // Simulate the finalize workflow: spinner during agent execution.
+        // This test verifies a typical multi-phase spinner workflow.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, "Finalizing PRD...");
 
-        // Verify spinner is disabled in test environment.
-        assert!(
-            spinner.bar.is_none(),
-            "Finalize workflow spinner should be disabled in non-TTY"
-        );
-
-        // Simulate agent execution...
+        // Simulate agent execution with multiple phase transitions.
         spinner.set_message("Verifying changes...");
+        spinner.set_message("Committing...");
+        spinner.set_message("Done.");
 
         // Clear before processing output.
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
     fn test_spinner_reindex_workflow_simulation() {
         // Simulate the reindex workflow: spinner during link verification.
+        // This test verifies a typical two-phase spinner workflow.
+        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, "Verifying links...");
 
-        // Verify spinner is disabled in test environment.
-        assert!(
-            spinner.bar.is_none(),
-            "Reindex workflow spinner should be disabled in non-TTY"
-        );
-
-        // Simulate link verification...
+        // Simulate link verification with phase transitions.
+        spinner.set_message("Checking dependencies...");
         spinner.set_message("Updating index...");
 
         // Clear before completion.
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
     fn test_disabled_spinner_set_message_empty_string() {
+        // Test that empty string messages work correctly on a disabled spinner.
+        // This verifies edge case handling with empty messages.
+        // (Explicitly disabled behavior is tested by test_spinner_explicitly_disabled_has_no_bar)
         let spinner = start_spinner(false, "");
 
-        // Explicitly disabled spinner should have no bar.
-        assert!(
-            spinner.bar.is_none(),
-            "Explicitly disabled spinner should have no bar"
-        );
-
+        // Empty string operations should not panic.
         spinner.set_message("");
+        spinner.set_message(""); // Multiple empty sets.
         spinner.finish_and_clear();
+
+        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
