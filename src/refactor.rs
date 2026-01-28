@@ -197,7 +197,7 @@ fn run_iteration(
     if output.success {
         Ok(RefactorIterationResult::Applied {
             summary: if text.len() > 500 {
-                format!("{}...", &text[..500])
+                format!("...{}", &text[text.len() - 500..])
             } else {
                 text.to_string()
             },
