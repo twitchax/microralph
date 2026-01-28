@@ -211,29 +211,25 @@ fn run_iteration(
     }
 }
 
+/// Adds two optional u64 values, returning None only if both are None.
+fn add_optional(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(x + y),
+        (Some(x), None) | (None, Some(x)) => Some(x),
+        (None, None) => None,
+    }
+}
+
 /// Aggregates usage info from multiple iterations.
 fn aggregate_usage(total: &mut Option<UsageInfo>, new: &Option<UsageInfo>) {
     if let Some(new_usage) = new {
         if let Some(total_usage) = total {
-            // Aggregate Option<u64> fields.
-            total_usage.input_tokens = match (total_usage.input_tokens, new_usage.input_tokens) {
-                (Some(a), Some(b)) => Some(a + b),
-                (Some(a), None) => Some(a),
-                (None, Some(b)) => Some(b),
-                (None, None) => None,
-            };
-            total_usage.output_tokens = match (total_usage.output_tokens, new_usage.output_tokens) {
-                (Some(a), Some(b)) => Some(a + b),
-                (Some(a), None) => Some(a),
-                (None, Some(b)) => Some(b),
-                (None, None) => None,
-            };
-            total_usage.total_tokens = match (total_usage.total_tokens, new_usage.total_tokens) {
-                (Some(a), Some(b)) => Some(a + b),
-                (Some(a), None) => Some(a),
-                (None, Some(b)) => Some(b),
-                (None, None) => None,
-            };
+            total_usage.input_tokens =
+                add_optional(total_usage.input_tokens, new_usage.input_tokens);
+            total_usage.output_tokens =
+                add_optional(total_usage.output_tokens, new_usage.output_tokens);
+            total_usage.total_tokens =
+                add_optional(total_usage.total_tokens, new_usage.total_tokens);
         } else {
             *total = Some(new_usage.clone());
         }
