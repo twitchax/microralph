@@ -6,6 +6,8 @@
 
 # microralph
 
+*Pronunciation: Some say it's pronounced "mister" (μr → Mr.). We neither confirm nor deny this.*
+
 > *A small ralph so you can ralph your ralphs.* 🦙
 
 **microralph** is a tiny CLI that wraps your favorite AI coding agent (including [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide) and [Claude Code CLI](https://docs.anthropic.com/en/docs/build-with-claude/claude-for-command-line)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.

@@ -176,6 +176,12 @@ tasks:
 
 ---
 
+# Technical Approach
+
+{{technical_approach}}
+
+---
+
 # Non-Goals (MVP)
 
 - Non-goal 1
