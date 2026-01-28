@@ -301,6 +301,27 @@ fn generate_prd_table(summaries: &[PrdSummary]) -> String {
     output
 }
 
+/// Builds a lookup map from PRD ID to relative path.
+fn build_path_map<'a>(summaries: &[&'a PrdSummary]) -> HashMap<&'a str, &'a str> {
+    summaries
+        .iter()
+        .map(|s| (s.id.as_str(), s.relative_path.as_str()))
+        .collect()
+}
+
+/// Formats PRD IDs as markdown links, falling back to plain text if not found.
+fn format_prd_links(ids: &[String], path_map: &HashMap<&str, &str>) -> Vec<String> {
+    ids.iter()
+        .map(|id| {
+            if let Some(path) = path_map.get(id.as_str()) {
+                format!("[{}]({})", id, path)
+            } else {
+                id.clone()
+            }
+        })
+        .collect()
+}
+
 /// Generates the Dependencies section showing PRD dependencies from frontmatter.
 ///
 /// Lists which PRDs depend on other PRDs via the `depends_on` frontmatter field.
@@ -309,7 +330,6 @@ fn generate_dependencies_section(summaries: &[&PrdSummary]) -> String {
 
     output.push_str("## Dependencies\n\n");
 
-    // Collect all PRDs that have depends_on.
     let with_deps: Vec<_> = summaries
         .iter()
         .filter(|s| !s.depends_on.is_empty())
@@ -318,24 +338,10 @@ fn generate_dependencies_section(summaries: &[&PrdSummary]) -> String {
     if with_deps.is_empty() {
         output.push_str("*No PRD dependencies defined.*\n");
     } else {
-        // Create a lookup map for relative paths.
-        let path_map: HashMap<&str, &str> = summaries
-            .iter()
-            .map(|s| (s.id.as_str(), s.relative_path.as_str()))
-            .collect();
+        let path_map = build_path_map(summaries);
 
         for summary in with_deps {
-            let deps_formatted: Vec<String> = summary
-                .depends_on
-                .iter()
-                .map(|dep_id| {
-                    if let Some(path) = path_map.get(dep_id.as_str()) {
-                        format!("[{}]({})", dep_id, path)
-                    } else {
-                        dep_id.clone()
-                    }
-                })
-                .collect();
+            let deps_formatted = format_prd_links(&summary.depends_on, &path_map);
 
             output.push_str(&format!(
                 "- [{}]({}) depends on {}\n",
@@ -358,7 +364,6 @@ fn generate_cross_references_section(summaries: &[&PrdSummary]) -> String {
 
     output.push_str("## Cross-References\n\n");
 
-    // Collect all PRDs that have references.
     let with_refs: Vec<_> = summaries
         .iter()
         .filter(|s| !s.references.is_empty())
@@ -367,24 +372,10 @@ fn generate_cross_references_section(summaries: &[&PrdSummary]) -> String {
     if with_refs.is_empty() {
         output.push_str("*No cross-references between PRDs.*\n");
     } else {
-        // Create a lookup map for relative paths.
-        let path_map: HashMap<&str, &str> = summaries
-            .iter()
-            .map(|s| (s.id.as_str(), s.relative_path.as_str()))
-            .collect();
+        let path_map = build_path_map(summaries);
 
         for summary in with_refs {
-            let refs_formatted: Vec<String> = summary
-                .references
-                .iter()
-                .map(|ref_id| {
-                    if let Some(path) = path_map.get(ref_id.as_str()) {
-                        format!("[{}]({})", ref_id, path)
-                    } else {
-                        ref_id.clone()
-                    }
-                })
-                .collect();
+            let refs_formatted = format_prd_links(&summary.references, &path_map);
 
             output.push_str(&format!(
                 "- [{}]({}) → {}\n",
