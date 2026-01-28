@@ -2,12 +2,14 @@
 //!
 //! This runner shells out to the Claude CLI (`claude`) to execute prompts.
 //! It uses `--dangerously-skip-permissions` by default for yolo mode (no permission prompts).
+//!
+//! The `Runner` trait is automatically implemented via the blanket impl in `cli_runner`
+//! for all types that implement `CliRunnerConfig`.
 
-use std::io::Write;
 use std::path::Path;
 
-use super::cli_runner::{self, CliRunnerConfig};
-use super::types::{Runner, RunnerOutput, RunnerResult, UsageInfo};
+use super::cli_runner::CliRunnerConfig;
+use super::types::UsageInfo;
 
 /// Permission mode for the Claude runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -291,37 +293,14 @@ impl CliRunnerConfig for ClaudeRunner {
     }
 }
 
-impl Runner for ClaudeRunner {
-    fn name(&self) -> &str {
-        CliRunnerConfig::name(self)
-    }
-
-    fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
-        Some(cli_runner::format_command_display(self, working_dir))
-    }
-
-    fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
-        cli_runner::execute_cli(self, prompt, working_dir)
-    }
-
-    fn execute_streaming(
-        &self,
-        prompt: &str,
-        working_dir: &Path,
-        output: &mut dyn Write,
-    ) -> RunnerResult<RunnerOutput> {
-        cli_runner::execute_cli_streaming(self, prompt, working_dir, output)
-    }
-
-    fn is_available(&self) -> bool {
-        cli_runner::check_cli_available(self.binary_path())
-    }
-}
+// NOTE: `Runner` trait is automatically implemented via blanket impl in `cli_runner.rs`
+// for all types that implement `CliRunnerConfig`.
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::runner::Runner;
 
     #[test]
     fn test_claude_config_default() {

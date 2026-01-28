@@ -2,12 +2,15 @@
 //!
 //! This module provides common functionality for CLI-based runners (Copilot, Claude, etc.)
 //! to reduce code duplication.
+//!
+//! Types implementing `CliRunnerConfig` automatically get a `Runner` implementation
+//! via the blanket impl, eliminating boilerplate in individual runner modules.
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::types::{RunnerError, RunnerOutput, RunnerResult, UsageInfo};
+use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
 
 /// Trait for CLI-based runners that share common execution logic.
 ///
@@ -250,6 +253,38 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
     }
 
     Ok(runner_output)
+}
+
+/// Blanket implementation of `Runner` for all types implementing `CliRunnerConfig`.
+///
+/// This eliminates boilerplate in individual runner modules (Copilot, Claude, etc.)
+/// by providing a single, shared implementation that delegates to the CLI runner
+/// infrastructure functions.
+impl<T: CliRunnerConfig + Send + Sync> Runner for T {
+    fn name(&self) -> &str {
+        CliRunnerConfig::name(self)
+    }
+
+    fn format_command_display(&self, _prompt: &str, working_dir: &Path) -> Option<String> {
+        Some(format_command_display(self, working_dir))
+    }
+
+    fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
+        execute_cli(self, prompt, working_dir)
+    }
+
+    fn execute_streaming(
+        &self,
+        prompt: &str,
+        working_dir: &Path,
+        output: &mut dyn Write,
+    ) -> RunnerResult<RunnerOutput> {
+        execute_cli_streaming(self, prompt, working_dir, output)
+    }
+
+    fn is_available(&self) -> bool {
+        check_cli_available(self.binary_path())
+    }
 }
 
 #[cfg(test)]
