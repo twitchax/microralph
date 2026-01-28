@@ -65,8 +65,14 @@ The body contains ONLY narrative/exposition sections:
 - `# Summary` — Brief overview
 - `# Problem` — Problem statement
 - `# Goals` — Numbered list of goals
+- `# Technical Approach` — Implementation strategy, architecture decisions, and high-level design. Include ASCII or Mermaid diagrams when the approach involves complex component interactions or data flows.
+- `# Assumptions` — Preconditions the implementation depends on
+- `# Constraints` — Technical or scope limitations that affect implementation options
+- `# References to Code` — Relevant files, modules, patterns, or entry points in the codebase
 - `# Non-Goals (MVP)` — What's explicitly out of scope
 - `# History` — Empty section for `mr run` to append entries
+
+**Technical Approach Guidance**: When the feature involves multiple components, services, or complex data flows, include an architecture diagram. Use ASCII art for simple diagrams or Mermaid syntax for more complex ones. Diagrams help AI agents during `mr run` understand the implementation strategy at a glance.
 
 ## Required Actions
 

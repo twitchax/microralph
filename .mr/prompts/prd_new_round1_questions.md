@@ -46,6 +46,10 @@ The following governance rules and constraints apply to this project:
    - What is the scope (MVP vs full feature)?
    - Are there specific sections in existing PRDs that are relevant (e.g., patterns, lessons learned)?
    - Are there existing code files or modules that should be referenced?
+   - What is the high-level technical approach or implementation strategy?
+   - What assumptions does this feature rely on (preconditions, external dependencies)?
+   - What constraints limit implementation options (performance, compatibility, scope)?
+   - Would an architecture diagram help clarify the approach?
 
 ## Output Format
 
@@ -55,3 +59,5 @@ Example:
 1. What specific problem are you trying to solve?
 2. What does "done" look like for this feature?
 3. Are there any existing patterns in the codebase to follow?
+4. What is the high-level technical approach for implementing this?
+5. Are there any assumptions or constraints we should document?

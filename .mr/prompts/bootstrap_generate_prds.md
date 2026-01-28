@@ -48,6 +48,13 @@ Each task in the frontmatter MUST have these fields:
   notes: Optional implementation hints or dependencies
 ```
 
+## YAML Frontmatter Quoting Rules
+
+**CRITICAL**: YAML strings containing special characters MUST be quoted to avoid parse errors:
+- **Colons (`:`)**: Any string with a colon must be quoted: `title: "Fix: Bug in parser"`
+- **Hashes (`#`)**: Strings with `#` must be quoted to avoid comment interpretation
+- When in doubt, wrap string values in double quotes.
+
 ## Constraints
 
 - Generate at most {{prd_budget}} PRDs

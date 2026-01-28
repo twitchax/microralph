@@ -86,7 +86,7 @@ tasks:
 - id: T-007
   title: "Run mr restore to update .mr/prompts and .mr/templates"
   priority: 7
-  status: todo
+  status: done
   notes: "After updating src/init.rs, run 'cargo run -- restore' to synchronize .mr/prompts/ and .mr/templates/ with the new embedded defaults."
 - id: T-008
   title: "Verify all UATs pass"
@@ -276,3 +276,15 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
   - UAT passed: 451 tests run, all passed
 
 - **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
+
+---
+
+## 2026-01-28 — T-007 Completed
+- **Task**: Run mr restore to update .mr/prompts and .mr/templates
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `cargo run -- restore` to synchronize `.mr/prompts/` and `.mr/templates/` with the updated embedded defaults from `src/init.rs`
+  - Restore output confirmed: 20 prompt/template files restored, constitution.md and config.toml replaced
+  - UAT passed: 451 tests run, all passed
+
+- **Constitution Compliance**: No violations. This task completes the Prompt Management synchronization cycle started in T-001 through T-006.

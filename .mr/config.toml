@@ -7,7 +7,7 @@
 
 # Default model to use with the runner.
 # This is passed to the runner CLI (e.g., `copilot --model <model>`).
-model = "claude-opus-4.5"
+# model = "claude-sonnet-4.5"
 
 # Permission mode for the runner.
 # Options: "yolo" (--allow-all), "manual" (prompt for each)
@@ -15,3 +15,7 @@ model = "claude-opus-4.5"
 
 # Session timeout in minutes.
 # timeout_minutes = 30
+
+# Whether to instruct the agent NOT to commit changes.
+# When true, prompts say "Do NOT commit" instead of commit instructions.
+# no_commit = false
