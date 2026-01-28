@@ -188,6 +188,12 @@ tasks:
 
 ---
 
+# Constraints
+
+{{constraints}}
+
+---
+
 # Non-Goals (MVP)
 
 - Non-goal 1

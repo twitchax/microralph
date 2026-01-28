@@ -66,7 +66,7 @@ tasks:
 - id: T-003
   title: "Add Constraints section to PRD template"
   priority: 3
-  status: todo
+  status: done
   notes: "Add '# Constraints' section to PRD_TEMPLATE. Documents technical or scope constraints that limit implementation options."
 - id: T-004
   title: "Add References to Code section to PRD template"
@@ -232,6 +232,18 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
 - **Changes**:
   - Modified `src/init.rs` to add `# Assumptions` section with `{{assumptions}}` placeholder to `PRD_TEMPLATE`
   - Section is placed between Technical Approach and Non-Goals as specified in the PRD
+  - UAT passed: 451 tests run, all passed
+
+- **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
+
+---
+
+## 2026-01-28 — T-003 Completed
+- **Task**: Add Constraints section to PRD template
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/init.rs` to add `# Constraints` section with `{{constraints}}` placeholder to `PRD_TEMPLATE`
+  - Section is placed between Assumptions and Non-Goals as specified in the PRD
   - UAT passed: 451 tests run, all passed
 
 - **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
