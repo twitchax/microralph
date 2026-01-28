@@ -131,14 +131,11 @@ impl CopilotRunner {
         Self { config }
     }
 
-    /// Builds the command arguments based on configuration.
-    fn build_args_impl(&self, prompt: &str) -> Vec<String> {
-        let mut args = Vec::new();
-
-        // Prompt (non-interactive mode).
-        args.push("-p".to_string());
-        args.push(prompt.to_string());
-
+    /// Appends common configuration flags to the provided args vector.
+    ///
+    /// This is the single source of truth for flag generation, used by both
+    /// `build_args_impl` and `format_display_parts_impl` to avoid duplication.
+    fn append_config_flags(&self, args: &mut Vec<String>) {
         // Permission flags.
         match self.config.permission_mode {
             CopilotPermissionMode::Yolo => {
@@ -171,6 +168,17 @@ impl CopilotRunner {
             args.push("--model".to_string());
             args.push(model.clone());
         }
+    }
+
+    /// Builds the command arguments based on configuration.
+    fn build_args_impl(&self, prompt: &str) -> Vec<String> {
+        let mut args = Vec::new();
+
+        // Prompt (non-interactive mode).
+        args.push("-p".to_string());
+        args.push(prompt.to_string());
+
+        self.append_config_flags(&mut args);
 
         args
     }
@@ -179,32 +187,7 @@ impl CopilotRunner {
     fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
         let mut parts = vec![self.config.copilot_path.clone()];
 
-        match self.config.permission_mode {
-            CopilotPermissionMode::Yolo => {
-                parts.push("--allow-all".to_string());
-            }
-            #[cfg(test)]
-            CopilotPermissionMode::AllowAll => {
-                parts.push("--allow-all-tools".to_string());
-                parts.push("--allow-all-paths".to_string());
-                parts.push("--allow-all-urls".to_string());
-            }
-            #[cfg(test)]
-            CopilotPermissionMode::Manual => {}
-        }
-
-        if self.config.silent {
-            parts.push("-s".to_string());
-        }
-
-        if self.config.no_ask_user {
-            parts.push("--no-ask-user".to_string());
-        }
-
-        if let Some(ref model) = self.config.model {
-            parts.push("--model".to_string());
-            parts.push(model.clone());
-        }
+        self.append_config_flags(&mut parts);
 
         parts.push("-p".to_string());
         parts.push("<prompt>".to_string());
