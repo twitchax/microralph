@@ -81,47 +81,66 @@ mod tests {
     #[test]
     fn test_spinner_disabled_when_not_enabled() {
         let spinner = start_spinner(false, "Testing...");
-        // Should not panic when calling methods on disabled spinner
+
+        // When enabled=false, the spinner should have no underlying progress bar.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None when enabled=false"
+        );
+
+        // Verify methods work without panic on disabled spinner.
         spinner.set_message("Updated message");
         spinner.finish_and_clear();
-        // No assertions needed - just verifying no panics
     }
 
     #[test]
     fn test_spinner_operations_do_not_panic() {
-        // In test environment, stdout is typically not a TTY, so spinner will be disabled
+        // In test environment, stdout is typically not a TTY, so spinner will be disabled.
         let spinner = start_spinner(true, "Testing...");
+
+        // Even with enabled=true, bar should be None in non-TTY test environment.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None in non-TTY environment"
+        );
+
+        // Verify methods work without panic on disabled spinner.
         spinner.set_message("Updated message");
         spinner.finish_and_clear();
-        // No assertions needed - just verifying no panics
     }
 
     #[test]
     fn test_spinner_with_static_message() {
         // Test that static &str messages (Cow::Borrowed) work correctly.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, "Static message");
 
-        // Multiple static message updates should work.
+        // In test (non-TTY) environment, bar should be None.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None in non-TTY environment"
+        );
+
+        // Multiple static message updates should work without panic.
         spinner.set_message("Another static");
         spinner.set_message("Third static");
         spinner.finish_and_clear();
-
-        // Verify workflow completed (no panic occurred).
     }
 
     #[test]
     fn test_spinner_with_dynamic_message() {
         // Test that dynamic String messages (Cow::Owned) work correctly.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
         let spinner = start_spinner(true, format!("Task {}/{}", 1, 5));
 
-        // Multiple dynamic message updates should work.
+        // In test (non-TTY) environment, bar should be None.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None in non-TTY environment"
+        );
+
+        // Multiple dynamic message updates should work without panic.
         spinner.set_message(format!("Task {}/{}", 2, 5));
         spinner.set_message(format!("Task {}/{}", 3, 5));
         spinner.finish_and_clear();
-
-        // Verify workflow completed (no panic occurred).
     }
 
     // ========================================
