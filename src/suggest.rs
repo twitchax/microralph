@@ -202,8 +202,20 @@ where
 fn analyze_codebase(root: &Path) -> Result<String> {
     let mut analysis = String::new();
 
-    // List key files and directories.
-    analysis.push_str("Repository structure:\n");
+    analysis.push_str(&analyze_repository_structure(root)?);
+    analysis.push_str(&detect_tools_and_dependencies(root));
+    analysis.push_str(&get_recent_commits(root));
+    analysis.push_str(&detect_todo_comments(root));
+
+    Ok(analysis)
+}
+
+/// Lists key files and directories in the repository root.
+///
+/// Skips hidden files, `target/`, and `node_modules/` directories.
+fn analyze_repository_structure(root: &Path) -> Result<String> {
+    let mut output = String::from("Repository structure:\n");
+
     for entry in std::fs::read_dir(root).context("Failed to read repository directory")? {
         let entry = entry?;
         let path = entry.path();
@@ -212,36 +224,45 @@ fn analyze_codebase(root: &Path) -> Result<String> {
             .map(|n| n.to_string_lossy())
             .unwrap_or_default();
 
-        // Skip hidden files and target/build directories.
         if name.starts_with('.') || name == "target" || name == "node_modules" {
             continue;
         }
 
         let kind = if path.is_dir() { "dir" } else { "file" };
-        analysis.push_str(&format!("- {} ({})\n", name, kind));
+        output.push_str(&format!("- {} ({})\n", name, kind));
     }
-    analysis.push('\n');
+    output.push('\n');
 
-    // Check for common tools and dependencies.
-    let tools = vec![
-        ("Cargo.toml", "Rust (cargo)"),
-        ("Makefile.toml", "cargo-make"),
-        ("package.json", "Node.js (npm/yarn)"),
-        ("requirements.txt", "Python (pip)"),
-        ("go.mod", "Go modules"),
-        (".github/workflows", "GitHub Actions"),
-    ];
+    Ok(output)
+}
 
-    analysis.push_str("Tools and dependencies:\n");
-    for (file, desc) in tools {
+/// Known tools and their display names for dependency detection.
+const KNOWN_TOOLS: &[(&str, &str)] = &[
+    ("Cargo.toml", "Rust (cargo)"),
+    ("Makefile.toml", "cargo-make"),
+    ("package.json", "Node.js (npm/yarn)"),
+    ("requirements.txt", "Python (pip)"),
+    ("go.mod", "Go modules"),
+    (".github/workflows", "GitHub Actions"),
+];
+
+/// Detects common tools and dependencies by checking for known files.
+fn detect_tools_and_dependencies(root: &Path) -> String {
+    let mut output = String::from("Tools and dependencies:\n");
+
+    for (file, desc) in KNOWN_TOOLS {
         if root.join(file).exists() {
-            analysis.push_str(&format!("- {}\n", desc));
+            output.push_str(&format!("- {}\n", desc));
         }
     }
-    analysis.push('\n');
+    output.push('\n');
 
-    // Get recent git commit messages (last 20).
-    if let Ok(output) = Command::new("git")
+    output
+}
+
+/// Gets recent git commit messages (last 20).
+fn get_recent_commits(root: &Path) -> String {
+    let Ok(result) = Command::new("git")
         .args([
             "log",
             "--all",
@@ -252,35 +273,46 @@ fn analyze_codebase(root: &Path) -> Result<String> {
         ])
         .current_dir(root)
         .output()
-        && output.status.success()
-    {
-        let log = String::from_utf8_lossy(&output.stdout);
-        analysis.push_str("Recent commits (last 20):\n");
-        analysis.push_str(&log);
-        analysis.push_str("\n\n");
+    else {
+        return String::new();
+    };
+
+    if !result.status.success() {
+        return String::new();
     }
 
-    // Count TODO comments in source files (simple heuristic).
-    if let Ok(output) = Command::new("git")
+    let log = String::from_utf8_lossy(&result.stdout);
+    format!("Recent commits (last 20):\n{}\n\n", log)
+}
+
+/// Detects TODO comments in source files as tech debt indicators.
+fn detect_todo_comments(root: &Path) -> String {
+    let Ok(result) = Command::new("git")
         .args(["grep", "-i", "TODO", "--", "*.rs", "*.py", "*.js", "*.go"])
         .current_dir(root)
         .output()
-        && output.status.success()
-    {
-        let todos = String::from_utf8_lossy(&output.stdout);
-        let todo_count = todos.lines().count();
-        analysis.push_str(&format!("TODO comments found: {}\n", todo_count));
-        if todo_count > 0 && todo_count <= 10 {
-            // Include a few examples if count is reasonable.
-            analysis.push_str("Examples:\n");
-            for (i, line) in todos.lines().take(5).enumerate() {
-                analysis.push_str(&format!("  {}. {}\n", i + 1, line));
-            }
-        }
-        analysis.push('\n');
+    else {
+        return String::new();
+    };
+
+    if !result.status.success() {
+        return String::new();
     }
 
-    Ok(analysis)
+    let todos = String::from_utf8_lossy(&result.stdout);
+    let todo_count = todos.lines().count();
+
+    let mut output = format!("TODO comments found: {}\n", todo_count);
+
+    if todo_count > 0 && todo_count <= 10 {
+        output.push_str("Examples:\n");
+        for (i, line) in todos.lines().take(5).enumerate() {
+            output.push_str(&format!("  {}. {}\n", i + 1, line));
+        }
+    }
+    output.push('\n');
+
+    output
 }
 
 /// Builds the suggestion generation prompt with placeholders expanded.
@@ -662,6 +694,119 @@ Based on my analysis, here are 5 PRD suggestions:
             analysis.contains("cargo-make"),
             "Should detect Makefile.toml"
         );
+    }
+
+    /// Tests analyze_repository_structure helper function.
+    #[test]
+    fn test_analyze_repository_structure() {
+        let temp = setup_test_repo();
+
+        // Create various files and directories.
+        std::fs::write(temp.path().join("README.md"), "# Test").unwrap();
+        std::fs::create_dir(temp.path().join("src")).unwrap();
+        std::fs::create_dir(temp.path().join("tests")).unwrap();
+        std::fs::write(temp.path().join(".hidden"), "hidden").unwrap();
+        std::fs::create_dir(temp.path().join("node_modules")).unwrap();
+        std::fs::create_dir(temp.path().join("target")).unwrap();
+
+        let result = analyze_repository_structure(temp.path()).unwrap();
+
+        assert!(result.contains("Repository structure:"));
+        assert!(result.contains("README.md"));
+        assert!(result.contains("src (dir)"));
+        assert!(result.contains("tests (dir)"));
+        // Hidden files, target, and node_modules should be skipped.
+        assert!(!result.contains(".hidden"));
+        assert!(!result.contains("node_modules"));
+        assert!(!result.contains("target"));
+    }
+
+    /// Tests detect_tools_and_dependencies helper function.
+    #[test]
+    fn test_detect_tools_and_dependencies() {
+        let temp = setup_test_repo();
+
+        // Create dependency indicator files.
+        std::fs::write(temp.path().join("Cargo.toml"), "").unwrap();
+        std::fs::write(temp.path().join("package.json"), "{}").unwrap();
+        std::fs::create_dir_all(temp.path().join(".github/workflows")).unwrap();
+
+        let result = detect_tools_and_dependencies(temp.path());
+
+        assert!(result.contains("Tools and dependencies:"));
+        assert!(result.contains("Rust (cargo)"));
+        assert!(result.contains("Node.js (npm/yarn)"));
+        assert!(result.contains("GitHub Actions"));
+        // Not created, so should not appear.
+        assert!(!result.contains("Python (pip)"));
+        assert!(!result.contains("Go modules"));
+    }
+
+    /// Tests detect_tools_and_dependencies with no tools present.
+    #[test]
+    fn test_detect_tools_and_dependencies_empty() {
+        let temp = setup_test_repo();
+
+        let result = detect_tools_and_dependencies(temp.path());
+
+        assert!(result.contains("Tools and dependencies:"));
+        // Should be just the header and a newline when no tools are detected.
+        assert!(!result.contains("Rust"));
+        assert!(!result.contains("Node.js"));
+    }
+
+    /// Tests get_recent_commits helper function in non-git directory.
+    #[test]
+    fn test_get_recent_commits_no_git() {
+        let temp = setup_test_repo();
+
+        // No git repo initialized, should return empty string.
+        let result = get_recent_commits(temp.path());
+
+        assert!(result.is_empty());
+    }
+
+    /// Tests get_recent_commits helper function with git repo.
+    #[test]
+    fn test_get_recent_commits_with_git() {
+        let temp = setup_test_repo();
+
+        // Initialize git and create a commit.
+        Command::new("git")
+            .args(["init"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        std::fs::write(temp.path().join("test.txt"), "test").unwrap();
+
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        Command::new("git")
+            .args(["commit", "-m", "Test commit message"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        let result = get_recent_commits(temp.path());
+
+        assert!(result.contains("Recent commits (last 20):"));
+        assert!(result.contains("Test commit message"));
+    }
+
+    /// Tests detect_todo_comments helper function in non-git directory.
+    #[test]
+    fn test_detect_todo_comments_no_git() {
+        let temp = setup_test_repo();
+
+        // No git repo initialized, should return empty string.
+        let result = detect_todo_comments(temp.path());
+
+        assert!(result.is_empty());
     }
 
     /// UAT-005: Placeholder expansion includes PRDs and codebase snapshot.
