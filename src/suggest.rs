@@ -830,6 +830,19 @@ Based on my analysis, here are 5 PRD suggestions:
             .output()
             .unwrap();
 
+        // Configure git user for CI environment (required for commits).
+        Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
+        Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+
         std::fs::write(temp.path().join("test.txt"), "test").unwrap();
 
         Command::new("git")
