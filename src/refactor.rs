@@ -347,8 +347,34 @@ mod tests {
 
         let prompt = build_refactor_prompt(root, &config, 2);
 
-        // Prompt should be generated (uses fallback template).
-        assert!(!prompt.is_empty());
+        // Prompt should include the focus hint from context.
+        assert!(
+            prompt.contains("improve error handling"),
+            "Prompt should contain the context focus hint. Got:\n{}",
+            prompt
+        );
+        assert!(
+            prompt.contains("Focus Hint"),
+            "Prompt should contain 'Focus Hint' section when context is provided"
+        );
+
+        // Prompt should include the path scope constraint.
+        assert!(
+            prompt.contains("src/"),
+            "Prompt should contain the path constraint. Got:\n{}",
+            prompt
+        );
+        assert!(
+            prompt.contains("Scope Constraint"),
+            "Prompt should contain 'Scope Constraint' section when path is provided"
+        );
+
+        // Prompt should include correct iteration info.
+        assert!(
+            prompt.contains("iteration 2 of 5"),
+            "Prompt should contain iteration info. Got:\n{}",
+            prompt
+        );
     }
 
     #[test]
