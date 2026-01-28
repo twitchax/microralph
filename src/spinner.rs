@@ -205,12 +205,18 @@ mod tests {
     #[test]
     fn test_spinner_run_task_simulation() {
         // Simulate the run_task workflow: create spinner, update, clear before output.
-        // This test verifies the workflow pattern works without panics across multiple tasks.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
+        // Verify that each spinner in the loop is correctly disabled in non-TTY environment.
         let task_count = 5;
+        let mut spinners_disabled = 0;
+
         for task_idx in 1..=task_count {
             let spinner =
                 start_spinner(true, format!("Running task {}/{}...", task_idx, task_count));
+
+            // Verify spinner is disabled in non-TTY test environment.
+            if spinner.bar.is_none() {
+                spinners_disabled += 1;
+            }
 
             // Simulate some work with message updates.
             spinner.set_message(format!("Processing task {}...", task_idx));
@@ -219,8 +225,11 @@ mod tests {
             spinner.finish_and_clear();
         }
 
-        // Verify we completed all iterations without panic.
-        assert_eq!(task_count, 5, "All task iterations should complete");
+        // All spinners should be disabled in non-TTY test environment.
+        assert_eq!(
+            spinners_disabled, task_count,
+            "All spinners should be disabled in non-TTY environment"
+        );
     }
 
     #[test]
