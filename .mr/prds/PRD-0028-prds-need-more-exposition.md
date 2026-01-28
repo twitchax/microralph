@@ -30,27 +30,27 @@ acceptance_tests:
 - id: uat-001
   name: "PRD template contains Technical Approach section"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: "PRD template contains Assumptions section"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: "PRD template contains Constraints section"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-004
   name: "PRD template contains References to Code section"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-005
   name: "Round1 questions prompt elicits technical approach details"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 - id: uat-006
   name: "Synthesize prompt instructs agent to populate new sections"
   command: cargo make uat
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -91,7 +91,7 @@ tasks:
 - id: T-008
   title: "Verify all UATs pass"
   priority: 8
-  status: todo
+  status: done
   notes: "Run 'cargo make uat' to verify all acceptance tests pass."
 
 ---
@@ -288,3 +288,22 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
   - UAT passed: 451 tests run, all passed
 
 - **Constitution Compliance**: No violations. This task completes the Prompt Management synchronization cycle started in T-001 through T-006.
+
+---
+
+## 2026-01-28 — T-008 Completed
+- **Task**: Verify all UATs pass
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `cargo make uat` to verify all acceptance tests pass
+  - UAT passed: 451 tests run, all passed
+  - Verified all 6 acceptance tests:
+    - UAT-001: PRD template contains Technical Approach section (`.mr/templates/prd.md` line 56)
+    - UAT-002: PRD template contains Assumptions section (line 62)
+    - UAT-003: PRD template contains Constraints section (line 68)
+    - UAT-004: PRD template contains References to Code section (line 74)
+    - UAT-005: Round1 questions prompt elicits technical approach details (`.mr/prompts/prd_new_round1_questions.md` lines 49-51, 62-63)
+    - UAT-006: Synthesize prompt instructs agent to populate new sections (`.mr/prompts/prd_new_synthesize_prd.md` lines 68-71, 75)
+  - Updated all UAT statuses to `verified` in frontmatter
+
+- **Constitution Compliance**: No violations. All tasks for this PRD are now complete.
