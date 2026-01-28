@@ -82,32 +82,80 @@ mod tests {
     }
 
     #[test]
-    fn test_finalization_summary_box_styling() {
-        // Test that the finalization summary box components render with appropriate styling
-        let separator = info("═══════════════════════════════════════════════════════════════");
-        let title = header("FINALIZATION SUMMARY");
-        let detail = dim("PRD Path: /some/path");
+    fn test_success_has_correct_emoji_prefix() {
+        let result = success("Task completed");
 
-        // Verify separator contains the expected characters
+        // Success should start with checkmark emoji.
         assert!(
-            separator.contains("═══"),
-            "Separator should contain box drawing characters"
+            result.starts_with("✅"),
+            "Success output should start with ✅ emoji"
         );
 
-        // Verify header contains the title text
+        // Message should follow the emoji.
         assert!(
-            title.contains("FINALIZATION SUMMARY"),
-            "Header should contain title text"
+            result.contains("Task completed"),
+            "Success output should contain the message"
+        );
+    }
+
+    #[test]
+    fn test_error_has_correct_emoji_prefix() {
+        let result = error("Something failed");
+
+        // Error should start with X emoji.
+        assert!(
+            result.starts_with("❌"),
+            "Error output should start with ❌ emoji"
         );
 
-        // Verify dim detail contains the path
+        // Message should follow the emoji.
         assert!(
-            detail.contains("PRD Path:"),
-            "Detail should contain the label"
+            result.contains("Something failed"),
+            "Error output should contain the message"
         );
+    }
+
+    #[test]
+    fn test_warning_has_correct_emoji_prefix() {
+        let result = warning("Heads up");
+
+        // Warning should start with warning emoji.
         assert!(
-            detail.contains("/some/path"),
-            "Detail should contain the path"
+            result.starts_with("⚠️"),
+            "Warning output should start with ⚠️ emoji"
         );
+
+        // Message should follow the emoji (accounting for spacing).
+        assert!(
+            result.contains("Heads up"),
+            "Warning output should contain the message"
+        );
+    }
+
+    #[test]
+    fn test_styling_functions_handle_empty_string() {
+        // All styling functions should not panic on empty input.
+        // In non-TTY test environment, output should be predictable.
+        assert!(success("").starts_with("✅"));
+        assert!(error("").starts_with("❌"));
+        assert!(warning("").starts_with("⚠️"));
+        assert_eq!(info(""), "");
+        assert_eq!(header(""), "");
+        assert_eq!(dim(""), "");
+    }
+
+    #[test]
+    fn test_info_header_dim_are_identity_in_non_tty() {
+        // In test environment (non-TTY), info/header/dim should return input unchanged.
+        // This tests the degradation behavior when colors are not supported.
+        let msg = "Plain text message";
+
+        assert_eq!(info(msg), msg, "info should return plain text in non-TTY");
+        assert_eq!(
+            header(msg),
+            msg,
+            "header should return plain text in non-TTY"
+        );
+        assert_eq!(dim(msg), msg, "dim should return plain text in non-TTY");
     }
 }
