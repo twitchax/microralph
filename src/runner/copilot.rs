@@ -9,9 +9,9 @@ use std::path::Path;
 use super::cli_runner::{self, CliRunnerConfig};
 use super::types::{Runner, RunnerOutput, RunnerResult, UsageInfo};
 
-/// Permission mode for the Copilot runner.
+/// Copilot-specific permission mode with additional granular options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PermissionMode {
+pub enum CopilotPermissionMode {
     /// Allow all permissions (--allow-all).
     #[default]
     Yolo,
@@ -32,7 +32,7 @@ pub struct CopilotConfig {
     pub copilot_path: String,
 
     /// Permission mode.
-    pub permission_mode: PermissionMode,
+    pub permission_mode: CopilotPermissionMode,
 
     /// Whether to use silent mode (-s) for clean output.
     /// When false, enables usage tracking via stats output.
@@ -49,7 +49,7 @@ impl Default for CopilotConfig {
     fn default() -> Self {
         Self {
             copilot_path: "copilot".to_string(),
-            permission_mode: PermissionMode::Yolo,
+            permission_mode: CopilotPermissionMode::Yolo,
             silent: false, // Disable silent mode to get usage stats
             no_ask_user: true,
             model: None,
@@ -73,7 +73,7 @@ impl CopilotConfig {
 
     /// Sets the permission mode.
     #[cfg(test)]
-    pub fn with_permission_mode(mut self, mode: PermissionMode) -> Self {
+    pub fn with_permission_mode(mut self, mode: CopilotPermissionMode) -> Self {
         self.permission_mode = mode;
         self
     }
@@ -139,17 +139,17 @@ impl CopilotRunner {
 
         // Permission flags.
         match self.config.permission_mode {
-            PermissionMode::Yolo => {
+            CopilotPermissionMode::Yolo => {
                 args.push("--allow-all".to_string());
             }
             #[cfg(test)]
-            PermissionMode::AllowAll => {
+            CopilotPermissionMode::AllowAll => {
                 args.push("--allow-all-tools".to_string());
                 args.push("--allow-all-paths".to_string());
                 args.push("--allow-all-urls".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {
+            CopilotPermissionMode::Manual => {
                 // No permission flags.
             }
         }
@@ -178,17 +178,17 @@ impl CopilotRunner {
         let mut parts = vec![self.config.copilot_path.clone()];
 
         match self.config.permission_mode {
-            PermissionMode::Yolo => {
+            CopilotPermissionMode::Yolo => {
                 parts.push("--allow-all".to_string());
             }
             #[cfg(test)]
-            PermissionMode::AllowAll => {
+            CopilotPermissionMode::AllowAll => {
                 parts.push("--allow-all-tools".to_string());
                 parts.push("--allow-all-paths".to_string());
                 parts.push("--allow-all-urls".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {}
+            CopilotPermissionMode::Manual => {}
         }
 
         if self.config.silent {
@@ -381,7 +381,7 @@ mod tests {
         let config = CopilotConfig::default();
 
         assert_eq!(config.copilot_path, "copilot");
-        assert_eq!(config.permission_mode, PermissionMode::Yolo);
+        assert_eq!(config.permission_mode, CopilotPermissionMode::Yolo);
         assert!(!config.silent); // Silent mode disabled by default to enable usage tracking
         assert!(config.no_ask_user);
     }
@@ -390,12 +390,12 @@ mod tests {
     fn test_copilot_config_builder() {
         let config = CopilotConfig::new()
             .with_path("/custom/path/copilot")
-            .with_permission_mode(PermissionMode::AllowAll)
+            .with_permission_mode(CopilotPermissionMode::AllowAll)
             .with_silent(false)
             .with_no_ask_user(false);
 
         assert_eq!(config.copilot_path, "/custom/path/copilot");
-        assert_eq!(config.permission_mode, PermissionMode::AllowAll);
+        assert_eq!(config.permission_mode, CopilotPermissionMode::AllowAll);
         assert!(!config.silent);
         assert!(!config.no_ask_user);
     }
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_build_args_allow_all_mode() {
-        let config = CopilotConfig::new().with_permission_mode(PermissionMode::AllowAll);
+        let config = CopilotConfig::new().with_permission_mode(CopilotPermissionMode::AllowAll);
         let runner = CopilotRunner::with_config(config);
         let args = runner.build_args("test prompt");
 
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn test_build_args_manual_mode() {
         let config = CopilotConfig::new()
-            .with_permission_mode(PermissionMode::Manual)
+            .with_permission_mode(CopilotPermissionMode::Manual)
             .with_silent(false)
             .with_no_ask_user(false);
         let runner = CopilotRunner::with_config(config);

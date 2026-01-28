@@ -11,7 +11,7 @@ use super::types::{Runner, RunnerOutput, RunnerResult, UsageInfo};
 
 /// Permission mode for the Claude runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PermissionMode {
+pub enum ClaudePermissionMode {
     /// Skip all permissions (--dangerously-skip-permissions).
     #[default]
     Yolo,
@@ -28,7 +28,7 @@ pub struct ClaudeConfig {
     pub claude_path: String,
 
     /// Permission mode.
-    pub permission_mode: PermissionMode,
+    pub permission_mode: ClaudePermissionMode,
 
     /// Whether to disable the ask_user tool.
     pub no_ask_user: bool,
@@ -41,7 +41,7 @@ impl Default for ClaudeConfig {
     fn default() -> Self {
         Self {
             claude_path: "claude".to_string(),
-            permission_mode: PermissionMode::Yolo,
+            permission_mode: ClaudePermissionMode::Yolo,
             no_ask_user: true,
             model: None,
         }
@@ -64,7 +64,7 @@ impl ClaudeConfig {
 
     /// Sets the permission mode.
     #[cfg(test)]
-    pub fn with_permission_mode(mut self, mode: PermissionMode) -> Self {
+    pub fn with_permission_mode(mut self, mode: ClaudePermissionMode) -> Self {
         self.permission_mode = mode;
         self
     }
@@ -118,11 +118,11 @@ impl ClaudeRunner {
         let mut parts = vec![self.config.claude_path.clone()];
 
         match self.config.permission_mode {
-            PermissionMode::Yolo => {
+            ClaudePermissionMode::Yolo => {
                 parts.push("--dangerously-skip-permissions".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {}
+            ClaudePermissionMode::Manual => {}
         }
 
         if self.config.no_ask_user {
@@ -250,11 +250,11 @@ impl CliRunnerConfig for ClaudeRunner {
 
         // Permission flags.
         match self.config.permission_mode {
-            PermissionMode::Yolo => {
+            ClaudePermissionMode::Yolo => {
                 args.push("--dangerously-skip-permissions".to_string());
             }
             #[cfg(test)]
-            PermissionMode::Manual => {
+            ClaudePermissionMode::Manual => {
                 // No permission flags.
             }
         }
@@ -328,7 +328,7 @@ mod tests {
         let config = ClaudeConfig::default();
 
         assert_eq!(config.claude_path, "claude");
-        assert_eq!(config.permission_mode, PermissionMode::Yolo);
+        assert_eq!(config.permission_mode, ClaudePermissionMode::Yolo);
         assert!(config.no_ask_user);
     }
 
@@ -336,11 +336,11 @@ mod tests {
     fn test_claude_config_builder() {
         let config = ClaudeConfig::new()
             .with_path("/custom/path/claude")
-            .with_permission_mode(PermissionMode::Manual)
+            .with_permission_mode(ClaudePermissionMode::Manual)
             .with_no_ask_user(false);
 
         assert_eq!(config.claude_path, "/custom/path/claude");
-        assert_eq!(config.permission_mode, PermissionMode::Manual);
+        assert_eq!(config.permission_mode, ClaudePermissionMode::Manual);
         assert!(!config.no_ask_user);
     }
 
@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn test_build_args_manual_mode() {
         let config = ClaudeConfig::new()
-            .with_permission_mode(PermissionMode::Manual)
+            .with_permission_mode(ClaudePermissionMode::Manual)
             .with_no_ask_user(false);
         let runner = ClaudeRunner::with_config(config);
         let args = runner.build_args("test prompt");
