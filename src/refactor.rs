@@ -211,17 +211,6 @@ fn run_iteration(
     }
 }
 
-/// Aggregates usage info from multiple iterations.
-fn aggregate_usage(total: &mut Option<UsageInfo>, new: &Option<UsageInfo>) {
-    if let Some(new_usage) = new {
-        if let Some(total_usage) = total {
-            total_usage.merge(new_usage);
-        } else {
-            *total = Some(new_usage.clone());
-        }
-    }
-}
-
 /// Runs the refactor loop.
 ///
 /// Iterates up to `max_iterations` times, invoking the runner each time.
@@ -253,26 +242,26 @@ pub fn refactor(config: &RefactorConfig, runner: &dyn Runner) -> Result<Refactor
             RefactorIterationResult::Applied { summary, usage } => {
                 tracing::info!(iteration, summary = %summary, "Refactor applied");
                 result.applied_count += 1;
-                aggregate_usage(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, &usage);
             }
 
             RefactorIterationResult::Suggested { suggestion, usage } => {
                 tracing::info!(iteration, "Dry-run suggestion generated");
                 tracing::debug!(suggestion = %suggestion, "Suggestion details");
                 result.suggested_count += 1;
-                aggregate_usage(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, &usage);
             }
 
             RefactorIterationResult::NoMoreRefactors { usage } => {
                 tracing::info!(iteration, "Early termination: no more refactors");
                 result.early_termination = true;
-                aggregate_usage(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, &usage);
                 break;
             }
 
             RefactorIterationResult::Failed { error, usage } => {
                 tracing::warn!(iteration, error = %error, "Refactor iteration failed");
-                aggregate_usage(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, &usage);
                 // Continue to next iteration per PRD: "leave UAT failure handling to agent's discretion"
             }
         }

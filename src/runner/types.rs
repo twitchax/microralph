@@ -67,6 +67,20 @@ impl UsageInfo {
         self.output_tokens = Self::add_optional(self.output_tokens, other.output_tokens);
         self.total_tokens = Self::add_optional(self.total_tokens, other.total_tokens);
     }
+
+    /// Aggregates an optional UsageInfo into an optional accumulator.
+    ///
+    /// This is a common pattern when accumulating usage across multiple operations.
+    /// If `new` is `Some`, it's merged into `total`. If `total` is `None`, it becomes a clone of `new`.
+    pub fn aggregate(total: &mut Option<UsageInfo>, new: &Option<UsageInfo>) {
+        if let Some(new_usage) = new {
+            if let Some(total_usage) = total {
+                total_usage.merge(new_usage);
+            } else {
+                *total = Some(new_usage.clone());
+            }
+        }
+    }
 }
 
 /// Output from a runner invocation.
@@ -178,6 +192,7 @@ pub trait Runner: Send + Sync {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -259,5 +274,74 @@ mod tests {
             total_tokens: None,
         };
         assert!(with_input.has_data());
+    }
+
+    #[test]
+    fn test_usage_info_aggregate_into_none() {
+        let mut total = None;
+        let new = Some(UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: Some(50),
+            total_tokens: Some(150),
+        });
+
+        UsageInfo::aggregate(&mut total, &new);
+
+        assert!(total.is_some());
+        let total = total.unwrap();
+        assert_eq!(total.input_tokens, Some(100));
+        assert_eq!(total.output_tokens, Some(50));
+        assert_eq!(total.total_tokens, Some(150));
+    }
+
+    #[test]
+    fn test_usage_info_aggregate_into_some() {
+        let mut total = Some(UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: Some(50),
+            total_tokens: Some(150),
+        });
+        let new = Some(UsageInfo {
+            input_tokens: Some(200),
+            output_tokens: Some(100),
+            total_tokens: Some(300),
+        });
+
+        UsageInfo::aggregate(&mut total, &new);
+
+        assert!(total.is_some());
+        let total = total.unwrap();
+        assert_eq!(total.input_tokens, Some(300));
+        assert_eq!(total.output_tokens, Some(150));
+        assert_eq!(total.total_tokens, Some(450));
+    }
+
+    #[test]
+    fn test_usage_info_aggregate_with_none_new() {
+        let mut total = Some(UsageInfo {
+            input_tokens: Some(100),
+            output_tokens: Some(50),
+            total_tokens: Some(150),
+        });
+        let new = None;
+
+        UsageInfo::aggregate(&mut total, &new);
+
+        // Total should be unchanged.
+        assert!(total.is_some());
+        let total = total.unwrap();
+        assert_eq!(total.input_tokens, Some(100));
+        assert_eq!(total.output_tokens, Some(50));
+        assert_eq!(total.total_tokens, Some(150));
+    }
+
+    #[test]
+    fn test_usage_info_aggregate_both_none() {
+        let mut total: Option<UsageInfo> = None;
+        let new: Option<UsageInfo> = None;
+
+        UsageInfo::aggregate(&mut total, &new);
+
+        assert!(total.is_none());
     }
 }
