@@ -76,7 +76,7 @@ tasks:
 - id: T-005
   title: "Update PROMPT_PRD_NEW_ROUND1 to elicit new section content"
   priority: 5
-  status: todo
+  status: done
   notes: "Modify the Round1 questions prompt in src/init.rs to ask about technical approach, assumptions, constraints, and code references. See T-001 through T-004 for section definitions."
 - id: T-006
   title: "Update PROMPT_PRD_NEW_SYNTHESIZE to populate new sections"
@@ -256,6 +256,19 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
 - **Changes**:
   - Modified `src/init.rs` to add `# References to Code` section with `{{references_to_code}}` placeholder to `PRD_TEMPLATE`
   - Section is placed between Constraints and Non-Goals as specified in the PRD Technical Approach
+  - UAT passed: 451 tests run, all passed
+
+- **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
+
+---
+
+## 2026-01-28 — T-005 Completed
+- **Task**: Update PROMPT_PRD_NEW_ROUND1 to elicit new section content
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/init.rs` to add four new bullet points to the Round1 questions prompt "Required Actions" section
+  - Added questions about: high-level technical approach, assumptions/preconditions, constraints, and architecture diagrams
+  - Updated the example questions to include technical approach and assumptions examples
   - UAT passed: 451 tests run, all passed
 
 - **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
