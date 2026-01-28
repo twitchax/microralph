@@ -184,22 +184,58 @@ mod tests {
 
     #[test]
     fn test_spinner_clear_is_idempotent() {
-        // Calling finish_and_clear multiple times should not panic.
+        // Calling finish_and_clear multiple times should not panic and bar remains None.
         let spinner = start_spinner(true, "Testing...");
+
+        // Verify bar is None before clearing (non-TTY environment).
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None before clear"
+        );
+
         spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should remain None after first clear"
+        );
+
         spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should remain None after second clear"
+        );
+
         spinner.finish_and_clear();
-        // No panic = success
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should remain None after third clear"
+        );
     }
 
     #[test]
     fn test_spinner_message_updates_on_disabled_spinner() {
-        // Updating message on disabled spinner should be a no-op without panic.
+        // Updating message on disabled spinner should be a no-op and bar remains None.
         let spinner = start_spinner(false, "Initial");
+
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should be None initially"
+        );
+
         for i in 1..=10 {
             spinner.set_message(format!("Iteration {}", i));
+            assert!(
+                spinner.bar.is_none(),
+                "Spinner bar should remain None after message update {}",
+                i
+            );
         }
+
         spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner bar should remain None after finish_and_clear"
+        );
     }
 
     #[test]
@@ -235,94 +271,171 @@ mod tests {
     #[test]
     fn test_spinner_refactor_iteration_simulation() {
         // Simulate the refactor workflow: one spinner per iteration.
-        // This test verifies message updates work correctly in a loop.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
+        // Verify each spinner is disabled in non-TTY and remains so through lifecycle.
         let max_iterations = 3;
-        let mut completed = 0;
+
         for iteration in 1..=max_iterations {
             let spinner = start_spinner(
                 true,
                 format!("Refactor iteration {}/{}...", iteration, max_iterations),
             );
 
+            // Verify spinner is disabled in non-TTY environment.
+            assert!(
+                spinner.bar.is_none(),
+                "Spinner {} should be disabled in non-TTY",
+                iteration
+            );
+
             spinner.set_message(format!("Analyzing codebase (iteration {})...", iteration));
 
-            // Clear before showing output.
-            spinner.finish_and_clear();
-            completed += 1;
-        }
+            // Verify spinner bar remains None after message update.
+            assert!(
+                spinner.bar.is_none(),
+                "Spinner {} should remain disabled after message update",
+                iteration
+            );
 
-        // Verify all iterations completed successfully.
-        assert_eq!(
-            completed, max_iterations,
-            "All refactor iterations should complete"
-        );
+            spinner.finish_and_clear();
+
+            // Verify spinner bar remains None after finish_and_clear.
+            assert!(
+                spinner.bar.is_none(),
+                "Spinner {} should remain disabled after finish_and_clear",
+                iteration
+            );
+        }
     }
 
     #[test]
     fn test_spinner_suggest_workflow_simulation() {
         // Simulate the suggest workflow: spinner during AI generation.
-        // This test verifies a typical single-phase spinner workflow.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
+        // Verify spinner is disabled in non-TTY and remains so through the workflow.
         let spinner = start_spinner(true, "Analyzing codebase...");
+
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled initially in non-TTY"
+        );
 
         // Simulate AI work with a phase transition.
         spinner.set_message("Generating suggestions...");
 
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after phase transition"
+        );
+
         // Clear before displaying suggestions.
         spinner.finish_and_clear();
 
-        // Verify workflow completed (no panic occurred).
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after finish_and_clear"
+        );
     }
 
     #[test]
     fn test_spinner_finalize_workflow_simulation() {
         // Simulate the finalize workflow: spinner during agent execution.
-        // This test verifies a typical multi-phase spinner workflow.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
+        // Verify spinner remains disabled through multiple phase transitions.
         let spinner = start_spinner(true, "Finalizing PRD...");
+
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled initially"
+        );
 
         // Simulate agent execution with multiple phase transitions.
         spinner.set_message("Verifying changes...");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after 'Verifying changes'"
+        );
+
         spinner.set_message("Committing...");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after 'Committing'"
+        );
+
         spinner.set_message("Done.");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after 'Done'"
+        );
 
         // Clear before processing output.
         spinner.finish_and_clear();
 
-        // Verify workflow completed (no panic occurred).
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after finish_and_clear"
+        );
     }
 
     #[test]
     fn test_spinner_reindex_workflow_simulation() {
         // Simulate the reindex workflow: spinner during link verification.
-        // This test verifies a typical two-phase spinner workflow.
-        // (Non-TTY behavior is tested by test_spinner_disabled_in_non_tty_environment)
+        // Verify spinner remains disabled through the two-phase workflow.
         let spinner = start_spinner(true, "Verifying links...");
+
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled initially"
+        );
 
         // Simulate link verification with phase transitions.
         spinner.set_message("Checking dependencies...");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after 'Checking dependencies'"
+        );
+
         spinner.set_message("Updating index...");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after 'Updating index'"
+        );
 
         // Clear before completion.
         spinner.finish_and_clear();
 
-        // Verify workflow completed (no panic occurred).
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after finish_and_clear"
+        );
     }
 
     #[test]
     fn test_disabled_spinner_set_message_empty_string() {
-        // Test that empty string messages work correctly on a disabled spinner.
-        // This verifies edge case handling with empty messages.
-        // (Explicitly disabled behavior is tested by test_spinner_explicitly_disabled_has_no_bar)
+        // Test that empty string messages work correctly on an explicitly disabled spinner.
+        // Verify spinner remains disabled with empty string edge cases.
         let spinner = start_spinner(false, "");
 
-        // Empty string operations should not panic.
-        spinner.set_message("");
-        spinner.set_message(""); // Multiple empty sets.
-        spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should be disabled initially"
+        );
 
-        // Verify workflow completed (no panic occurred).
+        // Empty string operations should not panic and bar should remain None.
+        spinner.set_message("");
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after empty message"
+        );
+
+        spinner.set_message(""); // Multiple empty sets.
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after second empty message"
+        );
+
+        spinner.finish_and_clear();
+        assert!(
+            spinner.bar.is_none(),
+            "Spinner should remain disabled after finish_and_clear"
+        );
     }
 
     #[test]
