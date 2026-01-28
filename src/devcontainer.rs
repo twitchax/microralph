@@ -86,9 +86,44 @@ mod tests {
             env::remove_var("CODESPACES");
         }
 
-        // This test can't reliably test the /workspaces check
-        // since we might actually be in a dev container during testing.
-        // Just verify the function is callable.
-        let _ = is_dev_container();
+        // The function checks env vars first, then /workspaces directory.
+        // After clearing env vars, the result depends on /workspaces existence.
+        let workspaces_exists = Path::new("/workspaces").exists();
+        let result = is_dev_container();
+
+        // With env vars removed, result should match /workspaces existence check.
+        assert_eq!(
+            result, workspaces_exists,
+            "Without env vars, is_dev_container should return {} (workspaces_exists={})",
+            workspaces_exists, workspaces_exists
+        );
+    }
+
+    #[test]
+    fn test_is_dev_container_prioritizes_env_vars_over_filesystem() {
+        // Set REMOTE_CONTAINERS, then check that it returns true
+        // regardless of /workspaces existence (env check comes first).
+        unsafe {
+            env::set_var("REMOTE_CONTAINERS", "1");
+        }
+        assert!(
+            is_dev_container(),
+            "Should return true when REMOTE_CONTAINERS is set"
+        );
+        unsafe {
+            env::remove_var("REMOTE_CONTAINERS");
+        }
+
+        // Same for CODESPACES.
+        unsafe {
+            env::set_var("CODESPACES", "1");
+        }
+        assert!(
+            is_dev_container(),
+            "Should return true when CODESPACES is set"
+        );
+        unsafe {
+            env::remove_var("CODESPACES");
+        }
     }
 }
