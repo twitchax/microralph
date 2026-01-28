@@ -1942,8 +1942,10 @@ fn cmd_graph_ascii(show_titles: bool, max_title_len: usize) -> Result<()> {
     let prd_graph = graph::build_graph(&cwd)?;
 
     let config = graph::AsciiConfig {
-        show_titles,
-        max_title_len,
+        display: graph::NodeDisplayConfig {
+            show_titles,
+            max_title_len,
+        },
     };
 
     let output = graph::render_ascii(&prd_graph, Some(config));
@@ -1979,8 +1981,10 @@ fn cmd_graph_mermaid(show_titles: bool, max_title_len: usize, lr: bool) -> Resul
     };
 
     let config = graph::MermaidConfig {
-        show_titles,
-        max_title_len,
+        display: graph::NodeDisplayConfig {
+            show_titles,
+            max_title_len,
+        },
         direction,
     };
 
@@ -2017,8 +2021,10 @@ fn cmd_graph_dot(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()
     };
 
     let config = graph::DotConfig {
-        show_titles,
-        max_title_len,
+        display: graph::NodeDisplayConfig {
+            show_titles,
+            max_title_len,
+        },
         direction,
     };
 

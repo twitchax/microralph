@@ -245,22 +245,10 @@ impl NodeDisplayConfig {
 use std::collections::HashMap;
 
 /// Configuration for ASCII graph rendering.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AsciiConfig {
-    /// Whether to show node titles in addition to IDs.
-    pub show_titles: bool,
-
-    /// Maximum title length before truncation.
-    pub max_title_len: usize,
-}
-
-impl Default for AsciiConfig {
-    fn default() -> Self {
-        Self {
-            show_titles: true,
-            max_title_len: 40,
-        }
-    }
+    /// Common display settings for node labels.
+    pub display: NodeDisplayConfig,
 }
 
 impl AsciiConfig {
@@ -268,14 +256,6 @@ impl AsciiConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Returns a NodeDisplayConfig view of this config.
-    fn display_config(&self) -> NodeDisplayConfig {
-        NodeDisplayConfig {
-            show_titles: self.show_titles,
-            max_title_len: self.max_title_len,
-        }
     }
 }
 
@@ -378,9 +358,8 @@ fn render_node(
     config: &AsciiConfig,
 ) {
     // Node header: [PRD-XXXX] Title (status)
-    let display = config.display_config();
-    let title_display = if display.show_titles {
-        format!(" {}", display.truncate_title(&node.title))
+    let title_display = if config.display.show_titles {
+        format!(" {}", config.display.truncate_title(&node.title))
     } else {
         String::new()
     };
@@ -430,11 +409,8 @@ fn render_missing_node(
 /// Configuration for Mermaid graph rendering.
 #[derive(Debug, Clone)]
 pub struct MermaidConfig {
-    /// Whether to show node titles in addition to IDs.
-    pub show_titles: bool,
-
-    /// Maximum title length before truncation.
-    pub max_title_len: usize,
+    /// Common display settings for node labels.
+    pub display: NodeDisplayConfig,
 
     /// Direction of the flowchart (TD = top-down, LR = left-right).
     pub direction: MermaidDirection,
@@ -452,8 +428,7 @@ pub enum MermaidDirection {
 impl Default for MermaidConfig {
     fn default() -> Self {
         Self {
-            show_titles: true,
-            max_title_len: 40,
+            display: NodeDisplayConfig::default(),
             direction: MermaidDirection::TopDown,
         }
     }
@@ -464,14 +439,6 @@ impl MermaidConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Returns a NodeDisplayConfig view of this config.
-    fn display_config(&self) -> NodeDisplayConfig {
-        NodeDisplayConfig {
-            show_titles: self.show_titles,
-            max_title_len: self.max_title_len,
-        }
     }
 }
 
@@ -568,10 +535,9 @@ fn mermaid_node_id(id: &str) -> String {
 /// Creates a label for a Mermaid node.
 fn mermaid_node_label(node: &GraphNode, config: &MermaidConfig) -> String {
     let status = format!("{}", node.status);
-    let display = config.display_config();
 
-    if display.show_titles {
-        let title = display.truncate_title(&node.title);
+    if config.display.show_titles {
+        let title = config.display.truncate_title(&node.title);
 
         // Escape quotes in the title for Mermaid.
         let title = title.replace('"', "#quot;");
@@ -589,11 +555,8 @@ fn mermaid_node_label(node: &GraphNode, config: &MermaidConfig) -> String {
 /// Configuration for DOT (Graphviz) graph rendering.
 #[derive(Debug, Clone)]
 pub struct DotConfig {
-    /// Whether to show node titles in addition to IDs.
-    pub show_titles: bool,
-
-    /// Maximum title length before truncation.
-    pub max_title_len: usize,
+    /// Common display settings for node labels.
+    pub display: NodeDisplayConfig,
 
     /// Direction of the graph (TB = top-bottom, LR = left-right).
     pub direction: DotDirection,
@@ -611,8 +574,7 @@ pub enum DotDirection {
 impl Default for DotConfig {
     fn default() -> Self {
         Self {
-            show_titles: true,
-            max_title_len: 40,
+            display: NodeDisplayConfig::default(),
             direction: DotDirection::TopBottom,
         }
     }
@@ -623,14 +585,6 @@ impl DotConfig {
     #[allow(dead_code)] // Kept for public API completeness.
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Returns a NodeDisplayConfig view of this config.
-    fn display_config(&self) -> NodeDisplayConfig {
-        NodeDisplayConfig {
-            show_titles: self.show_titles,
-            max_title_len: self.max_title_len,
-        }
     }
 }
 
@@ -737,10 +691,9 @@ fn dot_node_id(id: &str) -> String {
 /// Creates a label for a DOT node.
 fn dot_node_label(node: &GraphNode, config: &DotConfig) -> String {
     let status = format!("{}", node.status);
-    let display = config.display_config();
 
-    if display.show_titles {
-        let title = display.truncate_title(&node.title);
+    if config.display.show_titles {
+        let title = config.display.truncate_title(&node.title);
 
         // Escape quotes in the title for DOT.
         let title = title.replace('"', "\\\"");
@@ -1190,8 +1143,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = AsciiConfig {
-            show_titles: false,
-            max_title_len: 40,
+            display: NodeDisplayConfig {
+                show_titles: false,
+                max_title_len: 40,
+            },
         };
         let output = render_ascii(&graph, Some(config));
 
@@ -1215,8 +1170,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = AsciiConfig {
-            show_titles: true,
-            max_title_len: 20,
+            display: NodeDisplayConfig {
+                show_titles: true,
+                max_title_len: 20,
+            },
         };
         let output = render_ascii(&graph, Some(config));
 
@@ -1362,8 +1319,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = MermaidConfig {
-            show_titles: false,
-            max_title_len: 40,
+            display: NodeDisplayConfig {
+                show_titles: false,
+                max_title_len: 40,
+            },
             direction: MermaidDirection::TopDown,
         };
         let output = render_mermaid(&graph, Some(config));
@@ -1384,8 +1343,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = MermaidConfig {
-            show_titles: true,
-            max_title_len: 40,
+            display: NodeDisplayConfig {
+                show_titles: true,
+                max_title_len: 40,
+            },
             direction: MermaidDirection::LeftRight,
         };
         let output = render_mermaid(&graph, Some(config));
@@ -1409,8 +1370,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = MermaidConfig {
-            show_titles: true,
-            max_title_len: 20,
+            display: NodeDisplayConfig {
+                show_titles: true,
+                max_title_len: 20,
+            },
             direction: MermaidDirection::TopDown,
         };
         let output = render_mermaid(&graph, Some(config));
@@ -1564,8 +1527,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = DotConfig {
-            show_titles: false,
-            max_title_len: 40,
+            display: NodeDisplayConfig {
+                show_titles: false,
+                max_title_len: 40,
+            },
             direction: DotDirection::TopBottom,
         };
         let output = render_dot(&graph, Some(config));
@@ -1586,8 +1551,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = DotConfig {
-            show_titles: true,
-            max_title_len: 40,
+            display: NodeDisplayConfig {
+                show_titles: true,
+                max_title_len: 40,
+            },
             direction: DotDirection::LeftRight,
         };
         let output = render_dot(&graph, Some(config));
@@ -1611,8 +1578,10 @@ mod tests {
 
         let graph = build_graph_from_prds(&prds).unwrap();
         let config = DotConfig {
-            show_titles: true,
-            max_title_len: 20,
+            display: NodeDisplayConfig {
+                show_titles: true,
+                max_title_len: 20,
+            },
             direction: DotDirection::TopBottom,
         };
         let output = render_dot(&graph, Some(config));
@@ -1848,16 +1817,16 @@ mod tests {
     fn test_ascii_config_new() {
         let config = AsciiConfig::new();
 
-        assert!(config.show_titles);
-        assert_eq!(config.max_title_len, 40);
+        assert!(config.display.show_titles);
+        assert_eq!(config.display.max_title_len, 40);
     }
 
     #[test]
     fn test_mermaid_config_new() {
         let config = MermaidConfig::new();
 
-        assert!(config.show_titles);
-        assert_eq!(config.max_title_len, 40);
+        assert!(config.display.show_titles);
+        assert_eq!(config.display.max_title_len, 40);
         assert_eq!(config.direction, MermaidDirection::TopDown);
     }
 
@@ -1865,8 +1834,8 @@ mod tests {
     fn test_dot_config_new() {
         let config = DotConfig::new();
 
-        assert!(config.show_titles);
-        assert_eq!(config.max_title_len, 40);
+        assert!(config.display.show_titles);
+        assert_eq!(config.display.max_title_len, 40);
         assert_eq!(config.direction, DotDirection::TopBottom);
     }
 
