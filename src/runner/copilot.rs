@@ -267,7 +267,7 @@ impl CopilotRunner {
                 .ok()
                 .and_then(|re| re.captures(text))
         {
-            output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
+            output_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
         }
 
         let total_tokens = match (input_tokens, output_tokens) {
