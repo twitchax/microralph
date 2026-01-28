@@ -61,7 +61,7 @@ tasks:
 - id: T-002
   title: "Add Assumptions section to PRD template"
   priority: 2
-  status: todo
+  status: done
   notes: "Add '# Assumptions' section to PRD_TEMPLATE after Technical Approach. Lists preconditions and assumptions the implementation depends on."
 - id: T-003
   title: "Add Constraints section to PRD template"
@@ -220,6 +220,18 @@ After modifying `src/init.rs`, run `mr restore` to overwrite `.mr/prompts/` and 
 - **Changes**:
   - Modified `src/init.rs` to add `# Technical Approach` section with `{{technical_approach}}` placeholder to `PRD_TEMPLATE`
   - Section is placed between Goals and Non-Goals as specified in the PRD
+  - UAT passed: 451 tests run, all passed
+
+- **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).
+
+---
+
+## 2026-01-28 — T-002 Completed
+- **Task**: Add Assumptions section to PRD template
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/init.rs` to add `# Assumptions` section with `{{assumptions}}` placeholder to `PRD_TEMPLATE`
+  - Section is placed between Technical Approach and Non-Goals as specified in the PRD
   - UAT passed: 451 tests run, all passed
 
 - **Constitution Compliance**: No violations. Change is minimal and follows the Prompt Management rule (updating src/init.rs first; synchronization via mr restore will happen in T-007).

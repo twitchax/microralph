@@ -182,6 +182,12 @@ tasks:
 
 ---
 
+# Assumptions
+
+{{assumptions}}
+
+---
+
 # Non-Goals (MVP)
 
 - Non-goal 1
