@@ -115,12 +115,6 @@ impl RunnerOutput {
             usage: None,
         }
     }
-
-    /// Adds usage information to this output.
-    pub fn with_usage(mut self, usage: UsageInfo) -> Self {
-        self.usage = Some(usage);
-        self
-    }
 }
 
 /// Trait for runners that can execute prompts.

@@ -148,17 +148,11 @@ pub fn execute_cli<C: CliRunnerConfig + ?Sized>(
         "CLI completed"
     );
 
-    let mut runner_output = RunnerOutput {
+    Ok(RunnerOutput {
         text: processed_output,
         success,
-        usage: None,
-    };
-
-    if let Some(usage_info) = usage {
-        runner_output = runner_output.with_usage(usage_info);
-    }
-
-    Ok(runner_output)
+        usage,
+    })
 }
 
 /// Executes a CLI command with real-time output streaming.
@@ -230,17 +224,11 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
         "CLI completed (streaming)"
     );
 
-    let mut runner_output = RunnerOutput {
+    Ok(RunnerOutput {
         text: processed_output,
         success,
-        usage: None,
-    };
-
-    if let Some(usage_info) = usage {
-        runner_output = runner_output.with_usage(usage_info);
-    }
-
-    Ok(runner_output)
+        usage,
+    })
 }
 
 /// Blanket implementation of `Runner` for all types implementing `CliRunnerConfig`.
