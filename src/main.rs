@@ -261,15 +261,22 @@ enum Command {
         stream: bool,
     },
 
-    /// [C] Dev container management commands.
+    /// [H] Visualize PRD dependency graph in various formats.
     #[command(display_order = 12)]
+    Graph {
+        #[command(subcommand)]
+        command: GraphCommand,
+    },
+
+    /// [C] Dev container management commands.
+    #[command(display_order = 13)]
     Devcontainer {
         #[command(subcommand)]
         command: DevcontainerCommand,
     },
 
     /// [C] Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
-    #[command(display_order = 13)]
+    #[command(display_order = 14)]
     Reindex {
         /// The runner to use for link verification/fixing.
         #[arg(long, default_value = "copilot")]
@@ -285,18 +292,13 @@ enum Command {
     },
 
     /// [C] Constitution management commands.
-    #[command(display_order = 14)]
+    #[command(display_order = 15)]
     Constitution {
         #[command(subcommand)]
         command: ConstitutionCommand,
     },
 
-    /// [H] Visualize PRD dependency graph in various formats.
-    #[command(display_order = 15)]
-    Graph {
-        #[command(subcommand)]
-        command: GraphCommand,
-    },
+
 }
 
 #[derive(Subcommand, Debug)]
