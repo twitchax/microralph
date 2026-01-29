@@ -297,8 +297,6 @@ enum Command {
         #[command(subcommand)]
         command: ConstitutionCommand,
     },
-
-
 }
 
 #[derive(Subcommand, Debug)]
