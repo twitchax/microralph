@@ -235,8 +235,7 @@ mod tests {
         let mut spinners_disabled = 0;
 
         for task_idx in 1..=task_count {
-            let spinner =
-                start_spinner(true, format!("Running task {task_idx}/{task_count}..."));
+            let spinner = start_spinner(true, format!("Running task {task_idx}/{task_count}..."));
 
             // Verify spinner is disabled in non-TTY test environment.
             if spinner.bar.is_none() {

@@ -318,10 +318,7 @@ mod tests {
         // Ensure all prompt kinds have defaults.
         for kind in PromptKind::all() {
             let content = get_default_prompt(*kind);
-            assert!(
-                !content.is_empty(),
-                "Default prompt for {kind:?} is empty"
-            );
+            assert!(!content.is_empty(), "Default prompt for {kind:?} is empty");
             assert!(
                 content.contains("microralph"),
                 "Default prompt for {kind:?} missing header"
