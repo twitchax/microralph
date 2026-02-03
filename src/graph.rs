@@ -43,7 +43,7 @@ impl GraphNode {
     pub fn missing(id: &str) -> Self {
         Self {
             id: id.to_string(),
-            title: format!("{} (not found)", id),
+            title: format!("{id} (not found)"),
             status: PrdStatus::default(),
             is_missing: true,
         }
@@ -378,7 +378,7 @@ fn render_node(
             } else {
                 "├──"
             };
-            output.push_str(&format!("  {} {}\n", connector, dep));
+            output.push_str(&format!("  {connector} {dep}\n"));
         }
     }
 
@@ -475,7 +475,7 @@ pub fn render_mermaid(graph: &PrdGraph, config: Option<MermaidConfig>) -> String
         MermaidDirection::TopDown => "TD",
         MermaidDirection::LeftRight => "LR",
     };
-    output.push_str(&format!("flowchart {}\n", direction));
+    output.push_str(&format!("flowchart {direction}\n"));
 
     // Quick check for empty graph.
     if graph.nodes.is_empty() {
@@ -490,10 +490,10 @@ pub fn render_mermaid(graph: &PrdGraph, config: Option<MermaidConfig>) -> String
 
         if node.is_missing {
             // Missing nodes use dashed/different shape.
-            output.push_str(&format!("    {}{{{{\"{}\"}}}}:::missing\n", node_id, label));
+            output.push_str(&format!("    {node_id}{{{{\"{label}\"}}}}:::missing\n"));
         } else {
             // Normal nodes use rectangle shape.
-            output.push_str(&format!("    {}[\"{}\"]\n", node_id, label));
+            output.push_str(&format!("    {node_id}[\"{label}\"]\n"));
         }
     }
 
@@ -509,10 +509,10 @@ pub fn render_mermaid(graph: &PrdGraph, config: Option<MermaidConfig>) -> String
 
         if edge.is_missing {
             // Dashed arrow for missing references.
-            output.push_str(&format!("    {} -.-> {}\n", from_id, to_id));
+            output.push_str(&format!("    {from_id} -.-> {to_id}\n"));
         } else {
             // Solid arrow for valid references.
-            output.push_str(&format!("    {} --> {}\n", from_id, to_id));
+            output.push_str(&format!("    {from_id} --> {to_id}\n"));
         }
     }
 
@@ -628,7 +628,7 @@ pub fn render_dot(graph: &PrdGraph, config: Option<DotConfig>) -> String {
         DotDirection::TopBottom => "TB",
         DotDirection::LeftRight => "LR",
     };
-    output.push_str(&format!("    rankdir={};\n", direction));
+    output.push_str(&format!("    rankdir={direction};\n"));
 
     // Default node style.
     output.push_str("    node [shape=box];\n\n");
@@ -648,12 +648,11 @@ pub fn render_dot(graph: &PrdGraph, config: Option<DotConfig>) -> String {
         if node.is_missing {
             // Missing nodes use dashed style.
             output.push_str(&format!(
-                "    {} [label=\"{}\" style=dashed color=red];\n",
-                node_id, label
+                "    {node_id} [label=\"{label}\" style=dashed color=red];\n"
             ));
         } else {
             // Normal nodes use default style.
-            output.push_str(&format!("    {} [label=\"{}\"];\n", node_id, label));
+            output.push_str(&format!("    {node_id} [label=\"{label}\"];\n"));
         }
     }
 
@@ -669,10 +668,10 @@ pub fn render_dot(graph: &PrdGraph, config: Option<DotConfig>) -> String {
 
         if edge.is_missing {
             // Dashed edge for missing references.
-            output.push_str(&format!("    {} -> {} [style=dashed];\n", from_id, to_id));
+            output.push_str(&format!("    {from_id} -> {to_id} [style=dashed];\n"));
         } else {
             // Solid edge for valid references.
-            output.push_str(&format!("    {} -> {};\n", from_id, to_id));
+            output.push_str(&format!("    {from_id} -> {to_id};\n"));
         }
     }
 

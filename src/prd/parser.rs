@@ -37,7 +37,7 @@ pub fn parse_prd(content: &str) -> Result<Prd> {
     let (frontmatter_str, body) = split_frontmatter(content)?;
 
     let frontmatter: PrdFrontmatter = serde_yaml::from_str(&frontmatter_str)
-        .map_err(|e| anyhow::anyhow!("Failed to parse PRD frontmatter as YAML: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to parse PRD frontmatter as YAML: {e}"))?;
 
     Ok(Prd::new(frontmatter, body))
 }

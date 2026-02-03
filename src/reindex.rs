@@ -120,7 +120,7 @@ pub fn reindex(root: impl AsRef<Path>, runner: &dyn Runner, stream: bool) -> Res
 
     // Print command info before spinner (only when not streaming).
     if !stream && let Some(cmd_display) = runner.format_command_display(&prompt, root) {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     let spinner = start_spinner(!stream, "Verifying links...");
@@ -271,7 +271,7 @@ fn run_depends_on_fix(
 
     // Print command info before spinner (only when not streaming).
     if !stream && let Some(cmd_display) = runner.format_command_display(&prompt, root) {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     let spinner = start_spinner(!stream, "Analyzing depends_on relationships...");

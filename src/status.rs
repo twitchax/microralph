@@ -150,7 +150,7 @@ pub fn get_status(root: &Path) -> Result<StatusReport> {
     let summaries: Vec<PrdSummary> = prds
         .iter()
         .map(|(filename, prd, _abs_path)| {
-            let relative_path = format!("prds/{}", filename);
+            let relative_path = format!("prds/{filename}");
             PrdSummary::from_prd(prd, relative_path)
         })
         .collect();
@@ -357,7 +357,7 @@ pub fn format_status(report: &StatusReport) -> String {
     if report.stats.total_tasks > 0 {
         let pct = (report.stats.completed_tasks as f64 / report.stats.total_tasks as f64) * 100.0;
         output.push_str(" (");
-        output.push_str(&format!("{:.0}", pct));
+        output.push_str(&format!("{pct:.0}"));
         output.push_str("%)");
     }
 

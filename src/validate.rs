@@ -143,7 +143,7 @@ fn try_parse_generic_frontmatter(content: &str) -> anyhow::Result<()> {
 
     // Try to parse as generic YAML (serde_yaml::Value)
     serde_yaml::from_str::<serde_yaml::Value>(frontmatter)
-        .map_err(|e| anyhow::anyhow!("Failed to parse YAML frontmatter: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to parse YAML frontmatter: {e}"))?;
 
     Ok(())
 }

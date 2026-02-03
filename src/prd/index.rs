@@ -204,7 +204,7 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     let mut by_status: HashMap<PrdStatus, Vec<PrdSummary>> = HashMap::new();
 
     for (filename, prd, _abs_path) in prds {
-        let relative_path = format!("prds/{}", filename);
+        let relative_path = format!("prds/{filename}");
         let summary = PrdSummary::from_prd(prd, relative_path);
         by_status.entry(summary.status).or_default().push(summary);
     }
@@ -261,11 +261,11 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     let parked = by_status.get(&PrdStatus::Parked).map_or(0, |v| v.len());
 
     output.push_str("## Statistics\n\n");
-    output.push_str(&format!("- **Total PRDs**: {}\n", total));
-    output.push_str(&format!("- **Active**: {}\n", active));
-    output.push_str(&format!("- **Draft**: {}\n", draft));
-    output.push_str(&format!("- **Done**: {}\n", done));
-    output.push_str(&format!("- **Parked**: {}\n", parked));
+    output.push_str(&format!("- **Total PRDs**: {total}\n"));
+    output.push_str(&format!("- **Active**: {active}\n"));
+    output.push_str(&format!("- **Draft**: {draft}\n"));
+    output.push_str(&format!("- **Done**: {done}\n"));
+    output.push_str(&format!("- **Parked**: {parked}\n"));
     output.push('\n');
 
     // Footer.
@@ -314,7 +314,7 @@ fn format_prd_links(ids: &[String], path_map: &HashMap<&str, &str>) -> Vec<Strin
     ids.iter()
         .map(|id| {
             if let Some(path) = path_map.get(id.as_str()) {
-                format!("[{}]({})", id, path)
+                format!("[{id}]({path})")
             } else {
                 id.clone()
             }
@@ -434,7 +434,7 @@ pub fn scan_prd_summaries(root: impl AsRef<Path>) -> Result<Vec<PrdSummary>> {
     Ok(prds
         .into_iter()
         .map(|(filename, prd, _abs_path)| {
-            let relative_path = format!("prds/{}", filename);
+            let relative_path = format!("prds/{filename}");
             PrdSummary::from_prd(&prd, relative_path)
         })
         .collect())

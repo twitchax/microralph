@@ -136,7 +136,7 @@ where
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&plan_prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner when not streaming.
@@ -186,7 +186,7 @@ where
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&generate_prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner when not streaming.
@@ -339,7 +339,7 @@ where
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&reconstruct_prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner when not streaming.

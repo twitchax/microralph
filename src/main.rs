@@ -655,7 +655,7 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
         println!();
         println!(
             "{}",
-            colors::info(&format!("Adapting prompts and templates for {}...", lang))
+            colors::info(&format!("Adapting prompts and templates for {lang}..."))
         );
 
         // Load config for model (config file was just created).
@@ -664,10 +664,7 @@ fn cmd_init(language: Option<&str>, runner_name: &str, cli_model: Option<&str>) 
 
         adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
-        println!(
-            "{}",
-            colors::info(&format!("Prompts adapted for {}.", lang))
-        );
+        println!("{}", colors::info(&format!("Prompts adapted for {lang}.")));
     }
 
     println!();
@@ -785,7 +782,7 @@ fn cmd_bootstrap(
             colors::info("Reconstructing PRDs from git history...")
         );
     }
-    println!("{}", colors::info(&format!("Detected language: {}", lang)));
+    println!("{}", colors::info(&format!("Detected language: {lang}")));
     println!();
 
     let result = bootstrap::bootstrap(&config, runner.as_ref())?;
@@ -812,15 +809,12 @@ fn cmd_bootstrap(
         println!();
         println!(
             "{}",
-            colors::info(&format!("Adapting prompts and templates for {}...", lang))
+            colors::info(&format!("Adapting prompts and templates for {lang}..."))
         );
 
         adapt_language(&cwd, lang, runner_name, model.as_deref())?;
 
-        println!(
-            "{}",
-            colors::info(&format!("Prompts adapted for {}.", lang))
-        );
+        println!("{}", colors::info(&format!("Prompts adapted for {lang}.")));
     }
 
     println!();
@@ -1410,12 +1404,12 @@ fn cmd_run(
                 if runner_success {
                     println!(
                         "{}",
-                        colors::success(&format!("Task {} completed successfully!", task_id))
+                        colors::success(&format!("Task {task_id} completed successfully!"))
                     );
                 } else {
                     println!(
                         "{}",
-                        colors::error(&format!("Task {} did not complete successfully.", task_id))
+                        colors::error(&format!("Task {task_id} did not complete successfully."))
                     );
                     last_failed = true;
                 }
@@ -1427,13 +1421,13 @@ fn cmd_run(
                 );
                 println!(
                     "  {}",
-                    colors::dim(&format!("Task: {} — {}", task_id, task_title))
+                    colors::dim(&format!("Task: {task_id} — {task_title}"))
                 );
                 println!();
 
                 if !output_summary.is_empty() {
                     println!("{}", colors::header("Runner output:"));
-                    println!("{}", output_summary);
+                    println!("{output_summary}");
                 }
 
                 // Display usage information if available.
@@ -1444,7 +1438,7 @@ fn cmd_run(
                     println!("{}", colors::dim("Token usage:"));
 
                     if let Some(input) = usage_info.input_tokens {
-                        print!("{}", colors::dim(&format!("  Input: {}", input)));
+                        print!("{}", colors::dim(&format!("  Input: {input}")));
                     }
 
                     if let Some(output) = usage_info.output_tokens {
@@ -1453,7 +1447,7 @@ fn cmd_run(
                         } else {
                             print!("{}", colors::dim("  "));
                         }
-                        print!("{}", colors::dim(&format!("Output: {}", output)));
+                        print!("{}", colors::dim(&format!("Output: {output}")));
                     }
 
                     if let Some(total) = usage_info.total_tokens {
@@ -1462,7 +1456,7 @@ fn cmd_run(
                         } else {
                             print!("{}", colors::dim("  "));
                         }
-                        print!("{}", colors::dim(&format!("Total: {}", total)));
+                        print!("{}", colors::dim(&format!("Total: {total}")));
                     }
 
                     println!(); // Newline after usage info.
@@ -1486,8 +1480,7 @@ fn cmd_run(
                 println!(
                     "{}",
                     colors::warning(&format!(
-                        "All tasks done for {} but {} UAT(s) need verification.",
-                        prd_id, unverified_count
+                        "All tasks done for {prd_id} but {unverified_count} UAT(s) need verification."
                     ))
                 );
                 println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
@@ -1559,10 +1552,7 @@ fn cmd_run(
 
             run::RunResult::PrdComplete { prd_id, prd_path } => {
                 println!();
-                println!(
-                    "{}",
-                    colors::success(&format!("PRD {} is complete!", prd_id))
-                );
+                println!("{}", colors::success(&format!("PRD {prd_id} is complete!")));
                 println!("  {}", colors::dim("All tasks done, all UATs verified."));
                 println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
                 break;
@@ -1574,7 +1564,7 @@ fn cmd_run(
         println!("---");
         println!(
             "{}",
-            colors::info(&format!("Completed {} tasks total.", tasks_completed))
+            colors::info(&format!("Completed {tasks_completed} tasks total."))
         );
     }
 
@@ -1600,7 +1590,7 @@ fn cmd_devcontainer_generate(runner_name: &str, cli_model: Option<&str>) -> Resu
     let runner = create_runner(runner_name, model.clone())?;
 
     println!("{}", colors::info("Analyzing repository..."));
-    println!("{}", colors::info(&format!("Detected language: {}", lang)));
+    println!("{}", colors::info(&format!("Detected language: {lang}")));
     println!();
 
     // Call the testable implementation.
@@ -1693,7 +1683,7 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
     let mut analysis = String::new();
 
     // Language and typical tools.
-    analysis.push_str(&format!("Language: {}\n", lang));
+    analysis.push_str(&format!("Language: {lang}\n"));
     analysis.push_str(&format!(
         "Typical build commands: {:?}\n\n",
         lang.build_commands()
@@ -1713,7 +1703,7 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
     let found_tools: Vec<_> = tools
         .iter()
         .filter(|(file, _)| root.join(file).exists())
-        .map(|(_, desc)| format!("- {}\n", desc))
+        .map(|(_, desc)| format!("- {desc}\n"))
         .collect();
     analysis.push_str(&found_tools.join(""));
     analysis.push('\n');
@@ -1823,12 +1813,12 @@ fn cmd_refactor(
     // Display header.
     println!("{}", colors::header("Refactor Command"));
     println!();
-    println!("{}", colors::info(&format!("Max iterations: {}", max)));
+    println!("{}", colors::info(&format!("Max iterations: {max}")));
     if let Some(ctx) = context {
-        println!("{}", colors::info(&format!("Focus: {}", ctx)));
+        println!("{}", colors::info(&format!("Focus: {ctx}")));
     }
     if let Some(p) = path {
-        println!("{}", colors::info(&format!("Path constraint: {}", p)));
+        println!("{}", colors::info(&format!("Path constraint: {p}")));
     }
     if dry_run {
         println!(

@@ -134,7 +134,7 @@ where
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&round1_prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     tracing::info!(
@@ -201,7 +201,7 @@ where
         if !config.stream
             && let Some(cmd_display) = runner.format_command_display(&round_n_prompt, config.root)
         {
-            println!("\n🔧 Executing: {}", cmd_display);
+            println!("\n🔧 Executing: {cmd_display}");
         }
 
         tracing::info!(
@@ -213,7 +213,7 @@ where
 
         let spinner = start_spinner(
             !config.stream,
-            format!("Generating follow-up questions (round {})...", rounds),
+            format!("Generating follow-up questions (round {rounds})..."),
         );
 
         let round_n_output = runner
@@ -273,7 +273,7 @@ where
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&synthesize_prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     tracing::info!(

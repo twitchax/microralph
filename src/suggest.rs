@@ -151,7 +151,7 @@ where
         "{}",
         colors::success(&format!("Selected: {}", selected.title))
     );
-    println!("{}", colors::dim(&format!("Generating slug: {}", slug)));
+    println!("{}", colors::dim(&format!("Generating slug: {slug}")));
     println!();
 
     // Flow into `mr new` with pre-filled context.
@@ -184,7 +184,7 @@ where
 
     // Count tasks if available
     let task_count = result.prd.tasks().map(|t| t.len()).unwrap_or(0);
-    println!("  {}", colors::dim(&format!("Tasks: {}", task_count)));
+    println!("  {}", colors::dim(&format!("Tasks: {task_count}")));
 
     // Regenerate index.
     generate_index_from_root(root)?;
@@ -229,7 +229,7 @@ fn analyze_repository_structure(root: &Path) -> Result<String> {
         }
 
         let kind = if path.is_dir() { "dir" } else { "file" };
-        output.push_str(&format!("- {} ({})\n", name, kind));
+        output.push_str(&format!("- {name} ({kind})\n"));
     }
     output.push('\n');
 
@@ -252,7 +252,7 @@ fn detect_tools_and_dependencies(root: &Path) -> String {
 
     for (file, desc) in KNOWN_TOOLS {
         if root.join(file).exists() {
-            output.push_str(&format!("- {}\n", desc));
+            output.push_str(&format!("- {desc}\n"));
         }
     }
     output.push('\n');
@@ -282,7 +282,7 @@ fn get_recent_commits(root: &Path) -> String {
     }
 
     let log = String::from_utf8_lossy(&result.stdout);
-    format!("Recent commits (last 20):\n{}\n\n", log)
+    format!("Recent commits (last 20):\n{log}\n\n")
 }
 
 /// Detects TODO comments in source files as tech debt indicators.
@@ -302,7 +302,7 @@ fn detect_todo_comments(root: &Path) -> String {
     let todos = String::from_utf8_lossy(&result.stdout);
     let todo_count = todos.lines().count();
 
-    let mut output = format!("TODO comments found: {}\n", todo_count);
+    let mut output = format!("TODO comments found: {todo_count}\n");
 
     if todo_count > 0 && todo_count <= 10 {
         output.push_str("Examples:\n");
@@ -503,10 +503,7 @@ fn validate_selection(input: &str, max_suggestions: usize) -> Result<Option<usiz
         .context("Invalid selection. Please enter a number between 1 and 5.")?;
 
     if selection < 1 || selection > max_suggestions {
-        bail!(
-            "Selection out of range. Please enter a number between 1 and {}.",
-            max_suggestions
-        );
+        bail!("Selection out of range. Please enter a number between 1 and {max_suggestions}.");
     }
 
     // Convert to 0-based index

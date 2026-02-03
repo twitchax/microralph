@@ -229,7 +229,7 @@ pub fn pick_prd_via_runner(
 
     // Print command info before spinner (only when not streaming).
     if !stream && let Some(cmd_display) = runner.format_command_display(&prompt, root) {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner when not streaming.
@@ -420,7 +420,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner when not streaming (streaming already provides visual feedback).
@@ -656,12 +656,12 @@ pub fn run_uat_verification_loop(
         if !config.stream
             && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
         {
-            println!("\n🔧 Executing: {}", cmd_display);
+            println!("\n🔧 Executing: {cmd_display}");
         }
 
         let spinner = start_spinner(
             !config.stream,
-            format!("Verifying UAT {}/{}...", current_uat_num, all_uats),
+            format!("Verifying UAT {current_uat_num}/{all_uats}..."),
         );
 
         let output = if config.stream {

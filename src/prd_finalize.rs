@@ -194,10 +194,10 @@ fn generate_summary_report(prd: &Prd) -> String {
 
     let mut report = String::new();
 
-    report.push_str(&format!("## {} — Finalization Complete\n", local_date));
+    report.push_str(&format!("## {local_date} — Finalization Complete\n"));
     report.push_str(&format!("- **PRD**: {} — {}\n", prd.id(), prd.title()));
-    report.push_str(&format!("- **Finalized**: {}\n", timestamp));
-    report.push_str(&format!("- **Tasks Completed**: {}\n", task_count));
+    report.push_str(&format!("- **Finalized**: {timestamp}\n"));
+    report.push_str(&format!("- **Tasks Completed**: {task_count}\n"));
     report.push_str("- **Summary**:\n");
 
     let task_lines: Vec<_> = tasks
@@ -348,7 +348,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     if !config.stream
         && let Some(cmd_display) = runner.format_command_display(&prompt, config.root)
     {
-        println!("\n🔧 Executing: {}", cmd_display);
+        println!("\n🔧 Executing: {cmd_display}");
     }
 
     // Start spinner during agent execution phase (only when not streaming).

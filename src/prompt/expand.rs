@@ -342,7 +342,7 @@ fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
             // Replace all item fields. Each item is a HashMap<String, String>,
             // and we substitute {{key}} with the corresponding value.
             for (key, value) in item {
-                let placeholder = format!("{{{{{}}}}}", key);
+                let placeholder = format!("{{{{{key}}}}}");
                 item_result = item_result.replace(&placeholder, value);
             }
 

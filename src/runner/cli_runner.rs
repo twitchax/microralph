@@ -23,7 +23,7 @@ fn read_stream_lines<R: Read>(reader: R, output: &mut dyn Write, captured: &mut 
     for line in buf_reader.lines() {
         match line {
             Ok(line) => {
-                let _ = writeln!(output, "{}", line);
+                let _ = writeln!(output, "{line}");
                 let _ = output.flush();
 
                 if !captured.is_empty() {
@@ -130,7 +130,7 @@ pub fn execute_cli<C: CliRunnerConfig + ?Sized>(
     } else if stdout.is_empty() {
         stderr.to_string()
     } else {
-        format!("{}\n{}", stdout, stderr)
+        format!("{stdout}\n{stderr}")
     };
 
     // Parse usage information and post-process output
@@ -166,7 +166,7 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
 ) -> RunnerResult<RunnerOutput> {
     // Display the command being invoked
     let cmd_display = format_command_display(config, working_dir);
-    println!("\n🔧 Executing: {}", cmd_display);
+    println!("\n🔧 Executing: {cmd_display}");
 
     let args = config.build_args(prompt);
 
@@ -207,7 +207,7 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
     // Wait for the process to complete
     let status = child
         .wait()
-        .map_err(|e| RunnerError::ProcessFailed(format!("Failed to wait for CLI: {}", e)))?;
+        .map_err(|e| RunnerError::ProcessFailed(format!("Failed to wait for CLI: {e}")))?;
 
     let success = status.success();
 

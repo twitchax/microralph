@@ -131,14 +131,13 @@ where
 
             if questions.is_empty() {
                 bail!(
-                    "Runner response did not contain '{}' signal or questions",
-                    EDIT_COMPLETE_SIGNAL
+                    "Runner response did not contain '{EDIT_COMPLETE_SIGNAL}' signal or questions"
                 );
             }
 
             writeln!(output)?;
             for q in &questions {
-                writeln!(output, "Q: {}", q)?;
+                writeln!(output, "Q: {q}")?;
             }
             writeln!(output)?;
 
@@ -160,10 +159,7 @@ where
     }
 
     // If we exit the loop without returning, something went wrong.
-    bail!(
-        "Failed to complete constitution edit after {} rounds",
-        rounds
-    )
+    bail!("Failed to complete constitution edit after {rounds} rounds")
 }
 
 /// Invokes the runner with the constitution edit prompt.
