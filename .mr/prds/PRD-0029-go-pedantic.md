@@ -44,7 +44,7 @@ tasks:
 - id: T-004
   title: Remove unnecessary raw string hashes (10 instances)
   priority: 4
-  status: todo
+  status: done
   notes: Replace r#"..."# with r"..." where hashes are not needed
 - id: T-005
   title: Fix redundant closures (11 instances)
@@ -214,3 +214,17 @@ The approach is methodical, addressing warnings by category:
   - Verified 0 remaining `doc_markdown` warnings with `cargo clippy -- -W clippy::doc_markdown`
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the doc_markdown lint fixes.
+
+---
+
+## 2026-02-03 — T-004 Completed
+- **Task**: Remove unnecessary raw string hashes (10 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Applied `cargo clippy --fix -- -W clippy::needless_raw_string_hashes` to auto-fix 10 instances
+  - Files modified: changelog.rs (1 instance), init.rs (9 instances)
+  - Changed `r#"..."#` to `r"..."` where hashes were not needed (strings don't contain quotes)
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `needless_raw_string_hashes` warnings
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the needless_raw_string_hashes lint fixes.
