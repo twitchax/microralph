@@ -1594,7 +1594,7 @@ fn cmd_devcontainer_generate(runner_name: &str, cli_model: Option<&str>) -> Resu
     println!();
 
     // Call the testable implementation.
-    generate_devcontainer_config(&cwd, lang, runner)?;
+    generate_devcontainer_config(&cwd, lang, runner.as_ref())?;
 
     println!("{}", colors::success("Dev container config generated!"));
     println!(
@@ -1631,7 +1631,7 @@ fn cmd_devcontainer_generate(runner_name: &str, cli_model: Option<&str>) -> Resu
 fn generate_devcontainer_config(
     root: &Path,
     lang: init::Language,
-    runner: Box<dyn runner::Runner>,
+    runner: &dyn runner::Runner,
 ) -> Result<()> {
     use crate::prompt::{
         PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
@@ -1639,7 +1639,7 @@ fn generate_devcontainer_config(
     };
 
     // Analyze repository for dev container context.
-    let analysis = analyze_repo_for_devcontainer(root, lang)?;
+    let analysis = analyze_repo_for_devcontainer(root, lang);
 
     tracing::debug!("Repository analysis complete");
 
@@ -1676,7 +1676,7 @@ fn generate_devcontainer_config(
 /// - Development tools found in git history
 /// - Tools referenced in PRDs
 /// - Current dependencies from manifest files
-fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<String> {
+fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> String {
     use std::fmt::Write;
     use std::process::Command;
 
@@ -1738,7 +1738,7 @@ fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<St
         }
     }
 
-    Ok(analysis)
+    analysis
 }
 
 /// Runs the `mr status` command.
@@ -2464,8 +2464,7 @@ Generate a devcontainer.json configuration for:
         let mock_runner = MockRunner::new(vec![RunnerOutput::success(mock_response)]);
 
         // Call the core generation function.
-        let result =
-            generate_devcontainer_config(temp_path, init::Language::Rust, Box::new(mock_runner));
+        let result = generate_devcontainer_config(temp_path, init::Language::Rust, &mock_runner);
 
         // Verify success - the LLM is responsible for creating the file, not microralph.
         assert!(result.is_ok(), "Generation should succeed: {:?}", result);

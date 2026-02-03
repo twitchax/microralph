@@ -307,7 +307,7 @@ impl Default for CopilotRunner {
 }
 
 impl CliRunnerConfig for CopilotRunner {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "copilot"
     }
 

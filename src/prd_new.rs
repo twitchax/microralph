@@ -434,9 +434,8 @@ fn find_created_prd_file(
             continue;
         }
 
-        let filename = match path.file_name().and_then(|n| n.to_str()) {
-            Some(n) => n,
-            None => continue,
+        let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
         };
 
         // Check if this file matches our slug.

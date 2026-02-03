@@ -323,12 +323,9 @@ fn expand_each_blocks(template: &str, context: &PlaceholderContext) -> String {
 
         // Get the list value from context. If it's not a list or not found,
         // we leave the block as-is (this prevents infinite loops on malformed blocks).
-        let items = match context.get(var_name) {
-            Some(PlaceholderValue::List(list)) => list,
-            _ => {
-                // Not a list or not found, leave the block as-is.
-                break;
-            }
+        let Some(PlaceholderValue::List(items)) = context.get(var_name) else {
+            // Not a list or not found, leave the block as-is.
+            break;
         };
 
         // Expand the template for each item in the list.

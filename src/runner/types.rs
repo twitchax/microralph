@@ -35,6 +35,7 @@ pub type RunnerResult<T> = Result<T, RunnerError>;
 
 /// Token usage information from the underlying agent.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_field_names)] // Fields are named for clarity in token usage context
 pub struct UsageInfo {
     /// Number of input tokens consumed.
     pub input_tokens: Option<u64>,
@@ -72,7 +73,7 @@ impl UsageInfo {
     ///
     /// This is a common pattern when accumulating usage across multiple operations.
     /// If `new` is `Some`, it's merged into `total`. If `total` is `None`, it becomes a clone of `new`.
-    pub fn aggregate(total: &mut Option<UsageInfo>, new: &Option<UsageInfo>) {
+    pub fn aggregate(total: &mut Option<UsageInfo>, new: Option<&UsageInfo>) {
         if let Some(new_usage) = new {
             if let Some(total_usage) = total {
                 total_usage.merge(new_usage);
@@ -279,7 +280,7 @@ mod tests {
             total_tokens: Some(150),
         });
 
-        UsageInfo::aggregate(&mut total, &new);
+        UsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_some());
         let total = total.unwrap();
@@ -301,7 +302,7 @@ mod tests {
             total_tokens: Some(300),
         });
 
-        UsageInfo::aggregate(&mut total, &new);
+        UsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_some());
         let total = total.unwrap();
@@ -319,7 +320,7 @@ mod tests {
         });
         let new = None;
 
-        UsageInfo::aggregate(&mut total, &new);
+        UsageInfo::aggregate(&mut total, new.as_ref());
 
         // Total should be unchanged.
         assert!(total.is_some());
@@ -334,7 +335,7 @@ mod tests {
         let mut total: Option<UsageInfo> = None;
         let new: Option<UsageInfo> = None;
 
-        UsageInfo::aggregate(&mut total, &new);
+        UsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_none());
     }

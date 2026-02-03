@@ -128,12 +128,9 @@ where
     io::stdin().read_line(&mut input)?;
 
     // Validate and parse selection.
-    let selection_index = match validate_selection(&input, suggestions.len())? {
-        Some(idx) => idx,
-        None => {
-            println!("{}", colors::dim("Cancelled."));
-            return Ok(());
-        }
+    let Some(selection_index) = validate_selection(&input, suggestions.len())? else {
+        println!("{}", colors::dim("Cancelled."));
+        return Ok(());
     };
 
     let selected = &suggestions[selection_index];

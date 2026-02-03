@@ -242,26 +242,26 @@ pub fn refactor(config: &RefactorConfig, runner: &dyn Runner) -> Result<Refactor
             RefactorIterationResult::Applied { summary, usage } => {
                 tracing::info!(iteration, summary = %summary, "Refactor applied");
                 result.applied_count += 1;
-                UsageInfo::aggregate(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
             }
 
             RefactorIterationResult::Suggested { suggestion, usage } => {
                 tracing::info!(iteration, "Dry-run suggestion generated");
                 tracing::debug!(suggestion = %suggestion, "Suggestion details");
                 result.suggested_count += 1;
-                UsageInfo::aggregate(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
             }
 
             RefactorIterationResult::NoMoreRefactors { usage } => {
                 tracing::info!(iteration, "Early termination: no more refactors");
                 result.early_termination = true;
-                UsageInfo::aggregate(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
                 break;
             }
 
             RefactorIterationResult::Failed { error, usage } => {
                 tracing::warn!(iteration, error = %error, "Refactor iteration failed");
-                UsageInfo::aggregate(&mut result.total_usage, &usage);
+                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
                 // Continue to next iteration per PRD: "leave UAT failure handling to agent's discretion"
             }
         }

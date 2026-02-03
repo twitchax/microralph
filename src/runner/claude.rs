@@ -252,7 +252,7 @@ impl Default for ClaudeRunner {
 }
 
 impl CliRunnerConfig for ClaudeRunner {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "claude"
     }
 

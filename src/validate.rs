@@ -25,7 +25,7 @@ pub fn validate_prd_frontmatter(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
 
     match parse_prd_file_for_validation(path) {
-        Ok(_) => {
+        Ok(()) => {
             tracing::debug!(path = %path.display(), "PRD frontmatter validation passed");
             true
         }
@@ -73,7 +73,7 @@ pub fn validate_constitution_frontmatter(path: impl AsRef<Path>) -> bool {
             if content.trim_start().starts_with("---") {
                 // Has frontmatter - try to parse it
                 match try_parse_generic_frontmatter(&content) {
-                    Ok(_) => {
+                    Ok(()) => {
                         tracing::debug!(path = %path.display(), "Constitution frontmatter validation passed");
                         true
                     }

@@ -705,19 +705,11 @@ pub fn run_uat_verification_loop(
             opted_out_count += 1;
 
             // Reload to check if UAT is still unverified (agent should have updated it)
-            let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
+            let (_f, _refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
                 .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
 
             // If UAT is still unverified after opt-out, continue to next UAT
-            // OPT-OUT doesn't block verification of remaining UATs
-            if refreshed_prd
-                .unverified_uats()
-                .iter()
-                .any(|u| u.id == uat.id)
-            {
-                // UAT is still unverified after opt-out - continue loop to try other UATs
-                continue;
-            }
+            // OPT-OUT doesn't block verification of remaining UATs - loop continues naturally
         } else if output.success {
             // STATE: Update State (Success path) - Agent should have marked UAT as verified
             let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?

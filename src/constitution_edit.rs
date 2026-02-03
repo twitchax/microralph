@@ -125,36 +125,34 @@ where
                 rounds,
                 qa_history,
             });
-        } else {
-            // Runner has questions—extract and ask the user.
-            let questions = parse_questions(&runner_response);
+        }
 
-            if questions.is_empty() {
-                bail!(
-                    "Runner response did not contain '{EDIT_COMPLETE_SIGNAL}' signal or questions"
-                );
-            }
+        // Runner has questions—extract and ask the user.
+        let questions = parse_questions(&runner_response);
 
-            writeln!(output)?;
-            for q in &questions {
-                writeln!(output, "Q: {q}")?;
-            }
-            writeln!(output)?;
+        if questions.is_empty() {
+            bail!("Runner response did not contain '{EDIT_COMPLETE_SIGNAL}' signal or questions");
+        }
 
-            // Collect answers.
-            for question in questions {
-                write!(output, "> ")?;
-                output.flush()?;
+        writeln!(output)?;
+        for q in &questions {
+            writeln!(output, "Q: {q}")?;
+        }
+        writeln!(output)?;
 
-                let mut answer = String::new();
-                input.read_line(&mut answer)?;
-                let answer = answer.trim().to_string();
+        // Collect answers.
+        for question in questions {
+            write!(output, "> ")?;
+            output.flush()?;
 
-                qa_history.push(QaPair {
-                    question: question.clone(),
-                    answer: answer.clone(),
-                });
-            }
+            let mut answer = String::new();
+            input.read_line(&mut answer)?;
+            let answer = answer.trim().to_string();
+
+            qa_history.push(QaPair {
+                question: question.clone(),
+                answer: answer.clone(),
+            });
         }
     }
 

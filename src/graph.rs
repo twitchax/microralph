@@ -119,7 +119,7 @@ pub fn build_graph(root: impl AsRef<Path>) -> Result<PrdGraph> {
     let prds_dir = root.as_ref().join(".mr").join("prds");
     let prds = scan_prds(&prds_dir)?;
 
-    build_graph_from_prds(&prds)
+    Ok(build_graph_from_prds(&prds))
 }
 
 /// Builds a dependency graph from parsed PRDs.
@@ -134,9 +134,7 @@ pub fn build_graph(root: impl AsRef<Path>) -> Result<PrdGraph> {
 /// # Returns
 ///
 /// A `PrdGraph` containing nodes, edges, and any warnings about missing refs.
-pub fn build_graph_from_prds(
-    prds: &[(String, crate::prd::Prd, std::path::PathBuf)],
-) -> Result<PrdGraph> {
+pub fn build_graph_from_prds(prds: &[(String, crate::prd::Prd, std::path::PathBuf)]) -> PrdGraph {
     // Build a lookup map of existing PRD IDs.
     let existing_ids: HashSet<&str> = prds.iter().map(|(_, prd, _)| prd.id()).collect();
 
@@ -194,12 +192,12 @@ pub fn build_graph_from_prds(
     // Sort edges for deterministic output.
     edges.sort_by(|a, b| (&a.from, &a.to).cmp(&(&b.from, &b.to)));
 
-    Ok(PrdGraph {
+    PrdGraph {
         nodes,
         edges,
         missing_refs: missing_refs_sorted,
         warnings,
-    })
+    }
 }
 
 // ============================================================================
@@ -774,7 +772,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes.len(), 2);
         assert_eq!(graph.edges.len(), 0);
@@ -803,7 +801,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes.len(), 2);
         assert_eq!(graph.edges.len(), 1);
@@ -830,7 +828,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // Should have 2 nodes: PRD-0001 and the missing PRD-9999.
         assert_eq!(graph.nodes.len(), 2);
@@ -879,7 +877,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes.len(), 3);
         assert_eq!(graph.edges.len(), 2);
@@ -921,7 +919,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes.len(), 3);
         assert_eq!(graph.edges.len(), 2);
@@ -948,7 +946,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // 2 nodes total (1 real + 1 missing), but node_count excludes missing.
         assert_eq!(graph.nodes.len(), 2);
@@ -980,7 +978,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // Should have 3 nodes: PRD-0001, PRD-0002, and one PRD-9999.
         assert_eq!(graph.nodes.len(), 3);
@@ -1035,7 +1033,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         assert!(output.contains("PRD Dependency Graph"));
@@ -1065,7 +1063,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         assert!(output.contains("[PRD-0001]"));
@@ -1087,7 +1085,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         // Should show the missing reference section.
@@ -1123,7 +1121,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         // PRD-0003 should show both dependencies.
@@ -1140,7 +1138,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = AsciiConfig {
             display: NodeDisplayConfig {
                 show_titles: false,
@@ -1167,7 +1165,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = AsciiConfig {
             display: NodeDisplayConfig {
                 show_titles: true,
@@ -1208,7 +1206,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         assert!(output.contains("flowchart TD"));
@@ -1238,7 +1236,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         assert!(output.contains("flowchart TD"));
@@ -1263,7 +1261,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         // Should show missing node with special shape.
@@ -1300,7 +1298,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         // Both edges should exist.
@@ -1316,7 +1314,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = MermaidConfig {
             display: NodeDisplayConfig {
                 show_titles: false,
@@ -1340,7 +1338,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = MermaidConfig {
             display: NodeDisplayConfig {
                 show_titles: true,
@@ -1367,7 +1365,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = MermaidConfig {
             display: NodeDisplayConfig {
                 show_titles: true,
@@ -1417,7 +1415,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         assert!(output.contains("digraph PRD_Dependencies {"));
@@ -1448,7 +1446,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         assert!(output.contains("PRD0001 [label="));
@@ -1472,7 +1470,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         // Missing node should have dashed style and red color.
@@ -1508,7 +1506,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         // Both edges should exist.
@@ -1524,7 +1522,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = DotConfig {
             display: NodeDisplayConfig {
                 show_titles: false,
@@ -1548,7 +1546,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = DotConfig {
             display: NodeDisplayConfig {
                 show_titles: true,
@@ -1575,7 +1573,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let config = DotConfig {
             display: NodeDisplayConfig {
                 show_titles: true,
@@ -1615,7 +1613,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // Self-reference is a valid edge (not missing).
         assert_eq!(graph.nodes.len(), 1);
@@ -1654,7 +1652,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // Both edges should exist (circular is allowed).
         assert_eq!(graph.nodes.len(), 2);
@@ -1676,7 +1674,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes.len(), 1);
         assert_eq!(graph.edges.len(), 0);
@@ -1704,7 +1702,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.nodes[0].id, "PRD-0001");
         assert_eq!(graph.nodes[1].id, "PRD-0002");
@@ -1747,7 +1745,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         // Edges should be sorted by (from, to).
         assert_eq!(graph.edges.len(), 3);
@@ -1777,7 +1775,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert!(!graph.has_missing_refs());
         assert!(graph.missing_refs.is_empty());
@@ -1803,7 +1801,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
 
         assert_eq!(graph.edge_count(), 1);
     }
@@ -1855,7 +1853,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         // Mermaid uses #quot; to escape quotes.
@@ -1876,7 +1874,7 @@ mod tests {
             std::path::PathBuf::from("prds/PRD-0001.md"),
         )];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         // DOT uses backslash-escaped quotes.
@@ -1914,7 +1912,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         // All three nodes should be present.
@@ -1961,7 +1959,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         // Chain edges.
@@ -2000,7 +1998,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         // Chain edges.
@@ -2029,7 +2027,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_ascii(&graph, None);
 
         // Should show both valid nodes.
@@ -2069,7 +2067,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_mermaid(&graph, None);
 
         // Valid edge (solid arrow).
@@ -2104,7 +2102,7 @@ mod tests {
             ),
         ];
 
-        let graph = build_graph_from_prds(&prds).unwrap();
+        let graph = build_graph_from_prds(&prds);
         let output = render_dot(&graph, None);
 
         // Valid edge (solid).

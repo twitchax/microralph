@@ -45,7 +45,7 @@ fn read_stream_lines<R: Read>(reader: R, output: &mut dyn Write, captured: &mut 
 /// while the shared infrastructure handles command execution and output capture.
 pub trait CliRunnerConfig {
     /// Returns the name of this runner (e.g., "copilot", "claude").
-    fn name(&self) -> &str;
+    fn name(&self) -> &'static str;
 
     /// Returns the path to the CLI binary.
     fn binary_path(&self) -> &str;
@@ -274,7 +274,7 @@ mod tests {
     }
 
     impl CliRunnerConfig for TestConfig {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "test"
         }
 

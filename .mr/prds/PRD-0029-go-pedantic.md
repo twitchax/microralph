@@ -74,7 +74,7 @@ tasks:
 - id: T-010
   title: Fix remaining miscellaneous warnings
   priority: 10
-  status: todo
+  status: done
   notes: Includes redundant else, unnecessary Result wrapping, pass by value/reference, Option<&T>, single-pattern match, redundant continue
 - id: T-011
   title: Address functions with too many lines (8 instances)
@@ -304,3 +304,27 @@ The approach is methodical, addressing warnings by category:
   - Verified 0 remaining casting warnings with `cargo clippy -- -W clippy::cast_precision_loss -W clippy::cast_possible_truncation -W clippy::cast_sign_loss`
 
 - **Constitution Compliance**: No violations. Used local allows with comments instead of try_into() because f64 doesn't implement TryInto<u64> directly, and the conversions are safe due to the domain constraints (positive token counts, small task counts).
+
+## 2026-02-03 — T-010 Completed
+- **Task**: Fix remaining miscellaneous warnings
+- **Status**: ✅ Done
+- **Changes**:
+  - Fixed 13 miscellaneous pedantic lint warnings across 11 files
+  - `constitution_edit.rs`: Removed redundant else block (clippy::redundant_else)
+  - `graph.rs`: Removed unnecessary Result wrapper from `build_graph_from_prds` (clippy::unnecessary_wraps)
+  - `init.rs:32`: Changed `&self` to `self` for Copy type in `Language::build_commands` (clippy::trivially_copy_pass_by_ref)
+  - `prompt/types.rs:72`: Changed `&self` to `self` for Copy type in `PromptKind::filename` (clippy::trivially_copy_pass_by_ref)
+  - `prd_new.rs:437`: Converted match to let...else pattern (clippy::manual_let_else)
+  - `prompt/expand.rs:326`: Converted match to let...else pattern (clippy::manual_let_else)
+  - `suggest.rs:131`: Converted match to let...else pattern (clippy::manual_let_else, clippy::single_match_else)
+  - `run.rs:719`: Removed needless continue statement (clippy::needless_continue)
+  - `runner/cli_runner.rs`, `runner/claude.rs`, `runner/copilot.rs`: Changed `fn name(&self) -> &str` to `fn name(&self) -> &'static str` (clippy::unnecessary_literal_bound)
+  - `runner/types.rs:38`: Added `#[allow(clippy::struct_field_names)]` for UsageInfo (field names are intentionally descriptive)
+  - `runner/types.rs:75`: Changed `&Option<UsageInfo>` to `Option<&UsageInfo>` in aggregate function (clippy::ref_option)
+  - `validate.rs:28,76`: Changed `Ok(_)` to `Ok(())` for explicit unit matching (clippy::ignored_unit_patterns)
+  - `main.rs:1634`: Changed `Box<dyn Runner>` to `&dyn Runner` for needless_pass_by_value
+  - `main.rs:1679`: Removed unnecessary Result wrapper from `analyze_repo_for_devcontainer` (clippy::unnecessary_wraps)
+  - UAT passed: 484 tests, all green
+  - Remaining warnings are all `too_many_lines` (9 instances) which are addressed in T-011
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the miscellaneous lint fixes.

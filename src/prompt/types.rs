@@ -69,7 +69,7 @@ impl PromptKind {
     /// Returns the filename for this prompt kind.
     ///
     /// This is the name of the file in `.mr/prompts/`.
-    pub fn filename(&self) -> &'static str {
+    pub fn filename(self) -> &'static str {
         match self {
             Self::Init => "init.md",
             Self::BootstrapPlan => "bootstrap_plan.md",

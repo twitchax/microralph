@@ -29,7 +29,7 @@ pub enum Language {
 
 impl Language {
     /// Returns the typical build/test commands for this language.
-    pub fn build_commands(&self) -> &'static [&'static str] {
+    pub fn build_commands(self) -> &'static [&'static str] {
         match self {
             Self::Rust => &[
                 "cargo build",
