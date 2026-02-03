@@ -524,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_extract_last_history() {
-        let body = r#"# Summary
+        let body = r"# Summary
 
 Test PRD.
 
@@ -538,7 +538,7 @@ Test PRD.
 - **Status**: ✅ Done
 - **Changes**:
   - Changed something
-"#;
+";
 
         let history = extract_last_history(body).unwrap();
 
@@ -628,9 +628,9 @@ Test PRD.
             PrdStatus::Active,
             vec![make_task("T-001", 1, TaskStatus::Todo)],
             Some(
-                r#"## 2026-01-24 — T-000 Completed
+                r"## 2026-01-24 — T-000 Completed
 - **Task**: Setup
-- **Status**: ✅ Done"#,
+- **Status**: ✅ Done",
             ),
         );
 

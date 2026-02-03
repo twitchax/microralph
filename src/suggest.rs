@@ -541,7 +541,7 @@ mod tests {
 
     /// Sample suggestion output matching the expected format.
     fn sample_suggestion_output() -> String {
-        r#"
+        r"
 Based on my analysis, here are 5 PRD suggestions:
 
 1. Add Logging Framework — Implement structured logging with tracing-subscriber
@@ -568,7 +568,7 @@ Based on my analysis, here are 5 PRD suggestions:
    Category: UX
    Effort: Small (4-6 hours)
    Rationale: Improve CLI discoverability and reduce typing errors
-"#
+"
         .to_string()
     }
 
@@ -617,10 +617,10 @@ Based on my analysis, here are 5 PRD suggestions:
 
     #[test]
     fn test_parse_suggestions_incomplete() {
-        let output = r#"
+        let output = r"
 1. Test Suggestion — Description
    Category: Testing
-"#;
+";
         let result = parse_suggestions(output);
         assert!(result.is_ok(), "Should handle incomplete metadata");
         let suggestions = result.unwrap();
@@ -1058,7 +1058,7 @@ Based on my analysis, here are 5 PRD suggestions:
     /// - Valid categories from the expected set
     #[test]
     fn test_suggestions_include_strategic_and_quick_win() {
-        let output = r#"
+        let output = r"
 1. Add Telemetry Support — Integrate OpenTelemetry for distributed tracing
    Category: Strategic
    Effort: High
@@ -1083,7 +1083,7 @@ Based on my analysis, here are 5 PRD suggestions:
    Category: Testing
    Effort: Medium
    Rationale: Improve confidence in cross-module interactions
-"#;
+";
 
         let suggestions = parse_suggestions(output).unwrap();
         assert_eq!(suggestions.len(), 5, "Should parse exactly 5 suggestions");
