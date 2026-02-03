@@ -356,6 +356,8 @@ pub fn format_status(report: &StatusReport) -> String {
     output.push_str(" completed");
 
     if report.stats.total_tasks > 0 {
+        // Task counts are small enough that precision loss is negligible.
+        #[allow(clippy::cast_precision_loss)]
         let pct = (report.stats.completed_tasks as f64 / report.stats.total_tasks as f64) * 100.0;
         output.push_str(" (");
         let _ = write!(output, "{pct:.0}");

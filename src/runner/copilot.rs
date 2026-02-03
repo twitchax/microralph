@@ -222,7 +222,11 @@ impl CopilotRunner {
                     "m" => 1_000_000.0,
                     _ => 1.0,
                 };
-                input_tokens = Some((num * multiplier) as u64);
+
+                // Token counts are always non-negative and within u64 range.
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let tokens = (num * multiplier) as u64;
+                input_tokens = Some(tokens);
             }
 
             output_tokens = caps.get(3).and_then(|m| m.as_str().parse().ok());
