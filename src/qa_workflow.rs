@@ -39,7 +39,7 @@ pub fn to_placeholder_list(qa_history: &[QaPair]) -> Vec<HashMap<String, String>
 /// Handles various output formats:
 /// - Direct frontmatter (starts with `---`)
 /// - Markdown/YAML code blocks
-/// - Content after READY_TO_APPLY signal
+/// - Content after `READY_TO_APPLY` signal
 ///
 /// This is the robust implementation from `prd_new.rs` that handles:
 /// - ANSI escape sequences
@@ -183,7 +183,7 @@ pub fn strip_ansi_escapes(s: &str) -> String {
 /// - Starting with a digit followed by `.` or `)`
 /// - Ending with a `?` (for single-line) or blank line (for multi-line)
 ///
-/// Returns empty vector if READY_TO_APPLY signal is present.
+/// Returns empty vector if `READY_TO_APPLY` signal is present.
 pub fn parse_questions(output: &str) -> Vec<String> {
     let mut questions = Vec::new();
     let mut current_question = String::new();

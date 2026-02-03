@@ -3,6 +3,7 @@
 //! Validates PRD completion, runs final acceptance tests, generates artifacts,
 //! updates the index, and marks the PRD as done.
 
+use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -194,10 +195,10 @@ fn generate_summary_report(prd: &Prd) -> String {
 
     let mut report = String::new();
 
-    report.push_str(&format!("## {local_date} — Finalization Complete\n"));
-    report.push_str(&format!("- **PRD**: {} — {}\n", prd.id(), prd.title()));
-    report.push_str(&format!("- **Finalized**: {timestamp}\n"));
-    report.push_str(&format!("- **Tasks Completed**: {task_count}\n"));
+    let _ = writeln!(report, "## {local_date} — Finalization Complete");
+    let _ = writeln!(report, "- **PRD**: {} — {}", prd.id(), prd.title());
+    let _ = writeln!(report, "- **Finalized**: {timestamp}");
+    let _ = writeln!(report, "- **Tasks Completed**: {task_count}");
     report.push_str("- **Summary**:\n");
 
     let task_lines: Vec<_> = tasks

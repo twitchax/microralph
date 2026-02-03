@@ -1379,7 +1379,7 @@ Report what was done:
 - List of files modified (if any)
 "#;
 
-/// Default content for the reindex depends_on prompt.
+/// Default content for the reindex `depends_on` prompt.
 pub const PROMPT_REINDEX_DEPENDS_ON: &str = r#"# microralph — Reindex Depends On Prompt
 
 ## Objective

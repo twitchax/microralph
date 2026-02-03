@@ -61,14 +61,14 @@ impl UsageInfo {
         }
     }
 
-    /// Merges another UsageInfo into this one, summing token counts.
+    /// Merges another [`UsageInfo`] into this one, summing token counts.
     pub fn merge(&mut self, other: &UsageInfo) {
         self.input_tokens = Self::add_optional(self.input_tokens, other.input_tokens);
         self.output_tokens = Self::add_optional(self.output_tokens, other.output_tokens);
         self.total_tokens = Self::add_optional(self.total_tokens, other.total_tokens);
     }
 
-    /// Aggregates an optional UsageInfo into an optional accumulator.
+    /// Aggregates an optional [`UsageInfo`] into an optional accumulator.
     ///
     /// This is a common pattern when accumulating usage across multiple operations.
     /// If `new` is `Some`, it's merged into `total`. If `total` is `None`, it becomes a clone of `new`.

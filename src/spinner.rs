@@ -15,7 +15,7 @@ static SPINNER_STYLE: LazyLock<ProgressStyle> = LazyLock::new(|| {
         .expect("spinner template is valid")
 });
 
-/// A wrapper around indicatif's ProgressBar that handles TTY detection.
+/// A wrapper around indicatif's [`ProgressBar`] that handles TTY detection.
 ///
 /// When stdout is not a TTY, all operations become no-ops.
 #[allow(dead_code)] // Will be used by T-003+

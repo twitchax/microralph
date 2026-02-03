@@ -102,7 +102,7 @@ impl Config {
             .or_else(|| self.model.clone())
     }
 
-    /// Returns the effective no_commit setting, with CLI flag taking precedence.
+    /// Returns the effective `no_commit` setting, with CLI flag taking precedence.
     ///
     /// Logic:
     /// - If CLI flag is `Some(true)` (--no-commit passed), returns `true`.

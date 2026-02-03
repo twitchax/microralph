@@ -4,6 +4,7 @@
 //! in `.mr/PRDS.md` with a table listing all PRDs.
 
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -46,12 +47,12 @@ pub struct PrdSummary {
     /// IDs of other PRDs referenced in this PRD's body.
     pub references: Vec<String>,
 
-    /// PRD IDs this PRD depends on (from frontmatter depends_on field).
+    /// PRD IDs this PRD depends on (from frontmatter `depends_on` field).
     pub depends_on: Vec<String>,
 }
 
 impl PrdSummary {
-    /// Creates a new PrdSummary from a Prd and its file path.
+    /// Creates a new [`PrdSummary`] from a [`Prd`] and its file path.
     pub fn from_prd(prd: &Prd, relative_path: String) -> Self {
         let tasks = prd.tasks().unwrap_or_default();
         let completed_tasks = prd.completed_tasks().len();
@@ -141,7 +142,7 @@ fn extract_prd_references(body: &str, self_id: &str) -> Vec<String> {
 ///
 /// # Returns
 ///
-/// A vector of (filename, Prd, absolute_path) tuples for successfully parsed PRDs.
+/// A vector of (filename, [`Prd`], `absolute_path`) tuples for successfully parsed PRDs.
 /// Files that fail to parse are logged and skipped.
 pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd, std::path::PathBuf)>> {
     let prds_dir = prds_dir.as_ref();
@@ -188,7 +189,7 @@ pub fn scan_prds(prds_dir: impl AsRef<Path>) -> Result<Vec<(String, Prd, std::pa
 ///
 /// # Arguments
 ///
-/// * `prds` - Vector of (filename, Prd, absolute_path) tuples
+/// * `prds` - Vector of (filename, [`Prd`], `absolute_path`) tuples
 ///
 /// # Returns
 ///
@@ -261,19 +262,20 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
     let parked = by_status.get(&PrdStatus::Parked).map_or(0, |v| v.len());
 
     output.push_str("## Statistics\n\n");
-    output.push_str(&format!("- **Total PRDs**: {total}\n"));
-    output.push_str(&format!("- **Active**: {active}\n"));
-    output.push_str(&format!("- **Draft**: {draft}\n"));
-    output.push_str(&format!("- **Done**: {done}\n"));
-    output.push_str(&format!("- **Parked**: {parked}\n"));
+    let _ = writeln!(output, "- **Total PRDs**: {total}");
+    let _ = writeln!(output, "- **Active**: {active}");
+    let _ = writeln!(output, "- **Draft**: {draft}");
+    let _ = writeln!(output, "- **Done**: {done}");
+    let _ = writeln!(output, "- **Parked**: {parked}");
     output.push('\n');
 
     // Footer.
     output.push_str("---\n\n");
-    output.push_str(&format!(
-        "*Last updated: {}*\n",
+    let _ = writeln!(
+        output,
+        "*Last updated: {}*",
         chrono::Local::now().format("%Y-%m-%d")
-    ));
+    );
 
     output
 }
@@ -288,14 +290,15 @@ fn generate_prd_table(summaries: &[PrdSummary]) -> String {
 
     // Table rows.
     for summary in summaries {
-        output.push_str(&format!(
-            "| [{}]({}) | {} | {} | {} |\n",
+        let _ = writeln!(
+            output,
+            "| [{}]({}) | {} | {} | {} |",
             summary.id,
             summary.relative_path,
             summary.title,
             summary.status,
             summary.progress()
-        ));
+        );
     }
 
     output
@@ -343,12 +346,13 @@ fn generate_dependencies_section(summaries: &[&PrdSummary]) -> String {
         for summary in with_deps {
             let deps_formatted = format_prd_links(&summary.depends_on, &path_map);
 
-            output.push_str(&format!(
-                "- [{}]({}) depends on {}\n",
+            let _ = writeln!(
+                output,
+                "- [{}]({}) depends on {}",
                 summary.id,
                 summary.relative_path,
                 deps_formatted.join(", ")
-            ));
+            );
         }
     }
     output.push('\n');
@@ -377,12 +381,13 @@ fn generate_cross_references_section(summaries: &[&PrdSummary]) -> String {
         for summary in with_refs {
             let refs_formatted = format_prd_links(&summary.references, &path_map);
 
-            output.push_str(&format!(
-                "- [{}]({}) → {}\n",
+            let _ = writeln!(
+                output,
+                "- [{}]({}) → {}",
                 summary.id,
                 summary.relative_path,
                 refs_formatted.join(", ")
-            ));
+            );
         }
     }
     output.push('\n');
@@ -418,7 +423,7 @@ pub fn generate_index_file(
     Ok(count)
 }
 
-/// Scans PRDs from a repository root and returns PrdSummary objects.
+/// Scans PRDs from a repository root and returns [`PrdSummary`] objects.
 ///
 /// # Arguments
 ///
@@ -426,7 +431,7 @@ pub fn generate_index_file(
 ///
 /// # Returns
 ///
-/// A vector of PrdSummary objects for all successfully parsed PRDs.
+/// A vector of [`PrdSummary`] objects for all successfully parsed PRDs.
 pub fn scan_prd_summaries(root: impl AsRef<Path>) -> Result<Vec<PrdSummary>> {
     let prds_dir = root.as_ref().join(".mr").join("prds");
     let prds = scan_prds(&prds_dir)?;

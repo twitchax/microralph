@@ -134,7 +134,7 @@ pub struct GitConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub feature_branch_prefix: Option<String>,
 
-    /// Commit policy: "never", "auto_clean", or "always".
+    /// Commit policy: `"never"`, `"auto_clean"`, or `"always"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub commit_policy: Option<String>,
 }
@@ -150,7 +150,7 @@ pub struct RunnerConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_runners: Option<Vec<String>>,
 
-    /// Permissions mode: "yolo", "allow_all", or "manual".
+    /// Permissions mode: `"yolo"`, `"allow_all"`, or `"manual"`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions_mode: Option<String>,
 
@@ -368,7 +368,7 @@ pub struct PrdFrontmatter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 
-    /// PRD IDs that this PRD depends on (e.g., ["PRD-0001", "PRD-0003"]).
+    /// PRD IDs that this PRD depends on (e.g., `["PRD-0001", "PRD-0003"]`).
     /// Represents directed edges: "this PRD should be done after the dependencies".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,

@@ -63,7 +63,7 @@ pub trait CliRunnerConfig {
         text.to_string()
     }
 
-    /// Returns additional display information for format_command_display.
+    /// Returns additional display information for [`format_command_display`].
     /// Default implementation returns base format.
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
         vec![

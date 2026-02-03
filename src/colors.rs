@@ -1,7 +1,7 @@
 //! Color utilities for terminal output.
 //!
-//! This module provides utilities for colorizing terminal output using owo-colors.
-//! Colors automatically degrade to plain text when output is piped or NO_COLOR is set.
+//! This module provides utilities for colorizing terminal output using `owo-colors`.
+//! Colors automatically degrade to plain text when output is piped or `NO_COLOR` is set.
 
 use owo_colors::{OwoColorize, Stream};
 

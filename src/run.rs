@@ -106,7 +106,7 @@ pub struct UatVerificationLoopResult {
     /// Total iterations performed.
     pub iterations: usize,
 
-    /// Whether the loop was stopped due to max_iterations limit.
+    /// Whether the loop was stopped due to `max_iterations` limit.
     pub hit_max_iterations: bool,
 
     /// Remaining unverified UATs after the loop.
@@ -333,16 +333,16 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str, no_commi
 /// Runs the next task from the active PRD.
 ///
 /// The PRD ID must be provided in the config. If you need to pick a PRD,
-/// use `pick_prd_via_runner` first.
+/// use [`pick_prd_via_runner`] first.
 ///
 /// # Arguments
 ///
-/// * `config` - Configuration for the run (must include prd_id)
+/// * `config` - Configuration for the run (must include `prd_id`)
 /// * `runner` - The runner to use for task execution
 ///
 /// # Returns
 ///
-/// A `RunResult` describing what happened, or an error.
+/// A [`RunResult`] describing what happened, or an error.
 pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     // PRD ID must be provided.
     let prd_id = config.prd_id.ok_or_else(|| {
@@ -526,7 +526,7 @@ pub struct UatVerificationConfig<'a> {
 /// Runs the UAT verification loop.
 ///
 /// Iterates over unverified UATs, invoking the runner for each one.
-/// Respects max_iterations limit and handles OPT-OUT responses.
+/// Respects `max_iterations` limit and handles `OPT-OUT` responses.
 ///
 /// # Arguments
 ///
@@ -535,25 +535,25 @@ pub struct UatVerificationConfig<'a> {
 ///
 /// # Returns
 ///
-/// A `UatVerificationLoopResult` describing what happened.
+/// A [`UatVerificationLoopResult`] describing what happened.
 ///
 /// # State Machine Flow
 ///
 /// This function implements a UAT verification state machine with the following states:
 ///
-/// 1. **Load**: Read PRD and get max_iterations config
+/// 1. **Load**: Read PRD and get `max_iterations` config
 /// 2. **Loop Start**: Reload PRD to get current unverified UATs (may change between iterations)
 /// 3. **Check Completion**: If no unverified UATs remain → Success exit
-/// 4. **Check Iteration Limit**: If max_iterations reached → Early exit with remaining UATs
+/// 4. **Check Iteration Limit**: If `max_iterations` reached → Early exit with remaining UATs
 /// 5. **Pick UAT**: Select the first unverified UAT to process
 /// 6. **Execute Runner**: Invoke runner with UAT verification prompt
-/// 7. **Parse Response**: Check for OPT-OUT signal or success
+/// 7. **Parse Response**: Check for `OPT-OUT` signal or success
 /// 8. **Update State**:
-///    - OPT-OUT: Append history entry, continue to next UAT
+///    - `OPT-OUT`: Append history entry, continue to next UAT
 ///    - Success: Update UAT status to verified if not already done by runner
 /// 9. **Loop**: Return to step 2
 ///
-/// The loop ensures eventual termination via max_iterations and allows the runner to modify
+/// The loop ensures eventual termination via `max_iterations` and allows the runner to modify
 /// the PRD (e.g., marking UATs as verified) between iterations. This state machine handles
 /// three exit conditions: all verified, iteration limit, or error.
 pub fn run_uat_verification_loop(

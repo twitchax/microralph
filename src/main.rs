@@ -1678,16 +1678,18 @@ fn generate_devcontainer_config(
 /// - Tools referenced in PRDs
 /// - Current dependencies from manifest files
 fn analyze_repo_for_devcontainer(root: &Path, lang: init::Language) -> Result<String> {
+    use std::fmt::Write;
     use std::process::Command;
 
     let mut analysis = String::new();
 
     // Language and typical tools.
-    analysis.push_str(&format!("Language: {lang}\n"));
-    analysis.push_str(&format!(
-        "Typical build commands: {:?}\n\n",
+    let _ = writeln!(analysis, "Language: {lang}");
+    let _ = writeln!(
+        analysis,
+        "Typical build commands: {:?}\n",
         lang.build_commands()
-    ));
+    );
 
     // Check for common tools in the project.
     let tools = [

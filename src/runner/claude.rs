@@ -32,7 +32,7 @@ pub struct ClaudeConfig {
     /// Permission mode.
     pub permission_mode: ClaudePermissionMode,
 
-    /// Whether to disable the ask_user tool.
+    /// Whether to disable the `ask_user` tool.
     pub no_ask_user: bool,
 
     /// The model to use (e.g., "claude-sonnet-4.5").
@@ -144,7 +144,7 @@ impl ClaudeRunner {
         }
     }
 
-    /// Builds display parts for format_command_display.
+    /// Builds display parts for [`format_command_display`].
     fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
         let mut parts = vec![self.config.claude_path.clone()];
 

@@ -40,7 +40,7 @@ pub struct CopilotConfig {
     /// When false, enables usage tracking via stats output.
     pub silent: bool,
 
-    /// Whether to disable the ask_user tool.
+    /// Whether to disable the `ask_user` tool.
     pub no_ask_user: bool,
 
     /// The model to use (e.g., "claude-sonnet-4.5").
@@ -183,7 +183,7 @@ impl CopilotRunner {
         args
     }
 
-    /// Builds display parts for format_command_display.
+    /// Builds display parts for [`format_command_display`].
     fn format_display_parts_impl(&self, working_dir: &Path) -> Vec<String> {
         let mut parts = vec![self.config.copilot_path.clone()];
 

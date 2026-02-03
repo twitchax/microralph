@@ -4,6 +4,7 @@
 //! existing PRDs, and external research to generate actionable PRD suggestions.
 
 use anyhow::{Context, Result, bail};
+use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
@@ -229,7 +230,7 @@ fn analyze_repository_structure(root: &Path) -> Result<String> {
         }
 
         let kind = if path.is_dir() { "dir" } else { "file" };
-        output.push_str(&format!("- {name} ({kind})\n"));
+        let _ = writeln!(output, "- {name} ({kind})");
     }
     output.push('\n');
 
@@ -252,7 +253,7 @@ fn detect_tools_and_dependencies(root: &Path) -> String {
 
     for (file, desc) in KNOWN_TOOLS {
         if root.join(file).exists() {
-            output.push_str(&format!("- {desc}\n"));
+            let _ = writeln!(output, "- {desc}");
         }
     }
     output.push('\n');
@@ -307,7 +308,7 @@ fn detect_todo_comments(root: &Path) -> String {
     if todo_count > 0 && todo_count <= 10 {
         output.push_str("Examples:\n");
         for (i, line) in todos.lines().take(5).enumerate() {
-            output.push_str(&format!("  {}. {}\n", i + 1, line));
+            let _ = writeln!(output, "  {}. {}", i + 1, line);
         }
     }
     output.push('\n');

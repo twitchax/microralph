@@ -81,9 +81,9 @@ pub struct PrdNewConfig<'a> {
 /// 1. **Initialize**: Gather upfront context (CLI-provided or interactive prompt)
 /// 2. **Round 1 - Question Generation**: Runner generates initial questions based on context
 /// 3. **Round 1 - Answer Collection**: User provides answers to initial questions
-/// 4. **Loop State - Round N Start**: Check if we've hit MAX_QA_ROUNDS limit
+/// 4. **Loop State - Round N Start**: Check if we've hit `MAX_QA_ROUNDS` limit
 /// 5. **Loop State - Question Generation**: Runner examines Q/A history and generates follow-up questions
-/// 6. **Loop State - Ready Check**: Parse runner response for READY_TO_SYNTHESIZE signal
+/// 6. **Loop State - Ready Check**: Parse runner response for `READY_TO_SYNTHESIZE` signal
 /// 7. **Loop State - Additional Questions**: If runner provided more questions → collect answers
 /// 8. **Loop State - Auto-Advance**: If no questions and no ready signal → proceed to synthesis
 /// 9. **Synthesis**: Runner generates final PRD content from complete Q/A history
@@ -91,9 +91,9 @@ pub struct PrdNewConfig<'a> {
 /// 11. **Finalize**: Update index and return result
 ///
 /// The loop has multiple exit conditions:
-/// - Runner signals READY_TO_SYNTHESIZE
+/// - Runner signals `READY_TO_SYNTHESIZE`
 /// - Runner returns no additional questions
-/// - MAX_QA_ROUNDS limit reached
+/// - `MAX_QA_ROUNDS` limit reached
 ///
 /// This adaptive approach allows the runner to gather just enough information without
 /// burdening the user with unnecessary questions.

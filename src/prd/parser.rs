@@ -78,7 +78,7 @@ pub fn serialize_prd(prd: &Prd) -> Result<String> {
 
 /// Splits content into frontmatter and body sections.
 ///
-/// Returns a tuple of (frontmatter_yaml, body_markdown).
+/// Returns a tuple of (`frontmatter_yaml`, `body_markdown`).
 fn split_frontmatter(content: &str) -> Result<(String, String)> {
     let trimmed = content.trim_start();
 

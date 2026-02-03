@@ -28,10 +28,10 @@ pub struct ReindexResult {
     /// Number of links fixed.
     pub links_fixed: usize,
 
-    /// Number of depends_on relationships added.
+    /// Number of `depends_on` relationships added.
     pub depends_on_added: usize,
 
-    /// Number of depends_on relationships fixed (invalid refs removed).
+    /// Number of `depends_on` relationships fixed (invalid refs removed).
     pub depends_on_fixed: usize,
 }
 
@@ -43,7 +43,7 @@ struct PrdFileInfo {
     title: String,
 }
 
-/// Extended PRD info for depends_on analysis.
+/// Extended PRD info for `depends_on` analysis.
 #[derive(Debug, Clone)]
 struct PrdDependsOnInfo {
     filename: String,
@@ -200,9 +200,9 @@ fn extract_first_number(s: &str) -> Option<usize> {
 use crate::prd::Prd;
 use std::path::PathBuf;
 
-/// Runs the depends_on auto-fix phase.
+/// Runs the `depends_on` auto-fix phase.
 ///
-/// Invokes the runner with the ReindexDependsOn prompt to analyze PRDs
+/// Invokes the runner with the `ReindexDependsOn` prompt to analyze PRDs
 /// and infer/fix `depends_on` relationships.
 fn run_depends_on_fix(
     root: &Path,
@@ -317,7 +317,7 @@ fn extract_summary(body: &str) -> String {
     "(no summary available)".to_string()
 }
 
-/// Parses the runner output to extract depends_on fix counts.
+/// Parses the runner output to extract `depends_on` fix counts.
 ///
 /// This is a best-effort extraction. If the runner output doesn't contain
 /// parseable counts, returns (0, 0).

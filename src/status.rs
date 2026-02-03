@@ -3,6 +3,7 @@
 //! Provides an overview of PRDs and tasks, showing the next task to run
 //! and the last History entry for context.
 
+use std::fmt::Write;
 use std::path::Path;
 
 use anyhow::Result;
@@ -357,7 +358,7 @@ pub fn format_status(report: &StatusReport) -> String {
     if report.stats.total_tasks > 0 {
         let pct = (report.stats.completed_tasks as f64 / report.stats.total_tasks as f64) * 100.0;
         output.push_str(" (");
-        output.push_str(&format!("{pct:.0}"));
+        let _ = write!(output, "{pct:.0}");
         output.push_str("%)");
     }
 

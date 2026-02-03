@@ -61,7 +61,7 @@ pub enum PromptKind {
     /// Bootstrap reconstruct prompt for analyzing git history to create PRDs.
     BootstrapReconstruct,
 
-    /// Reindex depends_on prompt for inferring and fixing dependency relationships.
+    /// Reindex `depends_on` prompt for inferring and fixing dependency relationships.
     ReindexDependsOn,
 }
 

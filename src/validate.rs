@@ -113,7 +113,7 @@ pub fn validate_constitution_frontmatter(path: impl AsRef<Path>) -> bool {
     }
 }
 
-/// Helper to parse a PRD file (wrapper around parse_prd_file).
+/// Helper to parse a PRD file (wrapper around [`parse_prd_file`]).
 fn parse_prd_file_for_validation(path: &Path) -> anyhow::Result<()> {
     crate::prd::parse_prd_file(path)?;
     Ok(())

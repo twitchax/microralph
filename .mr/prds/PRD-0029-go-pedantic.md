@@ -34,12 +34,12 @@ tasks:
 - id: T-002
   title: Fix format! appended to String warnings (35 instances)
   priority: 2
-  status: todo
+  status: done
   notes: Replace string.push_str(&format!(...)) with write!(string, ...) or push_str patterns
 - id: T-003
   title: Fix documentation backtick warnings (42 instances)
   priority: 3
-  status: todo
+  status: done
   notes: Add backticks around code references in doc comments
 - id: T-004
   title: Remove unnecessary raw string hashes (10 instances)
@@ -185,3 +185,32 @@ The approach is methodical, addressing warnings by category:
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the uninlined_format_args lint fixes.
 
 ---
+
+## 2026-02-03 — T-002 Completed
+- **Task**: Fix format! appended to String warnings (35 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced all `string.push_str(&format!(...))` patterns with `write!(string, ...)` or `writeln!(string, ...)`
+  - Added `use std::fmt::Write` import to affected files
+  - Files modified: graph.rs (16 instances), main.rs (2 instances), prd_finalize.rs (4 instances), prd/index.rs (8 instances), status.rs (1 instance), suggest.rs (3 instances)
+  - Total: 34 instances fixed (one less than estimated, likely due to merging or prior fixes)
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `format_push_string` warnings with `cargo clippy -- -W clippy::format_push_string`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the format_push_string lint fixes.
+
+---
+
+## 2026-02-03 — T-003 Completed
+- **Task**: Fix documentation backtick warnings (42 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added backticks around code references in doc comments across 18 files
+  - Files modified: colors.rs, config.rs, graph.rs, init.rs, prd/index.rs, prd/parser.rs, prd/types.rs, prd_new.rs, prompt/types.rs, qa_workflow.rs, reindex.rs, run.rs, runner/claude.rs, runner/cli_runner.rs, runner/copilot.rs, runner/types.rs, spinner.rs, validate.rs
+  - Total: 43 instances fixed (includes 1 quote-based warning in prd/types.rs)
+  - Used intra-doc link syntax (`[`Name`]`) where referencing types like `Prd`, `PrdSummary`, `RunResult`, `UsageInfo`, `ProgressBar`
+  - Used regular backticks for field names, variable names, and signal names like `depends_on`, `OPT-OUT`, `READY_TO_APPLY`
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `doc_markdown` warnings with `cargo clippy -- -W clippy::doc_markdown`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the doc_markdown lint fixes.
