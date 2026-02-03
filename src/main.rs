@@ -1633,16 +1633,15 @@ fn generate_devcontainer_config(
     lang: init::Language,
     runner: Box<dyn runner::Runner>,
 ) -> Result<()> {
-    // Analyze repository for dev container context.
-    let analysis = analyze_repo_for_devcontainer(root, lang)?;
-
-    tracing::debug!("Repository analysis complete");
-
-    // Load the devcontainer generation prompt.
     use crate::prompt::{
         PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
         load_prompt_with_fallback,
     };
+
+    // Analyze repository for dev container context.
+    let analysis = analyze_repo_for_devcontainer(root, lang)?;
+
+    tracing::debug!("Repository analysis complete");
 
     let prompt_text = load_prompt_with_fallback(root, PromptKind::DevcontainerGenerate);
 

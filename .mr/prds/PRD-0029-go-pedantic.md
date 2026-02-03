@@ -54,7 +54,7 @@ tasks:
 - id: T-006
   title: Fix items after statements warnings (6 instances)
   priority: 6
-  status: todo
+  status: done
   notes: Move function/const definitions before statements
 - id: T-007
   title: Fix let...else patterns (3 instances)
@@ -243,3 +243,18 @@ The approach is methodical, addressing warnings by category:
   - Verified 0 remaining `redundant_closure_for_method_calls` warnings
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the redundant_closure lint fixes.
+
+---
+
+## 2026-02-03 — T-006 Completed
+- **Task**: Fix items after statements warnings (6 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Moved `use crate::prompt::{...}` import to the beginning of `generate_devcontainer_config()` function in main.rs
+  - All 6 warnings were from a single `use` statement placed after the `analyze_repo_for_devcontainer()` call
+  - Moved the import before any statements (immediately after the function signature)
+  - Files modified: main.rs (1 location, lines 1635-1645)
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `items_after_statements` warnings
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the items_after_statements lint fix.
