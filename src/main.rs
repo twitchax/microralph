@@ -1,6 +1,7 @@
 // Deny unwrap_used in production code to ensure proper error handling.
 // Test code and mock runner are allowed to use unwrap via #[cfg(test)] and module-level allows.
 #![deny(clippy::unwrap_used)]
+#![warn(clippy::pedantic)]
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -2450,14 +2451,14 @@ mod tests {
         let prompts_dir = temp_path.join(".mr/prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        let prompt_content = r#"# Dev Container Generation
+        let prompt_content = r"# Dev Container Generation
 
 Generate a devcontainer.json configuration for:
 - Language: {{language}}
 - Analysis: {{analysis}}
 
 **Create the file `.devcontainer/devcontainer.json` directly** with the generated configuration.
-"#;
+";
         std::fs::write(prompts_dir.join("devcontainer_generate.md"), prompt_content).unwrap();
 
         // Mock response - LLM will create the file itself, so response doesn't matter.

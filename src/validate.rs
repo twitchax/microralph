@@ -159,7 +159,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let prd_path = temp.path().join("PRD-0001.md");
 
-        let content = r#"---
+        let content = r"---
 id: PRD-0001
 title: Test PRD
 status: active
@@ -168,7 +168,7 @@ status: active
 # Summary
 
 Test content.
-"#;
+";
 
         std::fs::write(&prd_path, content).unwrap();
 
@@ -180,14 +180,14 @@ Test content.
         let temp = TempDir::new().unwrap();
         let prd_path = temp.path().join("PRD-0002.md");
 
-        let content = r#"---
+        let content = r"---
 id: PRD-0002
 title: Test PRD
 status: [invalid yaml structure
 ---
 
 # Summary
-"#;
+";
 
         std::fs::write(&prd_path, content).unwrap();
 
@@ -199,13 +199,13 @@ status: [invalid yaml structure
         let temp = TempDir::new().unwrap();
         let prd_path = temp.path().join("PRD-0003.md");
 
-        let content = r#"---
+        let content = r"---
 id: PRD-0003
 title: Test PRD
 status: active
 
 # No closing delimiter!
-"#;
+";
 
         std::fs::write(&prd_path, content).unwrap();
 
@@ -228,7 +228,7 @@ status: active
         let temp = TempDir::new().unwrap();
         let const_path = temp.path().join("constitution.md");
 
-        let content = r#"---
+        let content = r"---
 version: 1
 updated: 2026-01-26
 ---
@@ -236,7 +236,7 @@ updated: 2026-01-26
 # Constitution
 
 Rules go here.
-"#;
+";
 
         std::fs::write(&const_path, content).unwrap();
 
@@ -248,13 +248,13 @@ Rules go here.
         let temp = TempDir::new().unwrap();
         let const_path = temp.path().join("constitution.md");
 
-        let content = r#"---
+        let content = r"---
 version: [malformed
 updated: 2026-01-26
 ---
 
 # Constitution
-"#;
+";
 
         std::fs::write(&const_path, content).unwrap();
 
