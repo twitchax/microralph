@@ -98,14 +98,13 @@ fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<(Prd, PathBuf), FinalizeE
 
 /// Gets all incomplete tasks from a PRD.
 fn get_incomplete_tasks(prd: &Prd) -> Vec<(&Task, TaskStatus)> {
-    match prd.tasks() {
-        Some(tasks) => tasks
+    prd.tasks().map_or_else(Vec::new, |tasks| {
+        tasks
             .iter()
             .filter(|t| t.status != TaskStatus::Done)
             .map(|t| (t, t.status))
-            .collect(),
-        None => vec![],
-    }
+            .collect()
+    })
 }
 
 /// Validates that all tasks in the PRD are done.

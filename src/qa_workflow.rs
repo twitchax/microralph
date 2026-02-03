@@ -54,11 +54,11 @@ pub fn extract_prd_content(output: &str) -> Result<String> {
     let cleaned = CopilotRunner::strip_usage_stats(&cleaned);
 
     // Look for READY_TO_APPLY signal and start from there if present
-    let content_start = if let Some(idx) = cleaned.find("READY_TO_APPLY") {
-        &cleaned[idx + "READY_TO_APPLY".len()..]
-    } else {
-        cleaned.as_str()
-    };
+    let content_start = cleaned
+        .find("READY_TO_APPLY")
+        .map_or(cleaned.as_str(), |idx| {
+            &cleaned[idx + "READY_TO_APPLY".len()..]
+        });
 
     let trimmed = content_start.trim();
 

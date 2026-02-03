@@ -288,16 +288,11 @@ impl CopilotRunner {
     pub fn strip_usage_stats(text: &str) -> String {
         // Find the start of the stats section
         // It typically starts with "Total usage est:" or "API time spent:"
-        if let Some(pos) = text.find("\n\nTotal usage est:") {
-            text[..pos].to_string()
-        } else if let Some(pos) = text.find("\n\nAPI time spent:") {
-            text[..pos].to_string()
-        } else if let Some(pos) = text.find("\n\nBreakdown by AI model:") {
-            text[..pos].to_string()
-        } else {
-            // No stats section found, return as-is
-            text.to_string()
-        }
+        // Try to find stats sections in order of preference
+        text.find("\n\nTotal usage est:")
+            .or_else(|| text.find("\n\nAPI time spent:"))
+            .or_else(|| text.find("\n\nBreakdown by AI model:"))
+            .map_or_else(|| text.to_string(), |pos| text[..pos].to_string())
     }
 }
 

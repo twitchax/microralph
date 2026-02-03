@@ -247,14 +247,15 @@ fn expand_if_blocks(template: &str, context: &PlaceholderContext) -> String {
         let full_content = &result[content_start..if_end];
 
         // Check for {{else}} block within the content.
-        let (true_content, false_content) = if let Some(else_pos) = full_content.find("{{else}}") {
-            (
-                &full_content[..else_pos],
-                &full_content[else_pos + 8..], // +8 to skip "{{else}}"
-            )
-        } else {
-            (full_content, "")
-        };
+        let (true_content, false_content) =
+            full_content
+                .find("{{else}}")
+                .map_or((full_content, ""), |else_pos| {
+                    (
+                        &full_content[..else_pos],
+                        &full_content[else_pos + 8..], // +8 to skip "{{else}}"
+                    )
+                });
 
         // Determine whether to include the content based on the variable's value.
         // - Bool: use its truth value

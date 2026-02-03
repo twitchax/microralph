@@ -316,11 +316,9 @@ fn build_path_map<'a>(summaries: &[&'a PrdSummary]) -> HashMap<&'a str, &'a str>
 fn format_prd_links(ids: &[String], path_map: &HashMap<&str, &str>) -> Vec<String> {
     ids.iter()
         .map(|id| {
-            if let Some(path) = path_map.get(id.as_str()) {
-                format!("[{id}]({path})")
-            } else {
-                id.clone()
-            }
+            path_map
+                .get(id.as_str())
+                .map_or_else(|| id.clone(), |path| format!("[{id}]({path})"))
         })
         .collect()
 }

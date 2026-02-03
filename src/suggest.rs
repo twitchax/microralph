@@ -374,13 +374,14 @@ fn parse_numbered_entry(line: &str) -> Option<NumberedEntry> {
 /// If the em dash separator is not found, returns the entire string as title
 /// with an empty description.
 fn parse_title_description(text: &str) -> (String, String) {
-    if let Some(sep_idx) = text.find(" — ") {
-        let (title_part, rest_part) = text.split_at(sep_idx);
-        let desc_part = &rest_part[" — ".len()..];
-        (title_part.trim().to_string(), desc_part.trim().to_string())
-    } else {
-        (text.trim().to_string(), String::new())
-    }
+    text.find(" — ").map_or_else(
+        || (text.trim().to_string(), String::new()),
+        |sep_idx| {
+            let (title_part, rest_part) = text.split_at(sep_idx);
+            let desc_part = &rest_part[" — ".len()..];
+            (title_part.trim().to_string(), desc_part.trim().to_string())
+        },
+    )
 }
 
 /// Metadata extracted from suggestion lines.
