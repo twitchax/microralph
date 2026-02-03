@@ -64,7 +64,7 @@ tasks:
 - id: T-008
   title: Fix map().unwrap_or() patterns (5 instances)
   priority: 8
-  status: todo
+  status: done
   notes: Use map_or() or map_or_else() instead
 - id: T-009
   title: Fix casting warnings with try_into (3 instances)
@@ -279,3 +279,16 @@ The approach is methodical, addressing warnings by category:
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the option_if_let_else lint fixes.
 
 - **Note**: PRD originally estimated 3 instances, but clippy found 6 `option_if_let_else` warnings which were all fixed.
+
+## 2026-02-03 — T-008 Completed
+- **Task**: Fix map().unwrap_or() patterns (5 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Converted `map(...).unwrap_or_else(...)` to `map_or_else(...)` in init.rs (2 instances)
+  - Converted `map(...).unwrap_or(...)` to `map_or(...)` in qa_workflow.rs (1 instance), run.rs (1 instance), suggest.rs (1 instance)
+  - Used `is_some_and(|c| c.is_ascii_digit())` instead of `map(|c| c.is_ascii_digit()).unwrap_or(false)` in qa_workflow.rs (1 instance)
+  - Total: 6 instances fixed
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `map_unwrap_or` warnings with `cargo clippy -- -W clippy::map_unwrap_or`
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the map_unwrap_or lint fixes.

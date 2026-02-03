@@ -634,8 +634,7 @@ pub fn run_uat_verification_loop(
             .frontmatter
             .acceptance_tests
             .as_ref()
-            .map(Vec::len)
-            .unwrap_or(0);
+            .map_or(0, Vec::len);
         let current_uat_num = all_uats - unverified.len() + 1; // 1-indexed position.
 
         tracing::info!(

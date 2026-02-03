@@ -2338,10 +2338,10 @@ fn create_dir_if_missing(path: &Path, result: &mut InitResult) -> Result<()> {
 /// Creates a file if it doesn't exist.
 fn create_file_if_missing(path: &Path, content: &str, result: &mut InitResult) -> Result<()> {
     // Get relative path for logging.
-    let relative = path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| path.display().to_string());
+    let relative = path.file_name().map_or_else(
+        || path.display().to_string(),
+        |n| n.to_string_lossy().to_string(),
+    );
 
     if path.exists() {
         result.files_skipped += 1;
@@ -2360,10 +2360,10 @@ fn create_file_if_missing(path: &Path, content: &str, result: &mut InitResult) -
 
 /// Creates a file, always overwriting if it exists.
 fn create_file_always(path: &Path, content: &str, result: &mut InitResult) -> Result<()> {
-    let relative = path
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| path.display().to_string());
+    let relative = path.file_name().map_or_else(
+        || path.display().to_string(),
+        |n| n.to_string_lossy().to_string(),
+    );
 
     std::fs::write(path, content)
         .with_context(|| format!("Failed to create file: {}", path.display()))?;

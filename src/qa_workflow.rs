@@ -84,8 +84,7 @@ pub fn extract_prd_content(output: &str) -> Result<String> {
             // Skip to the next newline (past any remaining language identifier).
             let content_start = trimmed[after_fence..]
                 .find('\n')
-                .map(|i| after_fence + i + 1)
-                .unwrap_or(after_fence);
+                .map_or(after_fence, |i| after_fence + i + 1);
 
             // Look for the closing fence, but find the LAST one to handle
             // nested code blocks inside the PRD content.
@@ -198,11 +197,7 @@ pub fn parse_questions(output: &str) -> Vec<String> {
         let trimmed = line.trim();
 
         // Check if this line starts a new numbered question (1., 2., etc.).
-        let is_question_start = trimmed
-            .chars()
-            .next()
-            .map(|c| c.is_ascii_digit())
-            .unwrap_or(false)
+        let is_question_start = trimmed.chars().next().is_some_and(|c| c.is_ascii_digit())
             && (trimmed.contains(". ") || trimmed.contains(") "));
 
         if is_question_start {
