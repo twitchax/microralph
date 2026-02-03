@@ -212,7 +212,7 @@ mod tests {
         // The real test: calling set_message repeatedly must not panic on a disabled spinner.
         // This is important for code that doesn't check spinner state before updating.
         for i in 1..=10 {
-            spinner.set_message(format!("Iteration {}", i));
+            spinner.set_message(format!("Iteration {i}"));
         }
 
         // Also test with static strings (Cow::Borrowed path).
@@ -236,7 +236,7 @@ mod tests {
 
         for task_idx in 1..=task_count {
             let spinner =
-                start_spinner(true, format!("Running task {}/{}...", task_idx, task_count));
+                start_spinner(true, format!("Running task {task_idx}/{task_count}..."));
 
             // Verify spinner is disabled in non-TTY test environment.
             if spinner.bar.is_none() {
@@ -244,7 +244,7 @@ mod tests {
             }
 
             // Simulate some work with message updates.
-            spinner.set_message(format!("Processing task {}...", task_idx));
+            spinner.set_message(format!("Processing task {task_idx}..."));
 
             // Clear before output.
             spinner.finish_and_clear();
@@ -266,23 +266,21 @@ mod tests {
         for iteration in 1..=max_iterations {
             let spinner = start_spinner(
                 true,
-                format!("Refactor iteration {}/{}...", iteration, max_iterations),
+                format!("Refactor iteration {iteration}/{max_iterations}..."),
             );
 
             // Verify spinner is disabled in non-TTY environment.
             assert!(
                 spinner.bar.is_none(),
-                "Spinner {} should be disabled in non-TTY",
-                iteration
+                "Spinner {iteration} should be disabled in non-TTY"
             );
 
-            spinner.set_message(format!("Analyzing codebase (iteration {})...", iteration));
+            spinner.set_message(format!("Analyzing codebase (iteration {iteration})..."));
 
             // Verify spinner bar remains None after message update.
             assert!(
                 spinner.bar.is_none(),
-                "Spinner {} should remain disabled after message update",
-                iteration
+                "Spinner {iteration} should remain disabled after message update"
             );
 
             spinner.finish_and_clear();
@@ -290,8 +288,7 @@ mod tests {
             // Verify spinner bar remains None after finish_and_clear.
             assert!(
                 spinner.bar.is_none(),
-                "Spinner {} should remain disabled after finish_and_clear",
-                iteration
+                "Spinner {iteration} should remain disabled after finish_and_clear"
             );
         }
     }

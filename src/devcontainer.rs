@@ -94,8 +94,7 @@ mod tests {
         // With env vars removed, result should match /workspaces existence check.
         assert_eq!(
             result, workspaces_exists,
-            "Without env vars, is_dev_container should return {} (workspaces_exists={})",
-            workspaces_exists, workspaces_exists
+            "Without env vars, is_dev_container should return {workspaces_exists} (workspaces_exists={workspaces_exists})"
         );
     }
 

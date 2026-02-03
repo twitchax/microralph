@@ -403,14 +403,14 @@ mod tests {
         };
 
         let body = if let Some(hist) = history {
-            format!("# Summary\n\nTest PRD.\n\n# History\n\n{}\n", hist)
+            format!("# Summary\n\nTest PRD.\n\n# History\n\n{hist}\n")
         } else {
             "# Summary\n\nTest PRD.\n".to_string()
         };
 
         let prd = Prd::new(frontmatter, body);
         let content = crate::prd::serialize_prd(&prd).unwrap();
-        let filename = format!("{}-test.md", id);
+        let filename = format!("{id}-test.md");
 
         std::fs::write(prds_dir.join(filename), content).unwrap();
     }
@@ -418,7 +418,7 @@ mod tests {
     fn make_task(id: &str, priority: u32, status: TaskStatus) -> Task {
         Task {
             id: id.to_string(),
-            title: format!("Task {}", id),
+            title: format!("Task {id}"),
             priority,
             status,
             notes: None,

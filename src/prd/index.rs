@@ -483,7 +483,7 @@ mod tests {
     fn make_task(id: &str, priority: u32, status: TaskStatus) -> Task {
         Task {
             id: id.to_string(),
-            title: format!("Task {}", id),
+            title: format!("Task {id}"),
             priority,
             status,
             notes: None,

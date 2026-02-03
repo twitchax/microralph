@@ -2471,7 +2471,7 @@ Generate a devcontainer.json configuration for:
         let result = generate_devcontainer_config(temp_path, init::Language::Rust, &mock_runner);
 
         // Verify success - the LLM is responsible for creating the file, not microralph.
-        assert!(result.is_ok(), "Generation should succeed: {:?}", result);
+        assert!(result.is_ok(), "Generation should succeed: {result:?}");
     }
 
     #[test]
@@ -2493,7 +2493,7 @@ Generate a devcontainer.json configuration for:
         let result = restore_impl(root);
 
         // Verify success.
-        assert!(result.is_ok(), "Restore should succeed: {:?}", result);
+        assert!(result.is_ok(), "Restore should succeed: {result:?}");
 
         // Verify files still exist after restore.
         assert!(root.join(".mr/prompts/init.md").exists());
@@ -2533,7 +2533,7 @@ Generate a devcontainer.json configuration for:
         let result = restore_impl(root);
 
         // Verify success.
-        assert!(result.is_ok(), "Restore should succeed: {:?}", result);
+        assert!(result.is_ok(), "Restore should succeed: {result:?}");
 
         // Verify the file was restored to built-in default (not custom content).
         let content_after = std::fs::read_to_string(&init_prompt_path).unwrap();

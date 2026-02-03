@@ -320,13 +320,11 @@ mod tests {
             let content = get_default_prompt(*kind);
             assert!(
                 !content.is_empty(),
-                "Default prompt for {:?} is empty",
-                kind
+                "Default prompt for {kind:?} is empty"
             );
             assert!(
                 content.contains("microralph"),
-                "Default prompt for {:?} missing header",
-                kind
+                "Default prompt for {kind:?} missing header"
             );
         }
     }

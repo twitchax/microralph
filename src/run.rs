@@ -785,7 +785,7 @@ mod tests {
     fn create_test_prd(prds_dir: &Path, id: &str, status: PrdStatus, tasks: Vec<Task>) {
         let frontmatter = PrdFrontmatter {
             id: id.to_string(),
-            title: format!("Test PRD {}", id),
+            title: format!("Test PRD {id}"),
             status,
             tasks: if tasks.is_empty() { None } else { Some(tasks) },
             ..Default::default()
@@ -793,7 +793,7 @@ mod tests {
 
         let prd = Prd::new(frontmatter, "# Body\n".to_string());
         let content = crate::prd::serialize_prd(&prd).unwrap();
-        let filename = format!("{}-test.md", id);
+        let filename = format!("{id}-test.md");
 
         std::fs::write(prds_dir.join(filename), content).unwrap();
     }
@@ -801,7 +801,7 @@ mod tests {
     fn make_task(id: &str, priority: u32, status: TaskStatus) -> Task {
         Task {
             id: id.to_string(),
-            title: format!("Task {}", id),
+            title: format!("Task {id}"),
             priority,
             status,
             notes: None,
@@ -1836,7 +1836,7 @@ mod tests {
                 assert_eq!(unverified_count, 3);
                 (prd_id, prd_path)
             }
-            other => panic!("Expected NeedsUatVerification, got {:?}", other),
+            other => panic!("Expected NeedsUatVerification, got {other:?}"),
         };
 
         // Step 2: Run the UAT verification loop with max_iterations = 2.

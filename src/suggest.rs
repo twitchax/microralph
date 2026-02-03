@@ -1095,16 +1095,14 @@ Based on my analysis, here are 5 PRD suggestions:
         let has_strategic = categories.iter().any(|c| c == "Strategic");
         assert!(
             has_strategic,
-            "Suggestions should include at least one 'Strategic' category. Found: {:?}",
-            categories
+            "Suggestions should include at least one 'Strategic' category. Found: {categories:?}"
         );
 
         // Verify at least one "Quick Win" category exists.
         let has_quick_win = categories.iter().any(|c| c == "Quick Win");
         assert!(
             has_quick_win,
-            "Suggestions should include at least one 'Quick Win' category. Found: {:?}",
-            categories
+            "Suggestions should include at least one 'Quick Win' category. Found: {categories:?}"
         );
 
         // Verify all categories are from the expected set.
@@ -1112,9 +1110,7 @@ Based on my analysis, here are 5 PRD suggestions:
         for category in &categories {
             assert!(
                 valid_categories.contains(&category.as_str()),
-                "Invalid category '{}'. Must be one of: {:?}",
-                category,
-                valid_categories
+                "Invalid category '{category}'. Must be one of: {valid_categories:?}"
             );
         }
     }

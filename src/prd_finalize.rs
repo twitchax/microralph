@@ -226,7 +226,7 @@ fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
 
     // Ensure we start on a new line.
     writeln!(file)?;
-    write!(file, "{}", summary)?;
+    write!(file, "{summary}")?;
 
     Ok(())
 }
@@ -432,7 +432,7 @@ mod tests {
     fn make_test_prd(id: &str, tasks: Vec<Task>) -> Prd {
         let frontmatter = PrdFrontmatter {
             id: id.to_string(),
-            title: format!("Test PRD {}", id),
+            title: format!("Test PRD {id}"),
             tasks: if tasks.is_empty() { None } else { Some(tasks) },
             ..Default::default()
         };
@@ -447,7 +447,7 @@ mod tests {
     ) -> Prd {
         let frontmatter = PrdFrontmatter {
             id: id.to_string(),
-            title: format!("Test PRD {}", id),
+            title: format!("Test PRD {id}"),
             tasks: if tasks.is_empty() { None } else { Some(tasks) },
             acceptance_tests: if acceptance_tests.is_empty() {
                 None
@@ -463,7 +463,7 @@ mod tests {
     fn make_task(id: &str, status: TaskStatus) -> Task {
         Task {
             id: id.to_string(),
-            title: format!("Task {}", id),
+            title: format!("Task {id}"),
             priority: 1,
             status,
             notes: None,
@@ -473,7 +473,7 @@ mod tests {
     fn make_uat(id: &str, uat_status: UatStatus) -> AcceptanceTest {
         AcceptanceTest {
             id: id.to_string(),
-            name: format!("Test {}", id),
+            name: format!("Test {id}"),
             command: "cargo test".to_string(),
             uat_status,
         }
