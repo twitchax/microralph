@@ -49,7 +49,7 @@ tasks:
 - id: T-005
   title: Fix redundant closures (11 instances)
   priority: 5
-  status: todo
+  status: done
   notes: Replace |x| foo(x) with foo where applicable
 - id: T-006
   title: Fix items after statements warnings (6 instances)
@@ -228,3 +228,18 @@ The approach is methodical, addressing warnings by category:
   - Verified 0 remaining `needless_raw_string_hashes` warnings
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the needless_raw_string_hashes lint fixes.
+
+---
+
+## 2026-02-03 — T-005 Completed
+- **Task**: Fix redundant closures (11 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced `|x| x.to_string()` with `ToString::to_string` in config.rs, prd_new.rs, main.rs
+  - Replaced `|v| v.len()` with `Vec::len` in prd/index.rs (4 instances), run.rs (1 instance)
+  - Replaced `|t| t.len()` with `<[_]>::len` in suggest.rs
+  - Replaced `|v| v.as_u64()` with `serde_json::Value::as_u64` in runner/claude.rs (2 instances)
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `redundant_closure_for_method_calls` warnings
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused only on the redundant_closure lint fixes.

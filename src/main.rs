@@ -693,7 +693,7 @@ fn adapt_language(
     }
 
     // Select runner based on name.
-    let runner = create_runner(runner_name, model.map(|s| s.to_string()))?;
+    let runner = create_runner(runner_name, model.map(ToString::to_string))?;
 
     // Build the language adaptation prompt.
     let template = prompt::load_prompt_with_fallback(root, prompt::PromptKind::AdaptLanguage);

@@ -256,10 +256,10 @@ pub fn generate_index(prds: &[(String, Prd, std::path::PathBuf)]) -> String {
 
     // Statistics.
     let total = prds.len();
-    let active = by_status.get(&PrdStatus::Active).map_or(0, |v| v.len());
-    let draft = by_status.get(&PrdStatus::Draft).map_or(0, |v| v.len());
-    let done = by_status.get(&PrdStatus::Done).map_or(0, |v| v.len());
-    let parked = by_status.get(&PrdStatus::Parked).map_or(0, |v| v.len());
+    let active = by_status.get(&PrdStatus::Active).map_or(0, Vec::len);
+    let draft = by_status.get(&PrdStatus::Draft).map_or(0, Vec::len);
+    let done = by_status.get(&PrdStatus::Done).map_or(0, Vec::len);
+    let parked = by_status.get(&PrdStatus::Parked).map_or(0, Vec::len);
 
     output.push_str("## Statistics\n\n");
     let _ = writeln!(output, "- **Total PRDs**: {total}");

@@ -114,7 +114,7 @@ where
     // STATE: Initialize - Determine user context for the PRD
     // Context can be provided via CLI flag (non-interactive) or prompted interactively
     let user_context: Option<String> = if config.context.is_some() {
-        config.context.map(|s| s.to_string())
+        config.context.map(ToString::to_string)
     } else {
         prompt_for_context(input, output)?
     };

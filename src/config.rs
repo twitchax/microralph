@@ -98,7 +98,7 @@ impl Config {
     /// Returns the effective model, with CLI flag taking precedence.
     pub fn effective_model(&self, cli_model: Option<&str>) -> Option<String> {
         cli_model
-            .map(|s| s.to_string())
+            .map(ToString::to_string)
             .or_else(|| self.model.clone())
     }
 

@@ -184,7 +184,7 @@ where
     );
 
     // Count tasks if available
-    let task_count = result.prd.tasks().map(|t| t.len()).unwrap_or(0);
+    let task_count = result.prd.tasks().map(<[_]>::len).unwrap_or(0);
     println!("  {}", colors::dim(&format!("Tasks: {task_count}")));
 
     // Regenerate index.

@@ -634,7 +634,7 @@ pub fn run_uat_verification_loop(
             .frontmatter
             .acceptance_tests
             .as_ref()
-            .map(|tests| tests.len())
+            .map(Vec::len)
             .unwrap_or(0);
         let current_uat_num = all_uats - unverified.len() + 1; // 1-indexed position.
 

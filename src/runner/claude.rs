@@ -174,9 +174,13 @@ impl ClaudeRunner {
         // Extract usage object.
         let usage = json.get("usage")?;
 
-        let input_tokens = usage.get("input_tokens").and_then(|v| v.as_u64());
+        let input_tokens = usage
+            .get("input_tokens")
+            .and_then(serde_json::Value::as_u64);
 
-        let output_tokens = usage.get("output_tokens").and_then(|v| v.as_u64());
+        let output_tokens = usage
+            .get("output_tokens")
+            .and_then(serde_json::Value::as_u64);
 
         let total_tokens = match (input_tokens, output_tokens) {
             (Some(i), Some(o)) => Some(i + o),
