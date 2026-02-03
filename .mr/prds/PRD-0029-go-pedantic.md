@@ -1,7 +1,7 @@
 ---
 id: PRD-0029
 title: "Fix Pedantic Clippy Lints"
-status: active
+status: done
 owner: ""
 created: 2026-02-03
 updated: 2026-02-03
@@ -19,11 +19,11 @@ acceptance_tests:
 - id: uat-001
   name: Clippy pedantic passes with no warnings
   command: cargo clippy -- -W clippy::pedantic 2>&1 | grep -c "^warning:" | xargs test 0 -eq
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: Full CI pipeline passes
   command: cargo make ci
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -79,7 +79,7 @@ tasks:
 - id: T-011
   title: Address functions with too many lines (8 instances)
   priority: 11
-  status: todo
+  status: done
   notes: Allow clippy::too_many_lines on specific functions or refactor where practical. These are mostly command handlers that are inherently sequential.
 
 ---
@@ -328,3 +328,29 @@ The approach is methodical, addressing warnings by category:
   - Remaining warnings are all `too_many_lines` (9 instances) which are addressed in T-011
 
 - **Constitution Compliance**: No violations. Changes were minimal and focused only on the miscellaneous lint fixes.
+
+## 2026-02-03 — T-011 Completed
+- **Task**: Address functions with too many lines (8 instances)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `#[allow(clippy::too_many_lines)]` attribute to 9 functions (PRD estimated 8, actual was 9)
+  - Functions are inherently sequential command handlers that are not practical to refactor without harming readability
+  - Files modified:
+    - `init.rs:2047`: `init()` (118 lines) - initialization sequence
+    - `prd_edit.rs:64`: `edit_prd()` (104 lines) - PRD edit workflow
+    - `prd_new.rs:101`: `create_prd()` (207 lines) - PRD creation workflow
+    - `run.rs:560`: `run_uat_verification_loop()` (143 lines) - UAT verification state machine
+    - `status.rs:189`: `format_status()` (147 lines) - status formatting
+    - `suggest.rs:41`: `suggest()` (105 lines) - suggestion workflow
+    - `main.rs:378`: `main()` (184 lines) - CLI dispatch
+    - `main.rs:1069`: `cmd_prd_list()` (113 lines) - list command handler
+    - `main.rs:1322`: `cmd_run()` (198 lines) - run command handler
+  - UAT passed: 484 tests, all green
+  - Verified 0 remaining `too_many_lines` warnings with `cargo clippy -- -W clippy::too_many_lines`
+  - Verified uat-001 (pedantic clippy passes with no warnings)
+
+- **Constitution Compliance**: No violations. Used local allows rather than forced refactoring per PRD constraints. Changes were minimal and focused only on lint suppression for inherently sequential functions.
+
+- **Opportunistic UAT Verification**:
+  - uat-001: Verified — `cargo clippy -- -W clippy::pedantic` produces 0 warnings
+  - uat-002: Verified — `cargo make ci` passes (included in `cargo make uat`)

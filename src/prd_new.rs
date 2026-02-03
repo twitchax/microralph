@@ -97,6 +97,7 @@ pub struct PrdNewConfig<'a> {
 ///
 /// This adaptive approach allows the runner to gather just enough information without
 /// burdening the user with unnecessary questions.
+#[allow(clippy::too_many_lines)]
 pub fn create_prd<R, I, O>(
     config: &PrdNewConfig,
     runner: &R,

@@ -374,6 +374,7 @@ enum GraphCommand {
     },
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -1065,6 +1066,7 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
 }
 
 /// Runs the `mr list` command.
+#[allow(clippy::too_many_lines)]
 fn cmd_prd_list(include_done: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -1317,6 +1319,7 @@ fn normalize_prd_id(input: &str) -> String {
 }
 
 /// Runs the `mr run` command.
+#[allow(clippy::too_many_lines)]
 fn cmd_run(
     prd_id: Option<&str>,
     runner_name: &str,
