@@ -579,12 +579,12 @@ mod tests {
         ctx.insert("task_priority", "1");
         ctx.insert("task_notes", "Follow existing patterns");
 
-        let template = r#"## Task Details
+        let template = r"## Task Details
 
 - **ID**: {{task_id}}
 - **Title**: {{task_title}}
 - **Priority**: {{task_priority}}
-- **Notes**: {{task_notes}}"#;
+- **Notes**: {{task_notes}}";
 
         let result = expand_placeholders(template, &ctx);
 

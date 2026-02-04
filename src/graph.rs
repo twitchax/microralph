@@ -2473,6 +2473,7 @@ Feature with missing dependency.
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_graph_integration_complex_dependency_chain() {
         // Integration test: Complex dependency graph with multiple layers.
         let temp = tempfile::TempDir::new().unwrap();

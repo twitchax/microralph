@@ -329,11 +329,11 @@ A test PRD.
 
     #[test]
     fn test_parse_questions() {
-        let output = r#"I need some clarification:
+        let output = r"I need some clarification:
 
 1. What should the new task priority be?
 2. Should this replace the existing task?
-"#;
+";
 
         let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 2);
@@ -343,14 +343,14 @@ A test PRD.
 
     #[test]
     fn test_parse_questions_with_ready_signal() {
-        let output = r#"READY_TO_APPLY
+        let output = r"READY_TO_APPLY
 
 ```markdown
 ---
 id: PRD-0001
 ...
 ```
-"#;
+";
 
         let questions = qa_workflow::parse_questions(output);
         assert!(questions.is_empty());
@@ -358,7 +358,7 @@ id: PRD-0001
 
     #[test]
     fn test_extract_prd_content_markdown_block() {
-        let output = r#"READY_TO_APPLY
+        let output = r"READY_TO_APPLY
 
 ```markdown
 ---
@@ -372,7 +372,7 @@ tasks: []
 
 Updated content.
 ```
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
@@ -381,7 +381,7 @@ Updated content.
 
     #[test]
     fn test_extract_prd_content_plain() {
-        let output = r#"READY_TO_APPLY
+        let output = r"READY_TO_APPLY
 
 ---
 id: PRD-0001
@@ -391,7 +391,7 @@ tasks: []
 ---
 
 # Summary
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));

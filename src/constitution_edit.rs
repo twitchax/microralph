@@ -215,13 +215,13 @@ mod tests {
 
     #[test]
     fn test_parse_questions_for_constitution() {
-        let response = r#"
+        let response = r"
 I need more information:
 
 1. What is the scope?
 2. Should this apply to all PRDs?
 3. Any exceptions?
-"#;
+";
 
         let questions = parse_questions(response);
         assert_eq!(questions.len(), 3);
@@ -232,6 +232,8 @@ I need more information:
 
     #[test]
     fn test_constitution_edit() {
+        use crate::runner::RunnerOutput;
+
         // UAT: constitution_edit — Verify constitution edit command updates via LLM
         // This test verifies that the constitution edit command can successfully
         // coordinate with the runner to edit the constitution file.
@@ -243,14 +245,14 @@ I need more information:
 
         // Create initial constitution file
         let constitution_path = mr_dir.join("constitution.md");
-        let initial_constitution = r#"# Constitution
+        let initial_constitution = r"# Constitution
 
 ## Purpose
 Project governance rules
 
 ## Rules
 1. **Rule one**: Original rule
-"#;
+";
         std::fs::write(&constitution_path, initial_constitution).unwrap();
 
         // Create constitution_edit prompt template
@@ -264,7 +266,7 @@ Project governance rules
         // Simulate what a real runner would do: edit the file, then signal completion.
         // In a real scenario, the runner (Copilot/Claude) would use its file editing
         // tools to modify the constitution file directly.
-        let updated_constitution = r#"# Constitution
+        let updated_constitution = r"# Constitution
 
 ## Purpose
 Project governance rules
@@ -272,11 +274,10 @@ Project governance rules
 ## Rules
 1. **Rule one**: Updated rule via LLM
 2. **Rule two**: New rule added by edit
-"#;
+";
         std::fs::write(&constitution_path, updated_constitution).unwrap();
 
         // Mock runner that signals edits are complete (runner already edited the file)
-        use crate::runner::RunnerOutput;
         let mock_runner = MockRunner::new(vec![RunnerOutput {
             success: true,
             text: "I've updated the constitution as requested.\n\nEDIT_COMPLETE".to_string(),

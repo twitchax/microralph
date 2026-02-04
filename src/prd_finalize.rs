@@ -1018,7 +1018,7 @@ mod tests {
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
         // Create constitution file
-        let constitution_content = r#"# Constitution
+        let constitution_content = r"# Constitution
 
 ## Purpose
 Project governance rules.
@@ -1026,7 +1026,7 @@ Project governance rules.
 ## Rules
 1. **Acceptance tests must be codified** — No one-off manual tests.
 2. **Use semantic versioning** — All releases follow semver.
-"#;
+";
         std::fs::write(mr_dir.join("constitution.md"), constitution_content).unwrap();
 
         // Create a minimal finalize prompt template that includes constitution placeholder

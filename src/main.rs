@@ -1,7 +1,7 @@
 // Deny unwrap_used in production code to ensure proper error handling.
 // Test code and mock runner are allowed to use unwrap via #[cfg(test)] and module-level allows.
 #![deny(clippy::unwrap_used)]
-#![warn(clippy::pedantic)]
+#![deny(clippy::pedantic)]
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};

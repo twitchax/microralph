@@ -369,14 +369,14 @@ mod tests {
 
     #[test]
     fn test_parse_questions_multi_line() {
-        let output = r#"I need clarification:
+        let output = r"I need clarification:
 
 1. What is the task priority?
 This will help determine scheduling.
 
 2. Should this task block others?
 We need to know dependencies.
-"#;
+";
         let questions = parse_questions(output);
         assert_eq!(questions.len(), 2);
         assert!(questions[0].contains("priority"));

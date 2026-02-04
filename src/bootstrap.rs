@@ -992,9 +992,9 @@ An existing PRD that should not be duplicated.
 
         // Mock runner that simulates creating PRDs with depends_on.
         let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(
-            r#"Created PRD-0001 (status: done, reconstructed: true, depends_on: []).
+            r"Created PRD-0001 (status: done, reconstructed: true, depends_on: []).
 Created PRD-0002 (status: done, reconstructed: true, depends_on: [PRD-0001]).
-Created PRD-0003 (status: done, reconstructed: true, depends_on: [PRD-0001, PRD-0002])."#,
+Created PRD-0003 (status: done, reconstructed: true, depends_on: [PRD-0001, PRD-0002]).",
         )]);
 
         let config = BootstrapConfig::new(temp.path());

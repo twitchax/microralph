@@ -28,4 +28,4 @@ The constitution:
 
 7. **Prompt Management**: All prompt templates and default content must be defined in `src/init.rs` (as embedded constants) and materialized to `.mr/prompts/` during initialization. These two sources must remain consistent and synchronized.
 
-8. **Clippy Pedantic**: Enable `clippy::pedantic` linting in all production code to enforce stricter coding standards and improve code quality (`cargo make uat` already does this, so just don't change it).
+8. **Clippy Pedantic**: Enable `clippy::pedantic` linting in all production code to enforce stricter coding standards and improve code quality.  Do not disable this lint in any production code files (you may suppress some lints in tests where it makes sense).

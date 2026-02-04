@@ -355,11 +355,11 @@ mod tests {
 
     #[test]
     fn test_parse_link_counts() {
-        let output = r#"
+        let output = r"
 Reindex complete!
 Links verified: 12
 Links fixed: 3
-"#;
+";
         let (verified, fixed) = parse_link_counts(output);
         assert_eq!(verified, 12);
         assert_eq!(fixed, 3);
@@ -391,11 +391,11 @@ Links fixed: 3
 
     #[test]
     fn test_parse_depends_on_counts() {
-        let output = r#"
+        let output = r"
 Reindex depends_on complete!
 depends_on relationships added: 5
 depends_on relationships fixed: 2
-"#;
+";
         let (added, fixed) = parse_depends_on_counts(output);
         assert_eq!(added, 5);
         assert_eq!(fixed, 2);
@@ -419,13 +419,13 @@ depends_on relationships fixed: 2
 
     #[test]
     fn test_extract_summary() {
-        let body = r#"
+        let body = r"
 # Summary
 
 This is the first paragraph of content that should be extracted as the summary.
 
 More content follows here.
-"#;
+";
         let summary = extract_summary(body);
         assert_eq!(
             summary,

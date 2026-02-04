@@ -758,6 +758,7 @@ pub fn run_uat_verification_loop(
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
+#[allow(clippy::similar_names)]
 mod tests {
     use super::*;
     use crate::prd::{PrdFrontmatter, Task};
@@ -1086,12 +1087,12 @@ mod tests {
         // Create a prompt template with commit conditional.
         std::fs::write(
             prompts_dir.join("run_task.md"),
-            r#"Execute task {{next_task_id}} from {{prd_path}}
+            r"Execute task {{next_task_id}} from {{prd_path}}
 {{#if commit}}
 9. **Commit your work** with a descriptive commit message.
 {{else}}
 9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
-{{/if}}"#,
+{{/if}}",
         )
         .unwrap();
 
@@ -1140,12 +1141,12 @@ mod tests {
         // Create a prompt template with commit conditional.
         std::fs::write(
             prompts_dir.join("run_task.md"),
-            r#"Execute task {{next_task_id}} from {{prd_path}}
+            r"Execute task {{next_task_id}} from {{prd_path}}
 {{#if commit}}
 9. **Commit your work** with a descriptive commit message.
 {{else}}
 9. **Do NOT commit your work** — leave changes staged or unstaged for manual review.
-{{/if}}"#,
+{{/if}}",
         )
         .unwrap();
 
@@ -1194,12 +1195,12 @@ mod tests {
         // Create a run_task.md prompt with commit conditional.
         std::fs::write(
             prompts_dir.join("run_task.md"),
-            r#"Execute task {{next_task_id}} from {{prd_path}}
+            r"Execute task {{next_task_id}} from {{prd_path}}
 {{#if commit}}
 **Commit your work** with a descriptive commit message.
 {{else}}
 **Do NOT commit your work** — leave changes staged or unstaged for manual review.
-{{/if}}"#,
+{{/if}}",
         )
         .unwrap();
 
@@ -1262,12 +1263,12 @@ mod tests {
         // Create a run_task.md prompt with commit conditional.
         std::fs::write(
             prompts_dir.join("run_task.md"),
-            r#"Execute task {{next_task_id}} from {{prd_path}}
+            r"Execute task {{next_task_id}} from {{prd_path}}
 {{#if commit}}
 **Commit your work** with a descriptive commit message.
 {{else}}
 **Do NOT commit your work** — leave changes staged or unstaged for manual review.
-{{/if}}"#,
+{{/if}}",
         )
         .unwrap();
 
@@ -1749,6 +1750,7 @@ mod tests {
     /// 2. `run_uat_verification_loop()` processes the unverified UATs
     /// 3. Loop respects `max_iterations` and correctly updates UAT status
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_uat_verification_integration_flow() {
         use crate::prd::types::{AcceptanceTest, UatStatus};
 
@@ -1993,7 +1995,7 @@ mod tests {
         std::fs::write(prompts_dir.join("run_task.md"), prompt_content).unwrap();
 
         // Create a constitution file with example rules.
-        let constitution_content = r#"# Constitution
+        let constitution_content = r"# Constitution
 
 ## Purpose
 Project governance and best practices.
@@ -2001,7 +2003,7 @@ Project governance and best practices.
 ## Rules
 1. **Acceptance tests must be codified** — One-off acceptance tests are unacceptable.
 2. **Use semantic versioning** — All releases must follow semver.
-"#;
+";
         std::fs::write(
             root.join(".mr").join("constitution.md"),
             constitution_content,

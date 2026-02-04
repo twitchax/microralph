@@ -90,7 +90,7 @@ impl Config {
     #[cfg(test)]
     pub fn effective_runner(&self, cli_runner: Option<&str>) -> String {
         cli_runner
-            .map(|s| s.to_string())
+            .map(ToString::to_string)
             .or_else(|| self.runner.clone())
             .unwrap_or_else(|| "copilot".to_string())
     }
@@ -320,7 +320,7 @@ timeout_minutes = 60
         let temp = TempDir::new().unwrap();
         let mr_dir = temp.path().join(".mr");
         std::fs::create_dir_all(&mr_dir).unwrap();
-        std::fs::write(mr_dir.join("config.toml"), r#"no_commit = true"#).unwrap();
+        std::fs::write(mr_dir.join("config.toml"), r"no_commit = true").unwrap();
 
         let config = Config::load(temp.path()).unwrap().unwrap();
 

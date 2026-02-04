@@ -123,7 +123,10 @@ fn split_frontmatter(content: &str) -> Result<(String, String)> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::prd::types::{PrdStatus, TaskStatus};
+    use crate::prd::{
+        Task,
+        types::{PrdStatus, TaskStatus},
+    };
 
     const SAMPLE_PRD: &str = r#"---
 id: PRD-0001
@@ -253,8 +256,8 @@ A description of the problem.
         assert_eq!(prd.status(), reparsed.status());
         assert_eq!(prd.frontmatter.owner, reparsed.frontmatter.owner);
         assert_eq!(
-            prd.tasks().map(|t| t.len()),
-            reparsed.tasks().map(|t| t.len())
+            prd.tasks().map(<[Task]>::len),
+            reparsed.tasks().map(<[Task]>::len)
         );
     }
 
@@ -277,7 +280,7 @@ A description of the problem.
 
     #[test]
     fn test_parse_all_task_statuses() {
-        let content = r#"---
+        let content = r"---
 id: PRD-0001
 title: Status Test
 status: active
@@ -305,7 +308,7 @@ tasks:
 ---
 
 # Body
-"#;
+";
 
         let prd = parse_prd(content).unwrap();
         let tasks = prd.tasks().unwrap();
@@ -326,14 +329,14 @@ tasks:
             ("parked", PrdStatus::Parked),
         ] {
             let content = format!(
-                r#"---
+                r"---
 id: PRD-0001
 title: Status Test
 status: {status_str}
 ---
 
 # Body
-"#
+"
             );
 
             let prd = parse_prd(&content).unwrap();

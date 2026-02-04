@@ -686,12 +686,12 @@ mod tests {
 
     #[test]
     fn test_parse_questions_numbered_dot() {
-        let output = r#"Here are some questions:
+        let output = r"Here are some questions:
 
 1. What problem are you solving?
 2. What does success look like?
 3. Are there dependencies?
-"#;
+";
 
         let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 3);
@@ -702,9 +702,9 @@ mod tests {
 
     #[test]
     fn test_parse_questions_numbered_paren() {
-        let output = r#"1) First question?
+        let output = r"1) First question?
 2) Second question?
-"#;
+";
 
         let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 2);
@@ -719,7 +719,7 @@ mod tests {
 
     #[test]
     fn test_parse_questions_multiline_with_bullets() {
-        let output = r#"Here are some questions:
+        let output = r"Here are some questions:
 
 1. What problem are you solving?
 2. What features do you need?
@@ -728,7 +728,7 @@ mod tests {
    - Feature C
 3. What is your timeline?
 
-Some additional text here."#;
+Some additional text here.";
 
         let questions = qa_workflow::parse_questions(output);
         assert_eq!(questions.len(), 3);
@@ -742,7 +742,7 @@ Some additional text here."#;
 
     #[test]
     fn test_extract_prd_content_code_block() {
-        let output = r#"Here's the PRD:
+        let output = r"Here's the PRD:
 
 ```markdown
 ---
@@ -756,7 +756,7 @@ This is a test.
 ```
 
 Done!
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
@@ -766,7 +766,7 @@ Done!
     #[test]
     fn test_extract_prd_content_md_fence() {
         // LLMs often use ```md instead of ```markdown
-        let output = r#"Here's the PRD:
+        let output = r"Here's the PRD:
 
 ```md
 ---
@@ -776,7 +776,7 @@ title: Test
 
 # Summary
 ```
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
@@ -813,13 +813,13 @@ More text.
 
     #[test]
     fn test_extract_prd_content_plain() {
-        let output = r#"---
+        let output = r"---
 id: PRD-0001
 title: Test
 ---
 
 # Summary
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"));
@@ -828,7 +828,7 @@ title: Test
     #[test]
     fn test_extract_prd_content_with_leading_text() {
         // Fallback: find --- in output even without proper fencing
-        let output = r#"Sure, here's the PRD you asked for:
+        let output = r"Sure, here's the PRD you asked for:
 
 ---
 id: PRD-0001
@@ -836,7 +836,7 @@ title: Test
 ---
 
 # Summary
-"#;
+";
 
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
@@ -901,7 +901,7 @@ title: Test
         .unwrap();
 
         // Create mock runner with scripted responses.
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0001
 title: Test Feature
 status: draft
@@ -917,7 +917,7 @@ tasks:
 # Summary
 
 A test feature.
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success(
@@ -973,14 +973,14 @@ A test feature.
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0001
 title: Test
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         // Create runner that never says ready.
         // Round 1 generates 1 question, then rounds 2-5 each generate 1 question.
@@ -1045,14 +1045,14 @@ tasks: []
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0001
 title: Test Feature
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. What is the goal?"),
@@ -1113,14 +1113,14 @@ tasks: []
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0002
 title: Flag Feature
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. What is the goal?"),
@@ -1181,14 +1181,14 @@ tasks: []
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0003
 title: Context Test
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. What is the goal?"),
@@ -1251,14 +1251,14 @@ tasks: []
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0004
 title: Persistence Test
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. First question?"),
@@ -1333,14 +1333,14 @@ tasks: []
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0005
 title: Synthesis Context Test
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. First question?"),
@@ -1409,9 +1409,9 @@ tasks: []
         .unwrap();
 
         // Return invalid PRD content that cannot be parsed
-        let invalid_content = r#"This is not valid PRD content.
+        let invalid_content = r"This is not valid PRD content.
 It has no frontmatter and will fail to parse.
-Just some random text."#;
+Just some random text.";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. What is the goal?"),
@@ -1465,7 +1465,7 @@ Just some random text."#;
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
         // Create constitution file
-        let constitution_content = r#"# Constitution
+        let constitution_content = r"# Constitution
 
 ## Purpose
 Project governance rules.
@@ -1473,7 +1473,7 @@ Project governance rules.
 ## Rules
 1. **Acceptance tests must be codified** — No one-off manual tests.
 2. **Use semantic versioning** — All releases follow semver.
-"#;
+";
         std::fs::write(
             temp.path().join(".mr").join("constitution.md"),
             constitution_content,
@@ -1497,14 +1497,14 @@ Project governance rules.
         )
         .unwrap();
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0001
 title: Constitution Test
 status: draft
 tasks: []
 ---
 # Summary
-"#;
+";
 
         let runner = MockRunner::new(vec![
             crate::runner::RunnerOutput::success("1. First question?"),
