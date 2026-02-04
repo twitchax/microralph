@@ -184,16 +184,9 @@ pub fn get_status(root: &Path) -> Result<StatusReport> {
     })
 }
 
-/// Formats the status report for display.
-pub fn format_status(report: &StatusReport) -> String {
-    let mut output = String::new();
-
-    // Header.
-    output.push_str("microralph Status\n");
-    output.push_str("==================\n\n");
-
-    // Next task (most important info).
-    if let Some(next) = &report.next_task {
+/// Formats the next task section.
+fn format_next_task(output: &mut String, next_task: Option<&NextTaskInfo>) {
+    if let Some(next) = next_task {
         output.push_str("## Next Task\n\n");
         output.push_str("  PRD: ");
         output.push_str(&next.prd_id);
@@ -230,141 +223,104 @@ pub fn format_status(report: &StatusReport) -> String {
         output.push_str("## Next Task\n\n");
         output.push_str("  No active PRDs with incomplete tasks.\n\n");
     }
+}
 
-    // PRD Summary.
-    output.push_str("## PRDs\n\n");
-
-    if report.prds.is_empty() {
-        output.push_str("  No PRDs found. Create one with `mr new <slug>`.\n");
-    } else {
-        // Group by status.
-        let active: Vec<_> = report
-            .prds
-            .iter()
-            .filter(|p| p.status == PrdStatus::Active)
-            .collect();
-
-        let draft: Vec<_> = report
-            .prds
-            .iter()
-            .filter(|p| p.status == PrdStatus::Draft)
-            .collect();
-
-        let done: Vec<_> = report
-            .prds
-            .iter()
-            .filter(|p| p.status == PrdStatus::Done)
-            .collect();
-
-        let parked: Vec<_> = report
-            .prds
-            .iter()
-            .filter(|p| p.status == PrdStatus::Parked)
-            .collect();
-
-        if !active.is_empty() {
-            output.push_str("  Active:\n");
-
-            for prd in active {
-                output.push_str("    ");
-                output.push_str(&prd.id);
-                output.push_str(" — ");
-                output.push_str(&prd.title);
-                output.push_str(" [");
-                output.push_str(&prd.completed_tasks.to_string());
-                output.push('/');
-                output.push_str(&prd.total_tasks.to_string());
-                output.push_str("]\n");
-            }
-        }
-
-        if !draft.is_empty() {
-            output.push_str("  Draft:\n");
-
-            for prd in draft {
-                output.push_str("    ");
-                output.push_str(&prd.id);
-                output.push_str(" — ");
-                output.push_str(&prd.title);
-                output.push_str(" [");
-                output.push_str(&prd.completed_tasks.to_string());
-                output.push('/');
-                output.push_str(&prd.total_tasks.to_string());
-                output.push_str("]\n");
-            }
-        }
-
-        if !done.is_empty() {
-            output.push_str("  Done:\n");
-
-            for prd in done {
-                output.push_str("    ");
-                output.push_str(&prd.id);
-                output.push_str(" — ");
-                output.push_str(&prd.title);
-                output.push_str(" [");
-                output.push_str(&prd.completed_tasks.to_string());
-                output.push('/');
-                output.push_str(&prd.total_tasks.to_string());
-                output.push_str("]\n");
-            }
-        }
-
-        if !parked.is_empty() {
-            output.push_str("  Parked:\n");
-
-            for prd in parked {
-                output.push_str("    ");
-                output.push_str(&prd.id);
-                output.push_str(" — ");
-                output.push_str(&prd.title);
-                output.push_str(" [");
-                output.push_str(&prd.completed_tasks.to_string());
-                output.push('/');
-                output.push_str(&prd.total_tasks.to_string());
-                output.push_str("]\n");
-            }
-        }
+/// Formats a single PRD group (e.g., Active, Draft).
+fn format_prd_group(output: &mut String, label: &str, prds: &[&PrdSummary]) {
+    if prds.is_empty() {
+        return;
     }
 
-    output.push('\n');
+    output.push_str("  ");
+    output.push_str(label);
+    output.push_str(":\n");
 
-    // Statistics.
+    for prd in prds {
+        output.push_str("    ");
+        output.push_str(&prd.id);
+        output.push_str(" — ");
+        output.push_str(&prd.title);
+        output.push_str(" [");
+        output.push_str(&prd.completed_tasks.to_string());
+        output.push('/');
+        output.push_str(&prd.total_tasks.to_string());
+        output.push_str("]\n");
+    }
+}
+
+/// Formats the PRD summary section.
+fn format_prd_summary(output: &mut String, prds: &[PrdSummary]) {
+    output.push_str("## PRDs\n\n");
+
+    if prds.is_empty() {
+        output.push_str("  No PRDs found. Create one with `mr new <slug>`.\n");
+        return;
+    }
+
+    let active: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Active).collect();
+    let draft: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Draft).collect();
+    let done: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Done).collect();
+    let parked: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Parked).collect();
+
+    format_prd_group(output, "Active", &active);
+    format_prd_group(output, "Draft", &draft);
+    format_prd_group(output, "Done", &done);
+    format_prd_group(output, "Parked", &parked);
+}
+
+/// Formats the statistics section.
+fn format_statistics(output: &mut String, stats: &StatusStats) {
     output.push_str("## Statistics\n\n");
     output.push_str("  PRDs: ");
-    output.push_str(&report.stats.total_prds.to_string());
+    output.push_str(&stats.total_prds.to_string());
     output.push_str(" total");
 
-    if report.stats.total_prds > 0 {
+    if stats.total_prds > 0 {
         output.push_str(" (");
-        output.push_str(&report.stats.active_prds.to_string());
+        output.push_str(&stats.active_prds.to_string());
         output.push_str(" active, ");
-        output.push_str(&report.stats.draft_prds.to_string());
+        output.push_str(&stats.draft_prds.to_string());
         output.push_str(" draft, ");
-        output.push_str(&report.stats.done_prds.to_string());
+        output.push_str(&stats.done_prds.to_string());
         output.push_str(" done, ");
-        output.push_str(&report.stats.parked_prds.to_string());
+        output.push_str(&stats.parked_prds.to_string());
         output.push_str(" parked)");
     }
 
     output.push('\n');
 
     output.push_str("  Tasks: ");
-    output.push_str(&report.stats.completed_tasks.to_string());
+    output.push_str(&stats.completed_tasks.to_string());
     output.push('/');
-    output.push_str(&report.stats.total_tasks.to_string());
+    output.push_str(&stats.total_tasks.to_string());
     output.push_str(" completed");
 
-    if report.stats.total_tasks > 0 {
+    if stats.total_tasks > 0 {
         // Task counts are small enough that precision loss is negligible.
         #[allow(clippy::cast_precision_loss)]
-        let pct = (report.stats.completed_tasks as f64 / report.stats.total_tasks as f64) * 100.0;
+        let pct = (stats.completed_tasks as f64 / stats.total_tasks as f64) * 100.0;
         output.push_str(" (");
         let _ = write!(output, "{pct:.0}");
         output.push_str("%)");
     }
 
     output.push('\n');
+}
+
+/// Formats the status report for display.
+pub fn format_status(report: &StatusReport) -> String {
+    let mut output = String::new();
+
+    // Header.
+    output.push_str("microralph Status\n");
+    output.push_str("==================\n\n");
+
+    format_next_task(&mut output, report.next_task.as_ref());
+    format_prd_summary(&mut output, &report.prds);
+
+    output.push('\n');
+
+    format_statistics(&mut output, &report.stats);
 
     output
 }

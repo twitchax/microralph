@@ -94,28 +94,7 @@ where
     }
 
     // Display numbered picker.
-    println!("{}", colors::header("Suggested PRDs:"));
-    println!();
-
-    for suggestion in &suggestions {
-        println!(
-            "{}",
-            colors::info(&format!("{}. {}", suggestion.number, suggestion.title))
-        );
-        println!("   {}", colors::dim(&suggestion.description));
-        println!(
-            "   {}",
-            colors::dim(&format!(
-                "Category: {} | Effort: {}",
-                suggestion.category, suggestion.effort
-            ))
-        );
-        println!(
-            "   {}",
-            colors::dim(&format!("Rationale: {}", suggestion.rationale))
-        );
-        println!();
-    }
+    display_suggestions(&suggestions);
 
     // Prompt user for selection.
     print!(
@@ -172,6 +151,42 @@ where
 
     let result = create_prd(&config, runner, &mut input_handle, &mut output)?;
 
+    print_prd_result(&result);
+
+    // Regenerate index.
+    generate_index_from_root(root)?;
+
+    Ok(())
+}
+
+/// Displays the numbered list of suggestions for user selection.
+fn display_suggestions(suggestions: &[Suggestion]) {
+    println!("{}", colors::header("Suggested PRDs:"));
+    println!();
+
+    for suggestion in suggestions {
+        println!(
+            "{}",
+            colors::info(&format!("{}. {}", suggestion.number, suggestion.title))
+        );
+        println!("   {}", colors::dim(&suggestion.description));
+        println!(
+            "   {}",
+            colors::dim(&format!(
+                "Category: {} | Effort: {}",
+                suggestion.category, suggestion.effort
+            ))
+        );
+        println!(
+            "   {}",
+            colors::dim(&format!("Rationale: {}", suggestion.rationale))
+        );
+        println!();
+    }
+}
+
+/// Prints the result of PRD creation.
+fn print_prd_result(result: &crate::prd_new::PrdNewResult) {
     println!();
     println!("{}", colors::success("PRD created successfully!"));
     println!("  {}", colors::dim(&format!("ID: {}", result.prd.id())));
@@ -180,14 +195,8 @@ where
         colors::dim(&format!("Path: {}", result.path.display()))
     );
 
-    // Count tasks if available
     let task_count = result.prd.tasks().map_or(0, <[_]>::len);
     println!("  {}", colors::dim(&format!("Tasks: {task_count}")));
-
-    // Regenerate index.
-    generate_index_from_root(root)?;
-
-    Ok(())
 }
 
 /// Analyzes the codebase to gather context for suggestion generation.
