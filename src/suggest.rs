@@ -745,7 +745,7 @@ Based on my analysis, here are 5 PRD suggestions:
         );
     }
 
-    /// Tests analyze_repository_structure helper function.
+    /// Tests `analyze_repository_structure` helper function.
     #[test]
     fn test_analyze_repository_structure() {
         let temp = setup_test_repo();
@@ -770,7 +770,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(!result.contains("target"));
     }
 
-    /// Tests detect_tools_and_dependencies helper function.
+    /// Tests `detect_tools_and_dependencies` helper function.
     #[test]
     fn test_detect_tools_and_dependencies() {
         let temp = setup_test_repo();
@@ -791,7 +791,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(!result.contains("Go modules"));
     }
 
-    /// Tests detect_tools_and_dependencies with no tools present.
+    /// Tests `detect_tools_and_dependencies` with no tools present.
     #[test]
     fn test_detect_tools_and_dependencies_empty() {
         let temp = setup_test_repo();
@@ -804,7 +804,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(!result.contains("Node.js"));
     }
 
-    /// Tests get_recent_commits helper function in non-git directory.
+    /// Tests `get_recent_commits` helper function in non-git directory.
     #[test]
     fn test_get_recent_commits_no_git() {
         let temp = setup_test_repo();
@@ -815,7 +815,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(result.is_empty());
     }
 
-    /// Tests get_recent_commits helper function with git repo.
+    /// Tests `get_recent_commits` helper function with git repo.
     #[test]
     fn test_get_recent_commits_with_git() {
         let temp = setup_test_repo();
@@ -860,7 +860,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(result.contains("Test commit message"));
     }
 
-    /// Tests detect_todo_comments helper function in non-git directory.
+    /// Tests `detect_todo_comments` helper function in non-git directory.
     #[test]
     fn test_detect_todo_comments_no_git() {
         let temp = setup_test_repo();
@@ -938,7 +938,7 @@ Based on my analysis, here are 5 PRD suggestions:
     ///
     /// This test verifies that when a user selects a suggestion:
     /// 1. A slug is generated from the suggestion title
-    /// 2. PrdNewConfig is constructed with pre-filled context from the suggestion
+    /// 2. `PrdNewConfig` is constructed with pre-filled context from the suggestion
     /// 3. The context includes description, category, effort, and rationale
     #[test]
     fn test_suggestion_flows_to_prd_new_with_context() {
@@ -981,7 +981,7 @@ Based on my analysis, here are 5 PRD suggestions:
 
     /// UAT-005: Codebase analysis covers tech debt and dependency versions.
     ///
-    /// Verifies that analyze_codebase() includes:
+    /// Verifies that `analyze_codebase()` includes:
     /// - TODO comments detection (tech debt indicators)
     /// - Dependency file detection (Cargo.toml, package.json, etc.)
     #[test]
@@ -1119,7 +1119,7 @@ Based on my analysis, here are 5 PRD suggestions:
     // Tests for parse_suggestions helper functions
     // =========================================================================
 
-    /// Tests parse_numbered_entry with valid numbered lines.
+    /// Tests `parse_numbered_entry` with valid numbered lines.
     #[test]
     fn test_parse_numbered_entry_valid() {
         let result = parse_numbered_entry("1. Add Logging Framework");
@@ -1135,7 +1135,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(entry.rest, "Last Suggestion");
     }
 
-    /// Tests parse_numbered_entry with leading/trailing whitespace.
+    /// Tests `parse_numbered_entry` with leading/trailing whitespace.
     #[test]
     fn test_parse_numbered_entry_whitespace() {
         let result = parse_numbered_entry("  3. Trimmed Entry  ");
@@ -1146,7 +1146,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(entry.rest, "Trimmed Entry");
     }
 
-    /// Tests parse_numbered_entry with invalid lines.
+    /// Tests `parse_numbered_entry` with invalid lines.
     #[test]
     fn test_parse_numbered_entry_invalid() {
         // No number
@@ -1163,7 +1163,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(parse_numbered_entry("1. ").is_none());
     }
 
-    /// Tests parse_title_description with em dash separator.
+    /// Tests `parse_title_description` with em dash separator.
     #[test]
     fn test_parse_title_description_with_separator() {
         let (title, desc) = parse_title_description("Add Logging — Implement tracing-subscriber");
@@ -1171,7 +1171,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(desc, "Implement tracing-subscriber");
     }
 
-    /// Tests parse_title_description without em dash separator.
+    /// Tests `parse_title_description` without em dash separator.
     #[test]
     fn test_parse_title_description_no_separator() {
         let (title, desc) = parse_title_description("Just a title");
@@ -1179,7 +1179,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(desc, "");
     }
 
-    /// Tests parse_title_description with extra whitespace.
+    /// Tests `parse_title_description` with extra whitespace.
     #[test]
     fn test_parse_title_description_whitespace() {
         let (title, desc) = parse_title_description("  Title  —  Description  ");
@@ -1187,7 +1187,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(desc, "Description");
     }
 
-    /// Tests is_numbered_entry_start detection.
+    /// Tests `is_numbered_entry_start` detection.
     #[test]
     fn test_is_numbered_entry_start() {
         assert!(is_numbered_entry_start("1. Add Logging"));
@@ -1197,7 +1197,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert!(!is_numbered_entry_start("No number here"));
     }
 
-    /// Tests parse_suggestion_metadata with complete metadata.
+    /// Tests `parse_suggestion_metadata` with complete metadata.
     #[test]
     fn test_parse_suggestion_metadata_complete() {
         let lines = vec![
@@ -1214,7 +1214,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(consumed, 4); // 3 metadata lines + 1 empty line
     }
 
-    /// Tests parse_suggestion_metadata with partial metadata.
+    /// Tests `parse_suggestion_metadata` with partial metadata.
     #[test]
     fn test_parse_suggestion_metadata_partial() {
         let lines = vec!["   Category: Testing", ""];
@@ -1226,7 +1226,7 @@ Based on my analysis, here are 5 PRD suggestions:
         assert_eq!(consumed, 2);
     }
 
-    /// Tests parse_suggestion_metadata stops at next numbered entry.
+    /// Tests `parse_suggestion_metadata` stops at next numbered entry.
     #[test]
     fn test_parse_suggestion_metadata_stops_at_next_entry() {
         let lines = vec!["   Category: UX", "   Effort: Low", "2. Next Suggestion"];

@@ -1745,9 +1745,9 @@ mod tests {
     }
 
     /// Integration test for the full UAT verification flow:
-    /// 1. run_task() returns NeedsUatVerification when all tasks done but UATs unverified
-    /// 2. run_uat_verification_loop() processes the unverified UATs
-    /// 3. Loop respects max_iterations and correctly updates UAT status
+    /// 1. `run_task()` returns `NeedsUatVerification` when all tasks done but UATs unverified
+    /// 2. `run_uat_verification_loop()` processes the unverified UATs
+    /// 3. Loop respects `max_iterations` and correctly updates UAT status
     #[test]
     fn test_uat_verification_integration_flow() {
         use crate::prd::types::{AcceptanceTest, UatStatus};

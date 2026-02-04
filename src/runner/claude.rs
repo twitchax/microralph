@@ -71,7 +71,7 @@ impl ClaudeConfig {
         self
     }
 
-    /// Sets whether to disable the ask_user tool.
+    /// Sets whether to disable the `ask_user` tool.
     #[cfg(test)]
     pub fn with_no_ask_user(mut self, no_ask_user: bool) -> Self {
         self.no_ask_user = no_ask_user;
