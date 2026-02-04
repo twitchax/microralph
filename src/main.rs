@@ -1331,6 +1331,157 @@ fn normalize_prd_id(input: &str) -> String {
     trimmed.to_string()
 }
 
+/// Prints the result of a task execution.
+fn print_task_result(
+    task_id: &str,
+    task_title: &str,
+    prd_id: &str,
+    prd_path: &Path,
+    runner_success: bool,
+    output_summary: &str,
+    usage: Option<&runner::TokenUsageInfo>,
+) {
+    println!();
+
+    if runner_success {
+        println!(
+            "{}",
+            colors::success(&format!("Task {task_id} completed successfully!"))
+        );
+    } else {
+        println!(
+            "{}",
+            colors::error(&format!("Task {task_id} did not complete successfully."))
+        );
+    }
+
+    println!();
+    println!(
+        "  {}",
+        colors::dim(&format!("PRD: {} ({})", prd_id, prd_path.display()))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Task: {task_id} — {task_title}"))
+    );
+    println!();
+
+    if !output_summary.is_empty() {
+        println!("{}", colors::header("Runner output:"));
+        println!("{output_summary}");
+    }
+
+    // Display usage information if available.
+    if let Some(usage_info) = usage
+        && usage_info.has_data()
+    {
+        println!();
+        println!("{}", colors::dim("Token usage:"));
+
+        if let Some(input) = usage_info.input {
+            print!("{}", colors::dim(&format!("  Input: {input}")));
+        }
+
+        if let Some(output) = usage_info.output {
+            if usage_info.input.is_some() {
+                print!("{}", colors::dim(", "));
+            } else {
+                print!("{}", colors::dim("  "));
+            }
+            print!("{}", colors::dim(&format!("Output: {output}")));
+        }
+
+        if let Some(total) = usage_info.total {
+            if usage_info.input.is_some() || usage_info.output.is_some() {
+                print!("{}", colors::dim(", "));
+            } else {
+                print!("{}", colors::dim("  "));
+            }
+            print!("{}", colors::dim(&format!("Total: {total}")));
+        }
+
+        println!(); // Newline after usage info.
+    }
+}
+
+/// Prints the result of UAT verification loop.
+fn print_uat_result(result: &run::UatVerificationLoopResult) {
+    println!();
+    println!("{}", colors::info("UAT verification loop completed:"));
+    println!(
+        "  {}",
+        colors::dim(&format!("Verified: {}", result.verified_count))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Opted out: {}", result.opted_out_count))
+    );
+    println!(
+        "  {}",
+        colors::dim(&format!("Iterations: {}", result.iterations))
+    );
+
+    if result.hit_max_iterations {
+        println!("  {}", colors::warning("Hit max iterations limit."));
+    }
+
+    if result.remaining_unverified > 0 {
+        println!(
+            "  {}",
+            colors::dim(&format!(
+                "Remaining unverified: {}",
+                result.remaining_unverified
+            ))
+        );
+        println!();
+        println!(
+            "{}",
+            colors::dim("Run `mr run` again to continue verification.")
+        );
+    } else {
+        println!();
+        println!(
+            "{}",
+            colors::info("All UATs verified or opted out. PRD is complete!")
+        );
+    }
+}
+
+/// Prints the UAT verification introduction header.
+fn print_uat_verification_header(prd_id: &str, prd_path: &Path, unverified_count: usize) {
+    println!();
+    println!(
+        "{}",
+        colors::warning(&format!(
+            "All tasks done for {prd_id} but {unverified_count} UAT(s) need verification."
+        ))
+    );
+    println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
+    println!();
+    println!("{}", colors::info("Starting UAT verification loop..."));
+    println!();
+}
+
+/// Prints the PRD complete message.
+fn print_prd_complete(prd_id: &str, prd_path: &Path) {
+    println!();
+    println!("{}", colors::success(&format!("PRD {prd_id} is complete!")));
+    println!("  {}", colors::dim("All tasks done, all UATs verified."));
+    println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
+}
+
+/// Handles `run_task` errors: `Ok(None)` to break, `Ok(Some(result))` to continue, `Err` to propagate.
+fn handle_run_task_error(e: anyhow::Error, tasks_completed: u32) -> Result<Option<run::RunResult>> {
+    let err_msg = e.to_string();
+    if err_msg.contains("No active PRD") || err_msg.contains("no incomplete tasks") {
+        if tasks_completed == 0 {
+            return Err(e);
+        }
+        return Ok(None); // Break gracefully.
+    }
+    Err(e)
+}
+
 /// Runs the `mr run` command.
 fn cmd_run(
     prd_id: Option<&str>,
@@ -1355,25 +1506,24 @@ fn cmd_run(
     let model = cfg.effective_model(cli_model);
 
     // Compute effective no_commit setting (CLI flag supersedes config).
-    let no_commit = cfg.effective_no_commit(if cli_no_commit { Some(true) } else { None });
+    let no_commit = cfg.effective_no_commit(cli_no_commit.then_some(true));
 
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
     // If no PRD ID was provided, ask the runner to pick one.
-    let active_prd_id = if let Some(id) = normalized_prd_id {
-        id
-    } else {
-        // Ask runner to pick the PRD once, then use it for all task executions.
-        run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?.ok_or_else(|| {
-            anyhow::anyhow!(
-                "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
-            )
-        })?
-    };
+    let active_prd_id = normalized_prd_id.map_or_else(
+        || {
+            run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
+                )
+            })
+        },
+        Ok,
+    )?;
 
     let mut tasks_completed = 0;
-    let mut last_failed = false;
 
     loop {
         let config = run::RunConfig {
@@ -1385,21 +1535,10 @@ fn cmd_run(
 
         let result = match run::run_task(&config, runner.as_ref()) {
             Ok(result) => result,
-            Err(e) => {
-                // Check if it's the "no active PRD" error, which means we're done.
-                let err_msg = e.to_string();
-                if err_msg.contains("No active PRD") || err_msg.contains("no incomplete tasks") {
-                    if tasks_completed == 0 {
-                        // No tasks were run, propagate original error.
-                        return Err(e);
-                    }
-
-                    // We completed some tasks, exit gracefully.
-                    break;
-                }
-
-                return Err(e);
-            }
+            Err(e) => match handle_run_task_error(e, tasks_completed)? {
+                Some(result) => result,
+                None => break,
+            },
         };
 
         match result {
@@ -1414,76 +1553,22 @@ fn cmd_run(
             } => {
                 tasks_completed += 1;
 
-                println!();
-
-                if runner_success {
-                    println!(
-                        "{}",
-                        colors::success(&format!("Task {task_id} completed successfully!"))
-                    );
-                } else {
-                    println!(
-                        "{}",
-                        colors::error(&format!("Task {task_id} did not complete successfully."))
-                    );
-                    last_failed = true;
-                }
-
-                println!();
-                println!(
-                    "  {}",
-                    colors::dim(&format!("PRD: {} ({})", prd_id, prd_path.display()))
+                print_task_result(
+                    &task_id,
+                    &task_title,
+                    &prd_id,
+                    &prd_path,
+                    runner_success,
+                    &output_summary,
+                    usage.as_ref(),
                 );
-                println!(
-                    "  {}",
-                    colors::dim(&format!("Task: {task_id} — {task_title}"))
-                );
-                println!();
-
-                if !output_summary.is_empty() {
-                    println!("{}", colors::header("Runner output:"));
-                    println!("{output_summary}");
-                }
-
-                // Display usage information if available.
-                if let Some(usage_info) = usage
-                    && usage_info.has_data()
-                {
-                    println!();
-                    println!("{}", colors::dim("Token usage:"));
-
-                    if let Some(input) = usage_info.input {
-                        print!("{}", colors::dim(&format!("  Input: {input}")));
-                    }
-
-                    if let Some(output) = usage_info.output {
-                        if usage_info.input.is_some() {
-                            print!("{}", colors::dim(", "));
-                        } else {
-                            print!("{}", colors::dim("  "));
-                        }
-                        print!("{}", colors::dim(&format!("Output: {output}")));
-                    }
-
-                    if let Some(total) = usage_info.total {
-                        if usage_info.input.is_some() || usage_info.output.is_some() {
-                            print!("{}", colors::dim(", "));
-                        } else {
-                            print!("{}", colors::dim("  "));
-                        }
-                        print!("{}", colors::dim(&format!("Total: {total}")));
-                    }
-
-                    println!(); // Newline after usage info.
-                }
 
                 // Exit if --one flag is set or if the task failed.
-                if one || last_failed {
+                if one || !runner_success {
                     break;
                 }
 
-                println!("---");
-                println!("{}", colors::info("Continuing to next task..."));
+                println!("---\\n{}", colors::info("Continuing to next task..."));
             }
 
             run::RunResult::NeedsUatVerification {
@@ -1491,17 +1576,7 @@ fn cmd_run(
                 prd_path,
                 unverified_count,
             } => {
-                println!();
-                println!(
-                    "{}",
-                    colors::warning(&format!(
-                        "All tasks done for {prd_id} but {unverified_count} UAT(s) need verification."
-                    ))
-                );
-                println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
-                println!();
-                println!("{}", colors::info("Starting UAT verification loop..."));
-                println!();
+                print_uat_verification_header(&prd_id, &prd_path, unverified_count);
 
                 // Run the UAT verification loop.
                 let uat_config = run::UatVerificationConfig {
@@ -1513,45 +1588,7 @@ fn cmd_run(
 
                 match run::run_uat_verification_loop(&uat_config, runner.as_ref()) {
                     Ok(result) => {
-                        println!();
-                        println!("{}", colors::info("UAT verification loop completed:"));
-                        println!(
-                            "  {}",
-                            colors::dim(&format!("Verified: {}", result.verified_count))
-                        );
-                        println!(
-                            "  {}",
-                            colors::dim(&format!("Opted out: {}", result.opted_out_count))
-                        );
-                        println!(
-                            "  {}",
-                            colors::dim(&format!("Iterations: {}", result.iterations))
-                        );
-
-                        if result.hit_max_iterations {
-                            println!("  {}", colors::warning("Hit max iterations limit."));
-                        }
-
-                        if result.remaining_unverified > 0 {
-                            println!(
-                                "  {}",
-                                colors::dim(&format!(
-                                    "Remaining unverified: {}",
-                                    result.remaining_unverified
-                                ))
-                            );
-                            println!();
-                            println!(
-                                "{}",
-                                colors::dim("Run `mr run` again to continue verification.")
-                            );
-                        } else {
-                            println!();
-                            println!(
-                                "{}",
-                                colors::info("All UATs verified or opted out. PRD is complete!")
-                            );
-                        }
+                        print_uat_result(&result);
                     }
                     Err(e) => {
                         eprintln!(
@@ -1566,10 +1603,7 @@ fn cmd_run(
             }
 
             run::RunResult::PrdComplete { prd_id, prd_path } => {
-                println!();
-                println!("{}", colors::success(&format!("PRD {prd_id} is complete!")));
-                println!("  {}", colors::dim("All tasks done, all UATs verified."));
-                println!("  {}", colors::dim(&format!("PRD: {}", prd_path.display())));
+                print_prd_complete(&prd_id, &prd_path);
                 break;
             }
         }
