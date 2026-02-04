@@ -51,7 +51,7 @@ tasks:
 - id: T-005
   title: Update main.rs module declarations and imports
   priority: 3
-  status: todo
+  status: done
   notes: "Update mod declarations and use statements to reflect new structure"
 - id: T-006
   title: Update internal cross-module imports throughout codebase
@@ -277,6 +277,22 @@ use util::{colors, spinner};
   - Updated `src/main.rs` to remove `mod constitution_edit;` declaration
   - Updated `src/main.rs` usages to use `config::constitution::ConstitutionEditConfig` and `config::constitution::edit_constitution`
   - All existing imports of `crate::config::` (in prd/new.rs, commands/run.rs, commands/init.rs, commands/refactor.rs, prd/finalize.rs) continue to work as `Config` and `load_constitution` remain exported from config/mod.rs
+  - UAT: `cargo make uat` passed with 484 tests
+
+---
+
+## 2026-02-04 — T-005 Completed
+- **Task**: Update main.rs module declarations and imports
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that main.rs module declarations (lines 11-17) are correct for the new structure:
+    - `mod changelog;`, `mod commands;`, `mod config;`, `mod prd;`, `mod prompt;`, `mod runner;`, `mod util;`
+  - Verified that use statements (lines 19-24) properly import from the new module paths:
+    - `use commands::{bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate};`
+    - `use runner::Runner;`
+    - `use util::colors;`
+  - The module declarations and imports were incrementally updated by tasks T-001 through T-004 as files were moved
+  - No additional changes were needed; the structure matches the target pattern defined in the PRD
   - UAT: `cargo make uat` passed with 484 tests
 
 ---
