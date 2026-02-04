@@ -21,11 +21,11 @@ acceptance_tests:
 - id: uat-001
   name: Full CI pipeline passes after reorganization
   command: cargo make ci
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: All existing tests pass
   command: cargo make test
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -61,7 +61,7 @@ tasks:
 - id: T-007
   title: Verify CI passes with new structure
   priority: 4
-  status: todo
+  status: done
   notes: "Run cargo make ci to ensure fmt, clippy, and tests pass"
 
 ---
@@ -318,3 +318,21 @@ use util::{colors, spinner};
 - **Constitution Compliance**: No violations. Changes were minimal and focused solely on import path updates.
 
 ---
+
+## 2026-02-04 — T-007 Completed
+- **Task**: Verify CI passes with new structure
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `cargo make ci` to verify the full CI pipeline passes after module reorganization
+  - All checks passed: fmt, clippy, and tests
+  - All 484 tests passed successfully
+  - Ran `cargo make uat` as final verification - all tests passed
+- **Verification Evidence**:
+  - `cargo make ci` exit code: 0
+  - `cargo make uat` exit code: 0
+  - Test summary: 484 tests run, 484 passed, 0 skipped
+- **UATs Opportunistically Verified**:
+  - uat-001 (Full CI pipeline passes after reorganization): PASSED - `cargo make ci` exited with code 0
+  - uat-002 (All existing tests pass): PASSED - 484 tests passed via `cargo make test`
+
+- **Constitution Compliance**: No violations. This was a verification-only task requiring no code changes.
