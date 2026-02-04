@@ -257,10 +257,22 @@ fn format_prd_summary(output: &mut String, prds: &[PrdSummary]) {
         return;
     }
 
-    let active: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Active).collect();
-    let draft: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Draft).collect();
-    let done: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Done).collect();
-    let parked: Vec<_> = prds.iter().filter(|p| p.status == PrdStatus::Parked).collect();
+    let active: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == PrdStatus::Active)
+        .collect();
+    let draft: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == PrdStatus::Draft)
+        .collect();
+    let done: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == PrdStatus::Done)
+        .collect();
+    let parked: Vec<_> = prds
+        .iter()
+        .filter(|p| p.status == PrdStatus::Parked)
+        .collect();
 
     format_prd_group(output, "Active", &active);
     format_prd_group(output, "Draft", &draft);
