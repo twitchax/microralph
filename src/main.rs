@@ -1079,6 +1079,68 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
     Ok(())
 }
 
+/// Formats a PRD summary for display.
+fn format_prd_summary(prd_summary: &prd::PrdSummary) -> String {
+    // Task status with emoji.
+    let task_status = if prd_summary.total_tasks > 0 {
+        let emoji = if prd_summary.completed_tasks == prd_summary.total_tasks {
+            "✅"
+        } else {
+            "📋"
+        };
+        format!(
+            "{} {}/{}",
+            emoji, prd_summary.completed_tasks, prd_summary.total_tasks
+        )
+    } else {
+        String::new()
+    };
+
+    // UAT status with emoji.
+    let uat_status = if prd_summary.total_uats > 0 {
+        let emoji = if prd_summary.verified_uats == prd_summary.total_uats {
+            "🧪"
+        } else {
+            "⚠️"
+        };
+        format!(
+            "{} {}/{}",
+            emoji, prd_summary.verified_uats, prd_summary.total_uats
+        )
+    } else {
+        String::new()
+    };
+
+    // Combine status parts.
+    let status_parts: Vec<&str> = [task_status.as_str(), uat_status.as_str()]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let status_str = if status_parts.is_empty() {
+        String::new()
+    } else {
+        format!(" [{}]", status_parts.join(" | "))
+    };
+
+    format!("{} - {}{}", prd_summary.id, prd_summary.title, status_str)
+}
+
+/// Prints a group of PRDs with a header.
+fn print_prd_group(header: &str, prds: &[&prd::PrdSummary]) {
+    if prds.is_empty() {
+        return;
+    }
+
+    println!("  {}", colors::header(header));
+
+    for prd_summary in prds {
+        println!("    {}", format_prd_summary(prd_summary));
+    }
+
+    println!();
+}
+
 /// Runs the `mr list` command.
 fn cmd_prd_list(include_done: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
@@ -1141,91 +1203,10 @@ fn cmd_prd_list(include_done: bool) -> Result<()> {
     println!("{}", colors::header("PRDs:"));
     println!();
 
-    let format_prd = |prd_summary: &prd::PrdSummary| {
-        // Task status with emoji.
-        let task_status = if prd_summary.total_tasks > 0 {
-            let emoji = if prd_summary.completed_tasks == prd_summary.total_tasks {
-                "✅"
-            } else {
-                "📋"
-            };
-            format!(
-                "{} {}/{}",
-                emoji, prd_summary.completed_tasks, prd_summary.total_tasks
-            )
-        } else {
-            String::new()
-        };
-
-        // UAT status with emoji.
-        let uat_status = if prd_summary.total_uats > 0 {
-            let emoji = if prd_summary.verified_uats == prd_summary.total_uats {
-                "🧪"
-            } else {
-                "⚠️"
-            };
-            format!(
-                "{} {}/{}",
-                emoji, prd_summary.verified_uats, prd_summary.total_uats
-            )
-        } else {
-            String::new()
-        };
-
-        // Combine status parts.
-        let status_parts: Vec<&str> = [task_status.as_str(), uat_status.as_str()]
-            .into_iter()
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        let status_str = if status_parts.is_empty() {
-            String::new()
-        } else {
-            format!(" [{}]", status_parts.join(" | "))
-        };
-
-        format!("{} - {}{}", prd_summary.id, prd_summary.title, status_str)
-    };
-
-    if !active.is_empty() {
-        println!("  {}", colors::header("Active:"));
-
-        for prd_summary in active {
-            println!("    {}", format_prd(prd_summary));
-        }
-
-        println!();
-    }
-
-    if !draft.is_empty() {
-        println!("  {}", colors::header("Draft:"));
-
-        for prd_summary in draft {
-            println!("    {}", format_prd(prd_summary));
-        }
-
-        println!();
-    }
-
-    if !done.is_empty() {
-        println!("  {}", colors::header("Done:"));
-
-        for prd_summary in done {
-            println!("    {}", format_prd(prd_summary));
-        }
-
-        println!();
-    }
-
-    if !parked.is_empty() {
-        println!("  {}", colors::header("Parked:"));
-
-        for prd_summary in parked {
-            println!("    {}", format_prd(prd_summary));
-        }
-
-        println!();
-    }
+    print_prd_group("Active:", &active);
+    print_prd_group("Draft:", &draft);
+    print_prd_group("Done:", &done);
+    print_prd_group("Parked:", &parked);
 
     Ok(())
 }
