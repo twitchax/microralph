@@ -16,9 +16,7 @@ mod prompt;
 mod runner;
 mod util;
 
-use commands::{
-    bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate,
-};
+use commands::{bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest};
 
 use runner::Runner;
 use util::colors;
@@ -1539,7 +1537,7 @@ fn cmd_run(
                     break;
                 }
 
-                println!("---\\n{}", colors::info("Continuing to next task..."));
+                println!("---\n{}", colors::info("Continuing to next task..."));
             }
 
             run::RunResult::NeedsUatVerification {

@@ -17,7 +17,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
-use crate::init;
+use super::init;
 use crate::prd::{generate_index_from_root, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,

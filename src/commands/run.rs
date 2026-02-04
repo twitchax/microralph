@@ -447,7 +447,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
 
     // Validate PRD frontmatter after agent edits.
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-    crate::validate::validate_prd_frontmatter(&prd_path);
+    super::validate::validate_prd_frontmatter(&prd_path);
 
     // Summarize output (truncate if too long). Skip summary if we already streamed.
     let output_summary = if config.stream {
@@ -584,7 +584,7 @@ fn execute_uat_verification(
 
     // Validate PRD frontmatter after agent edits.
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after UAT verification");
-    crate::validate::validate_prd_frontmatter(prd_path);
+    super::validate::validate_prd_frontmatter(prd_path);
 
     Ok(output)
 }

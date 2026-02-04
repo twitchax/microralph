@@ -6,7 +6,7 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 
 use super::types::PromptKind;
-use crate::init;
+use crate::commands::init;
 
 /// A loader for prompt files from the `.mr/prompts/` directory.
 #[derive(Debug)]

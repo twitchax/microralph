@@ -200,7 +200,7 @@ fn write_prd_and_update_index<O: Write>(
     std::fs::write(prd_path, new_content).context("Failed to write updated PRD")?;
 
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-    crate::validate::validate_prd_frontmatter(prd_path);
+    crate::commands::validate::validate_prd_frontmatter(prd_path);
 
     writeln!(output)?;
     writeln!(output, "Updated PRD: {}", prd_path.display())?;

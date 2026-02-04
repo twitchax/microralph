@@ -56,7 +56,7 @@ tasks:
 - id: T-006
   title: Update internal cross-module imports throughout codebase
   priority: 3
-  status: todo
+  status: done
   notes: "Fix all crate:: imports to use new module paths"
 - id: T-007
   title: Verify CI passes with new structure
@@ -294,5 +294,27 @@ use util::{colors, spinner};
   - The module declarations and imports were incrementally updated by tasks T-001 through T-004 as files were moved
   - No additional changes were needed; the structure matches the target pattern defined in the PRD
   - UAT: `cargo make uat` passed with 484 tests
+
+---
+
+## 2026-02-04 — T-006 Completed
+- **Task**: Update internal cross-module imports throughout codebase
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated imports that relied on implicit re-exports via `use` statements in main.rs to use explicit module paths:
+    - `src/prompt/loader.rs`: `use crate::init;` → `use crate::commands::init;`
+    - `src/commands/bootstrap.rs`: `use crate::init;` → `use super::init;` (sibling module reference)
+    - `src/config/constitution.rs`: `crate::validate::` → `crate::commands::validate::`
+    - `src/prd/edit.rs`: `crate::validate::` → `crate::commands::validate::`
+    - `src/commands/run.rs`: `crate::validate::` → `super::validate::` (2 occurrences)
+    - `src/commands/reindex.rs` (tests): `crate::init::` → `crate::commands::init::`
+    - `src/commands/suggest.rs` (tests): Added `use crate::commands::init;` import
+  - Removed unused `validate` import from main.rs (was only needed for implicit re-export)
+  - All imports now use explicit paths reflecting the actual module hierarchy:
+    - Within `commands/`: use `super::` for sibling modules
+    - From outside `commands/`: use `crate::commands::` prefix
+  - UAT: `cargo make uat` passed with 484 tests
+
+- **Constitution Compliance**: No violations. Changes were minimal and focused solely on import path updates.
 
 ---

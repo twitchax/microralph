@@ -538,7 +538,7 @@ fn generate_slug(title: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::init;
+    use crate::commands::init;
     use tempfile::TempDir;
 
     fn setup_test_repo() -> TempDir {

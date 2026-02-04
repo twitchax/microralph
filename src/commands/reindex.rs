@@ -352,6 +352,7 @@ fn parse_depends_on_counts(output: &str) -> (usize, usize) {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::commands::init;
 
     #[test]
     fn test_parse_link_counts() {
@@ -464,7 +465,7 @@ More content follows here.
         let root = temp.path();
 
         // Initialize .mr structure.
-        crate::init::init(root).unwrap();
+        init::init(root).unwrap();
 
         // Create test PRDs without depends_on for the runner to fix.
         let prd1 = r#"---
@@ -548,7 +549,7 @@ Authentication feature that builds on initial setup.
         let root = temp.path();
 
         // Initialize .mr structure.
-        crate::init::init(root).unwrap();
+        init::init(root).unwrap();
 
         // Create a PRD with existing depends_on.
         let prd_with_deps = r#"---
