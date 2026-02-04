@@ -375,6 +375,19 @@ enum GraphCommand {
     },
 }
 
+/// Arguments for the refactor command.
+#[derive(Clone, Copy)]
+struct CmdRefactorArgs<'a> {
+    max: u32,
+    context: Option<&'a str>,
+    path: Option<&'a str>,
+    dry_run: bool,
+    no_commit: bool,
+    runner_name: &'a str,
+    cli_model: Option<&'a str>,
+    stream: bool,
+}
+
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -491,16 +504,16 @@ fn main() -> Result<()> {
                 stream = %stream,
                 "Running refactor loop..."
             );
-            cmd_refactor(
+            cmd_refactor(&CmdRefactorArgs {
                 max,
-                context.as_deref(),
-                path.as_deref(),
+                context: context.as_deref(),
+                path: path.as_deref(),
                 dry_run,
                 no_commit,
-                &runner,
-                model.as_deref(),
+                runner_name: &runner,
+                cli_model: model.as_deref(),
                 stream,
-            )?;
+            })?;
         }
         Some(Command::Devcontainer { command }) => match command {
             DevcontainerCommand::Generate { runner, model } => {
@@ -1780,16 +1793,18 @@ fn cmd_suggest(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
 ///
 /// Executes AI-driven iterative refactoring up to `max` iterations.
 /// Each iteration identifies one impactful refactor, applies it, verifies UATs, and commits.
-fn cmd_refactor(
-    max: u32,
-    context: Option<&str>,
-    path: Option<&str>,
-    dry_run: bool,
-    no_commit: bool,
-    runner_name: &str,
-    cli_model: Option<&str>,
-    stream: bool,
-) -> Result<()> {
+fn cmd_refactor(args: &CmdRefactorArgs<'_>) -> Result<()> {
+    let CmdRefactorArgs {
+        max,
+        context,
+        path,
+        dry_run,
+        no_commit,
+        runner_name,
+        cli_model,
+        stream,
+    } = *args;
+
     let cwd = std::env::current_dir()?;
 
     init::ensure_initialized(&cwd)?;
