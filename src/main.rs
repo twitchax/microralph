@@ -8,28 +8,23 @@ use clap::{Parser, Subcommand};
 use std::path::Path;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
-mod bootstrap;
 mod changelog;
 mod colors;
+mod commands;
 mod config;
 mod constitution_edit;
-mod devcontainer;
-mod graph;
-mod init;
 mod prd;
 mod prd_edit;
 mod prd_finalize;
 mod prd_new;
 mod prompt;
 mod qa_workflow;
-mod refactor;
-mod reindex;
-mod run;
 mod runner;
 mod spinner;
-mod status;
-mod suggest;
-mod validate;
+
+use commands::{
+    bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate,
+};
 
 use runner::Runner;
 
