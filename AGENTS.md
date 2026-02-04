@@ -5,6 +5,14 @@ This document provides detailed workflows and troubleshooting for AI coding agen
 ## Workspace Overview
 
 - `src/`: Main Rust source code
+  - `commands/`: CLI command implementations (bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate)
+  - `config/`: Configuration loading and constitution editing
+  - `prd/`: PRD types, parsing, indexing, and operations (edit, new, finalize)
+  - `prompt/`: Prompt loading and expansion
+  - `runner/`: Runner implementations (copilot, claude, mock)
+  - `util/`: Shared utilities (colors, spinner, qa_workflow)
+  - `main.rs`: CLI entry point
+  - `changelog.rs`: Changelog generation
 - `.mr/`: microralph state directory
   - `prds/`: PRD files
   - `templates/`: PRD templates
