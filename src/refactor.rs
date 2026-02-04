@@ -11,7 +11,7 @@ use crate::config::load_constitution;
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
-use crate::runner::{Runner, RunnerOutput, UsageInfo};
+use crate::runner::{Runner, RunnerOutput, TokenUsageInfo};
 use crate::spinner::start_spinner;
 
 /// Configuration for `mr refactor`.
@@ -48,7 +48,7 @@ pub enum RefactorIterationResult {
         summary: String,
 
         /// Optional usage information from the underlying agent.
-        usage: Option<UsageInfo>,
+        usage: Option<TokenUsageInfo>,
     },
 
     /// Dry-run mode: a refactor was suggested but not applied.
@@ -57,13 +57,13 @@ pub enum RefactorIterationResult {
         suggestion: String,
 
         /// Optional usage information.
-        usage: Option<UsageInfo>,
+        usage: Option<TokenUsageInfo>,
     },
 
     /// Agent signaled no more impactful refactors remain.
     NoMoreRefactors {
         /// Optional usage information.
-        usage: Option<UsageInfo>,
+        usage: Option<TokenUsageInfo>,
     },
 
     /// The iteration failed (UAT failure or other error).
@@ -72,7 +72,7 @@ pub enum RefactorIterationResult {
         error: String,
 
         /// Optional usage information.
-        usage: Option<UsageInfo>,
+        usage: Option<TokenUsageInfo>,
     },
 }
 
@@ -92,7 +92,7 @@ pub struct RefactorLoopResult {
     pub early_termination: bool,
 
     /// Total token usage across all iterations.
-    pub total_usage: Option<UsageInfo>,
+    pub total_usage: Option<TokenUsageInfo>,
 }
 
 /// Builds the prompt for a refactor iteration.
@@ -242,26 +242,26 @@ pub fn refactor(config: &RefactorConfig, runner: &dyn Runner) -> Result<Refactor
             RefactorIterationResult::Applied { summary, usage } => {
                 tracing::info!(iteration, summary = %summary, "Refactor applied");
                 result.applied_count += 1;
-                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
+                TokenUsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
             }
 
             RefactorIterationResult::Suggested { suggestion, usage } => {
                 tracing::info!(iteration, "Dry-run suggestion generated");
                 tracing::debug!(suggestion = %suggestion, "Suggestion details");
                 result.suggested_count += 1;
-                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
+                TokenUsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
             }
 
             RefactorIterationResult::NoMoreRefactors { usage } => {
                 tracing::info!(iteration, "Early termination: no more refactors");
                 result.early_termination = true;
-                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
+                TokenUsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
                 break;
             }
 
             RefactorIterationResult::Failed { error, usage } => {
                 tracing::warn!(iteration, error = %error, "Refactor iteration failed");
-                UsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
+                TokenUsageInfo::aggregate(&mut result.total_usage, usage.as_ref());
                 // Continue to next iteration per PRD: "leave UAT failure handling to agent's discretion"
             }
         }

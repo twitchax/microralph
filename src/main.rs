@@ -1439,12 +1439,12 @@ fn cmd_run(
                     println!();
                     println!("{}", colors::dim("Token usage:"));
 
-                    if let Some(input) = usage_info.input_tokens {
+                    if let Some(input) = usage_info.input {
                         print!("{}", colors::dim(&format!("  Input: {input}")));
                     }
 
-                    if let Some(output) = usage_info.output_tokens {
-                        if usage_info.input_tokens.is_some() {
+                    if let Some(output) = usage_info.output {
+                        if usage_info.input.is_some() {
                             print!("{}", colors::dim(", "));
                         } else {
                             print!("{}", colors::dim("  "));
@@ -1452,8 +1452,8 @@ fn cmd_run(
                         print!("{}", colors::dim(&format!("Output: {output}")));
                     }
 
-                    if let Some(total) = usage_info.total_tokens {
-                        if usage_info.input_tokens.is_some() || usage_info.output_tokens.is_some() {
+                    if let Some(total) = usage_info.total {
+                        if usage_info.input.is_some() || usage_info.output.is_some() {
                             print!("{}", colors::dim(", "));
                         } else {
                             print!("{}", colors::dim("  "));
@@ -1873,9 +1873,9 @@ fn cmd_refactor(
             "  {}",
             colors::dim(&format!(
                 "Tokens: {} in / {} out / {} total",
-                usage.input_tokens.unwrap_or(0),
-                usage.output_tokens.unwrap_or(0),
-                usage.total_tokens.unwrap_or(0)
+                usage.input.unwrap_or(0),
+                usage.output.unwrap_or(0),
+                usage.total.unwrap_or(0)
             ))
         );
     }

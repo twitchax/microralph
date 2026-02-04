@@ -17,7 +17,7 @@ use crate::prd::{AcceptanceTest, Prd, PrdStatus, TaskStatus, scan_prds};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
-use crate::runner::{Runner, RunnerOutput, UsageInfo};
+use crate::runner::{Runner, RunnerOutput, TokenUsageInfo};
 use crate::spinner::start_spinner;
 
 /// Configuration for `mr run`.
@@ -61,7 +61,7 @@ pub enum RunResult {
         output_summary: String,
 
         /// Optional usage information from the underlying agent.
-        usage: Option<UsageInfo>,
+        usage: Option<TokenUsageInfo>,
     },
 
     /// All tasks are done but there are unverified UATs that need verification.

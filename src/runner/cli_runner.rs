@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, UsageInfo};
+use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, TokenUsageInfo};
 
 /// Reads lines from a stream, writes them to output, and captures them.
 ///
@@ -55,7 +55,7 @@ pub trait CliRunnerConfig {
 
     /// Parses token usage information from CLI output.
     /// Returns None if usage info cannot be parsed.
-    fn parse_usage(&self, text: &str) -> Option<UsageInfo>;
+    fn parse_usage(&self, text: &str) -> Option<TokenUsageInfo>;
 
     /// Post-processes the output text (e.g., extracting result from JSON).
     /// Default implementation returns text as-is.
@@ -286,7 +286,7 @@ mod tests {
             self.args.clone()
         }
 
-        fn parse_usage(&self, _text: &str) -> Option<UsageInfo> {
+        fn parse_usage(&self, _text: &str) -> Option<TokenUsageInfo> {
             None
         }
     }

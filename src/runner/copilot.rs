@@ -9,7 +9,7 @@
 use std::path::Path;
 
 use super::cli_runner::CliRunnerConfig;
-use super::types::UsageInfo;
+use super::types::TokenUsageInfo;
 
 /// Copilot-specific permission mode with additional granular options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -204,9 +204,9 @@ impl CopilotRunner {
     /// Breakdown by AI model:
     ///  claude-opus-4.5         18.3k in, 38 out, 0 cached (Est. 3 Premium requests)
     /// ```
-    fn parse_usage_impl(text: &str) -> Option<UsageInfo> {
-        let mut input_tokens = None;
-        let mut output_tokens = None;
+    fn parse_usage_impl(text: &str) -> Option<TokenUsageInfo> {
+        let mut input = None;
+        let mut output = None;
 
         // Pattern for Copilot CLI format: "18.3k in, 38 out"
         if let Some(caps) =
@@ -226,49 +226,49 @@ impl CopilotRunner {
                 // Token counts are always non-negative and within u64 range.
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let tokens = (num * multiplier) as u64;
-                input_tokens = Some(tokens);
+                input = Some(tokens);
             }
 
-            output_tokens = caps.get(3).and_then(|m| m.as_str().parse().ok());
+            output = caps.get(3).and_then(|m| m.as_str().parse().ok());
         }
 
         // Fallback patterns
-        if input_tokens.is_none()
+        if input.is_none()
             && let Some(caps) =
                 regex::Regex::new(r"[Tt]oken usage:\s*input[=:\s]+(\d+)[,\s]*output[=:\s]+(\d+)")
                     .ok()
                     .and_then(|re| re.captures(text))
         {
-            input_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
-            output_tokens = caps.get(2).and_then(|m| m.as_str().parse().ok());
+            input = caps.get(1).and_then(|m| m.as_str().parse().ok());
+            output = caps.get(2).and_then(|m| m.as_str().parse().ok());
         }
 
-        if input_tokens.is_none()
+        if input.is_none()
             && let Some(caps) = regex::Regex::new(r"[Ii]nput tokens[=:\s]+(\d+)")
                 .ok()
                 .and_then(|re| re.captures(text))
         {
-            input_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+            input = caps.get(1).and_then(|m| m.as_str().parse().ok());
         }
 
-        if output_tokens.is_none()
+        if output.is_none()
             && let Some(caps) = regex::Regex::new(r"[Oo]utput tokens[=:\s]+(\d+)")
                 .ok()
                 .and_then(|re| re.captures(text))
         {
-            output_tokens = caps.get(1).and_then(|m| m.as_str().parse().ok());
+            output = caps.get(1).and_then(|m| m.as_str().parse().ok());
         }
 
-        let total_tokens = match (input_tokens, output_tokens) {
+        let total = match (input, output) {
             (Some(i), Some(o)) => Some(i + o),
             _ => None,
         };
 
-        if input_tokens.is_some() || output_tokens.is_some() || total_tokens.is_some() {
-            Some(UsageInfo {
-                input_tokens,
-                output_tokens,
-                total_tokens,
+        if input.is_some() || output.is_some() || total.is_some() {
+            Some(TokenUsageInfo {
+                input,
+                output,
+                total,
             })
         } else {
             None
@@ -319,7 +319,7 @@ impl CliRunnerConfig for CopilotRunner {
         self.build_args_impl(prompt)
     }
 
-    fn parse_usage(&self, text: &str) -> Option<UsageInfo> {
+    fn parse_usage(&self, text: &str) -> Option<TokenUsageInfo> {
         Self::parse_usage_impl(text)
     }
 
@@ -451,9 +451,9 @@ mod tests {
 
         let usage = CopilotRunner::parse_usage_impl(output).expect("Should parse usage");
 
-        assert_eq!(usage.input_tokens, Some(18300));
-        assert_eq!(usage.output_tokens, Some(38));
-        assert_eq!(usage.total_tokens, Some(18338));
+        assert_eq!(usage.input, Some(18300));
+        assert_eq!(usage.output, Some(38));
+        assert_eq!(usage.total, Some(18338));
     }
 
     #[test]
@@ -462,8 +462,8 @@ mod tests {
 
         let usage = CopilotRunner::parse_usage_impl(output).expect("Should parse usage");
 
-        assert_eq!(usage.input_tokens, Some(1_200_000));
-        assert_eq!(usage.output_tokens, Some(456));
+        assert_eq!(usage.input, Some(1_200_000));
+        assert_eq!(usage.output, Some(456));
     }
 
     #[test]

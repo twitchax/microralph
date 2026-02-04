@@ -9,7 +9,7 @@
 use std::path::Path;
 
 use super::cli_runner::CliRunnerConfig;
-use super::types::UsageInfo;
+use super::types::TokenUsageInfo;
 
 /// Permission mode for the Claude runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -167,32 +167,32 @@ impl ClaudeRunner {
     /// - `cache_read_input_tokens`: Tokens read from cache
     ///
     /// This function parses the JSON output and extracts token usage.
-    fn parse_usage(text: &str) -> Option<UsageInfo> {
+    fn parse_usage(text: &str) -> Option<TokenUsageInfo> {
         // Try to parse as JSON.
         let json: serde_json::Value = serde_json::from_str(text).ok()?;
 
         // Extract usage object.
         let usage = json.get("usage")?;
 
-        let input_tokens = usage
+        let input = usage
             .get("input_tokens")
             .and_then(serde_json::Value::as_u64);
 
-        let output_tokens = usage
+        let output = usage
             .get("output_tokens")
             .and_then(serde_json::Value::as_u64);
 
-        let total_tokens = match (input_tokens, output_tokens) {
+        let total = match (input, output) {
             (Some(i), Some(o)) => Some(i + o),
             _ => None,
         };
 
-        // Return UsageInfo if we found at least one piece of information.
-        if input_tokens.is_some() || output_tokens.is_some() {
-            Some(UsageInfo {
-                input_tokens,
-                output_tokens,
-                total_tokens,
+        // Return TokenUsageInfo if we found at least one piece of information.
+        if input.is_some() || output.is_some() {
+            Some(TokenUsageInfo {
+                input,
+                output,
+                total,
             })
         } else {
             None
@@ -276,7 +276,7 @@ impl CliRunnerConfig for ClaudeRunner {
         args
     }
 
-    fn parse_usage(&self, text: &str) -> Option<UsageInfo> {
+    fn parse_usage(&self, text: &str) -> Option<TokenUsageInfo> {
         Self::parse_usage(text)
     }
 
@@ -417,9 +417,9 @@ mod tests {
 
         let usage = ClaudeRunner::parse_usage(json_output).unwrap();
 
-        assert_eq!(usage.input_tokens, Some(1234));
-        assert_eq!(usage.output_tokens, Some(56));
-        assert_eq!(usage.total_tokens, Some(1290));
+        assert_eq!(usage.input, Some(1234));
+        assert_eq!(usage.output, Some(56));
+        assert_eq!(usage.total, Some(1290));
     }
 
     #[test]
@@ -433,9 +433,9 @@ mod tests {
 
         let usage = ClaudeRunner::parse_usage(json_output).unwrap();
 
-        assert_eq!(usage.input_tokens, Some(100));
-        assert_eq!(usage.output_tokens, None);
-        assert_eq!(usage.total_tokens, None);
+        assert_eq!(usage.input, Some(100));
+        assert_eq!(usage.output, None);
+        assert_eq!(usage.total, None);
     }
 
     #[test]

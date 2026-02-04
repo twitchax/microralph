@@ -35,21 +35,21 @@ pub type RunnerResult<T> = Result<T, RunnerError>;
 
 /// Token usage information from the underlying agent.
 #[derive(Debug, Clone)]
-pub struct UsageInfo {
+pub struct TokenUsageInfo {
     /// Number of input tokens consumed.
-    pub input_tokens: Option<u64>,
+    pub input: Option<u64>,
 
     /// Number of output tokens generated.
-    pub output_tokens: Option<u64>,
+    pub output: Option<u64>,
 
     /// Total tokens (input + output), if available separately.
-    pub total_tokens: Option<u64>,
+    pub total: Option<u64>,
 }
 
-impl UsageInfo {
+impl TokenUsageInfo {
     /// Returns true if any usage information is present.
     pub fn has_data(&self) -> bool {
-        self.input_tokens.is_some() || self.output_tokens.is_some() || self.total_tokens.is_some()
+        self.input.is_some() || self.output.is_some() || self.total.is_some()
     }
 
     /// Adds two optional u64 values, returning None only if both are None.
@@ -61,18 +61,18 @@ impl UsageInfo {
         }
     }
 
-    /// Merges another [`UsageInfo`] into this one, summing token counts.
-    pub fn merge(&mut self, other: &UsageInfo) {
-        self.input_tokens = Self::add_optional(self.input_tokens, other.input_tokens);
-        self.output_tokens = Self::add_optional(self.output_tokens, other.output_tokens);
-        self.total_tokens = Self::add_optional(self.total_tokens, other.total_tokens);
+    /// Merges another [`TokenUsageInfo`] into this one, summing token counts.
+    pub fn merge(&mut self, other: &TokenUsageInfo) {
+        self.input = Self::add_optional(self.input, other.input);
+        self.output = Self::add_optional(self.output, other.output);
+        self.total = Self::add_optional(self.total, other.total);
     }
 
-    /// Aggregates an optional [`UsageInfo`] into an optional accumulator.
+    /// Aggregates an optional [`TokenUsageInfo`] into an optional accumulator.
     ///
     /// This is a common pattern when accumulating usage across multiple operations.
     /// If `new` is `Some`, it's merged into `total`. If `total` is `None`, it becomes a clone of `new`.
-    pub fn aggregate(total: &mut Option<UsageInfo>, new: Option<&UsageInfo>) {
+    pub fn aggregate(total: &mut Option<TokenUsageInfo>, new: Option<&TokenUsageInfo>) {
         if let Some(new_usage) = new {
             if let Some(total_usage) = total {
                 total_usage.merge(new_usage);
@@ -93,7 +93,7 @@ pub struct RunnerOutput {
     pub success: bool,
 
     /// Optional usage information from the underlying agent.
-    pub usage: Option<UsageInfo>,
+    pub usage: Option<TokenUsageInfo>,
 }
 
 impl RunnerOutput {
@@ -191,80 +191,80 @@ mod tests {
 
     #[test]
     fn test_usage_info_merge_both_some() {
-        let mut total = UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: Some(50),
-            total_tokens: Some(150),
+        let mut total = TokenUsageInfo {
+            input: Some(100),
+            output: Some(50),
+            total: Some(150),
         };
 
-        let other = UsageInfo {
-            input_tokens: Some(200),
-            output_tokens: Some(100),
-            total_tokens: Some(300),
+        let other = TokenUsageInfo {
+            input: Some(200),
+            output: Some(100),
+            total: Some(300),
         };
 
         total.merge(&other);
 
-        assert_eq!(total.input_tokens, Some(300));
-        assert_eq!(total.output_tokens, Some(150));
-        assert_eq!(total.total_tokens, Some(450));
+        assert_eq!(total.input, Some(300));
+        assert_eq!(total.output, Some(150));
+        assert_eq!(total.total, Some(450));
     }
 
     #[test]
     fn test_usage_info_merge_partial() {
-        let mut total = UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: None,
-            total_tokens: None,
+        let mut total = TokenUsageInfo {
+            input: Some(100),
+            output: None,
+            total: None,
         };
 
-        let other = UsageInfo {
-            input_tokens: None,
-            output_tokens: Some(50),
-            total_tokens: Some(50),
+        let other = TokenUsageInfo {
+            input: None,
+            output: Some(50),
+            total: Some(50),
         };
 
         total.merge(&other);
 
-        assert_eq!(total.input_tokens, Some(100));
-        assert_eq!(total.output_tokens, Some(50));
-        assert_eq!(total.total_tokens, Some(50));
+        assert_eq!(total.input, Some(100));
+        assert_eq!(total.output, Some(50));
+        assert_eq!(total.total, Some(50));
     }
 
     #[test]
     fn test_usage_info_merge_both_none() {
-        let mut total = UsageInfo {
-            input_tokens: None,
-            output_tokens: None,
-            total_tokens: None,
+        let mut total = TokenUsageInfo {
+            input: None,
+            output: None,
+            total: None,
         };
 
-        let other = UsageInfo {
-            input_tokens: None,
-            output_tokens: None,
-            total_tokens: None,
+        let other = TokenUsageInfo {
+            input: None,
+            output: None,
+            total: None,
         };
 
         total.merge(&other);
 
-        assert_eq!(total.input_tokens, None);
-        assert_eq!(total.output_tokens, None);
-        assert_eq!(total.total_tokens, None);
+        assert_eq!(total.input, None);
+        assert_eq!(total.output, None);
+        assert_eq!(total.total, None);
     }
 
     #[test]
     fn test_usage_info_has_data() {
-        let empty = UsageInfo {
-            input_tokens: None,
-            output_tokens: None,
-            total_tokens: None,
+        let empty = TokenUsageInfo {
+            input: None,
+            output: None,
+            total: None,
         };
         assert!(!empty.has_data());
 
-        let with_input = UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: None,
-            total_tokens: None,
+        let with_input = TokenUsageInfo {
+            input: Some(100),
+            output: None,
+            total: None,
         };
         assert!(with_input.has_data());
     }
@@ -272,68 +272,68 @@ mod tests {
     #[test]
     fn test_usage_info_aggregate_into_none() {
         let mut total = None;
-        let new = Some(UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: Some(50),
-            total_tokens: Some(150),
+        let new = Some(TokenUsageInfo {
+            input: Some(100),
+            output: Some(50),
+            total: Some(150),
         });
 
-        UsageInfo::aggregate(&mut total, new.as_ref());
+        TokenUsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_some());
         let total = total.unwrap();
-        assert_eq!(total.input_tokens, Some(100));
-        assert_eq!(total.output_tokens, Some(50));
-        assert_eq!(total.total_tokens, Some(150));
+        assert_eq!(total.input, Some(100));
+        assert_eq!(total.output, Some(50));
+        assert_eq!(total.total, Some(150));
     }
 
     #[test]
     fn test_usage_info_aggregate_into_some() {
-        let mut total = Some(UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: Some(50),
-            total_tokens: Some(150),
+        let mut total = Some(TokenUsageInfo {
+            input: Some(100),
+            output: Some(50),
+            total: Some(150),
         });
-        let new = Some(UsageInfo {
-            input_tokens: Some(200),
-            output_tokens: Some(100),
-            total_tokens: Some(300),
+        let new = Some(TokenUsageInfo {
+            input: Some(200),
+            output: Some(100),
+            total: Some(300),
         });
 
-        UsageInfo::aggregate(&mut total, new.as_ref());
+        TokenUsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_some());
         let total = total.unwrap();
-        assert_eq!(total.input_tokens, Some(300));
-        assert_eq!(total.output_tokens, Some(150));
-        assert_eq!(total.total_tokens, Some(450));
+        assert_eq!(total.input, Some(300));
+        assert_eq!(total.output, Some(150));
+        assert_eq!(total.total, Some(450));
     }
 
     #[test]
     fn test_usage_info_aggregate_with_none_new() {
-        let mut total = Some(UsageInfo {
-            input_tokens: Some(100),
-            output_tokens: Some(50),
-            total_tokens: Some(150),
+        let mut total = Some(TokenUsageInfo {
+            input: Some(100),
+            output: Some(50),
+            total: Some(150),
         });
         let new = None;
 
-        UsageInfo::aggregate(&mut total, new.as_ref());
+        TokenUsageInfo::aggregate(&mut total, new.as_ref());
 
         // Total should be unchanged.
         assert!(total.is_some());
         let total = total.unwrap();
-        assert_eq!(total.input_tokens, Some(100));
-        assert_eq!(total.output_tokens, Some(50));
-        assert_eq!(total.total_tokens, Some(150));
+        assert_eq!(total.input, Some(100));
+        assert_eq!(total.output, Some(50));
+        assert_eq!(total.total, Some(150));
     }
 
     #[test]
     fn test_usage_info_aggregate_both_none() {
-        let mut total: Option<UsageInfo> = None;
-        let new: Option<UsageInfo> = None;
+        let mut total: Option<TokenUsageInfo> = None;
+        let new: Option<TokenUsageInfo> = None;
 
-        UsageInfo::aggregate(&mut total, new.as_ref());
+        TokenUsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_none());
     }
