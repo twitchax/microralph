@@ -117,24 +117,9 @@ where
         // Check if ready to apply.
         if runner_output.text.contains(READY_SIGNAL) {
             tracing::debug!("Runner signaled ready to apply");
-
-            // Extract and apply the new PRD content.
             let new_content = qa_workflow::extract_prd_content(&runner_output.text)?;
-            let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
-
-            // Write the updated PRD.
-            std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
-
-            // Validate PRD frontmatter after agent edits.
-            tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-            crate::validate::validate_prd_frontmatter(&prd_path);
-
-            writeln!(output)?;
-            writeln!(output, "Updated PRD: {}", prd_path.display())?;
-
-            // Update the index.
-            generate_index_from_root(config.root)?;
-            writeln!(output, "Updated PRD index")?;
+            let new_prd =
+                write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
 
             return Ok(PrdEditResult {
                 prd: new_prd,
@@ -150,19 +135,8 @@ where
         if questions.is_empty() {
             // No questions and no ready signal - try to extract content anyway
             if let Ok(new_content) = qa_workflow::extract_prd_content(&runner_output.text) {
-                let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
-
-                std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
-
-                // Validate PRD frontmatter after agent edits.
-                tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-                crate::validate::validate_prd_frontmatter(&prd_path);
-
-                writeln!(output)?;
-                writeln!(output, "Updated PRD: {}", prd_path.display())?;
-
-                generate_index_from_root(config.root)?;
-                writeln!(output, "Updated PRD index")?;
+                let new_prd =
+                    write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
 
                 return Ok(PrdEditResult {
                     prd: new_prd,
@@ -205,19 +179,7 @@ where
     }
 
     let new_content = qa_workflow::extract_prd_content(&final_output.text)?;
-    let new_prd = parse_prd(&new_content).context("Failed to parse updated PRD")?;
-
-    std::fs::write(&prd_path, &new_content).context("Failed to write updated PRD")?;
-
-    // Validate PRD frontmatter after agent edits.
-    tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-    crate::validate::validate_prd_frontmatter(&prd_path);
-
-    writeln!(output)?;
-    writeln!(output, "Updated PRD: {}", prd_path.display())?;
-
-    generate_index_from_root(config.root)?;
-    writeln!(output, "Updated PRD index")?;
+    let new_prd = write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
 
     Ok(PrdEditResult {
         prd: new_prd,
@@ -225,6 +187,29 @@ where
         rounds,
         qa_history,
     })
+}
+
+/// Writes the updated PRD content and regenerates the index.
+fn write_prd_and_update_index<O: Write>(
+    root: &Path,
+    prd_path: &Path,
+    new_content: &str,
+    output: &mut O,
+) -> Result<Prd> {
+    let new_prd = parse_prd(new_content).context("Failed to parse updated PRD")?;
+
+    std::fs::write(prd_path, new_content).context("Failed to write updated PRD")?;
+
+    tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
+    crate::validate::validate_prd_frontmatter(prd_path);
+
+    writeln!(output)?;
+    writeln!(output, "Updated PRD: {}", prd_path.display())?;
+
+    generate_index_from_root(root)?;
+    writeln!(output, "Updated PRD index")?;
+
+    Ok(new_prd)
 }
 
 /// Finds a PRD by ID and returns its path and content.
