@@ -118,8 +118,7 @@ where
         if runner_output.text.contains(READY_SIGNAL) {
             tracing::debug!("Runner signaled ready to apply");
             let new_content = qa_workflow::extract_prd_content(&runner_output.text)?;
-            let new_prd =
-                write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
+            let new_prd = write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
 
             return Ok(PrdEditResult {
                 prd: new_prd,

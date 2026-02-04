@@ -2007,6 +2007,29 @@ Automatic AGENTS.md updates have been removed to give agents more flexibility. A
 Update any relevant section, not just this one. Keep additions concise and actionable.
 ";
 
+/// Mapping of prompt filenames to their content.
+const PROMPT_FILES: &[(&str, &str)] = &[
+    ("init.md", PROMPT_INIT),
+    ("bootstrap_plan.md", PROMPT_BOOTSTRAP_PLAN),
+    ("bootstrap_generate_prds.md", PROMPT_BOOTSTRAP_GENERATE_PRDS),
+    ("prd_new_round1_questions.md", PROMPT_PRD_NEW_ROUND1),
+    ("prd_new_roundN_questions.md", PROMPT_PRD_NEW_ROUNDN),
+    ("prd_new_synthesize_prd.md", PROMPT_PRD_NEW_SYNTHESIZE),
+    ("run_task.md", PROMPT_RUN_TASK),
+    ("run_task_finalize.md", PROMPT_RUN_TASK_FINALIZE),
+    ("run_uat_verify.md", PROMPT_RUN_UAT_VERIFY),
+    ("prd_edit.md", PROMPT_PRD_EDIT),
+    ("constitution_edit.md", PROMPT_CONSTITUTION_EDIT),
+    ("devcontainer_generate.md", PROMPT_DEVCONTAINER_GENERATE),
+    ("adapt_language.md", PROMPT_ADAPT_LANGUAGE),
+    ("reindex.md", PROMPT_REINDEX),
+    ("pick_prd.md", PROMPT_PICK_PRD),
+    ("suggest_generate.md", PROMPT_SUGGEST_GENERATE),
+    ("refactor.md", PROMPT_REFACTOR),
+    ("bootstrap_reconstruct.md", PROMPT_BOOTSTRAP_RECONSTRUCT),
+    ("reindex_depends_on.md", PROMPT_REINDEX_DEPENDS_ON),
+];
+
 /// Result of initialization, containing counts and paths of created items.
 #[derive(Debug, Default)]
 pub struct InitResult {
@@ -2064,93 +2087,10 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
 
     let prompts_dir = mr_dir.join("prompts");
     create_dir_if_missing(&prompts_dir, &mut result)?;
-    create_file_if_missing(&prompts_dir.join("init.md"), PROMPT_INIT, &mut result)?;
-    create_file_if_missing(
-        &prompts_dir.join("bootstrap_plan.md"),
-        PROMPT_BOOTSTRAP_PLAN,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("bootstrap_generate_prds.md"),
-        PROMPT_BOOTSTRAP_GENERATE_PRDS,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("prd_new_round1_questions.md"),
-        PROMPT_PRD_NEW_ROUND1,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("prd_new_roundN_questions.md"),
-        PROMPT_PRD_NEW_ROUNDN,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("prd_new_synthesize_prd.md"),
-        PROMPT_PRD_NEW_SYNTHESIZE,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("run_task.md"),
-        PROMPT_RUN_TASK,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("run_task_finalize.md"),
-        PROMPT_RUN_TASK_FINALIZE,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("run_uat_verify.md"),
-        PROMPT_RUN_UAT_VERIFY,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("prd_edit.md"),
-        PROMPT_PRD_EDIT,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("constitution_edit.md"),
-        PROMPT_CONSTITUTION_EDIT,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("devcontainer_generate.md"),
-        PROMPT_DEVCONTAINER_GENERATE,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("adapt_language.md"),
-        PROMPT_ADAPT_LANGUAGE,
-        &mut result,
-    )?;
-    create_file_if_missing(&prompts_dir.join("reindex.md"), PROMPT_REINDEX, &mut result)?;
-    create_file_if_missing(
-        &prompts_dir.join("pick_prd.md"),
-        PROMPT_PICK_PRD,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("suggest_generate.md"),
-        PROMPT_SUGGEST_GENERATE,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("refactor.md"),
-        PROMPT_REFACTOR,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("bootstrap_reconstruct.md"),
-        PROMPT_BOOTSTRAP_RECONSTRUCT,
-        &mut result,
-    )?;
-    create_file_if_missing(
-        &prompts_dir.join("reindex_depends_on.md"),
-        PROMPT_REINDEX_DEPENDS_ON,
-        &mut result,
-    )?;
+
+    for (filename, content) in PROMPT_FILES {
+        create_file_if_missing(&prompts_dir.join(filename), content, &mut result)?;
+    }
 
     // Create empty PRDS.md index.
     create_file_if_missing(&mr_dir.join("PRDS.md"), EMPTY_INDEX, &mut result)?;
@@ -2204,93 +2144,9 @@ pub fn init_prompts_and_templates(root: impl AsRef<Path>) -> Result<InitResult> 
     create_file_always(&templates_dir.join("prd.md"), PRD_TEMPLATE, &mut result)?;
 
     // Write all prompt files (always overwrite).
-    create_file_always(&prompts_dir.join("init.md"), PROMPT_INIT, &mut result)?;
-    create_file_always(
-        &prompts_dir.join("bootstrap_plan.md"),
-        PROMPT_BOOTSTRAP_PLAN,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("bootstrap_generate_prds.md"),
-        PROMPT_BOOTSTRAP_GENERATE_PRDS,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("prd_new_round1_questions.md"),
-        PROMPT_PRD_NEW_ROUND1,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("prd_new_roundN_questions.md"),
-        PROMPT_PRD_NEW_ROUNDN,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("prd_new_synthesize_prd.md"),
-        PROMPT_PRD_NEW_SYNTHESIZE,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("run_task.md"),
-        PROMPT_RUN_TASK,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("run_task_finalize.md"),
-        PROMPT_RUN_TASK_FINALIZE,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("run_uat_verify.md"),
-        PROMPT_RUN_UAT_VERIFY,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("prd_edit.md"),
-        PROMPT_PRD_EDIT,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("constitution_edit.md"),
-        PROMPT_CONSTITUTION_EDIT,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("devcontainer_generate.md"),
-        PROMPT_DEVCONTAINER_GENERATE,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("adapt_language.md"),
-        PROMPT_ADAPT_LANGUAGE,
-        &mut result,
-    )?;
-    create_file_always(&prompts_dir.join("reindex.md"), PROMPT_REINDEX, &mut result)?;
-    create_file_always(
-        &prompts_dir.join("pick_prd.md"),
-        PROMPT_PICK_PRD,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("suggest_generate.md"),
-        PROMPT_SUGGEST_GENERATE,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("refactor.md"),
-        PROMPT_REFACTOR,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("bootstrap_reconstruct.md"),
-        PROMPT_BOOTSTRAP_RECONSTRUCT,
-        &mut result,
-    )?;
-    create_file_always(
-        &prompts_dir.join("reindex_depends_on.md"),
-        PROMPT_REINDEX_DEPENDS_ON,
-        &mut result,
-    )?;
+    for (filename, content) in PROMPT_FILES {
+        create_file_always(&prompts_dir.join(filename), content, &mut result)?;
+    }
 
     Ok(result)
 }
