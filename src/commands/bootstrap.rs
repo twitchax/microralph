@@ -24,7 +24,7 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
-use crate::spinner::start_spinner;
+use crate::util::spinner::start_spinner;
 
 /// Default PRD budget when bootstrapping.
 const DEFAULT_PRD_BUDGET: u32 = 6;

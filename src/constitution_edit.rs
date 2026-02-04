@@ -12,8 +12,8 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::qa_workflow::{self, QaPair, parse_questions};
 use crate::runner::Runner;
+use crate::util::qa_workflow::{self, QaPair, parse_questions};
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;

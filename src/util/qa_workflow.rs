@@ -261,18 +261,18 @@ where
         // Display question with proper multi-line formatting.
         let question_lines: Vec<&str> = question.lines().collect();
         if question_lines.len() == 1 {
-            writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
+            writeln!(output, "{}. {}", i + 1, super::colors::question(question))?;
         } else {
             // First line with number.
             writeln!(
                 output,
                 "{}. {}",
                 i + 1,
-                crate::colors::question(question_lines[0])
+                super::colors::question(question_lines[0])
             )?;
             // Subsequent lines indented.
             for line in &question_lines[1..] {
-                writeln!(output, "   {}", crate::colors::question(line))?;
+                writeln!(output, "   {}", super::colors::question(line))?;
             }
         }
         write!(output, "   > ")?;
@@ -330,7 +330,7 @@ where
     let mut pairs = Vec::new();
 
     for (i, question) in questions.iter().enumerate() {
-        writeln!(output, "{}. {}", i + 1, crate::colors::question(question))?;
+        writeln!(output, "{}. {}", i + 1, super::colors::question(question))?;
         write!(output, "   > ")?;
         output.flush()?;
 

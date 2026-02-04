@@ -13,8 +13,8 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::qa_workflow::{self, QaPair};
 use crate::runner::Runner;
+use crate::util::qa_workflow::{self, QaPair};
 
 /// Maximum number of Q/A rounds before forcing application.
 const MAX_QA_ROUNDS: usize = 3;
@@ -252,8 +252,8 @@ fn build_edit_prompt(config: &PrdEditConfig, prd_content: &str, qa_history: &[Qa
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::qa_workflow;
     use crate::runner::{MockRunner, RunnerOutput};
+    use crate::util::qa_workflow;
     use tempfile::TempDir;
 
     fn setup_test_repo() -> TempDir {

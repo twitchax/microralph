@@ -41,7 +41,7 @@ tasks:
 - id: T-003
   title: Create util/ module for utility functions
   priority: 2
-  status: todo
+  status: done
   notes: "Move colors.rs, spinner.rs, qa_workflow.rs into util/ module"
 - id: T-004
   title: Move config.rs and constitution_edit.rs into config/ module
@@ -238,6 +238,30 @@ use util::{colors, spinner};
   - Updated `src/main.rs` to remove old `mod prd_edit`, `mod prd_new`, `mod prd_finalize` declarations
   - Updated `src/main.rs` usages to reference `prd::edit::`, `prd::new::`, `prd::finalize::`
   - Fixed `src/commands/suggest.rs` import to use `crate::prd::new::` path
+  - UAT: `cargo make uat` passed with 484 tests
+
+---
+
+## 2026-02-04 — T-003 Completed
+- **Task**: Create util/ module for utility functions
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/util/` directory with `mod.rs` declaring public submodules: `colors`, `spinner`, `qa_workflow`
+  - Moved `src/colors.rs` to `src/util/colors.rs`
+  - Moved `src/spinner.rs` to `src/util/spinner.rs`
+  - Moved `src/qa_workflow.rs` to `src/util/qa_workflow.rs`
+  - Updated `src/main.rs` to replace individual module declarations with `mod util;` and added `use util::colors;`
+  - Updated `src/util/qa_workflow.rs` to use `super::colors::` for intra-module references
+  - Updated imports across the codebase to use `crate::util::` paths:
+    - `src/constitution_edit.rs`: `crate::util::qa_workflow`
+    - `src/prd/edit.rs`: `crate::util::qa_workflow`
+    - `src/prd/new.rs`: `crate::util::qa_workflow`, `crate::util::spinner`
+    - `src/prd/finalize.rs`: `crate::util::spinner`
+    - `src/commands/run.rs`: `crate::util::spinner`
+    - `src/commands/refactor.rs`: `crate::util::spinner`
+    - `src/commands/reindex.rs`: `crate::util::spinner`
+    - `src/commands/suggest.rs`: `crate::util::colors`, `crate::util::spinner`
+    - `src/commands/bootstrap.rs`: `crate::util::spinner`
   - UAT: `cargo make uat` passed with 484 tests
 
 ---

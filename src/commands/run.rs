@@ -18,7 +18,7 @@ use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::{Runner, RunnerOutput, TokenUsageInfo};
-use crate::spinner::start_spinner;
+use crate::util::spinner::start_spinner;
 
 /// Configuration for `mr run`.
 #[derive(Debug)]

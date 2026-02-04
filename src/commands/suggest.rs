@@ -9,7 +9,6 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 
-use crate::colors;
 use crate::prd::new::{PrdNewConfig, PrdNewResult, create_prd};
 use crate::prd::{generate_index_from_root, scan_prd_summaries};
 use crate::prompt::{
@@ -17,7 +16,8 @@ use crate::prompt::{
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
-use crate::spinner::start_spinner;
+use crate::util::colors;
+use crate::util::spinner::start_spinner;
 
 /// A single PRD suggestion from the AI.
 #[derive(Debug, Clone)]

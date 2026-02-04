@@ -22,7 +22,7 @@ use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::Runner;
-use crate::spinner::start_spinner;
+use crate::util::spinner::start_spinner;
 
 /// Errors that can occur during PRD finalization.
 #[derive(Debug, Error)]

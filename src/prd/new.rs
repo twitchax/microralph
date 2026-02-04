@@ -15,9 +15,9 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::qa_workflow::{self, QaPair};
 use crate::runner::Runner;
-use crate::spinner::start_spinner;
+use crate::util::qa_workflow::{self, QaPair};
+use crate::util::spinner::start_spinner;
 
 /// Maximum number of Q/A rounds before forcing synthesis.
 const MAX_QA_ROUNDS: usize = 5;
@@ -639,7 +639,7 @@ where
     writeln!(
         output,
         "{}",
-        crate::colors::question(
+        crate::util::colors::question(
             "Would you like to provide additional context for the AI? (optional)"
         )
     )?;
@@ -667,8 +667,8 @@ where
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::qa_workflow;
     use crate::runner::MockRunner;
+    use crate::util::qa_workflow;
     use tempfile::TempDir;
 
     fn setup_test_repo() -> TempDir {

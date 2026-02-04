@@ -9,21 +9,20 @@ use std::path::Path;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 mod changelog;
-mod colors;
 mod commands;
 mod config;
 mod constitution_edit;
 mod prd;
 mod prompt;
-mod qa_workflow;
 mod runner;
-mod spinner;
+mod util;
 
 use commands::{
     bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate,
 };
 
 use runner::Runner;
+use util::colors;
 
 /// microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
 ///
