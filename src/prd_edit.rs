@@ -60,7 +60,6 @@ pub struct PrdEditConfig<'a> {
 /// 4. Applies changes when runner signals ready
 /// 5. Writes the updated PRD to disk
 /// 6. Updates the index
-#[allow(clippy::too_many_lines)]
 pub fn edit_prd<R, I, O>(
     config: &PrdEditConfig,
     runner: &R,

@@ -2043,7 +2043,6 @@ pub struct InitResult {
 /// # Returns
 ///
 /// An `InitResult` with counts and paths of created/skipped items.
-#[allow(clippy::too_many_lines)]
 pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     let root = root.as_ref();
     let mut result = InitResult::default();

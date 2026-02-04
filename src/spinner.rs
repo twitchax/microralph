@@ -18,12 +18,10 @@ static SPINNER_STYLE: LazyLock<ProgressStyle> = LazyLock::new(|| {
 /// A wrapper around indicatif's [`ProgressBar`] that handles TTY detection.
 ///
 /// When stdout is not a TTY, all operations become no-ops.
-#[allow(dead_code)] // Will be used by T-003+
 pub struct Spinner {
     bar: Option<ProgressBar>,
 }
 
-#[allow(dead_code)] // Will be used by T-003+
 impl Spinner {
     /// Creates a new spinner if stdout is a TTY, otherwise returns a no-op spinner.
     fn new_internal(enabled: bool) -> Self {
@@ -66,7 +64,6 @@ impl Spinner {
 /// # Returns
 ///
 /// A `Spinner` handle that can be used to update or clear the spinner.
-#[allow(dead_code)] // Will be used by T-003+
 pub fn start_spinner(enabled: bool, message: impl Into<std::borrow::Cow<'static, str>>) -> Spinner {
     let spinner = Spinner::new_internal(enabled);
     spinner.set_message(message);

@@ -37,7 +37,6 @@ pub struct Suggestion {
 /// 2. Invokes the runner to generate 5 PRD suggestions
 /// 3. Displays a numbered picker for user selection
 /// 4. Flows the selected suggestion into `mr new` with pre-filled context
-#[allow(clippy::too_many_lines)]
 pub fn suggest<R>(root: &Path, runner: &R) -> Result<()>
 where
     R: Runner + ?Sized,

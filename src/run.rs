@@ -556,7 +556,6 @@ pub struct UatVerificationConfig<'a> {
 /// The loop ensures eventual termination via `max_iterations` and allows the runner to modify
 /// the PRD (e.g., marking UATs as verified) between iterations. This state machine handles
 /// three exit conditions: all verified, iteration limit, or error.
-#[allow(clippy::too_many_lines)]
 pub fn run_uat_verification_loop(
     config: &UatVerificationConfig,
     runner: &dyn Runner,

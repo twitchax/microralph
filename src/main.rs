@@ -1067,7 +1067,6 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
 }
 
 /// Runs the `mr list` command.
-#[allow(clippy::too_many_lines)]
 fn cmd_prd_list(include_done: bool) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -1320,7 +1319,6 @@ fn normalize_prd_id(input: &str) -> String {
 }
 
 /// Runs the `mr run` command.
-#[allow(clippy::too_many_lines)]
 fn cmd_run(
     prd_id: Option<&str>,
     runner_name: &str,
@@ -1782,7 +1780,6 @@ fn cmd_suggest(runner_name: &str, cli_model: Option<&str>) -> Result<()> {
 ///
 /// Executes AI-driven iterative refactoring up to `max` iterations.
 /// Each iteration identifies one impactful refactor, applies it, verifies UATs, and commits.
-#[allow(clippy::too_many_arguments)]
 fn cmd_refactor(
     max: u32,
     context: Option<&str>,

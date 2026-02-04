@@ -185,7 +185,6 @@ pub fn get_status(root: &Path) -> Result<StatusReport> {
 }
 
 /// Formats the status report for display.
-#[allow(clippy::too_many_lines)]
 pub fn format_status(report: &StatusReport) -> String {
     let mut output = String::new();
 

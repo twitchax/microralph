@@ -35,7 +35,6 @@ pub type RunnerResult<T> = Result<T, RunnerError>;
 
 /// Token usage information from the underlying agent.
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_field_names)] // Fields are named for clarity in token usage context
 pub struct UsageInfo {
     /// Number of input tokens consumed.
     pub input_tokens: Option<u64>,
@@ -129,7 +128,6 @@ pub trait Runner: Send + Sync {
     /// Formats the command that will be executed for display to the user.
     /// Should include all relevant parameters but exclude the prompt content.
     /// Returns None if command display is not applicable for this runner.
-    #[allow(dead_code)]
     fn format_command_display(
         &self,
         _prompt: &str,
