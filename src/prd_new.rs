@@ -175,15 +175,65 @@ where
     // STATE: Round 1 - Answer Collection
     // User provides answers to initial questions; these become the Q/A history
     let mut qa_history = qa_workflow::collect_multiline_answers(&questions, input, output)?;
-    let mut rounds = 1;
 
     // STATE: Loop State - Multi-round Q/A until runner is ready to synthesize
-    // Each iteration builds on previous Q/A history to gather more specific details
+    let rounds = run_followup_rounds(
+        config,
+        runner,
+        &mut qa_history,
+        user_context.as_deref(),
+        input,
+        output,
+    )?;
+
+    // STATE: Synthesis and Persist - Generate final PRD and write to disk
+    let (prd, prd_path) = synthesize_and_persist_prd(
+        config,
+        runner,
+        &qa_history,
+        &existing_prds,
+        user_context.as_deref(),
+        &next_id,
+        output,
+    )?;
+
+    writeln!(output)?;
+    writeln!(output, "Created PRD: {}", prd_path.display())?;
+
+    // STATE: Finalize - Update index to reflect new PRD
+    generate_index_from_root(config.root)?;
+    writeln!(output, "Updated PRD index")?;
+
+    Ok(PrdNewResult {
+        prd,
+        path: prd_path,
+        rounds,
+        qa_history,
+    })
+}
+
+/// Runs follow-up Q/A rounds until the runner signals readiness or max rounds is reached.
+///
+/// Returns the total number of rounds (including round 1).
+fn run_followup_rounds<R, I, O>(
+    config: &PrdNewConfig,
+    runner: &R,
+    qa_history: &mut Vec<QaPair>,
+    user_context: Option<&str>,
+    input: &mut I,
+    output: &mut O,
+) -> Result<usize>
+where
+    R: Runner + ?Sized,
+    I: BufRead,
+    O: Write,
+{
+    let mut rounds = 1;
+
     loop {
         rounds += 1;
 
-        // STATE: Loop State - Check MAX_QA_ROUNDS limit
-        // Force synthesis if we've asked too many rounds (prevents infinite loops)
+        // Check MAX_QA_ROUNDS limit - force synthesis if too many rounds.
         if rounds > MAX_QA_ROUNDS {
             writeln!(output)?;
             writeln!(
@@ -193,9 +243,8 @@ where
             break;
         }
 
-        // STATE: Loop State - Question Generation (Round N)
-        // Runner reviews Q/A history and decides whether to ask follow-ups or signal readiness
-        let round_n_prompt = build_round_n_prompt(config, &qa_history, user_context.as_deref());
+        // Build prompt for this round.
+        let round_n_prompt = build_round_n_prompt(config, qa_history, user_context);
 
         // Print command info before spinner (only when not streaming).
         if !config.stream
@@ -229,19 +278,16 @@ where
             );
         }
 
-        // STATE: Loop State - Ready Check
-        // Runner signals READY_TO_SYNTHESIZE when it has enough information
+        // Check if runner signals ready to synthesize.
         if round_n_output.text.contains(READY_SIGNAL) {
             tracing::debug!("Runner signaled ready to synthesize");
             break;
         }
 
-        // STATE: Loop State - Additional Questions parsing
-        // Runner may provide follow-up questions to clarify details
+        // Parse any additional questions.
         let additional_questions = qa_workflow::parse_questions(&round_n_output.text);
 
-        // STATE: Loop State - Auto-Advance
-        // If runner didn't provide questions or signal ready, assume it's ready
+        // If no questions and no ready signal, assume ready.
         if additional_questions.is_empty() {
             tracing::debug!("No additional questions, proceeding to synthesis");
             break;
@@ -255,19 +301,35 @@ where
         )?;
         writeln!(output)?;
 
-        // Collect additional answers and append to Q/A history
+        // Collect additional answers and append to Q/A history.
         let additional_qa =
             qa_workflow::collect_multiline_answers(&additional_questions, input, output)?;
         qa_history.extend(additional_qa);
-        // Continue loop for next round
     }
 
-    // STATE: Synthesis - Generate final PRD from complete Q/A history
-    // Runner creates PRD frontmatter (id, title, tasks, etc.) and body content
+    Ok(rounds)
+}
+
+/// Synthesizes and persists the PRD to disk.
+///
+/// Returns the parsed PRD and its file path.
+fn synthesize_and_persist_prd<R, O>(
+    config: &PrdNewConfig,
+    runner: &R,
+    qa_history: &[QaPair],
+    existing_prds: &[PrdSummary],
+    user_context: Option<&str>,
+    next_id: &str,
+    output: &mut O,
+) -> Result<(Prd, std::path::PathBuf)>
+where
+    R: Runner + ?Sized,
+    O: Write,
+{
     writeln!(output)?;
 
     let synthesize_prompt =
-        build_synthesize_prompt(config, &qa_history, &existing_prds, user_context.as_deref());
+        build_synthesize_prompt(config, qa_history, existing_prds, user_context);
 
     // Print command info before spinner (only when not streaming).
     if !config.stream
@@ -294,96 +356,39 @@ where
         bail!("Runner failed during synthesis: {}", synthesize_output.text);
     }
 
-    // STATE: Persist - Write PRD to disk
-    // Two strategies: (1) runner creates file directly, or (2) we parse runner's response and write
-    // Strategy (1) is used in production, strategy (2) in tests with MockRunner
+    // Persist to disk using one of two strategies.
     let prds_dir = config.root.join(".mr").join("prds");
 
-    // Look for the newly created PRD file matching our slug.
     let (prd, prd_path, prd_content) = if let Some((path, content)) =
-        find_created_prd_file(&prds_dir, config.slug, &next_id)?
+        find_created_prd_file(&prds_dir, config.slug, next_id)?
     {
-        // Strategy (1): Runner created the file directly
+        // Strategy (1): Runner created the file directly.
         tracing::debug!(path = %path.display(), "Found PRD file created by runner");
 
-        let parsed = match parse_prd(&content) {
-            Ok(p) => p,
-            Err(e) => {
-                // Runner created file but it's malformed - keep it as-is but warn
-                tracing::warn!(
-                    path = %path.display(),
-                    error = %e,
-                    "Failed to parse PRD file created by runner, using expected values for operations"
-                );
-                writeln!(
-                    output,
-                    "⚠️  Warning: Failed to parse runner-created PRD, leaving file as-is"
-                )?;
-
-                // Construct minimal Prd for return using expected values
-                // The file already contains the runner's actual output
-                let frontmatter = crate::prd::types::PrdFrontmatter {
-                    id: next_id.clone(),
-                    title: format!("PRD for {}", config.slug),
-                    status: crate::prd::PrdStatus::Draft,
-                    ..Default::default()
-                };
-                crate::prd::Prd::new(frontmatter, String::new())
-            }
-        };
-
+        let parsed = parse_prd_or_fallback(&content, next_id, config.slug, Some(&path), output)?;
         (parsed, path, content)
     } else {
-        // Strategy (2): Parse runner's response and write ourselves (fallback for tests)
+        // Strategy (2): Parse runner's response and write ourselves.
         tracing::debug!("No PRD file found, parsing response content");
 
         let prd_content = match qa_workflow::extract_prd_content(&synthesize_output.text) {
             Ok(content) => content,
             Err(e) => {
-                tracing::warn!(
-                    error = %e,
-                    "Failed to extract PRD content from runner output, using raw output"
-                );
-                // Use the raw output if we can't extract PRD content
+                tracing::warn!(error = %e, "Failed to extract PRD content, using raw output");
                 synthesize_output.text.clone()
             }
         };
 
-        let prd = match parse_prd(&prd_content) {
-            Ok(p) => p,
-            Err(e) => {
-                tracing::warn!(
-                    error = %e,
-                    content_preview = ?prd_content.chars().take(200).collect::<String>(),
-                    "Failed to parse synthesized PRD content, using expected values for operations"
-                );
-                writeln!(
-                    output,
-                    "⚠️  Warning: Failed to parse synthesized PRD content, leaving file as-is"
-                )?;
+        let prd = parse_prd_or_fallback(&prd_content, next_id, config.slug, None, output)?;
 
-                // Construct minimal Prd for return using expected values
-                // The file will contain the runner's actual output
-                let frontmatter = crate::prd::types::PrdFrontmatter {
-                    id: next_id.clone(),
-                    title: format!("PRD for {}", config.slug),
-                    status: crate::prd::PrdStatus::Draft,
-                    ..Default::default()
-                };
-                crate::prd::Prd::new(frontmatter, String::new())
-            }
-        };
-
-        // Write the PRD to disk.
         let filename = format!("{}-{}.md", prd.id(), config.slug);
         let prd_path = prds_dir.join(&filename);
-
         std::fs::write(&prd_path, &prd_content).context("Failed to write PRD file")?;
 
         (prd, prd_path, prd_content)
     };
 
-    // Validate the PRD has required fields
+    // Validate required fields.
     if prd.id().is_empty() || prd.title().is_empty() {
         tracing::warn!(
             content_preview = ?prd_content.chars().take(200).collect::<String>(),
@@ -395,19 +400,47 @@ where
         )?;
     }
 
-    writeln!(output)?;
-    writeln!(output, "Created PRD: {}", prd_path.display())?;
+    Ok((prd, prd_path))
+}
 
-    // STATE: Finalize - Update index to reflect new PRD
-    generate_index_from_root(config.root)?;
-    writeln!(output, "Updated PRD index")?;
+/// Parses PRD content or returns a fallback PRD if parsing fails.
+fn parse_prd_or_fallback<O: Write>(
+    content: &str,
+    next_id: &str,
+    slug: &str,
+    path: Option<&std::path::Path>,
+    output: &mut O,
+) -> Result<Prd> {
+    match parse_prd(content) {
+        Ok(p) => Ok(p),
+        Err(e) => {
+            if let Some(p) = path {
+                tracing::warn!(
+                    path = %p.display(),
+                    error = %e,
+                    "Failed to parse PRD file, using expected values"
+                );
+            } else {
+                tracing::warn!(
+                    error = %e,
+                    content_preview = ?content.chars().take(200).collect::<String>(),
+                    "Failed to parse PRD content, using expected values"
+                );
+            }
+            writeln!(
+                output,
+                "⚠️  Warning: Failed to parse PRD, leaving file as-is"
+            )?;
 
-    Ok(PrdNewResult {
-        prd,
-        path: prd_path,
-        rounds,
-        qa_history,
-    })
+            let frontmatter = crate::prd::types::PrdFrontmatter {
+                id: next_id.to_string(),
+                title: format!("PRD for {slug}"),
+                status: crate::prd::PrdStatus::Draft,
+                ..Default::default()
+            };
+            Ok(crate::prd::Prd::new(frontmatter, String::new()))
+        }
+    }
 }
 
 /// Searches for a PRD file that was created by the runner.

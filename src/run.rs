@@ -714,7 +714,11 @@ pub fn run_uat_verification_loop(
         }
 
         let uat = unverified[0];
-        let all_uats = current_prd.frontmatter.acceptance_tests.as_ref().map_or(0, Vec::len);
+        let all_uats = current_prd
+            .frontmatter
+            .acceptance_tests
+            .as_ref()
+            .map_or(0, Vec::len);
         let current_uat_num = all_uats - unverified.len() + 1;
 
         tracing::info!(
@@ -724,7 +728,13 @@ pub fn run_uat_verification_loop(
         );
 
         let output = execute_uat_verification(
-            config, runner, &current_prd, &current_prd_path, uat, current_uat_num, all_uats,
+            config,
+            runner,
+            &current_prd,
+            &current_prd_path,
+            uat,
+            current_uat_num,
+            all_uats,
         )?;
 
         iterations += 1;
