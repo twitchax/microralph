@@ -10,8 +10,8 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::colors;
+use crate::prd::new::{PrdNewConfig, PrdNewResult, create_prd};
 use crate::prd::{generate_index_from_root, scan_prd_summaries};
-use crate::prd_new::{PrdNewConfig, create_prd};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
@@ -186,7 +186,7 @@ fn display_suggestions(suggestions: &[Suggestion]) {
 }
 
 /// Prints the result of PRD creation.
-fn print_prd_result(result: &crate::prd_new::PrdNewResult) {
+fn print_prd_result(result: &PrdNewResult) {
     println!();
     println!("{}", colors::success("PRD created successfully!"));
     println!("  {}", colors::dim(&format!("ID: {}", result.prd.id())));

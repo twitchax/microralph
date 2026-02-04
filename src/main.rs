@@ -14,9 +14,6 @@ mod commands;
 mod config;
 mod constitution_edit;
 mod prd;
-mod prd_edit;
-mod prd_finalize;
-mod prd_new;
 mod prompt;
 mod qa_workflow;
 mod runner;
@@ -928,7 +925,7 @@ fn cmd_prd_new(
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
-    let config = prd_new::PrdNewConfig {
+    let config = prd::new::PrdNewConfig {
         root: &cwd,
         slug,
         description: None,
@@ -941,7 +938,7 @@ fn cmd_prd_new(
     let stdout = std::io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    let result = prd_new::create_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+    let result = prd::new::create_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
 
     println!();
     println!("{}", colors::success("PRD created successfully!"));
@@ -984,7 +981,7 @@ fn cmd_prd_edit(
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
-    let config = prd_edit::PrdEditConfig {
+    let config = prd::edit::PrdEditConfig {
         root: &cwd,
         prd_id,
         request,
@@ -995,7 +992,7 @@ fn cmd_prd_edit(
     let stdout = std::io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    let result = prd_edit::edit_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+    let result = prd::edit::edit_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
 
     println!();
     println!("{}", colors::success("PRD edited successfully!"));
@@ -1225,14 +1222,14 @@ fn cmd_prd_finalize(
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
-    let config = prd_finalize::PrdFinalizeConfig {
+    let config = prd::finalize::PrdFinalizeConfig {
         root: &cwd,
         prd_id,
         stream,
         no_commit,
     };
 
-    let result = prd_finalize::finalize_prd(&config, runner.as_ref())?;
+    let result = prd::finalize::finalize_prd(&config, runner.as_ref())?;
 
     // Output summary report to stdout.
     println!();

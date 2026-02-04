@@ -36,7 +36,7 @@ tasks:
 - id: T-002
   title: Consolidate prd_*.rs files into prd/ module
   priority: 1
-  status: todo
+  status: done
   notes: "Move prd_edit.rs, prd_new.rs, prd_finalize.rs into prd/ module as edit.rs, new.rs, finalize.rs"
 - id: T-003
   title: Create util/ module for utility functions
@@ -222,6 +222,22 @@ use util::{colors, spinner};
   - Moved 10 command implementation files to `src/commands/`: bootstrap.rs, devcontainer.rs, graph.rs, init.rs, refactor.rs, reindex.rs, run.rs, status.rs, suggest.rs, validate.rs
   - Updated `src/main.rs` to declare `commands` module and import submodules via `use commands::{...}`
   - `restore` functionality remains in main.rs (it was never a separate file, contrary to PRD notes mentioning "restore.rs")
+  - UAT: `cargo make uat` passed with 484 tests
+
+---
+
+## 2026-02-04 — T-002 Completed
+- **Task**: Consolidate prd_*.rs files into prd/ module
+- **Status**: ✅ Done
+- **Changes**:
+  - Moved `src/prd_edit.rs` to `src/prd/edit.rs`
+  - Moved `src/prd_new.rs` to `src/prd/new.rs`
+  - Moved `src/prd_finalize.rs` to `src/prd/finalize.rs`
+  - Updated `src/prd/mod.rs` to declare new submodules (`edit`, `new`, `finalize`) as public modules
+  - Updated imports in moved files to use `super::` instead of `crate::prd::` for intra-module references
+  - Updated `src/main.rs` to remove old `mod prd_edit`, `mod prd_new`, `mod prd_finalize` declarations
+  - Updated `src/main.rs` usages to reference `prd::edit::`, `prd::new::`, `prd::finalize::`
+  - Fixed `src/commands/suggest.rs` import to use `crate::prd::new::` path
   - UAT: `cargo make uat` passed with 484 tests
 
 ---

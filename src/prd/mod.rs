@@ -4,7 +4,10 @@
 //! tasks, status, and other structured information. The parser preserves
 //! human-written Markdown content during round-trips.
 
+pub mod edit;
+pub mod finalize;
 mod index;
+pub mod new;
 mod parser;
 pub mod types;
 

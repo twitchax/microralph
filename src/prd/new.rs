@@ -9,8 +9,8 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
+use super::{Prd, PrdSummary, generate_index_from_root, parse_prd, scan_prd_summaries};
 use crate::config::load_constitution;
-use crate::prd::{Prd, PrdSummary, generate_index_from_root, parse_prd, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,

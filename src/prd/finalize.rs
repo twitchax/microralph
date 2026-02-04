@@ -13,9 +13,11 @@ use thiserror::Error;
 #[cfg(test)]
 use std::io::Write;
 
+use super::types::{AcceptanceTest, Task};
+use super::{
+    Prd, PrdStatus, TaskStatus, generate_index_from_root, parse_prd_file, scan_prds, serialize_prd,
+};
 use crate::changelog::ensure_changelog_exists;
-use crate::prd::types::{AcceptanceTest, Task};
-use crate::prd::{self, Prd, PrdStatus, TaskStatus, generate_index_from_root, serialize_prd};
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
@@ -84,8 +86,7 @@ pub struct PrdFinalizeResult {
 /// Finds a PRD by ID from the scanned PRDs.
 fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<(Prd, PathBuf), FinalizeError> {
     let prds_dir = root.join(".mr").join("prds");
-    let prds =
-        prd::scan_prds(&prds_dir).map_err(|_| FinalizeError::PrdNotFound(prd_id.to_string()))?;
+    let prds = scan_prds(&prds_dir).map_err(|_| FinalizeError::PrdNotFound(prd_id.to_string()))?;
 
     for (_filename, prd, path) in prds {
         if prd.id() == prd_id {
@@ -237,7 +238,7 @@ fn append_to_prd(prd_path: &Path, summary: &str) -> Result<()> {
 /// updates the status, and writes it back.
 fn update_prd_status_to_done(prd_path: &Path) -> Result<()> {
     // Re-read the PRD from disk to capture any changes made by the runner.
-    let mut updated_prd = prd::parse_prd_file(prd_path)
+    let mut updated_prd = parse_prd_file(prd_path)
         .with_context(|| format!("Failed to re-read PRD file: {}", prd_path.display()))?;
 
     // Update the status.
@@ -326,7 +327,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     );
 
     // Re-read the PRD after status update for the prompt context.
-    let prd = prd::parse_prd_file(&path).with_context(|| {
+    let prd = parse_prd_file(&path).with_context(|| {
         format!(
             "Failed to re-read PRD after status update: {}",
             path.display()
@@ -405,7 +406,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
     // - Committed all changes via git
 
     // Re-read the PRD one final time to generate the summary report with the most current data.
-    let final_prd = prd::parse_prd_file(&path).with_context(|| {
+    let final_prd = parse_prd_file(&path).with_context(|| {
         format!(
             "Failed to re-read PRD for summary generation: {}",
             path.display()
@@ -426,8 +427,8 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use super::super::types::{PrdFrontmatter, Task, TaskStatus, UatStatus};
     use super::*;
-    use crate::prd::types::{PrdFrontmatter, Task, TaskStatus, UatStatus};
 
     fn make_test_prd(id: &str, tasks: Vec<Task>) -> Prd {
         let frontmatter = PrdFrontmatter {
@@ -835,7 +836,7 @@ mod tests {
         update_prd_status_to_done(&prd_path).unwrap();
 
         // Parse the updated file.
-        let updated = prd::parse_prd_file(&prd_path).unwrap();
+        let updated = parse_prd_file(&prd_path).unwrap();
 
         // Status should be done.
         assert_eq!(updated.status(), PrdStatus::Done);
