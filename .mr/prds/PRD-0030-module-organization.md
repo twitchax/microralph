@@ -46,7 +46,7 @@ tasks:
 - id: T-004
   title: Move config.rs and constitution_edit.rs into config/ module
   priority: 2
-  status: todo
+  status: done
   notes: "Create config/ module with mod.rs (config loading), constitution.rs (constitution editing)"
 - id: T-005
   title: Update main.rs module declarations and imports
@@ -262,6 +262,21 @@ use util::{colors, spinner};
     - `src/commands/reindex.rs`: `crate::util::spinner`
     - `src/commands/suggest.rs`: `crate::util::colors`, `crate::util::spinner`
     - `src/commands/bootstrap.rs`: `crate::util::spinner`
+  - UAT: `cargo make uat` passed with 484 tests
+
+---
+
+## 2026-02-04 — T-004 Completed
+- **Task**: Move config.rs and constitution_edit.rs into config/ module
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/config/` directory
+  - Moved `src/config.rs` to `src/config/mod.rs` (contains `Config` struct, `load_constitution`, constants)
+  - Moved `src/constitution_edit.rs` to `src/config/constitution.rs` (contains `ConstitutionEditConfig`, `edit_constitution`)
+  - Updated `src/config/mod.rs` to declare `pub mod constitution;` submodule
+  - Updated `src/main.rs` to remove `mod constitution_edit;` declaration
+  - Updated `src/main.rs` usages to use `config::constitution::ConstitutionEditConfig` and `config::constitution::edit_constitution`
+  - All existing imports of `crate::config::` (in prd/new.rs, commands/run.rs, commands/init.rs, commands/refactor.rs, prd/finalize.rs) continue to work as `Config` and `load_constitution` remain exported from config/mod.rs
   - UAT: `cargo make uat` passed with 484 tests
 
 ---

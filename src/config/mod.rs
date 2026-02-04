@@ -3,6 +3,8 @@
 //! This module provides types and loading logic for `.mr/config.toml`.
 //! Configuration values can be overridden by CLI flags.
 
+pub mod constitution;
+
 use std::path::Path;
 
 use anyhow::{Context, Result};

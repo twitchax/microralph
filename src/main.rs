@@ -11,7 +11,6 @@ use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 mod changelog;
 mod commands;
 mod config;
-mod constitution_edit;
 mod prd;
 mod prompt;
 mod runner;
@@ -1032,7 +1031,7 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
     // Select runner based on name.
     let runner = create_runner(runner_name, model)?;
 
-    let config = constitution_edit::ConstitutionEditConfig {
+    let edit_config = config::constitution::ConstitutionEditConfig {
         root: &cwd,
         request,
     };
@@ -1042,8 +1041,8 @@ fn cmd_constitution_edit(request: &str, runner_name: &str, cli_model: Option<&st
     let stdout = std::io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    let result = constitution_edit::edit_constitution(
-        &config,
+    let result = config::constitution::edit_constitution(
+        &edit_config,
         runner.as_ref(),
         &mut stdin_lock,
         &mut stdout_lock,
