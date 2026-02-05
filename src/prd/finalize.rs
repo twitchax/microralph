@@ -17,11 +17,11 @@ use super::types::{AcceptanceTest, Task};
 use super::{
     Prd, PrdStatus, TaskStatus, generate_index_from_root, parse_prd_file, scan_prds, serialize_prd,
 };
-use crate::changelog::ensure_changelog_exists;
 use crate::prompt::{
     PlaceholderContext, PromptKind, expand_placeholders, load_prompt_with_fallback,
 };
 use crate::runner::Runner;
+use crate::util::changelog::ensure_changelog_exists;
 use crate::util::spinner::start_spinner;
 
 /// Errors that can occur during PRD finalization.

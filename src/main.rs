@@ -8,7 +8,6 @@ use clap::{Parser, Subcommand};
 use std::path::Path;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
-mod changelog;
 mod commands;
 mod config;
 mod prd;
