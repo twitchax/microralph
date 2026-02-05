@@ -9,6 +9,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📋 PRD Tasks
 
+- Prd(PRD-0029)feat(T-001): fix uninlined_format_args warnings
+
+- Applied clippy --fix to inline 78 format string arguments
+- Files modified: 16 source files
+- UAT passed: 484 tests green
+- Prd(PRD-0029)feat(T-003): Add backticks to doc comments for clippy::doc_markdown compliance
+
+Fixed 43 instances of doc_markdown warnings across 18 files:
+- colors.rs, config.rs, graph.rs, init.rs
+- prd/index.rs, prd/parser.rs, prd/types.rs
+- prd_new.rs, prompt/types.rs, qa_workflow.rs, reindex.rs
+- run.rs, runner/claude.rs, runner/cli_runner.rs
+- runner/copilot.rs, runner/types.rs, spinner.rs, validate.rs
+
+Used intra-doc link syntax for type references (e.g., [`Prd`]) and
+regular backticks for field names, variables, and signal names.
+- Prd(PRD-0029)feat(T-004): Remove unnecessary raw string hashes
+- Prd(PRD-0029)feat(T-005): Fix redundant closures (11 instances)
+- Prd(PRD-0029)feat(T-006): Fix items_after_statements lint warnings
+- Prd(PRD-0029)feat(T-007): Fix option_if_let_else warnings with map_or/map_or_else
+- Prd(PRD-0029)feat(T-008): Fix map().unwrap_or() patterns with map_or/map_or_else
+- Prd(PRD-0029)feat(T-009): Fix casting warnings with local allows
+
+- Fixed 4 casting warnings (PRD estimated 3)
+- runner/copilot.rs: Added allow for f64->u64 conversion (token counts)
+- status.rs: Added allow for usize->f64 conversion (task counts)
+- Both conversions are safe due to domain constraints
+
+UAT: 484 tests passed
+- Prd(PRD-0029)feat(T-010): fix miscellaneous pedantic lint warnings
+- Prd(PRD-0029)feat(T-011): Address functions with too many lines
+
+Added #[allow(clippy::too_many_lines)] to 9 functions that are inherently
+sequential command handlers not practical to refactor:
+- init.rs: init()
+- prd_edit.rs: edit_prd()
+- prd_new.rs: create_prd()
+- run.rs: run_uat_verification_loop()
+- status.rs: format_status()
+- suggest.rs: suggest()
+- main.rs: main(), cmd_prd_list(), cmd_run()
+
+PRD-0029 is now complete with all 11 tasks done and all UATs verified.
+- Prd(PRD-0030)feat(T-001): Create commands/ module for CLI command implementations
+- Prd(PRD-0030)feat(T-002): consolidate prd_*.rs files into prd/ module
+
+- Move prd_edit.rs to prd/edit.rs
+- Move prd_new.rs to prd/new.rs
+- Move prd_finalize.rs to prd/finalize.rs
+- Update prd/mod.rs with new submodule declarations
+- Update main.rs and commands/suggest.rs imports
+- UAT passed: 484 tests
+- Prd(PRD-0030)feat(T-003): create util/ module for utility functions
+
+- Created src/util/ module with colors, spinner, qa_workflow
+- Updated all imports to use crate::util:: paths
+- All 484 tests pass
+- Prd(PRD-0030)feat(T-004): Move config and constitution_edit into config/ module
+- Prd(PRD-0030)feat(T-005): Update main.rs module declarations and imports
+
+- Verified main.rs module declarations match new structure
+- Module declarations: changelog, commands, config, prd, prompt, runner, util
+- Use statements properly import from new module paths
+- No code changes needed; imports were updated incrementally by T-001 through T-004
+- UAT: cargo make uat passed with 484 tests
+- Prd(PRD-0030)feat(T-006): update cross-module imports to use explicit paths
+- Prd(PRD-0030)feat(T-007): Verify CI passes with new module structure
+
+- Verified full CI pipeline passes after module reorganization
+- All 484 tests pass successfully
+- Both UATs (uat-001, uat-002) verified and marked as complete
+- All 7 tasks in PRD-0030 are now done
+- Prd(PRD-0030)finalize: source module reorganization complete
+
+## [0.4.0] - 2026-01-28
+
+### 📋 PRD Tasks
+
 - Prd(PRD-0024)feat(T-001): Add indicatif dependency for spinners
 - Prd(PRD-0024)feat(T-002): Add spinner utility module
 - Prd(PRD-0024)feat(T-003): Integrate spinner into mr run command
