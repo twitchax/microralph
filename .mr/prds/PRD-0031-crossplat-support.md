@@ -30,7 +30,7 @@ acceptance_tests:
 - id: uat-003
   name: "Binary compiles for Windows target"
   command: cargo check --target x86_64-pc-windows-msvc
-  uat_status: unverified
+  uat_status: verified
 
 tasks:
 - id: T-001
@@ -241,3 +241,15 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - `check_cli_available()` in `src/runner/cli_runner.rs:80-82` uses `which::which()` crate — no `Command::new("which")` shell-out exists
   - Two existing tests cover this: `test_check_cli_available_cargo` (line 291) and `test_check_cli_available_nonexistent` (line 297)
   - Both tests pass: 2 passed, 0 failed
+
+---
+
+## 2026-02-05 — uat-003 Verification
+- **UAT**: Binary compiles for Windows target
+- **Status**: ✅ Verified
+- **Method**: Existing test (ran `cargo check --target x86_64-pc-windows-msvc`)
+- **Details**:
+  - Added `x86_64-pc-windows-msvc` target via `rustup target add`
+  - Ran `cargo check --target x86_64-pc-windows-msvc` — compiled successfully with 0 errors
+  - All 105 crates (including `microralph v0.5.0`) type-checked cleanly for the Windows MSVC target
+  - Confirms cross-platform compatibility achieved by the `which` crate migration
