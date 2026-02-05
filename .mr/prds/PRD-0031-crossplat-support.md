@@ -56,7 +56,7 @@ tasks:
 - id: T-005
   title: "Audit for other platform-specific shell assumptions"
   priority: 3
-  status: todo
+  status: done
   notes: "Scan for any other `Command::new` calls or shell-outs that assume Unix-only tooling. Document findings but only fix if trivially resolvable."
 
 ---
@@ -202,3 +202,20 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - Replaced shell subprocess calls with duckscript's `exec` command
   - All 485 tests pass via `cargo make uat`
 - **Constitution Compliance**: No violations. Minimal change (one task script rewritten), no public API changes, no unrelated refactoring.
+
+---
+
+## 2026-02-05 — T-005 Completed
+- **Task**: Audit for other platform-specific shell assumptions
+- **Status**: ✅ Done
+- **Changes**:
+  - Performed comprehensive audit of all `Command::new` calls, shell-outs, and platform-specific patterns across Rust source code and `Makefile.toml`
+  - No code changes required — all findings are either already cross-platform or explicitly out of scope
+- **Audit Findings**:
+  - **`Command::new("git")` in `suggest.rs`, `main.rs`, `bootstrap.rs`**: All invoke `git` which is cross-platform. Explicitly listed as a Non-Goal in the PRD ("git is assumed to be on PATH and work identically").
+  - **`Command::new(config.binary_path())` in `cli_runner.rs`**: Uses configurable binary paths validated by `which::which()` (fixed in T-002). Already cross-platform.
+  - **`Makefile.toml` release scripts** (`release`, `publish-all`, `github-release`, `publish-crates`): Use `#!/bin/bash` with Unix tools (`mktemp`, `sed`, `grep`, `shift`). These are release/CI-only tasks, not core CLI runtime, and not trivially fixable (would require full duckscript rewrites). Left as-is.
+  - **No instances found** of: `sh -c`, `/tmp/` hardcoded paths, `chmod`, `HOME`/`SHELL` env vars, `cfg(target_os)`, or other Unix-specific patterns in Rust source code.
+  - **`devcontainer` task**: Already fixed to duckscript in T-004.
+- **Conclusion**: The Rust source code is fully cross-platform after T-001–T-003 changes. Remaining platform-specific patterns are confined to optional release scripts in `Makefile.toml` and are not trivially resolvable.
+- **Constitution Compliance**: No violations. Audit-only task with no code changes.
