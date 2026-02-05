@@ -41,7 +41,7 @@ tasks:
 - id: T-002
   title: "Replace `Command::new(\"which\")` with `which::which()` in cli_runner.rs"
   priority: 1
-  status: todo
+  status: done
   notes: "Rewrite `check_cli_available()` to use `which::which(binary_path).is_ok()` instead of shelling out. This handles Windows (`where.exe`), macOS, and Linux transparently."
 - id: T-003
   title: "Update unit tests for check_cli_available"
@@ -167,3 +167,13 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
 - **Constitution Compliance**: No violations. Minimal change (one dependency added), no public API changes.
 
 ---
+
+## 2026-02-05 — T-002 Completed
+- **Task**: Replace `Command::new("which")` with `which::which()` in cli_runner.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced `check_cli_available()` body in `src/runner/cli_runner.rs` from shelling out to `Command::new("which")` to using `which::which(binary_path).is_ok()`
+  - Function signature unchanged — no callers affected
+  - All 484 tests pass via `cargo make uat`
+- **Constitution Compliance**: No violations. Minimal change (one function body), public API preserved, no unrelated refactoring.
+- **UAT Opportunistic Verification**: uat-001 and uat-002 feasible (CI passes, `check_cli_available` no longer shells out); uat-003 not verified (requires Windows MSVC target toolchain).

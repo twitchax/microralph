@@ -78,11 +78,7 @@ pub trait CliRunnerConfig {
 
 /// Checks if a CLI binary is available on the system.
 pub fn check_cli_available(binary_path: &str) -> bool {
-    Command::new("which")
-        .arg(binary_path)
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    which::which(binary_path).is_ok()
 }
 
 /// Formats the command display for logging/user feedback.
