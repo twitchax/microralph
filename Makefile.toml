@@ -529,28 +529,30 @@ cargo watch -x "run -- status"
 '''
 
 [tasks.devcontainer]
-# Start and exec into the dev container
+# Start and exec into the dev container (cross-platform via duckscript)
 cwd = "."
 workspace = false
-script_runner = "@shell"
+script_runner = "@duckscript"
 script = '''
 # Ensure @devcontainers/cli is installed
-if ! command -v devcontainer &> /dev/null; then
+path = which devcontainer
+if is_empty ${path}
     echo "📦 Installing @devcontainers/cli..."
-    npm install -g @devcontainers/cli
-fi
+    exec npm install -g @devcontainers/cli
+end
 
 # Generate config if it doesn't exist
-if [ ! -f ".devcontainer/devcontainer.json" ]; then
+config_exists = is_path_exists .devcontainer/devcontainer.json
+if not ${config_exists}
     echo "⚠️  No devcontainer config found. Run 'cargo run -- devcontainer generate' first."
     exit 1
-fi
+end
 
 echo "🚀 Starting dev container..."
-devcontainer up --workspace-folder . --remove-existing-container
+exec devcontainer up --workspace-folder . --remove-existing-container
 
 echo "🔗 Connecting to dev container..."
-devcontainer exec --workspace-folder . bash
+exec devcontainer exec --workspace-folder . bash
 '''
 
 # =============================================================================

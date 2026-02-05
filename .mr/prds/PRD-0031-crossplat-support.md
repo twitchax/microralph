@@ -51,7 +51,7 @@ tasks:
 - id: T-004
   title: "Fix `command -v` in Makefile.toml devcontainer task"
   priority: 3
-  status: todo
+  status: done
   notes: "Replace `command -v devcontainer` with a cross-platform check. Options include using `which` from the shell (available on most systems with Git Bash), or using cargo-make's built-in condition system. This is lower priority and not required for release."
 - id: T-005
   title: "Audit for other platform-specific shell assumptions"
@@ -189,3 +189,16 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - Added `test_is_available_delegates_to_check_cli_available` to verify the `Runner` trait blanket impl routes through `check_cli_available()` for both available and missing binaries
   - All 485 tests pass via `cargo make uat` (net +1 test)
 - **Constitution Compliance**: No violations. Minimal test updates, no public API changes, no unrelated refactoring.
+
+---
+
+## 2026-02-05 — T-004 Completed
+- **Task**: Fix `command -v` in Makefile.toml devcontainer task
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced `script_runner = "@shell"` with `script_runner = "@duckscript"` in the `devcontainer` task in `Makefile.toml`
+  - Replaced `command -v devcontainer` (Bash built-in) with duckscript's cross-platform `which devcontainer`
+  - Replaced `[ ! -f ... ]` file existence check with duckscript's `is_path_exists`
+  - Replaced shell subprocess calls with duckscript's `exec` command
+  - All 485 tests pass via `cargo make uat`
+- **Constitution Compliance**: No violations. Minimal change (one task script rewritten), no public API changes, no unrelated refactoring.
