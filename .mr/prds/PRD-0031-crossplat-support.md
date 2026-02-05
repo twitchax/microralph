@@ -46,7 +46,7 @@ tasks:
 - id: T-003
   title: "Update unit tests for check_cli_available"
   priority: 2
-  status: todo
+  status: done
   notes: "Ensure existing tests in cli_runner.rs still pass with the new implementation. No behavioral change expected."
 - id: T-004
   title: "Fix `command -v` in Makefile.toml devcontainer task"
@@ -177,3 +177,15 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - All 484 tests pass via `cargo make uat`
 - **Constitution Compliance**: No violations. Minimal change (one function body), public API preserved, no unrelated refactoring.
 - **UAT Opportunistic Verification**: uat-001 and uat-002 feasible (CI passes, `check_cli_available` no longer shells out); uat-003 not verified (requires Windows MSVC target toolchain).
+
+---
+
+## 2026-02-05 — T-003 Completed
+- **Task**: Update unit tests for check_cli_available
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced `test_check_cli_available_echo` with `test_check_cli_available_cargo` in `src/runner/cli_runner.rs` — uses `cargo` instead of `echo` since `cargo` is guaranteed on PATH during `cargo test` and is cross-platform
+  - Updated comment to remove Unix-specific language
+  - Added `test_is_available_delegates_to_check_cli_available` to verify the `Runner` trait blanket impl routes through `check_cli_available()` for both available and missing binaries
+  - All 485 tests pass via `cargo make uat` (net +1 test)
+- **Constitution Compliance**: No violations. Minimal test updates, no public API changes, no unrelated refactoring.

@@ -288,14 +288,29 @@ mod tests {
     }
 
     #[test]
-    fn test_check_cli_available_echo() {
-        // 'echo' should be available on all Unix systems
-        assert!(check_cli_available("echo"));
+    fn test_check_cli_available_cargo() {
+        // 'cargo' is guaranteed to be on PATH since we're running inside cargo test
+        assert!(check_cli_available("cargo"));
     }
 
     #[test]
     fn test_check_cli_available_nonexistent() {
         assert!(!check_cli_available("nonexistent-binary-xyz123"));
+    }
+
+    #[test]
+    fn test_is_available_delegates_to_check_cli_available() {
+        let config = TestConfig {
+            binary: "cargo".to_string(),
+            args: vec![],
+        };
+        assert!(config.is_available());
+
+        let missing = TestConfig {
+            binary: "nonexistent-binary-xyz123".to_string(),
+            args: vec![],
+        };
+        assert!(!missing.is_available());
     }
 
     #[test]
