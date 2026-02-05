@@ -1,7 +1,7 @@
 ---
 id: PRD-0031
 title: "Cross-Platform Support: Fix Platform-Specific CLI Checks"
-status: draft
+status: active
 owner: twitchax
 created: 2026-02-05
 updated: 2026-02-05
@@ -36,7 +36,7 @@ tasks:
 - id: T-001
   title: "Add `which` crate as a dependency in Cargo.toml"
   priority: 1
-  status: todo
+  status: done
   notes: "Add the `which` crate to [dependencies] in Cargo.toml."
 - id: T-002
   title: "Replace `Command::new(\"which\")` with `which::which()` in cli_runner.rs"
@@ -156,5 +156,14 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
 # History
 
 (Entries appended by `mr run` will go below this line.)
+
+## 2026-02-05 — T-001 Completed
+- **Task**: Add `which` crate as a dependency in Cargo.toml
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `which = "8.0.0"` to `[dependencies]` in `Cargo.toml` via `cargo add which`
+  - `Cargo.lock` updated with `which v8.0.0`, `env_home v0.1.0`, and `winsafe v0.0.19` (transitive deps)
+  - `cargo make uat` passes — all tests pass, fmt and clippy clean
+- **Constitution Compliance**: No violations. Minimal change (one dependency added), no public API changes.
 
 ---
