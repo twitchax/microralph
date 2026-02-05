@@ -22,7 +22,7 @@ acceptance_tests:
 - id: uat-001
   name: "Existing CI pipeline passes after changes"
   command: cargo make ci
-  uat_status: unverified
+  uat_status: verified
 - id: uat-002
   name: "check_cli_available works without shelling out to `which`"
   command: cargo make test
@@ -219,3 +219,14 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - **`devcontainer` task**: Already fixed to duckscript in T-004.
 - **Conclusion**: The Rust source code is fully cross-platform after T-001–T-003 changes. Remaining platform-specific patterns are confined to optional release scripts in `Makefile.toml` and are not trivially resolvable.
 - **Constitution Compliance**: No violations. Audit-only task with no code changes.
+
+---
+
+## 2026-02-05 — uat-001 Verification
+- **UAT**: Existing CI pipeline passes after changes
+- **Status**: ✅ Verified
+- **Method**: Existing test (ran `cargo make ci`)
+- **Details**:
+  - Ran `cargo make ci` which executes fmt, clippy, and nextest
+  - All 485 tests passed, 0 skipped, fmt and clippy clean
+  - No new test needed — the CI pipeline itself is the acceptance criterion
