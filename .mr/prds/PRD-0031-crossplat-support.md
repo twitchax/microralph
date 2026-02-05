@@ -26,7 +26,7 @@ acceptance_tests:
 - id: uat-002
   name: "check_cli_available works without shelling out to `which`"
   command: cargo make test
-  uat_status: unverified
+  uat_status: verified
 - id: uat-003
   name: "Binary compiles for Windows target"
   command: cargo check --target x86_64-pc-windows-msvc
@@ -230,3 +230,14 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - Ran `cargo make ci` which executes fmt, clippy, and nextest
   - All 485 tests passed, 0 skipped, fmt and clippy clean
   - No new test needed — the CI pipeline itself is the acceptance criterion
+
+---
+
+## 2026-02-05 — uat-002 Verification
+- **UAT**: check_cli_available works without shelling out to `which`
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `check_cli_available()` in `src/runner/cli_runner.rs:80-82` uses `which::which()` crate — no `Command::new("which")` shell-out exists
+  - Two existing tests cover this: `test_check_cli_available_cargo` (line 291) and `test_check_cli_available_nonexistent` (line 297)
+  - Both tests pass: 2 passed, 0 failed
