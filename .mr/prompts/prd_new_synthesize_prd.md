@@ -2,7 +2,7 @@
 
 ## Objective
 
-Synthesize a complete PRD from the Q/A session, following the template structure exactly.
+Synthesize a complete PRD from the interactive discovery conversation, following the template structure exactly.
 
 ## Context
 
@@ -23,18 +23,18 @@ The following governance rules and constraints apply to this project:
 **CRITICAL**: The PRD you synthesize MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
 {{/if}}
 
-## Q/A Session
+## Conversation Context
 
-{{#each qa_history}}
-**Q**:
+{{#if conversation_transcript}}
+The following is a transcript of the interactive discovery conversation between the user and the agent:
 
-{{question}}
+{{conversation_transcript}}
+{{/if}}
 
-**A**:
-
-{{answer}}
-
-{{/each}}
+{{#if session_id}}
+This prompt is a continuation of a previous interactive session (session: {{session_id}}).
+Use the full conversational context from that session to inform PRD synthesis.
+{{/if}}
 
 ## Existing PRDs
 

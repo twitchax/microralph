@@ -172,9 +172,18 @@ where
 
     let spinner = start_spinner(!config.stream, "Synthesizing PRD...");
 
-    let synthesize_output = runner
-        .execute(&synthesize_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
+    // Prefer session resume (e.g., Claude's --continue) for full conversational context.
+    // Fall back to regular execute with transcript injected into the prompt.
+    let synthesize_output =
+        if let Some(result) = runner.execute_continue(&synthesize_prompt, config.root) {
+            tracing::info!("Using session resume for synthesis context handoff");
+            result.map_err(|e| anyhow::anyhow!("Runner failed (session resume): {e}"))?
+        } else {
+            tracing::info!("Using transcript-based synthesis context handoff");
+            runner
+                .execute(&synthesize_prompt, config.root)
+                .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?
+        };
 
     spinner.finish_and_clear();
 

@@ -584,6 +584,13 @@ mod tests {
         assert!(!args.contains(&"--no-ask-user".to_string()));
     }
 
+    #[test]
+    fn test_build_continue_args_returns_none() {
+        // Copilot does not support session resume.
+        let runner = CopilotRunner::new();
+        assert!(runner.build_continue_args("prompt").is_none());
+    }
+
     // Note: Integration tests that actually invoke copilot should be
     // separate and gated behind a feature flag or environment variable,
     // as they require copilot CLI to be installed and authenticated.

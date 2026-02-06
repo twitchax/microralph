@@ -220,6 +220,23 @@ pub trait Runner: Send + Sync {
             "interactive mode is not supported by this runner".to_string(),
         ))
     }
+
+    /// Executes a prompt by continuing/resuming the most recent session.
+    ///
+    /// Some runners (e.g., Claude) support session resume, which provides
+    /// full conversational context from a previous interactive session without
+    /// needing to pass a transcript in the prompt.
+    ///
+    /// Returns `None` if the runner does not support session resume,
+    /// in which case the caller should fall back to [`execute`] with
+    /// transcript context injected into the prompt.
+    fn execute_continue(
+        &self,
+        _prompt: &str,
+        _working_dir: &std::path::Path,
+    ) -> Option<RunnerResult<RunnerOutput>> {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -426,6 +443,17 @@ mod tests {
         assert!(
             err.to_string().contains("not supported"),
             "Expected 'not supported' error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_runner_default_execute_continue_returns_none() {
+        let runner = MinimalRunner;
+        let result = runner.execute_continue("test", std::path::Path::new("."));
+
+        assert!(
+            result.is_none(),
+            "Default execute_continue should return None"
         );
     }
 }

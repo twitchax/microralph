@@ -292,4 +292,16 @@ mod tests {
         assert_eq!(prompts[0], "interactive prompt 1");
         assert_eq!(prompts[1], "interactive prompt 2");
     }
+
+    #[test]
+    fn test_mock_runner_execute_continue_returns_none() {
+        let runner = MockRunner::empty();
+        let path = Path::new(".");
+
+        let result = runner.execute_continue("test", path);
+        assert!(
+            result.is_none(),
+            "MockRunner should return None for execute_continue (no session resume)"
+        );
+    }
 }

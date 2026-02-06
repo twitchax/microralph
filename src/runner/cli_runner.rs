@@ -82,8 +82,16 @@ pub trait CliRunnerConfig {
     /// Returns `None` if the runner does not support interactive mode.
     /// Implementors should return arguments that launch the CLI in interactive
     /// chat mode with the given prompt as initial context.
-    #[allow(dead_code)] // Interactive args for runners that support it
     fn build_interactive_args(&self, _prompt: &str) -> Option<Vec<String>> {
+        None
+    }
+
+    /// Builds the command arguments for continuing/resuming a previous session.
+    ///
+    /// Returns `None` if the runner does not support session resume.
+    /// Implementors should return arguments that resume the most recent
+    /// conversation session with the given prompt for follow-up.
+    fn build_continue_args(&self, _prompt: &str) -> Option<Vec<String>> {
         None
     }
 }
@@ -361,6 +369,68 @@ pub fn execute_interactive_cli<C: CliRunnerConfig + ?Sized>(
     })
 }
 
+/// Executes a CLI command by continuing/resuming the most recent session.
+///
+/// Uses `build_continue_args` to get resume-specific arguments. Returns `None`
+/// if the runner does not support session resume.
+pub fn execute_continue_cli<C: CliRunnerConfig + ?Sized>(
+    config: &C,
+    prompt: &str,
+    working_dir: &Path,
+) -> Option<RunnerResult<RunnerOutput>> {
+    let args = config.build_continue_args(prompt)?;
+    let resolved_binary = resolve_binary(config.binary_path());
+
+    tracing::debug!(
+        binary = %resolved_binary,
+        working_dir = %working_dir.display(),
+        args = ?args,
+        "Executing CLI (continue/resume)"
+    );
+
+    let mut command = build_command(&resolved_binary, &args, working_dir);
+
+    let output = match command.output() {
+        Ok(o) => o,
+        Err(e) => {
+            return Some(Err(RunnerError::ProcessFailed(format!(
+                "Failed to start CLI at '{}': {}",
+                config.binary_path(),
+                e
+            ))));
+        }
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    let combined_output = if stderr.is_empty() {
+        stdout.to_string()
+    } else if stdout.is_empty() {
+        stderr.to_string()
+    } else {
+        format!("{stdout}\n{stderr}")
+    };
+
+    let usage = config.parse_usage(&combined_output);
+    let processed_output = config.post_process_output(&combined_output);
+    let success = output.status.success();
+
+    tracing::debug!(
+        exit_code = ?output.status.code(),
+        success = success,
+        raw_len = combined_output.len(),
+        processed_len = processed_output.len(),
+        "CLI completed (continue/resume)"
+    );
+
+    Some(Ok(RunnerOutput {
+        text: processed_output,
+        success,
+        usage,
+    }))
+}
+
 /// Blanket implementation of `Runner` for all types implementing `CliRunnerConfig`.
 ///
 /// This eliminates boilerplate in individual runner modules (Copilot, Claude, etc.)
@@ -398,6 +468,14 @@ impl<T: CliRunnerConfig + Send + Sync> Runner for T {
         working_dir: &Path,
     ) -> RunnerResult<InteractiveResult> {
         execute_interactive_cli(self, prompt, working_dir)
+    }
+
+    fn execute_continue(
+        &self,
+        prompt: &str,
+        working_dir: &Path,
+    ) -> Option<RunnerResult<RunnerOutput>> {
+        execute_continue_cli(self, prompt, working_dir)
     }
 }
 
@@ -673,5 +751,67 @@ mod tests {
             err.to_string().contains("exited with status"),
             "Expected exit status error, got: {err}"
         );
+    }
+
+    #[test]
+    fn test_execute_continue_unsupported_by_default() {
+        // TestConfig does not override build_continue_args, so it returns None.
+        let config = TestConfig {
+            binary: "echo".to_string(),
+            args: vec![],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_continue_cli(&config, "test prompt", working_dir);
+        assert!(
+            result.is_none(),
+            "Should return None when continue is not supported"
+        );
+    }
+
+    struct ContinueTestConfig {
+        binary: String,
+        continue_args: Vec<String>,
+    }
+
+    impl CliRunnerConfig for ContinueTestConfig {
+        fn name(&self) -> &'static str {
+            "continue-test"
+        }
+
+        fn binary_path(&self) -> &str {
+            &self.binary
+        }
+
+        fn build_args(&self, _prompt: &str) -> Vec<String> {
+            vec![]
+        }
+
+        fn parse_usage(&self, _text: &str) -> Option<TokenUsageInfo> {
+            None
+        }
+
+        fn build_continue_args(&self, _prompt: &str) -> Option<Vec<String>> {
+            Some(self.continue_args.clone())
+        }
+    }
+
+    #[test]
+    fn test_execute_continue_cli_success() {
+        let config = ContinueTestConfig {
+            binary: "echo".to_string(),
+            continue_args: vec!["hello from continue".to_string()],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_continue_cli(&config, "test", working_dir);
+        assert!(
+            result.is_some(),
+            "Should return Some when continue is supported"
+        );
+
+        let output = result.unwrap().unwrap();
+        assert!(output.success);
+        assert!(output.text.contains("hello from continue"));
     }
 }

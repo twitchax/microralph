@@ -299,6 +299,25 @@ impl CliRunnerConfig for ClaudeRunner {
 
         Some(args)
     }
+
+    fn build_continue_args(&self, prompt: &str) -> Option<Vec<String>> {
+        let mut args = Vec::new();
+
+        // Resume the most recent session for context handoff.
+        args.push("--continue".to_string());
+
+        // Non-interactive prompt for synthesis.
+        args.push("-p".to_string());
+        args.push(prompt.to_string());
+
+        self.append_config_flags(&mut args);
+
+        // Request JSON output for usage parsing and result extraction.
+        args.push("--output-format".to_string());
+        args.push("json".to_string());
+
+        Some(args)
+    }
 }
 
 // NOTE: `Runner` trait is automatically implemented via blanket impl in `cli_runner.rs`
@@ -658,5 +677,49 @@ mod tests {
 
         // Should return original JSON when result field is missing
         assert_eq!(stripped, json_output);
+    }
+
+    #[test]
+    fn test_build_continue_args_yolo_mode() {
+        let runner = ClaudeRunner::new();
+        let args = runner.build_continue_args("synthesis prompt").unwrap();
+
+        // Should use --continue for session resume.
+        assert!(args.contains(&"--continue".to_string()));
+
+        // Should use -p for the synthesis prompt.
+        assert!(args.contains(&"-p".to_string()));
+        assert!(args.contains(&"synthesis prompt".to_string()));
+
+        // Should include --output-format json (non-interactive synthesis).
+        assert!(args.contains(&"--output-format".to_string()));
+        assert!(args.contains(&"json".to_string()));
+
+        // Should include config flags.
+        assert!(args.contains(&"--dangerously-skip-permissions".to_string()));
+    }
+
+    #[test]
+    fn test_build_continue_args_with_model() {
+        let runner = ClaudeRunner::with_model(Some("claude-sonnet-4".to_string()));
+        let args = runner.build_continue_args("prompt").unwrap();
+
+        assert!(args.contains(&"--continue".to_string()));
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"claude-sonnet-4".to_string()));
+    }
+
+    #[test]
+    fn test_build_continue_args_manual_mode() {
+        let config = ClaudeConfig::new()
+            .with_permission_mode(ClaudePermissionMode::Manual)
+            .with_no_ask_user(false);
+        let runner = ClaudeRunner::with_config(config);
+        let args = runner.build_continue_args("prompt").unwrap();
+
+        assert!(args.contains(&"--continue".to_string()));
+        assert!(args.contains(&"-p".to_string()));
+        assert!(!args.contains(&"--dangerously-skip-permissions".to_string()));
+        assert!(!args.contains(&"--permission-mode".to_string()));
     }
 }

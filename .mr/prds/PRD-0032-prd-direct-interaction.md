@@ -100,7 +100,7 @@ tasks:
   - id: T-008
     title: "Handle conversation context handoff between phases"
     priority: 2
-    status: todo
+    status: done
     notes: "Prefer session/conversation ID resume if CLI supports it. Fall back to --output-format json transcript capture. Pass captured context into the synthesis prompt for phase 2."
   - id: T-009
     title: "Handle Ctrl+C and error cases in interactive mode"
@@ -339,3 +339,19 @@ Preferred order:
   - UAT: `cargo make uat` passed — 500 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Prompt defined in `src/commands/init.rs` and materialized to `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3.
+
+## 2026-02-06 — T-008 Completed
+- **Task**: Handle conversation context handoff between phases
+- **Status**: ✅ Done
+- **Changes**:
+  - **`src/runner/types.rs`**: Added `execute_continue()` method to `Runner` trait with default implementation returning `None` (opt-in session resume). Added test for default behavior.
+  - **`src/runner/cli_runner.rs`**: Added `build_continue_args()` method to `CliRunnerConfig` trait (returns `None` by default). Added `execute_continue_cli()` function — shared infrastructure that executes CLI with session-resume args. Updated blanket `Runner` impl to delegate `execute_continue()` to `execute_continue_cli()`. Added 3 tests: unsupported default, continue config, and success execution.
+  - **`src/runner/claude.rs`**: Implemented `build_continue_args()` override — uses `--continue -p <prompt> --output-format json` + config flags for session resume. Added 3 tests: yolo mode, with model, and manual mode.
+  - **`src/runner/copilot.rs`**: No `build_continue_args()` override needed (returns `None` by default — Copilot does not support session resume). Added 1 test verifying it returns `None`.
+  - **`src/runner/mock.rs`**: Uses default `execute_continue()` (returns `None`) — mock tests use transcript-based fallback. Added 1 test verifying `None` behavior.
+  - **`src/prd/new.rs`**: Updated `synthesize_and_persist_prd()` to prefer `execute_continue()` for session-resume context handoff, falling back to `execute()` with transcript injected into the prompt.
+  - **`src/commands/init.rs`**: Updated `PROMPT_PRD_NEW_SYNTHESIZE` constant — replaced `{{#each qa_history}}` Q/A section with `{{#if conversation_transcript}}` and `{{#if session_id}}` sections for interactive-flow context handoff.
+  - **`.mr/prompts/prd_new_synthesize_prd.md`**: Updated materialized prompt to match `init.rs` changes (conversation transcript and session ID placeholders).
+  - UAT: `cargo make uat` passed — 508 tests, 0 failures (net +8 tests)
+
+- **Constitution Compliance**: No violations. Prompts synchronized between `src/commands/init.rs` and `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3. No public API breaks per rule 5 — new trait method has default implementation.
