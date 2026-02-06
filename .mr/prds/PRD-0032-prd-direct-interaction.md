@@ -36,7 +36,7 @@ acceptance_tests:
   - id: uat-002
     name: "Interactive session launches for mr new with ClaudeRunner"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "PRD is synthesized from conversation context after interactive session exits"
     command: cargo make uat
@@ -422,6 +422,18 @@ Preferred order:
   - `test_build_interactive_args_manual_mode` (src/runner/copilot.rs) — Verifies interactive args in manual permission mode
   - `test_execute_interactive_cli_success` (src/runner/cli_runner.rs) — Verifies shared `execute_interactive_cli` spawns interactive process correctly
   - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Verifies `mr new` invokes `execute_interactive` in discovery phase
+  - `cargo make uat` passed — 511 tests, 0 failures
+
+## 2026-02-06 — uat-002 Verification
+- **UAT**: Interactive session launches for mr new with ClaudeRunner
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_build_interactive_args_yolo_mode` (src/runner/claude.rs) — Verifies ClaudeRunner builds correct interactive args (`--initial-prompt`, `--dangerously-skip-permissions`, `--permission-mode dontAsk`)
+  - `test_build_interactive_args_with_model` (src/runner/claude.rs) — Verifies interactive args include `--model` when specified
+  - `test_build_interactive_args_manual_mode` (src/runner/claude.rs) — Verifies interactive args omit permission flags in manual mode
+  - `test_execute_interactive_cli_success` (src/runner/cli_runner.rs) — Verifies shared `execute_interactive_cli` spawns interactive process with `Stdio::inherit()` and returns `InteractiveResult`
+  - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Verifies `mr new` invokes `execute_interactive` in discovery phase (runner-agnostic via MockRunner)
   - `cargo make uat` passed — 511 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
