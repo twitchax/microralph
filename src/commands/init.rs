@@ -647,6 +647,66 @@ CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY 
 The first three characters of your response MUST be exactly: `---`
 "#;
 
+/// Default content for the PRD new interactive discovery prompt.
+pub const PROMPT_PRD_NEW_DISCOVERY: &str = r"# microralph — PRD New Interactive Discovery Prompt
+
+## Objective
+
+Have an interactive conversation with the user to gather enough information to create a well-defined PRD.
+
+## Context
+
+The user wants to create a new PRD with slug: `{{slug}}`
+
+{{#if user_description}}
+User's initial description:
+> {{user_description}}
+{{/if}}
+
+{{#if user_context}}
+User's upfront context:
+> {{user_context}}
+{{/if}}
+
+{{#if constitution}}
+## Project Constitution
+
+The following governance rules and constraints apply to this project:
+
+{{constitution}}
+
+**Note**: The resulting PRD should respect these constitutional rules.
+{{/if}}
+
+## Existing PRDs
+
+{{#each existing_prds}}
+- {{id}}: {{title}} ({{status}})
+{{/each}}
+
+## Required Actions
+
+1. Review the existing PRDs to understand project context.
+2. Scan the codebase for relevant files, patterns, or entry points.
+3. Engage the user in a natural conversation to understand:
+   - What problem does this PRD solve?
+   - What are the success criteria and acceptance tests?
+   - What are the dependencies or blockers?
+   - What is the scope (MVP vs full feature)?
+   - What is the high-level technical approach?
+   - What assumptions and constraints apply?
+4. Ask follow-up questions based on the user's responses.
+5. When you have enough information to write a complete PRD, let the user know and end the conversation.
+
+## Conversation Guidelines
+
+- Ask questions naturally, one or a few at a time.
+- Follow up on interesting threads or ambiguous answers.
+- Reference existing PRDs and code when relevant.
+- Do NOT generate a PRD during this conversation — that happens in a separate synthesis step.
+- When you have enough information, tell the user and suggest they exit the chat.
+";
+
 /// Default content for the run task prompt.
 pub const PROMPT_RUN_TASK: &str = r#"# microralph — Run Task Prompt
 
@@ -2015,6 +2075,7 @@ const PROMPT_FILES: &[(&str, &str)] = &[
     ("prd_new_round1_questions.md", PROMPT_PRD_NEW_ROUND1),
     ("prd_new_roundN_questions.md", PROMPT_PRD_NEW_ROUNDN),
     ("prd_new_synthesize_prd.md", PROMPT_PRD_NEW_SYNTHESIZE),
+    ("prd_new_discovery.md", PROMPT_PRD_NEW_DISCOVERY),
     ("run_task.md", PROMPT_RUN_TASK),
     ("run_task_finalize.md", PROMPT_RUN_TASK_FINALIZE),
     ("run_uat_verify.md", PROMPT_RUN_UAT_VERIFY),
@@ -2284,6 +2345,7 @@ mod tests {
                 .exists()
         );
         assert!(root.join(".mr/prompts/prd_new_synthesize_prd.md").exists());
+        assert!(root.join(".mr/prompts/prd_new_discovery.md").exists());
         assert!(root.join(".mr/prompts/run_task.md").exists());
         assert!(root.join(".mr/prompts/run_task_finalize.md").exists());
         assert!(root.join(".mr/prompts/run_uat_verify.md").exists());
@@ -2308,7 +2370,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 24); // 1 template + 19 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 25); // 1 template + 20 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -2319,13 +2381,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 24);
+        assert_eq!(result1.files_created, 25);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 24);
+        assert_eq!(result2.files_skipped, 25);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -2421,6 +2483,7 @@ mod tests {
             ("PROMPT_PRD_NEW_ROUND1", PROMPT_PRD_NEW_ROUND1),
             ("PROMPT_PRD_NEW_ROUNDN", PROMPT_PRD_NEW_ROUNDN),
             ("PROMPT_PRD_NEW_SYNTHESIZE", PROMPT_PRD_NEW_SYNTHESIZE),
+            ("PROMPT_PRD_NEW_DISCOVERY", PROMPT_PRD_NEW_DISCOVERY),
             ("PROMPT_RUN_TASK", PROMPT_RUN_TASK),
             ("PROMPT_RUN_TASK_FINALIZE", PROMPT_RUN_TASK_FINALIZE),
             ("PROMPT_RUN_UAT_VERIFY", PROMPT_RUN_UAT_VERIFY),
@@ -2463,6 +2526,9 @@ mod tests {
     fn test_prompts_contain_placeholders() {
         // Round 1 questions should have slug placeholder.
         assert!(PROMPT_PRD_NEW_ROUND1.contains("{{slug}}"));
+
+        // Discovery prompt should have slug placeholder.
+        assert!(PROMPT_PRD_NEW_DISCOVERY.contains("{{slug}}"));
 
         // Run task should have prd_path placeholder.
         assert!(PROMPT_RUN_TASK.contains("{{prd_path}}"));

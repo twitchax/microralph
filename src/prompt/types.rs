@@ -25,6 +25,9 @@ pub enum PromptKind {
     /// Final PRD synthesis prompt for `mr new`.
     PrdNewSynthesizePrd,
 
+    /// Interactive discovery prompt for `mr new`.
+    PrdNewDiscovery,
+
     /// Task execution prompt for `mr run`.
     RunTask,
 
@@ -77,6 +80,7 @@ impl PromptKind {
             Self::PrdNewRound1Questions => "prd_new_round1_questions.md",
             Self::PrdNewRoundNQuestions => "prd_new_roundN_questions.md",
             Self::PrdNewSynthesizePrd => "prd_new_synthesize_prd.md",
+            Self::PrdNewDiscovery => "prd_new_discovery.md",
             Self::RunTask => "run_task.md",
             Self::RunTaskFinalize => "run_task_finalize.md",
             Self::RunUatVerify => "run_uat_verify.md",
@@ -102,6 +106,7 @@ impl PromptKind {
             Self::PrdNewRound1Questions,
             Self::PrdNewRoundNQuestions,
             Self::PrdNewSynthesizePrd,
+            Self::PrdNewDiscovery,
             Self::RunTask,
             Self::RunTaskFinalize,
             Self::RunUatVerify,
@@ -143,7 +148,7 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 19);
+        assert_eq!(all.len(), 20);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

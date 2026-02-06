@@ -342,7 +342,7 @@ fn generate_next_prd_id(existing: &[PrdSummary]) -> String {
 /// Includes existing PRDs, constitution, and user-provided context so the
 /// agent has full project awareness during the interactive conversation.
 fn build_discovery_prompt(config: &PrdNewConfig, existing_prds: &[PrdSummary]) -> String {
-    let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewRound1Questions);
+    let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewDiscovery);
 
     let mut ctx = PlaceholderContext::new();
     ctx.insert("slug", config.slug);
@@ -681,7 +681,7 @@ title: Test
 
         // Create minimal prompt files.
         std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
+            prompts_dir.join("prd_new_discovery.md"),
             "Discovery for {{slug}}",
         )
         .unwrap();
@@ -744,7 +744,7 @@ A test feature.
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
         std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
+            prompts_dir.join("prd_new_discovery.md"),
             "Discovery for {{slug}}{{#if user_context}} considering context: {{user_context}}{{/if}}",
         )
         .unwrap();
@@ -800,7 +800,7 @@ tasks: []
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
         std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
+            prompts_dir.join("prd_new_discovery.md"),
             "Discovery for {{slug}}",
         )
         .unwrap();
@@ -859,7 +859,7 @@ tasks: []
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
         std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
+            prompts_dir.join("prd_new_discovery.md"),
             "Discovery for {{slug}}",
         )
         .unwrap();
@@ -917,7 +917,7 @@ tasks: []
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        std::fs::write(prompts_dir.join("prd_new_round1_questions.md"), "Discovery").unwrap();
+        std::fs::write(prompts_dir.join("prd_new_discovery.md"), "Discovery").unwrap();
         std::fs::write(
             prompts_dir.join("prd_new_synthesize_prd.md"),
             "Synthesize PRD",
@@ -991,7 +991,7 @@ Project governance rules.
 
         // Create prompt files that include constitution placeholder.
         std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
+            prompts_dir.join("prd_new_discovery.md"),
             "Discovery for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
         )
         .unwrap();

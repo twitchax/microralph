@@ -85,7 +85,7 @@ tasks:
   - id: T-005
     title: "Create interactive chat prompt for PRD discovery phase"
     priority: 2
-    status: todo
+    status: done
     notes: "Define in src/init.rs and materialize to .mr/prompts/. Prompt instructs the agent to ask questions until it has enough information, then exit. Include existing context (PRDs, constitution, codebase scan) as initial context."
   - id: T-006
     title: "Refactor prd::new to use two-phase interactive flow"
@@ -320,3 +320,22 @@ Preferred order:
   - UAT: `cargo make uat` passed — 500 tests, 0 failures (net -1 test due to Q/A loop tests replaced by interactive flow tests)
 
 - **Constitution Compliance**: No violations. Minimal changes (rule 3), consistent patterns (rule 4), no public API breaks (rule 5). `collect_multiline_answers` dead_code allow is a temporary measure pending T-007 cleanup.
+
+## 2026-02-06 — T-005 Completed
+- **Task**: Create interactive chat prompt for PRD discovery phase
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `PrdNewDiscovery` variant to `PromptKind` enum in `src/prompt/types.rs` with filename `prd_new_discovery.md`
+  - Added `PROMPT_PRD_NEW_DISCOVERY` constant in `src/commands/init.rs` — interactive discovery prompt that instructs the agent to have a natural conversation with the user to gather PRD requirements
+  - Added entry to `PROMPT_FILES` array in `src/commands/init.rs` for materialization during `mr init`
+  - Added mapping in `src/prompt/loader.rs` `get_default_prompt` for fallback loading
+  - Updated `build_discovery_prompt()` in `src/prd/new.rs` to use `PromptKind::PrdNewDiscovery` instead of `PromptKind::PrdNewRound1Questions`
+  - Materialized prompt file to `.mr/prompts/prd_new_discovery.md`
+  - Updated test file references in `src/prd/new.rs` from `prd_new_round1_questions.md` to `prd_new_discovery.md`
+  - Updated test counts: `PromptKind::all()` length 19→20, init file counts 24→25, missing prompts 19→20/18→19
+  - Added `prd_new_discovery.md` existence assertion in `test_init_creates_structure`
+  - Added `PROMPT_PRD_NEW_DISCOVERY` to `test_prompts_are_workflow_focused_no_philosophy` test
+  - Added placeholder assertion for `{{slug}}` in `test_prompts_contain_placeholders`
+  - UAT: `cargo make uat` passed — 500 tests, 0 failures
+
+- **Constitution Compliance**: No violations. Prompt defined in `src/commands/init.rs` and materialized to `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3.
