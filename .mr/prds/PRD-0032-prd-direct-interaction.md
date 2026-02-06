@@ -52,7 +52,7 @@ acceptance_tests:
   - id: uat-006
     name: "MockRunner supports interactive mode for unit tests"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-007
     name: "Old multi-round Q/A code is fully removed"
     command: cargo make test
@@ -466,5 +466,17 @@ Preferred order:
   - `test_prd_new_context_in_discovery_prompt` (src/prd/new.rs) — Existing test verifying user-provided context is injected into the discovery prompt.
   - Codebase scan is not injected as data; the discovery prompt template instructs the agent to scan the codebase (line 42 of prd_new_discovery.md).
   - `cargo make uat` passed — 512 tests, 0 failures
+
+## 2026-02-06 — uat-006 Verification
+- **UAT**: MockRunner supports interactive mode for unit tests
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_mock_runner_execute_interactive_returns_default` (src/runner/mock.rs) — Verifies MockRunner returns a default InteractiveResult with transcript.
+  - `test_mock_runner_execute_interactive_with_custom_result` (src/runner/mock.rs) — Verifies `set_interactive_result()` configures custom return values.
+  - `test_mock_runner_records_interactive_prompts` (src/runner/mock.rs) — Verifies `recorded_interactive_prompts()` captures all prompts passed to `execute_interactive()`.
+  - `test_mock_runner_execute_interactive_returns_interrupted_error` (src/runner/mock.rs) — Verifies `set_interactive_error()` with `RunnerError::Interrupted` for Ctrl+C testing.
+  - `test_mock_runner_execute_interactive_returns_process_failed_error` (src/runner/mock.rs) — Verifies `set_interactive_error()` with `RunnerError::ProcessFailed` for failure testing.
+  - All 5 tests passed.
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
