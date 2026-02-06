@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📋 PRD Tasks
 
+- Prd(PRD-0031)feat(T-001): add which crate dependency
+- Prd(PRD-0031)feat(T-002): replace Command::new("which") with which::which() in check_cli_available
+- Prd(PRD-0031)feat(T-003): update unit tests for cross-platform check_cli_available
+- Prd(PRD-0031)feat(T-004): replace command -v with duckscript which in Makefile.toml
+- Prd(PRD-0031)feat(T-005): audit platform-specific shell assumptions
+- Prd(PRD-0031)uat(uat-001): verify CI pipeline passes after cross-platform changes
+- Prd(PRD-0031)uat(uat-002): verify check_cli_available uses which crate
+- Prd(PRD-0031)uat(uat-003): verify Windows MSVC cross-compilation
+
+## [0.5.0] - 2026-02-05
+
+### 📋 PRD Tasks
+
 - Prd(PRD-0029)feat(T-001): fix uninlined_format_args warnings
 
 - Applied clippy --fix to inline 78 format string arguments
