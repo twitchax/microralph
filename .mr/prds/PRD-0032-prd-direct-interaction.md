@@ -56,7 +56,7 @@ acceptance_tests:
   - id: uat-007
     name: "Old multi-round Q/A code is fully removed"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-008
     name: "Project builds and passes CI with clippy pedantic"
     command: cargo make ci
@@ -478,5 +478,16 @@ Preferred order:
   - `test_mock_runner_execute_interactive_returns_interrupted_error` (src/runner/mock.rs) — Verifies `set_interactive_error()` with `RunnerError::Interrupted` for Ctrl+C testing.
   - `test_mock_runner_execute_interactive_returns_process_failed_error` (src/runner/mock.rs) — Verifies `set_interactive_error()` with `RunnerError::ProcessFailed` for failure testing.
   - All 5 tests passed.
+
+## 2026-02-06 — uat-007 Verification
+- **UAT**: Old multi-round Q/A code is fully removed
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - `test_old_qa_loop_code_removed` (src/prd/new.rs) — New test that uses `include_str!` to read the production code of `prd::new` and asserts that old Q/A loop patterns (`parse_questions`, `collect_singleline_answers`, `QaPair`, `MAX_QA_ROUNDS`, `qa_history`) are absent.
+  - The test splits the source at `#[cfg(test)]` to inspect only production code, avoiding false positives from its own string literals.
+  - Confirmed: `prd/new.rs` only uses `qa_workflow::extract_prd_content()` (a utility for parsing runner output), not the old iterative Q/A loop functions.
+  - `prd/edit.rs` still uses Q/A workflow functions, which is correct — it's a separate command not in scope for this PRD.
+  - `cargo make test` passed — 513 tests, 0 failures.
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).

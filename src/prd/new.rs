@@ -1166,4 +1166,32 @@ tasks: []
             "No PRD files should be created on failure"
         );
     }
+
+    /// UAT-007: Verify old multi-round Q/A code is fully removed from `prd::new`.
+    ///
+    /// The old workflow used iterative Q/A loop functions. These must not appear
+    /// in the non-test portion of this module.
+    #[test]
+    fn test_old_qa_loop_code_removed() {
+        let source = include_str!("new.rs");
+
+        // Split source at `#[cfg(test)]` to only inspect the non-test code.
+        let production_code = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source should contain #[cfg(test)]");
+
+        for pattern in [
+            "parse_questions",
+            "collect_singleline_answers",
+            "QaPair",
+            "MAX_QA_ROUNDS",
+            "qa_history",
+        ] {
+            assert!(
+                !production_code.contains(pattern),
+                "Old Q/A pattern `{pattern}` should not appear in production code of prd::new"
+            );
+        }
+    }
 }
