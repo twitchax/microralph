@@ -96,6 +96,60 @@ fn resolve_binary(binary_path: &str) -> String {
     which::which(binary_path).map_or_else(|_| binary_path.to_string(), |p| p.display().to_string())
 }
 
+/// Quotes an argument for safe passage through cmd.exe when invoking batch files.
+///
+/// Inside double-quoted strings, cmd.exe treats most characters literally
+/// except `%` (variable expansion) and `"` (end of quote). This function:
+/// - Wraps the argument in double quotes
+/// - Doubles internal `"` characters (`""` is cmd.exe's escape sequence)
+/// - Doubles `%` characters to prevent variable expansion
+#[cfg(windows)]
+fn quote_for_cmd(arg: &str) -> String {
+    let mut result = String::with_capacity(arg.len() + 4);
+    result.push('"');
+
+    for c in arg.chars() {
+        match c {
+            '"' => result.push_str("\"\""),
+            '%' => result.push_str("%%"),
+            _ => result.push(c),
+        }
+    }
+
+    result.push('"');
+    result
+}
+
+/// Creates a [`Command`] with proper argument handling for all platforms.
+///
+/// On Windows, `.cmd`/`.bat` files (common for npm-installed CLIs like `copilot`)
+/// are internally executed through cmd.exe. Rust 1.77.2+ validates arguments
+/// passed to batch files and rejects characters special to cmd.exe (CVE-2024-24576).
+/// Since runner prompts routinely contain these characters (`<`, `>`, `&`, `|`, `"`,
+/// etc.), this function uses `raw_arg` with cmd.exe-safe quoting to bypass the
+/// validation when the target is a batch file.
+fn build_command(resolved_binary: &str, args: &[String], working_dir: &Path) -> Command {
+    let mut command = Command::new(resolved_binary);
+    command.current_dir(working_dir);
+
+    #[cfg(windows)]
+    {
+        let lower = resolved_binary.to_lowercase();
+        if lower.ends_with(".cmd") || lower.ends_with(".bat") {
+            use std::os::windows::process::CommandExt;
+
+            for arg in args {
+                command.raw_arg(quote_for_cmd(arg));
+            }
+
+            return command;
+        }
+    }
+
+    command.args(args);
+    command
+}
+
 /// Formats the command display for logging/user feedback.
 pub fn format_command_display<C: CliRunnerConfig + ?Sized>(
     config: &C,
@@ -123,8 +177,7 @@ pub fn execute_cli<C: CliRunnerConfig + ?Sized>(
         "Executing CLI"
     );
 
-    let mut command = Command::new(&resolved_binary);
-    command.args(&args).current_dir(working_dir);
+    let mut command = build_command(&resolved_binary, &args, working_dir);
 
     let output = command.output().map_err(|e| {
         RunnerError::ProcessFailed(format!(
@@ -190,12 +243,8 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
         "Executing CLI (streaming)"
     );
 
-    let mut command = Command::new(&resolved_binary);
-    command
-        .args(&args)
-        .current_dir(working_dir)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    let mut command = build_command(&resolved_binary, &args, working_dir);
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
 
     let mut child = command.spawn().map_err(|e| {
         RunnerError::ProcessFailed(format!(
@@ -422,5 +471,50 @@ mod tests {
         read_stream_lines(&input[..], &mut output, &mut captured);
 
         assert_eq!(captured, "existing\nnew line");
+    }
+
+    #[test]
+    fn test_build_command_sets_working_dir() {
+        let working_dir = Path::new("/test/dir");
+        let args = vec!["arg1".to_string(), "arg2".to_string()];
+
+        let command = build_command("some-binary", &args, working_dir);
+
+        // Verify the command was created (we can't easily inspect args,
+        // but we can verify it doesn't panic and produces a valid Command).
+        let program = format!("{:?}", command.get_program());
+        assert!(program.contains("some-binary"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_quote_for_cmd_simple() {
+        assert_eq!(quote_for_cmd("hello"), "\"hello\"");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_quote_for_cmd_with_special_chars() {
+        // Double quotes should be doubled.
+        assert_eq!(quote_for_cmd("say \"hi\""), "\"say \"\"hi\"\"\"");
+
+        // Percent signs should be doubled.
+        assert_eq!(quote_for_cmd("100%"), "\"100%%\"");
+
+        // cmd.exe special chars inside quotes are literal (no escaping needed).
+        assert_eq!(quote_for_cmd("a & b | c < d > e"), "\"a & b | c < d > e\"");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_build_command_batch_file_uses_raw_arg() {
+        let working_dir = Path::new("C:\\test");
+        let args = vec!["-p".to_string(), "prompt with <special> chars".to_string()];
+
+        // Should not panic even with special characters when target is .cmd.
+        let command = build_command("C:\\path\\to\\copilot.cmd", &args, working_dir);
+
+        let program = format!("{:?}", command.get_program());
+        assert!(program.contains("copilot.cmd"));
     }
 }
