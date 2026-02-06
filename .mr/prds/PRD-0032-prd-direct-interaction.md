@@ -110,7 +110,7 @@ tasks:
   - id: T-010
     title: "Update prd_new prompt for synthesis phase"
     priority: 3
-    status: todo
+    status: done
     notes: "Adjust the existing PRD synthesis prompt to accept conversation transcript as input context. Keep it compatible with the existing template-based PRD generation. Update both src/init.rs and .mr/prompts/prd_new.md."
   - id: T-011
     title: "Update tests and MockRunner for new interactive flow"
@@ -383,3 +383,17 @@ Preferred order:
   - UAT: `cargo make uat` passed — 511 tests, 0 failures (net -6 tests from removed old Q/A tests)
 
 - **Constitution Compliance**: No violations. Prompt management synchronized between `src/commands/init.rs` and `.mr/prompts/` (rule 7). Minimal changes focused on dead code removal (rule 3). No public API breaks (rule 5). Clippy pedantic clean (rule 8).
+
+## 2026-02-06 — T-010 Completed
+- **Task**: Update prd_new prompt for synthesis phase
+- **Status**: ✅ Done
+- **Changes**:
+  - **`src/commands/init.rs`**: Refined `PROMPT_PRD_NEW_SYNTHESIZE` constant with three improvements:
+    1. Wrapped "Conversation Context" section header inside `{{#if conversation_transcript}}` conditional so it only renders when a transcript is present (renamed section to "Conversation Transcript")
+    2. Added synthesis guidance paragraph instructing the agent how to extract goals, constraints, and technical approach from conversation discussion points
+    3. Replaced `Read .mr/templates/prd.md for the exact structure` with `The PRD has two parts that you MUST follow exactly` — the synthesis phase runs non-interactively so the agent cannot read files; the template structure is already fully described inline
+    4. Wrapped `session_id` block in its own `## Session Context` section header (was previously inside the Conversation Context section)
+  - **`.mr/prompts/prd_new_synthesize_prd.md`**: Updated materialized prompt file to match `init.rs` changes exactly (per constitution rule 7)
+  - UAT: `cargo make uat` passed — 511 tests, 0 failures
+
+- **Constitution Compliance**: No violations. Prompts synchronized between `src/commands/init.rs` and `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3. No public API breaks per rule 5.

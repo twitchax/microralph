@@ -414,15 +414,19 @@ The following governance rules and constraints apply to this project:
 **CRITICAL**: The PRD you synthesize MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
 {{/if}}
 
-## Conversation Context
-
 {{#if conversation_transcript}}
-The following is a transcript of the interactive discovery conversation between the user and the agent:
+## Conversation Transcript
+
+The following is a transcript of the interactive discovery conversation between the user and the agent. Extract all requirements, constraints, decisions, and context from this conversation to inform the PRD:
 
 {{conversation_transcript}}
+
+**Synthesis guidance**: Identify the user's goals, technical preferences, scope boundaries, and any decisions made during the conversation. Transform discussion points into structured PRD sections — goals become Goals, discussed limitations become Constraints, and agreed-upon implementation details become the Technical Approach.
 {{/if}}
 
 {{#if session_id}}
+## Session Context
+
 This prompt is a continuation of a previous interactive session (session: {{session_id}}).
 Use the full conversational context from that session to inform PRD synthesis.
 {{/if}}
@@ -435,7 +439,7 @@ Use the full conversational context from that session to inform PRD synthesis.
 
 ## PRD Template Structure
 
-**CRITICAL**: Read `.mr/templates/prd.md` for the exact structure. The PRD has two parts:
+The PRD has two parts that you MUST follow exactly:
 
 ### 1. YAML Frontmatter (between `---` delimiters)
 
