@@ -60,7 +60,7 @@ acceptance_tests:
   - id: uat-008
     name: "Project builds and passes CI with clippy pedantic"
     command: cargo make ci
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Add execute_interactive() method to Runner trait"
@@ -489,5 +489,14 @@ Preferred order:
   - Confirmed: `prd/new.rs` only uses `qa_workflow::extract_prd_content()` (a utility for parsing runner output), not the old iterative Q/A loop functions.
   - `prd/edit.rs` still uses Q/A workflow functions, which is correct — it's a separate command not in scope for this PRD.
   - `cargo make test` passed — 513 tests, 0 failures.
+
+## 2026-02-06 — uat-008 Verification
+- **UAT**: Project builds and passes CI with clippy pedantic
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make ci` which executes fmt, clippy (pedantic), and test stages.
+  - All stages passed: 513 tests run, 513 passed, 0 skipped.
+  - No clippy warnings or formatting issues detected.
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
