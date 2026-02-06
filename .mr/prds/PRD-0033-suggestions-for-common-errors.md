@@ -51,7 +51,7 @@ tasks:
   - id: T-002
     title: "Add suggestion for malformed config.toml parse errors"
     priority: 1
-    status: todo
+    status: done
     notes: "In src/config/mod.rs, wrap TOML parse errors with a suggestion to run `mr restore` to reset config"
   - id: T-003
     title: "Add suggestion to PRD-not-found errors"
@@ -156,4 +156,13 @@ The changes are localized to individual error sites — no cross-cutting changes
 - **Changes**:
   - Updated `src/config/constitution.rs` line 72-75: enhanced `bail!` message for missing constitution file to include `Suggestion: Run \`mr restore\` to regenerate default files, or \`mr init\` to reinitialize.`
   - UAT passed: 497 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-06 — T-002 Completed
+- **Task**: Add suggestion for malformed config.toml parse errors
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/config/mod.rs` line 81: wrapped `toml::from_str` with `.with_context()` adding `Suggestion: Run \`mr restore\` to reset config to defaults.`
+  - Added `test_config_load_malformed_includes_suggestion` unit test verifying the suggestion text is present in parse error messages
+  - UAT passed: 498 tests, 0 failures
 - **Constitution Compliance**: No violations.

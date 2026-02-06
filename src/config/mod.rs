@@ -78,7 +78,12 @@ impl Config {
         }
 
         let content = std::fs::read_to_string(&config_path)?;
-        let config: Config = toml::from_str(&content)?;
+        let config: Config = toml::from_str(&content).with_context(|| {
+            format!(
+                "Failed to parse {}.\n  Suggestion: Run `mr restore` to reset config to defaults.",
+                config_path.display()
+            )
+        })?;
 
         Ok(Some(config))
     }
@@ -350,5 +355,21 @@ timeout_minutes = 60
         let constitution = super::load_constitution(temp.path()).unwrap().unwrap();
 
         assert_eq!(constitution, test_content);
+    }
+
+    #[test]
+    fn test_config_load_malformed_includes_suggestion() {
+        let temp = TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        std::fs::create_dir_all(&mr_dir).unwrap();
+        std::fs::write(mr_dir.join("config.toml"), "not valid toml {{{}}}").unwrap();
+
+        let err = Config::load(temp.path()).unwrap_err();
+        let msg = format!("{err:#}");
+
+        assert!(
+            msg.contains("mr restore"),
+            "Error should suggest `mr restore`, got: {msg}"
+        );
     }
 }
