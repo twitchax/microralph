@@ -224,7 +224,7 @@ fn find_prd(root: &Path, prd_id: &str) -> Result<(PathBuf, String)> {
         }
     }
 
-    bail!("PRD not found: {prd_id}")
+    bail!("PRD not found: {prd_id}.\n  Suggestion: Run `mr status` to list available PRDs.")
 }
 
 /// Builds the edit prompt with context.

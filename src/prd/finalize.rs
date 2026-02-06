@@ -48,7 +48,7 @@ pub enum FinalizeError {
     },
 
     /// The PRD was not found.
-    #[error("PRD not found: {0}")]
+    #[error("PRD not found: {0}.\n  Suggestion: Run `mr status` to list available PRDs.")]
     PrdNotFound(String),
 }
 

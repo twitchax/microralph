@@ -350,8 +350,11 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     })?;
 
     // Find the PRD.
-    let (_filename, prd, prd_path) = find_prd_by_id(config.root, prd_id)?
-        .ok_or_else(|| anyhow::anyhow!("PRD not found: {prd_id}"))?;
+    let (_filename, prd, prd_path) = find_prd_by_id(config.root, prd_id)?.ok_or_else(|| {
+        anyhow::anyhow!(
+            "PRD not found: {prd_id}.\n  Suggestion: Run `mr status` to list available PRDs."
+        )
+    })?;
 
     // Pick the next task.
     let Some(task) = prd.next_task() else {
@@ -607,8 +610,13 @@ fn process_uat_verification_response(
 
     if output.success {
         // Check if agent marked UAT as verified.
-        let (_f, refreshed_prd, _p) = find_prd_by_id(config.root, config.prd_id)?
-            .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+        let (_f, refreshed_prd, _p) =
+            find_prd_by_id(config.root, config.prd_id)?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
+                    config.prd_id
+                )
+            })?;
 
         let still_unverified = refreshed_prd
             .unverified_uats()
@@ -671,8 +679,13 @@ pub fn run_uat_verification_loop(
     config: &UatVerificationConfig,
     runner: &dyn Runner,
 ) -> Result<UatVerificationLoopResult> {
-    let (_filename, prd, prd_path) = find_prd_by_id(config.root, config.prd_id)?
-        .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+    let (_filename, prd, prd_path) =
+        find_prd_by_id(config.root, config.prd_id)?.ok_or_else(|| {
+            anyhow::anyhow!(
+                "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
+                config.prd_id
+            )
+        })?;
 
     let max_iterations = config.max_iterations.unwrap_or_else(|| {
         prd.frontmatter
@@ -690,8 +703,12 @@ pub fn run_uat_verification_loop(
 
     loop {
         let (_filename, current_prd, current_prd_path) =
-            find_prd_by_id(config.root, config.prd_id)?
-                .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+            find_prd_by_id(config.root, config.prd_id)?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
+                    config.prd_id
+                )
+            })?;
 
         let unverified = current_prd.unverified_uats();
 
@@ -747,7 +764,12 @@ pub fn run_uat_verification_loop(
     }
 
     let (_filename, final_prd, _final_path) = find_prd_by_id(config.root, config.prd_id)?
-        .ok_or_else(|| anyhow::anyhow!("PRD not found: {}", config.prd_id))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
+                config.prd_id
+            )
+        })?;
 
     Ok(UatVerificationLoopResult {
         prd_id: config.prd_id.to_string(),

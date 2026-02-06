@@ -56,7 +56,7 @@ tasks:
   - id: T-003
     title: "Add suggestion to PRD-not-found errors"
     priority: 1
-    status: todo
+    status: done
     notes: "In src/prd/edit.rs, src/prd/finalize.rs, and src/commands/run.rs — add suggestion to run `mr status` to list available PRDs"
   - id: T-004
     title: "Add suggestion to invalid PRD format errors"
@@ -164,5 +164,15 @@ The changes are localized to individual error sites — no cross-cutting changes
 - **Changes**:
   - Updated `src/config/mod.rs` line 81: wrapped `toml::from_str` with `.with_context()` adding `Suggestion: Run \`mr restore\` to reset config to defaults.`
   - Added `test_config_load_malformed_includes_suggestion` unit test verifying the suggestion text is present in parse error messages
+  - UAT passed: 498 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-06 — T-003 Completed
+- **Task**: Add suggestion to PRD-not-found errors
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd/edit.rs` line 227: enhanced `bail!` for `find_prd()` to include `Suggestion: Run \`mr status\` to list available PRDs.`
+  - Updated `src/prd/finalize.rs` line 51: enhanced `FinalizeError::PrdNotFound` `#[error]` message with the same suggestion
+  - Updated `src/commands/run.rs`: enhanced all 5 `ok_or_else` PRD-not-found closures (`run_task`, `process_uat_iteration_outcome`, `run_uat_verification_loop` ×3) with the suggestion
   - UAT passed: 498 tests, 0 failures
 - **Constitution Compliance**: No violations.
