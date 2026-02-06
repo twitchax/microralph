@@ -70,7 +70,7 @@ where
     let constitution_path = config.root.join(".mr").join("constitution.md");
     if !constitution_path.exists() {
         bail!(
-            "Constitution file not found at {}",
+            "Constitution file not found at {}.\n  Suggestion: Run `mr restore` to regenerate default files, or `mr init` to reinitialize.",
             constitution_path.display()
         );
     }

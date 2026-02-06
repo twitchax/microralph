@@ -1,7 +1,7 @@
 ---
 id: PRD-0033
 title: "Suggestions for Common Errors"
-status: draft
+status: active
 owner: twitchax
 created: 2026-02-06
 updated: 2026-02-06
@@ -46,7 +46,7 @@ tasks:
   - id: T-001
     title: "Improve constitution-missing error with restore/init suggestion"
     priority: 1
-    status: todo
+    status: done
     notes: "In src/config/constitution.rs, when constitution file is not found, add suggestion to run `mr restore` or `mr init`"
   - id: T-002
     title: "Add suggestion for malformed config.toml parse errors"
@@ -149,3 +149,11 @@ The changes are localized to individual error sites — no cross-cutting changes
 - Adding a `mr doctor` or `mr diagnose` command
 
 # History
+
+## 2026-02-06 — T-001 Completed
+- **Task**: Improve constitution-missing error with restore/init suggestion
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/config/constitution.rs` line 72-75: enhanced `bail!` message for missing constitution file to include `Suggestion: Run \`mr restore\` to regenerate default files, or \`mr init\` to reinitialize.`
+  - UAT passed: 497 tests, 0 failures
+- **Constitution Compliance**: No violations.
