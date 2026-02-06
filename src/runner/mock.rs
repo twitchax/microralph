@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::Mutex;
 
-use super::types::{InteractiveResult, Runner, RunnerOutput, RunnerResult};
+use super::types::{InteractiveResult, Runner, RunnerError, RunnerOutput, RunnerResult};
 
 /// A mock runner for deterministic testing.
 ///
@@ -27,6 +27,9 @@ pub struct MockRunner {
     /// Pre-configured interactive result to return from `execute_interactive()`.
     interactive_result: Mutex<Option<InteractiveResult>>,
 
+    /// Pre-configured interactive error to return from `execute_interactive()`.
+    interactive_error: Mutex<Option<RunnerError>>,
+
     /// Recorded interactive prompts.
     recorded_interactive_prompts: Mutex<Vec<String>>,
 }
@@ -41,6 +44,7 @@ impl MockRunner {
             responses: Mutex::new(responses.into()),
             recorded_prompts: Mutex::new(Vec::new()),
             interactive_result: Mutex::new(None),
+            interactive_error: Mutex::new(None),
             recorded_interactive_prompts: Mutex::new(Vec::new()),
         }
     }
@@ -54,6 +58,12 @@ impl MockRunner {
     #[cfg(test)]
     pub fn set_interactive_result(&self, result: InteractiveResult) {
         *self.interactive_result.lock().unwrap() = Some(result);
+    }
+
+    /// Sets an error to return from `execute_interactive()`.
+    #[cfg(test)]
+    pub fn set_interactive_error(&self, error: RunnerError) {
+        *self.interactive_error.lock().unwrap() = Some(error);
     }
 
     /// Adds a response to the queue.
@@ -134,6 +144,11 @@ impl Runner for MockRunner {
             .lock()
             .unwrap()
             .push(prompt.to_string());
+
+        // Return a pre-configured error if set.
+        if let Some(error) = self.interactive_error.lock().unwrap().take() {
+            return Err(error);
+        }
 
         // Return the pre-configured interactive result, or a default.
         let result = self
@@ -303,5 +318,39 @@ mod tests {
             result.is_none(),
             "MockRunner should return None for execute_continue (no session resume)"
         );
+    }
+
+    #[test]
+    fn test_mock_runner_execute_interactive_returns_interrupted_error() {
+        let runner = MockRunner::empty();
+        let path = Path::new(".");
+
+        runner.set_interactive_error(RunnerError::Interrupted(
+            "Interactive session terminated by signal 2 (SIGINT/Ctrl+C)".to_string(),
+        ));
+
+        let result = runner.execute_interactive("test", path);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(err.is_interrupted());
+        assert!(err.to_string().contains("SIGINT"));
+    }
+
+    #[test]
+    fn test_mock_runner_execute_interactive_returns_process_failed_error() {
+        let runner = MockRunner::empty();
+        let path = Path::new(".");
+
+        runner.set_interactive_error(RunnerError::ProcessFailed(
+            "Interactive session exited with status: exit status: 1".to_string(),
+        ));
+
+        let result = runner.execute_interactive("test", path);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(!err.is_interrupted());
+        assert!(err.to_string().contains("exited with status"));
     }
 }

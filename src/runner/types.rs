@@ -9,6 +9,9 @@ pub enum RunnerError {
     /// The runner process failed to start.
     ProcessFailed(String),
 
+    /// The runner process was interrupted by a signal (e.g., Ctrl+C / SIGINT).
+    Interrupted(String),
+
     /// IO error.
     Io(std::io::Error),
 }
@@ -19,6 +22,7 @@ impl fmt::Display for RunnerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ProcessFailed(msg) => write!(f, "Process failed to start: {msg}"),
+            Self::Interrupted(msg) => write!(f, "Process interrupted: {msg}"),
             Self::Io(err) => write!(f, "IO error: {err}"),
         }
     }
@@ -27,6 +31,13 @@ impl fmt::Display for RunnerError {
 impl From<std::io::Error> for RunnerError {
     fn from(err: std::io::Error) -> Self {
         Self::Io(err)
+    }
+}
+
+impl RunnerError {
+    /// Returns true if this error represents a signal interruption (e.g., Ctrl+C).
+    pub fn is_interrupted(&self) -> bool {
+        matches!(self, Self::Interrupted(_))
     }
 }
 
@@ -455,5 +466,28 @@ mod tests {
             result.is_none(),
             "Default execute_continue should return None"
         );
+    }
+
+    #[test]
+    fn test_runner_error_is_interrupted() {
+        let interrupted = RunnerError::Interrupted("signal 2".to_string());
+        assert!(interrupted.is_interrupted());
+
+        let failed = RunnerError::ProcessFailed("exit code 1".to_string());
+        assert!(!failed.is_interrupted());
+
+        let io_err = RunnerError::Io(std::io::Error::other("test"));
+        assert!(!io_err.is_interrupted());
+    }
+
+    #[test]
+    fn test_runner_error_interrupted_display() {
+        let err = RunnerError::Interrupted("signal 2 (SIGINT/Ctrl+C)".to_string());
+        let display = err.to_string();
+        assert!(
+            display.contains("interrupted"),
+            "Display should contain 'interrupted', got: {display}"
+        );
+        assert!(display.contains("signal 2"));
     }
 }

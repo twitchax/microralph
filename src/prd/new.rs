@@ -107,9 +107,23 @@ where
         "Launching interactive discovery session"
     );
 
-    let interactive_result = runner
-        .execute_interactive(&discovery_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Interactive session failed (aborted or error): {e}"))?;
+    let interactive_result = match runner.execute_interactive(&discovery_prompt, config.root) {
+        Ok(result) => result,
+        Err(e) => {
+            if e.is_interrupted() {
+                writeln!(output)?;
+                writeln!(
+                    output,
+                    "⚠️  Interactive session interrupted. PRD creation aborted — no PRD was created."
+                )?;
+                tracing::info!("Interactive session interrupted by signal, aborting PRD creation");
+                bail!("Interactive session interrupted (Ctrl+C or signal): {e}");
+            }
+
+            tracing::error!(error = %e, "Interactive session failed");
+            bail!("Interactive session failed: {e}");
+        }
+    };
 
     writeln!(output)?;
     writeln!(output, "Interactive session complete.")?;
@@ -1047,6 +1061,118 @@ tasks: []
         assert!(
             recorded[0].contains("Acceptance tests must be codified"),
             "Synthesis prompt should contain constitution content"
+        );
+    }
+
+    #[test]
+    fn test_create_prd_aborts_on_interrupted_signal() {
+        // Verifies that Ctrl+C (signal interruption) during the interactive
+        // session aborts PRD creation entirely without creating a file.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_new_discovery.md"),
+            "Discovery for {{slug}}",
+        )
+        .unwrap();
+
+        let runner = MockRunner::empty();
+        runner.set_interactive_error(crate::runner::RunnerError::Interrupted(
+            "Interactive session terminated by signal 2 (SIGINT/Ctrl+C)".to_string(),
+        ));
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "interrupted-test",
+            description: None,
+            context: None,
+            stream: false,
+        };
+
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut output);
+
+        assert!(result.is_err(), "PRD creation should fail on interrupt");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("interrupted"),
+            "Error should mention interruption, got: {err_msg}"
+        );
+
+        // Verify user-facing output mentions abort.
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(
+            output_str.contains("aborted"),
+            "Output should mention abort, got: {output_str}"
+        );
+
+        // Verify no PRD file was created.
+        let prds_dir = temp.path().join(".mr").join("prds");
+        let prd_files: Vec<_> = std::fs::read_dir(&prds_dir)
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "md"))
+            .collect();
+        assert!(
+            prd_files.is_empty(),
+            "No PRD files should be created on interrupt"
+        );
+    }
+
+    #[test]
+    fn test_create_prd_aborts_on_process_failure() {
+        // Verifies that a non-zero exit code (non-signal failure) also aborts.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_new_discovery.md"),
+            "Discovery for {{slug}}",
+        )
+        .unwrap();
+
+        let runner = MockRunner::empty();
+        runner.set_interactive_error(crate::runner::RunnerError::ProcessFailed(
+            "Interactive session exited with status: exit status: 1".to_string(),
+        ));
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "failed-test",
+            description: None,
+            context: None,
+            stream: false,
+        };
+
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut output);
+
+        assert!(result.is_err(), "PRD creation should fail on process error");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("failed"),
+            "Error should mention failure, got: {err_msg}"
+        );
+
+        // Verify no PRD file was created.
+        let prds_dir = temp.path().join(".mr").join("prds");
+        let prd_files: Vec<_> = std::fs::read_dir(&prds_dir)
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "md"))
+            .collect();
+        assert!(
+            prd_files.is_empty(),
+            "No PRD files should be created on failure"
         );
     }
 }

@@ -105,7 +105,7 @@ tasks:
   - id: T-009
     title: "Handle Ctrl+C and error cases in interactive mode"
     priority: 2
-    status: todo
+    status: done
     notes: "Detect non-zero exit codes or interrupted signals from the interactive subprocess. Abort PRD creation entirely on force-quit. Clean up any temporary state."
   - id: T-010
     title: "Update prd_new prompt for synthesis phase"
@@ -355,3 +355,16 @@ Preferred order:
   - UAT: `cargo make uat` passed — 508 tests, 0 failures (net +8 tests)
 
 - **Constitution Compliance**: No violations. Prompts synchronized between `src/commands/init.rs` and `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3. No public API breaks per rule 5 — new trait method has default implementation.
+
+## 2026-02-06 — T-009 Completed
+- **Task**: Handle Ctrl+C and error cases in interactive mode
+- **Status**: ✅ Done
+- **Changes**:
+  - **`src/runner/types.rs`**: Added `Interrupted(String)` variant to `RunnerError` enum for signal-based interruptions. Updated `Display` impl to show "Process interrupted: ..." for the new variant. Added `is_interrupted()` helper method. Added 2 tests: `test_runner_error_is_interrupted` and `test_runner_error_interrupted_display`.
+  - **`src/runner/cli_runner.rs`**: Updated `execute_interactive_cli()` to detect signal interruption on Unix using `ExitStatusExt::signal()`. When a process is killed by a signal (e.g., SIGINT from Ctrl+C), returns `RunnerError::Interrupted` instead of `RunnerError::ProcessFailed`. Added `signal_name()` helper for human-readable signal names. Added 3 tests: `test_execute_interactive_cli_signal_interrupted` (spawns `sh -c 'kill -2 $$'` to simulate Ctrl+C), `test_signal_name_known_signals`, `test_signal_name_unknown_signal`. Updated existing `test_execute_interactive_cli_failure` to assert `!is_interrupted()`.
+  - **`src/runner/mock.rs`**: Added `interactive_error` field and `set_interactive_error()` method to `MockRunner` for testing error paths. Updated `execute_interactive()` to check for pre-configured errors. Added 2 tests: `test_mock_runner_execute_interactive_returns_interrupted_error` and `test_mock_runner_execute_interactive_returns_process_failed_error`.
+  - **`src/runner/mod.rs`**: Added `#[cfg(test)]` re-export of `RunnerError` for use in test code across modules.
+  - **`src/prd/new.rs`**: Replaced generic `map_err` with explicit `match` on `execute_interactive()` result. On `Interrupted` error: writes user-friendly abort message ("⚠️ Interactive session interrupted. PRD creation aborted — no PRD was created."). On other errors: logs and bails with generic failure message. Added 2 tests: `test_create_prd_aborts_on_interrupted_signal` and `test_create_prd_aborts_on_process_failure` — both verify no PRD file is created on error.
+  - UAT: `cargo make uat` passed — 517 tests, 0 failures (net +9 tests)
+
+- **Constitution Compliance**: No violations. Minimal changes (rule 3), consistent with existing error handling patterns (rule 4), no public API breaks (rule 5 — new enum variant is additive), clippy pedantic clean (rule 8).

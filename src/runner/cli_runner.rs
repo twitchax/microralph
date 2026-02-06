@@ -313,6 +313,17 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
     })
 }
 
+/// Maps a Unix signal number to a human-readable name.
+#[cfg(unix)]
+fn signal_name(sig: i32) -> &'static str {
+    match sig {
+        2 => "SIGINT/Ctrl+C",
+        9 => "SIGKILL",
+        15 => "SIGTERM",
+        _ => "unknown signal",
+    }
+}
+
 /// Executes a CLI command in interactive mode with inherited stdio.
 ///
 /// The process inherits stdin, stdout, and stderr so the user interacts
@@ -353,6 +364,20 @@ pub fn execute_interactive_cli<C: CliRunnerConfig + ?Sized>(
     })?;
 
     if !status.success() {
+        // On Unix, a process killed by a signal has no exit code (code() returns None).
+        // Use signal() to detect which signal terminated the process.
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            if let Some(sig) = status.signal() {
+                return Err(RunnerError::Interrupted(format!(
+                    "Interactive session terminated by signal {sig} ({})",
+                    signal_name(sig)
+                )));
+            }
+        }
+
+        // On all platforms, a non-zero exit code without a signal is a general failure.
         return Err(RunnerError::ProcessFailed(format!(
             "Interactive session exited with status: {status}"
         )));
@@ -736,7 +761,7 @@ mod tests {
 
     #[test]
     fn test_execute_interactive_cli_failure() {
-        // Use `false` command which exits immediately with failure.
+        // Use `false` command which exits immediately with failure (non-signal).
         let config = InteractiveTestConfig {
             binary: "false".to_string(),
             interactive_args: vec![],
@@ -748,8 +773,36 @@ mod tests {
 
         let err = result.unwrap_err();
         assert!(
+            !err.is_interrupted(),
+            "`false` should produce ProcessFailed, not Interrupted"
+        );
+        assert!(
             err.to_string().contains("exited with status"),
             "Expected exit status error, got: {err}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_execute_interactive_cli_signal_interrupted() {
+        // Spawn a process that sends itself SIGINT to simulate Ctrl+C.
+        let config = InteractiveTestConfig {
+            binary: "sh".to_string(),
+            interactive_args: vec!["-c".to_string(), "kill -2 $$".to_string()],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_interactive_cli(&config, "test", working_dir);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            err.is_interrupted(),
+            "Signal-killed process should produce Interrupted, got: {err}"
+        );
+        assert!(
+            err.to_string().contains("SIGINT"),
+            "Error should mention SIGINT, got: {err}"
         );
     }
 
@@ -813,5 +866,19 @@ mod tests {
         let output = result.unwrap().unwrap();
         assert!(output.success);
         assert!(output.text.contains("hello from continue"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_signal_name_known_signals() {
+        assert_eq!(signal_name(2), "SIGINT/Ctrl+C");
+        assert_eq!(signal_name(9), "SIGKILL");
+        assert_eq!(signal_name(15), "SIGTERM");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_signal_name_unknown_signal() {
+        assert_eq!(signal_name(42), "unknown signal");
     }
 }
