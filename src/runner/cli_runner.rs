@@ -10,7 +10,9 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, TokenUsageInfo};
+use super::types::{
+    InteractiveResult, Runner, RunnerError, RunnerOutput, RunnerResult, TokenUsageInfo,
+};
 
 /// Reads lines from a stream, writes them to output, and captures them.
 ///
@@ -73,6 +75,16 @@ pub trait CliRunnerConfig {
             "--working-dir".to_string(),
             working_dir.display().to_string(),
         ]
+    }
+
+    /// Builds the command arguments for an interactive session.
+    ///
+    /// Returns `None` if the runner does not support interactive mode.
+    /// Implementors should return arguments that launch the CLI in interactive
+    /// chat mode with the given prompt as initial context.
+    #[allow(dead_code)] // Used via blanket impl; callers arrive in T-006+
+    fn build_interactive_args(&self, _prompt: &str) -> Option<Vec<String>> {
+        None
     }
 }
 
@@ -293,6 +305,63 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
     })
 }
 
+/// Executes a CLI command in interactive mode with inherited stdio.
+///
+/// The process inherits stdin, stdout, and stderr so the user interacts
+/// directly with the underlying agent. On exit, returns an [`InteractiveResult`]
+/// with any available session context.
+#[allow(dead_code)] // Used via blanket impl; callers arrive in T-006+
+pub fn execute_interactive_cli<C: CliRunnerConfig + ?Sized>(
+    config: &C,
+    prompt: &str,
+    working_dir: &Path,
+) -> RunnerResult<InteractiveResult> {
+    let Some(args) = config.build_interactive_args(prompt) else {
+        return Err(RunnerError::ProcessFailed(
+            "interactive mode is not supported by this runner".to_string(),
+        ));
+    };
+
+    let resolved_binary = resolve_binary(config.binary_path());
+
+    tracing::debug!(
+        binary = %resolved_binary,
+        working_dir = %working_dir.display(),
+        args = ?args,
+        "Executing CLI (interactive)"
+    );
+
+    let mut command = build_command(&resolved_binary, &args, working_dir);
+    command
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    let status = command.status().map_err(|e| {
+        RunnerError::ProcessFailed(format!(
+            "Failed to start CLI at '{}': {}",
+            config.binary_path(),
+            e
+        ))
+    })?;
+
+    if !status.success() {
+        return Err(RunnerError::ProcessFailed(format!(
+            "Interactive session exited with status: {status}"
+        )));
+    }
+
+    tracing::debug!(
+        exit_code = ?status.code(),
+        "CLI completed (interactive)"
+    );
+
+    Ok(InteractiveResult {
+        session_id: None,
+        transcript: None,
+    })
+}
+
 /// Blanket implementation of `Runner` for all types implementing `CliRunnerConfig`.
 ///
 /// This eliminates boilerplate in individual runner modules (Copilot, Claude, etc.)
@@ -322,6 +391,14 @@ impl<T: CliRunnerConfig + Send + Sync> Runner for T {
 
     fn is_available(&self) -> bool {
         check_cli_available(self.binary_path())
+    }
+
+    fn execute_interactive(
+        &self,
+        prompt: &str,
+        working_dir: &Path,
+    ) -> RunnerResult<InteractiveResult> {
+        execute_interactive_cli(self, prompt, working_dir)
     }
 }
 
@@ -516,5 +593,86 @@ mod tests {
 
         let program = format!("{:?}", command.get_program());
         assert!(program.contains("copilot.cmd"));
+    }
+
+    #[test]
+    fn test_execute_interactive_unsupported_by_default() {
+        // TestConfig does not override build_interactive_args, so it returns None.
+        let config = TestConfig {
+            binary: "echo".to_string(),
+            args: vec![],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_interactive_cli(&config, "test prompt", working_dir);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("not supported"),
+            "Expected 'not supported' error, got: {err}"
+        );
+    }
+
+    struct InteractiveTestConfig {
+        binary: String,
+        interactive_args: Vec<String>,
+    }
+
+    impl CliRunnerConfig for InteractiveTestConfig {
+        fn name(&self) -> &'static str {
+            "interactive-test"
+        }
+
+        fn binary_path(&self) -> &str {
+            &self.binary
+        }
+
+        fn build_args(&self, _prompt: &str) -> Vec<String> {
+            vec![]
+        }
+
+        fn parse_usage(&self, _text: &str) -> Option<TokenUsageInfo> {
+            None
+        }
+
+        fn build_interactive_args(&self, _prompt: &str) -> Option<Vec<String>> {
+            Some(self.interactive_args.clone())
+        }
+    }
+
+    #[test]
+    fn test_execute_interactive_cli_success() {
+        // Use `true` command which exits immediately with success.
+        let config = InteractiveTestConfig {
+            binary: "true".to_string(),
+            interactive_args: vec![],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_interactive_cli(&config, "test", working_dir).unwrap();
+
+        // `true` doesn't produce a session ID or transcript.
+        assert!(result.session_id.is_none());
+        assert!(result.transcript.is_none());
+    }
+
+    #[test]
+    fn test_execute_interactive_cli_failure() {
+        // Use `false` command which exits immediately with failure.
+        let config = InteractiveTestConfig {
+            binary: "false".to_string(),
+            interactive_args: vec![],
+        };
+        let working_dir = Path::new(".");
+
+        let result = execute_interactive_cli(&config, "test", working_dir);
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("exited with status"),
+            "Expected exit status error, got: {err}"
+        );
     }
 }

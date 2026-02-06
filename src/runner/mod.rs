@@ -19,4 +19,5 @@ pub use mock::MockRunner;
 pub use types::Runner;
 
 // Re-export for internal crate use (tests, other modules).
-pub(crate) use types::{RunnerOutput, TokenUsageInfo};
+#[allow(unused_imports)] // InteractiveResult used by callers in T-006+
+pub(crate) use types::{InteractiveResult, RunnerOutput, TokenUsageInfo};

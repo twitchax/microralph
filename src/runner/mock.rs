@@ -202,4 +202,16 @@ mod tests {
             "MockRunner should not provide usage info"
         );
     }
+
+    #[test]
+    fn test_mock_runner_execute_interactive_returns_error() {
+        let runner = MockRunner::empty();
+        let path = Path::new(".");
+
+        let result = runner.execute_interactive("test", path);
+        assert!(
+            result.is_err(),
+            "MockRunner should not support interactive mode by default"
+        );
+    }
 }

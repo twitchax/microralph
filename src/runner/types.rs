@@ -83,6 +83,20 @@ impl TokenUsageInfo {
     }
 }
 
+/// Result from an interactive runner session.
+///
+/// Contains context from the interactive session that can be used
+/// for subsequent non-interactive calls (e.g., synthesis phase).
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // API surface for PRD-0032 interactive mode (T-002+)
+pub struct InteractiveResult {
+    /// Optional session or conversation ID for resume-based context handoff.
+    pub session_id: Option<String>,
+
+    /// Optional transcript of the interactive conversation.
+    pub transcript: Option<String>,
+}
+
 /// Output from a runner invocation.
 #[derive(Debug, Clone)]
 pub struct RunnerOutput {
@@ -181,6 +195,32 @@ pub trait Runner: Send + Sync {
     /// Checks if the runner is available/configured.
     fn is_available(&self) -> bool {
         true
+    }
+
+    /// Launches an interactive session with inherited stdio.
+    ///
+    /// The user interacts directly with the underlying agent. On clean exit,
+    /// returns an [`InteractiveResult`] containing a session ID and/or transcript
+    /// for context handoff to a subsequent non-interactive call.
+    ///
+    /// # Arguments
+    ///
+    /// * `prompt` - Initial prompt/context to seed the interactive session
+    /// * `working_dir` - The working directory for the runner
+    ///
+    /// # Returns
+    ///
+    /// An [`InteractiveResult`] with session context, or an error if the
+    /// session could not be started or was interrupted.
+    #[allow(dead_code)] // Callers arrive in T-006+
+    fn execute_interactive(
+        &self,
+        _prompt: &str,
+        _working_dir: &std::path::Path,
+    ) -> RunnerResult<InteractiveResult> {
+        Err(RunnerError::ProcessFailed(
+            "interactive mode is not supported by this runner".to_string(),
+        ))
     }
 }
 
@@ -336,5 +376,58 @@ mod tests {
         TokenUsageInfo::aggregate(&mut total, new.as_ref());
 
         assert!(total.is_none());
+    }
+
+    #[test]
+    fn test_interactive_result_default_fields() {
+        let result = InteractiveResult {
+            session_id: None,
+            transcript: None,
+        };
+
+        assert!(result.session_id.is_none());
+        assert!(result.transcript.is_none());
+    }
+
+    #[test]
+    fn test_interactive_result_with_data() {
+        let result = InteractiveResult {
+            session_id: Some("session-123".to_string()),
+            transcript: Some("User: Hello\nAgent: Hi!".to_string()),
+        };
+
+        assert_eq!(result.session_id.as_deref(), Some("session-123"));
+        assert!(result.transcript.unwrap().contains("Hello"));
+    }
+
+    /// A minimal runner that only implements required methods, using defaults for the rest.
+    struct MinimalRunner;
+
+    impl Runner for MinimalRunner {
+        fn name(&self) -> &'static str {
+            "minimal"
+        }
+
+        fn execute(
+            &self,
+            _prompt: &str,
+            _working_dir: &std::path::Path,
+        ) -> RunnerResult<RunnerOutput> {
+            Ok(RunnerOutput::success("ok"))
+        }
+    }
+
+    #[test]
+    fn test_runner_default_execute_interactive_returns_error() {
+        let runner = MinimalRunner;
+        let result = runner.execute_interactive("test", std::path::Path::new("."));
+
+        assert!(result.is_err());
+
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("not supported"),
+            "Expected 'not supported' error, got: {err}"
+        );
     }
 }
