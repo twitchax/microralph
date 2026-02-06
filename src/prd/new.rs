@@ -1,10 +1,18 @@
-//! PRD creation via guided Q/A flow.
+//! PRD creation via two-phase interactive flow.
 //!
-//! This module implements `mr new` which mediates a Q/A session between
-//! the runner (coding agent) and the user to create a new PRD.
+//! This module implements `mr new` which uses a two-phase architecture:
+//!
+//! 1. **Interactive Discovery**: The user is dropped into a direct interactive
+//!    chat session with the underlying agent (Copilot/Claude). The agent asks
+//!    questions until it has enough context, then the user exits.
+//! 2. **Synthesis**: A non-interactive call synthesizes the PRD from the
+//!    conversation transcript/session context.
+//!
+//! On Ctrl+C or error during the interactive phase, the process aborts
+//! entirely without creating a PRD.
 
 use std::collections::HashMap;
-use std::io::{BufRead, Write};
+use std::io::Write;
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
@@ -15,15 +23,9 @@ use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
-use crate::runner::Runner;
-use crate::util::qa_workflow::{self, QaPair};
+use crate::runner::{InteractiveResult, Runner};
+use crate::util::qa_workflow;
 use crate::util::spinner::start_spinner;
-
-/// Maximum number of Q/A rounds before forcing synthesis.
-const MAX_QA_ROUNDS: usize = 5;
-
-/// The ready signal from the runner.
-const READY_SIGNAL: &str = "READY_TO_SYNTHESIZE";
 
 /// Result of the PRD creation process.
 #[derive(Debug)]
@@ -33,12 +35,6 @@ pub struct PrdNewResult {
 
     /// The path where the PRD was written.
     pub path: std::path::PathBuf,
-
-    /// Number of Q/A rounds.
-    pub rounds: usize,
-
-    /// The Q/A history.
-    pub qa_history: Vec<QaPair>,
 }
 
 /// Configuration for the PRD new command.
@@ -54,70 +50,34 @@ pub struct PrdNewConfig<'a> {
     pub description: Option<&'a str>,
 
     /// Optional upfront context from the user (via --context flag).
-    /// Used by `build_round1_prompt` and subsequent rounds.
     pub context: Option<&'a str>,
 
     /// Stream runner output to stdout in real-time.
-    /// When true, spinner is disabled.
+    /// When true, spinner is disabled during synthesis phase.
     pub stream: bool,
 }
 
-/// Runs the PRD creation flow.
+/// Runs the PRD creation flow using a two-phase interactive architecture.
 ///
-/// This function:
-/// 1. Scans existing PRDs for context
-/// 2. Invokes the runner with round 1 questions
-/// 3. Collects user answers
-/// 4. Loops with round N questions until ready
-/// 5. Synthesizes the final PRD
-/// 6. Writes the PRD to disk
-/// 7. Updates the index
-/// 8. Updates AGENTS.md auto-managed section
+/// **Phase 1 — Interactive Discovery**:
+/// Drops the user into a direct interactive chat session with the underlying
+/// agent. The discovery prompt includes existing PRDs, constitution, and any
+/// user-provided context. The agent asks questions until it has enough info,
+/// then the user exits.
 ///
-/// # Multi-Round Q/A State Machine
+/// **Phase 2 — Synthesis**:
+/// On clean exit from the interactive session, a non-interactive call
+/// synthesizes the PRD from the conversation transcript/session context.
 ///
-/// This function implements a multi-round Q/A state machine with the following states:
-///
-/// 1. **Initialize**: Gather upfront context (CLI-provided or interactive prompt)
-/// 2. **Round 1 - Question Generation**: Runner generates initial questions based on context
-/// 3. **Round 1 - Answer Collection**: User provides answers to initial questions
-/// 4. **Loop State - Round N Start**: Check if we've hit `MAX_QA_ROUNDS` limit
-/// 5. **Loop State - Question Generation**: Runner examines Q/A history and generates follow-up questions
-/// 6. **Loop State - Ready Check**: Parse runner response for `READY_TO_SYNTHESIZE` signal
-/// 7. **Loop State - Additional Questions**: If runner provided more questions → collect answers
-/// 8. **Loop State - Auto-Advance**: If no questions and no ready signal → proceed to synthesis
-/// 9. **Synthesis**: Runner generates final PRD content from complete Q/A history
-/// 10. **Persist**: Write PRD to disk (runner may create file directly or return content)
-/// 11. **Finalize**: Update index and return result
-///
-/// The loop has multiple exit conditions:
-/// - Runner signals `READY_TO_SYNTHESIZE`
-/// - Runner returns no additional questions
-/// - `MAX_QA_ROUNDS` limit reached
-///
-/// This adaptive approach allows the runner to gather just enough information without
-/// burdening the user with unnecessary questions.
-pub fn create_prd<R, I, O>(
-    config: &PrdNewConfig,
-    runner: &R,
-    input: &mut I,
-    output: &mut O,
-) -> Result<PrdNewResult>
+/// **Abort on error**: If the interactive session is interrupted (Ctrl+C)
+/// or fails, the process aborts entirely without creating a PRD.
+pub fn create_prd<R, O>(config: &PrdNewConfig, runner: &R, output: &mut O) -> Result<PrdNewResult>
 where
     R: Runner + ?Sized,
-    I: BufRead,
     O: Write,
 {
     writeln!(output, "Creating new PRD: {}", config.slug)?;
     writeln!(output)?;
-
-    // STATE: Initialize - Determine user context for the PRD
-    // Context can be provided via CLI flag (non-interactive) or prompted interactively
-    let user_context: Option<String> = if config.context.is_some() {
-        config.context.map(ToString::to_string)
-    } else {
-        prompt_for_context(input, output)?
-    };
 
     // Scan existing PRDs for context.
     let existing_prds = scan_prd_summaries(config.root)?;
@@ -126,73 +86,41 @@ where
     let next_id = generate_next_prd_id(&existing_prds);
     tracing::debug!(next_id = %next_id, runner = %runner.name(), "Starting PRD creation");
 
-    // STATE: Round 1 - Question Generation
-    // Runner analyzes context and existing PRDs to generate initial questions
-    let round1_prompt = build_round1_prompt(config, &existing_prds, user_context.as_deref());
+    // PHASE 1: Interactive Discovery
+    // Build discovery prompt with all available context, then launch interactive session.
+    let discovery_prompt = build_discovery_prompt(config, &existing_prds);
 
-    // Print command info before spinner (only when not streaming).
-    if !config.stream
-        && let Some(cmd_display) = runner.format_command_display(&round1_prompt, config.root)
-    {
-        println!("\n🔧 Executing: {cmd_display}");
-    }
+    writeln!(
+        output,
+        "Launching interactive session with {}...",
+        runner.name()
+    )?;
+    writeln!(
+        output,
+        "💡 Discuss your PRD with the agent. When finished, exit the chat session."
+    )?;
+    writeln!(output)?;
 
     tracing::info!(
         runner = %runner.name(),
         slug = %config.slug,
-        "Invoking runner for PRD creation round 1"
+        "Launching interactive discovery session"
     );
 
-    let spinner = start_spinner(!config.stream, "Generating questions...");
-
-    let round1_output = runner
-        .execute(&round1_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
-
-    spinner.finish_and_clear();
-
-    if !round1_output.success {
-        bail!("Runner failed during round 1: {}", round1_output.text);
-    }
-
-    let questions = qa_workflow::parse_questions(&round1_output.text);
-
-    if questions.is_empty() {
-        bail!("Runner did not generate any questions");
-    }
+    let interactive_result = runner
+        .execute_interactive(&discovery_prompt, config.root)
+        .map_err(|e| anyhow::anyhow!("Interactive session failed (aborted or error): {e}"))?;
 
     writeln!(output)?;
-    writeln!(
-        output,
-        "Please answer the following questions to help create your PRD:"
-    )?;
-    writeln!(
-        output,
-        "💡 Tip: Press Enter twice (blank line) to complete each answer"
-    )?;
-    writeln!(output)?;
+    writeln!(output, "Interactive session complete.")?;
 
-    // STATE: Round 1 - Answer Collection
-    // User provides answers to initial questions; these become the Q/A history
-    let mut qa_history = qa_workflow::collect_multiline_answers(&questions, input, output)?;
-
-    // STATE: Loop State - Multi-round Q/A until runner is ready to synthesize
-    let rounds = run_followup_rounds(
-        config,
-        runner,
-        &mut qa_history,
-        user_context.as_deref(),
-        input,
-        output,
-    )?;
-
-    // STATE: Synthesis and Persist - Generate final PRD and write to disk
+    // PHASE 2: Synthesis
+    // Use conversation transcript/session context from phase 1 to synthesize the PRD.
     let (prd, prd_path) = synthesize_and_persist_prd(
         config,
         runner,
-        &qa_history,
         &existing_prds,
-        user_context.as_deref(),
+        &interactive_result,
         &next_id,
         output,
     )?;
@@ -200,125 +128,24 @@ where
     writeln!(output)?;
     writeln!(output, "Created PRD: {}", prd_path.display())?;
 
-    // STATE: Finalize - Update index to reflect new PRD
+    // Finalize: Update index to reflect new PRD.
     generate_index_from_root(config.root)?;
     writeln!(output, "Updated PRD index")?;
 
     Ok(PrdNewResult {
         prd,
         path: prd_path,
-        rounds,
-        qa_history,
     })
 }
 
-/// Runs follow-up Q/A rounds until the runner signals readiness or max rounds is reached.
-///
-/// Returns the total number of rounds (including round 1).
-fn run_followup_rounds<R, I, O>(
-    config: &PrdNewConfig,
-    runner: &R,
-    qa_history: &mut Vec<QaPair>,
-    user_context: Option<&str>,
-    input: &mut I,
-    output: &mut O,
-) -> Result<usize>
-where
-    R: Runner + ?Sized,
-    I: BufRead,
-    O: Write,
-{
-    let mut rounds = 1;
-
-    loop {
-        rounds += 1;
-
-        // Check MAX_QA_ROUNDS limit - force synthesis if too many rounds.
-        if rounds > MAX_QA_ROUNDS {
-            writeln!(output)?;
-            writeln!(
-                output,
-                "Maximum Q/A rounds reached, proceeding to synthesis..."
-            )?;
-            break;
-        }
-
-        // Build prompt for this round.
-        let round_n_prompt = build_round_n_prompt(config, qa_history, user_context);
-
-        // Print command info before spinner (only when not streaming).
-        if !config.stream
-            && let Some(cmd_display) = runner.format_command_display(&round_n_prompt, config.root)
-        {
-            println!("\n🔧 Executing: {cmd_display}");
-        }
-
-        tracing::info!(
-            runner = %runner.name(),
-            round = rounds,
-            slug = %config.slug,
-            "Invoking runner for PRD creation follow-up round"
-        );
-
-        let spinner = start_spinner(
-            !config.stream,
-            format!("Generating follow-up questions (round {rounds})..."),
-        );
-
-        let round_n_output = runner
-            .execute(&round_n_prompt, config.root)
-            .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
-
-        spinner.finish_and_clear();
-
-        if !round_n_output.success {
-            bail!(
-                "Runner failed during round {rounds}: {}",
-                round_n_output.text
-            );
-        }
-
-        // Check if runner signals ready to synthesize.
-        if round_n_output.text.contains(READY_SIGNAL) {
-            tracing::debug!("Runner signaled ready to synthesize");
-            break;
-        }
-
-        // Parse any additional questions.
-        let additional_questions = qa_workflow::parse_questions(&round_n_output.text);
-
-        // If no questions and no ready signal, assume ready.
-        if additional_questions.is_empty() {
-            tracing::debug!("No additional questions, proceeding to synthesis");
-            break;
-        }
-
-        writeln!(output)?;
-        writeln!(output, "A few more questions:")?;
-        writeln!(
-            output,
-            "💡 Tip: Press Enter twice (blank line) to complete each answer"
-        )?;
-        writeln!(output)?;
-
-        // Collect additional answers and append to Q/A history.
-        let additional_qa =
-            qa_workflow::collect_multiline_answers(&additional_questions, input, output)?;
-        qa_history.extend(additional_qa);
-    }
-
-    Ok(rounds)
-}
-
-/// Synthesizes and persists the PRD to disk.
+/// Synthesizes and persists the PRD to disk using conversation context from phase 1.
 ///
 /// Returns the parsed PRD and its file path.
 fn synthesize_and_persist_prd<R, O>(
     config: &PrdNewConfig,
     runner: &R,
-    qa_history: &[QaPair],
     existing_prds: &[PrdSummary],
-    user_context: Option<&str>,
+    interactive_result: &InteractiveResult,
     next_id: &str,
     output: &mut O,
 ) -> Result<(Prd, std::path::PathBuf)>
@@ -328,8 +155,7 @@ where
 {
     writeln!(output)?;
 
-    let synthesize_prompt =
-        build_synthesize_prompt(config, qa_history, existing_prds, user_context);
+    let synthesize_prompt = build_synthesize_prompt(config, existing_prds, interactive_result);
 
     // Print command info before spinner (only when not streaming).
     if !config.stream
@@ -511,12 +337,11 @@ fn generate_next_prd_id(existing: &[PrdSummary]) -> String {
     format!("PRD-{:04}", max_num + 1)
 }
 
-/// Builds the round 1 prompt with context.
-fn build_round1_prompt(
-    config: &PrdNewConfig,
-    existing_prds: &[PrdSummary],
-    user_context: Option<&str>,
-) -> String {
+/// Builds the discovery prompt for the interactive phase.
+///
+/// Includes existing PRDs, constitution, and user-provided context so the
+/// agent has full project awareness during the interactive conversation.
+fn build_discovery_prompt(config: &PrdNewConfig, existing_prds: &[PrdSummary]) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewRound1Questions);
 
     let mut ctx = PlaceholderContext::new();
@@ -526,7 +351,7 @@ fn build_round1_prompt(
         ctx.insert("user_description", desc);
     }
 
-    if let Some(context) = user_context {
+    if let Some(context) = config.context {
         ctx.insert("user_context", context);
     }
 
@@ -554,48 +379,18 @@ fn build_round1_prompt(
     expand_placeholders(&template, &ctx)
 }
 
-/// Builds the round N prompt with Q/A history.
-fn build_round_n_prompt(
-    config: &PrdNewConfig,
-    qa_history: &[QaPair],
-    user_context: Option<&str>,
-) -> String {
-    let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewRoundNQuestions);
-
-    let mut ctx = PlaceholderContext::new();
-    ctx.insert("slug", config.slug);
-
-    if let Some(context) = user_context {
-        ctx.insert("user_context", context);
-    }
-
-    // Load constitution if available.
-    if let Ok(Some(constitution)) = load_constitution(config.root) {
-        ctx.insert("constitution", constitution);
-    }
-
-    // Build Q/A history.
-    ctx.insert(
-        "qa_history",
-        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
-    );
-
-    expand_placeholders(&template, &ctx)
-}
-
-/// Builds the synthesis prompt.
+/// Builds the synthesis prompt with conversation context from the interactive session.
 fn build_synthesize_prompt(
     config: &PrdNewConfig,
-    qa_history: &[QaPair],
     existing_prds: &[PrdSummary],
-    user_context: Option<&str>,
+    interactive_result: &InteractiveResult,
 ) -> String {
     let template = load_prompt_with_fallback(config.root, PromptKind::PrdNewSynthesizePrd);
 
     let mut ctx = PlaceholderContext::new();
     ctx.insert("slug", config.slug);
 
-    if let Some(context) = user_context {
+    if let Some(context) = config.context {
         ctx.insert("user_context", context);
     }
 
@@ -604,11 +399,15 @@ fn build_synthesize_prompt(
         ctx.insert("constitution", constitution);
     }
 
-    // Build Q/A history.
-    ctx.insert(
-        "qa_history",
-        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
-    );
+    // Include conversation transcript from interactive session if available.
+    if let Some(transcript) = &interactive_result.transcript {
+        ctx.insert("conversation_transcript", transcript.as_str());
+    }
+
+    // Include session ID if available for resume-based context handoff.
+    if let Some(session_id) = &interactive_result.session_id {
+        ctx.insert("session_id", session_id.as_str());
+    }
 
     // Build existing PRDs list.
     let prd_list: Vec<HashMap<String, String>> = existing_prds
@@ -626,41 +425,6 @@ fn build_synthesize_prompt(
     ctx.insert("existing_prds", PlaceholderValue::List(prd_list));
 
     expand_placeholders(&template, &ctx)
-}
-
-/// Prompts the user for optional upfront context.
-///
-/// Returns `Some(context)` if the user provides context, or `None` if they skip.
-fn prompt_for_context<I, O>(input: &mut I, output: &mut O) -> Result<Option<String>>
-where
-    I: BufRead,
-    O: Write,
-{
-    writeln!(
-        output,
-        "{}",
-        crate::util::colors::question(
-            "Would you like to provide additional context for the AI? (optional)"
-        )
-    )?;
-    writeln!(
-        output,
-        "This helps generate more relevant questions. Press Enter to skip, or type your context:"
-    )?;
-    write!(output, "> ")?;
-    output.flush()?;
-
-    let mut context = String::new();
-    input.read_line(&mut context)?;
-
-    let trimmed = context.trim();
-
-    if trimmed.is_empty() {
-        Ok(None)
-    } else {
-        writeln!(output)?;
-        Ok(Some(trimmed.to_string()))
-    }
 }
 
 #[cfg(test)]
@@ -910,7 +674,7 @@ title: Test
     }
 
     #[test]
-    fn test_create_prd_basic_flow() {
+    fn test_create_prd_two_phase_flow() {
         let temp = setup_test_repo();
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
@@ -918,12 +682,7 @@ title: Test
         // Create minimal prompt files.
         std::fs::write(
             prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions for {{slug}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A for {{slug}}",
+            "Discovery for {{slug}}",
         )
         .unwrap();
         std::fs::write(
@@ -932,7 +691,7 @@ title: Test
         )
         .unwrap();
 
-        // Create mock runner with scripted responses.
+        // Create mock runner with scripted synthesis response.
         let prd_content = r"---
 id: PRD-0001
 title: Test Feature
@@ -951,13 +710,7 @@ tasks:
 A test feature.
 ";
 
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success(
-                "1. What problem are you solving?\n2. What is the scope?",
-            ),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
 
         let config = PrdNewConfig {
             root: temp.path(),
@@ -967,254 +720,42 @@ A test feature.
             stream: false,
         };
 
-        let input = "Solving problem X\n\nMVP scope\n\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = create_prd(&config, &runner, &mut output).unwrap();
 
         assert_eq!(result.prd.id(), "PRD-0001");
-        assert_eq!(result.rounds, 2);
-        assert_eq!(result.qa_history.len(), 2);
         assert!(result.path.exists());
 
-        // Verify runner was called 3 times.
-        assert_eq!(runner.recorded_prompts().len(), 3);
+        // Verify interactive session was called once (discovery phase).
+        assert_eq!(runner.recorded_interactive_prompts().len(), 1);
+
+        // Verify synthesis (execute) was called once.
+        assert_eq!(runner.recorded_prompts().len(), 1);
     }
 
     #[test]
-    fn test_create_prd_max_rounds() {
+    fn test_prd_new_context_in_discovery_prompt() {
+        // Verifies that user-provided context is included in the discovery prompt
+        // passed to execute_interactive().
+
         let temp = setup_test_repo();
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        // Create minimal prompt files.
         std::fs::write(
             prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A",
+            "Discovery for {{slug}}{{#if user_context}} considering context: {{user_context}}{{/if}}",
         )
         .unwrap();
         std::fs::write(
             prompts_dir.join("prd_new_synthesize_prd.md"),
-            "Synthesize PRD",
+            "Synthesize PRD for {{slug}}",
         )
         .unwrap();
 
         let prd_content = r"---
 id: PRD-0001
-title: Test
-status: draft
-tasks: []
----
-# Summary
-";
-
-        // Create runner that never says ready.
-        // Round 1 generates 1 question, then rounds 2-5 each generate 1 question.
-        // At round 6, we break (rounds > MAX_QA_ROUNDS), so we need:
-        // - 1 response for round1
-        // - 4 responses for rounds 2-5 (loop runs while rounds <= MAX_QA_ROUNDS)
-        // - 1 response for synthesis
-        let mut responses = vec![crate::runner::RunnerOutput::success("1. Question?")];
-
-        // We need MAX_QA_ROUNDS - 1 round N responses (rounds 2 through MAX_QA_ROUNDS)
-        for _ in 0..(MAX_QA_ROUNDS - 1) {
-            responses.push(crate::runner::RunnerOutput::success("1. Another question?"));
-        }
-
-        responses.push(crate::runner::RunnerOutput::success(prd_content));
-
-        let runner = MockRunner::new(responses);
-
-        let config = PrdNewConfig {
-            root: temp.path(),
-            slug: "test",
-            description: None,
-            context: None,
-            stream: false,
-        };
-
-        // Provide enough answers: 1 for round1 + (MAX_QA_ROUNDS - 1) for subsequent rounds
-        let input = "Answer\n\n".repeat(MAX_QA_ROUNDS);
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
-
-        // Should have hit max rounds.
-        assert!(result.rounds > 1);
-    }
-
-    #[test]
-    fn test_prd_new_context_interactive() {
-        // UAT: uat-001 — Interactive flow prompts for context
-        // This test verifies that when no --context flag is provided,
-        // the create_prd flow prompts the user interactively for optional context.
-
-        let temp = setup_test_repo();
-        let prompts_dir = temp.path().join(".mr").join("prompts");
-        std::fs::create_dir_all(&prompts_dir).unwrap();
-
-        // Create minimal prompt files.
-        std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions for {{slug}}{{#if user_context}} with context: {{user_context}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_synthesize_prd.md"),
-            "Synthesize PRD",
-        )
-        .unwrap();
-
-        let prd_content = r"---
-id: PRD-0001
-title: Test Feature
-status: draft
-tasks: []
----
-# Summary
-";
-
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. What is the goal?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
-
-        let config = PrdNewConfig {
-            root: temp.path(),
-            slug: "test-feature",
-            description: None,
-            context: None, // No context flag provided
-            stream: false,
-        };
-
-        // Simulate user input: provide context, then answer the question
-        let input = "This is a test context for the feature\nThe goal is to test\n\n";
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
-
-        assert_eq!(result.prd.id(), "PRD-0001");
-
-        // Verify output contains the context prompt
-        let output_str = String::from_utf8(output).unwrap();
-        assert!(output_str.contains("Would you like to provide additional context"));
-
-        // Verify the first prompt includes the user context
-        let recorded = runner.recorded_prompts();
-        assert!(recorded[0].contains("This is a test context for the feature"));
-    }
-
-    #[test]
-    fn test_prd_new_context_flag() {
-        // UAT: uat-002 — Flag flow uses provided context
-        // This test verifies that when --context flag is provided,
-        // the context is used directly without an interactive prompt.
-
-        let temp = setup_test_repo();
-        let prompts_dir = temp.path().join(".mr").join("prompts");
-        std::fs::create_dir_all(&prompts_dir).unwrap();
-
-        // Create minimal prompt files.
-        std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions for {{slug}}{{#if user_context}} with context: {{user_context}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_synthesize_prd.md"),
-            "Synthesize PRD",
-        )
-        .unwrap();
-
-        let prd_content = r"---
-id: PRD-0002
-title: Flag Feature
-status: draft
-tasks: []
----
-# Summary
-";
-
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. What is the goal?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
-
-        let config = PrdNewConfig {
-            root: temp.path(),
-            slug: "flag-feature",
-            description: None,
-            context: Some("This context came from the --context flag"),
-            stream: false,
-        };
-
-        // Simulate user input: only the answer to the question (no context prompt expected)
-        let input = "The goal is to test the flag\n\n";
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
-
-        assert_eq!(result.prd.id(), "PRD-0002");
-
-        // Verify output does NOT contain the context prompt (flag was provided)
-        let output_str = String::from_utf8(output).unwrap();
-        assert!(!output_str.contains("Would you like to provide additional context"));
-
-        // Verify the first prompt includes the flag-provided context
-        let recorded = runner.recorded_prompts();
-        assert!(recorded[0].contains("This context came from the --context flag"));
-    }
-
-    #[test]
-    fn test_prd_new_context_in_questions() {
-        // UAT: uat-003 — Context influences question generation
-        // This test verifies that user-provided context actually influences
-        // the questions generated by the AI in the round1 prompt.
-
-        let temp = setup_test_repo();
-        let prompts_dir = temp.path().join(".mr").join("prompts");
-        std::fs::create_dir_all(&prompts_dir).unwrap();
-
-        // Create minimal prompt files that demonstrate context inclusion.
-        std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions for {{slug}}{{#if user_context}} considering context: {{user_context}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_synthesize_prd.md"),
-            "Synthesize PRD",
-        )
-        .unwrap();
-
-        let prd_content = r"---
-id: PRD-0003
 title: Context Test
 status: draft
 tasks: []
@@ -1222,11 +763,7 @@ tasks: []
 # Summary
 ";
 
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. What is the goal?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
 
         let config = PrdNewConfig {
             root: temp.path(),
@@ -1236,127 +773,35 @@ tasks: []
             stream: false,
         };
 
-        let input = "Process payments securely\n\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = create_prd(&config, &runner, &mut output).unwrap();
 
-        assert_eq!(result.prd.id(), "PRD-0003");
+        assert_eq!(result.prd.id(), "PRD-0001");
 
-        // Verify the round1 prompt includes context influence marker
-        let recorded = runner.recorded_prompts();
+        // Verify the discovery prompt includes user context.
+        let interactive_prompts = runner.recorded_interactive_prompts();
         assert!(
-            recorded[0].contains("considering context:"),
-            "Round1 prompt should contain context influence marker"
+            interactive_prompts[0].contains("considering context:"),
+            "Discovery prompt should contain context marker"
         );
         assert!(
-            recorded[0].contains("This is a payment processing feature for e-commerce"),
-            "Round1 prompt should contain actual user context"
+            interactive_prompts[0].contains("This is a payment processing feature for e-commerce"),
+            "Discovery prompt should contain actual user context"
         );
     }
 
     #[test]
-    fn test_prd_new_context_persistence() {
-        // UAT: uat-004 — Context persists through Q/A rounds
-        // This test verifies that user-provided context is carried through
-        // all Q/A rounds, not just round 1.
+    fn test_prd_new_context_in_synthesis_prompt() {
+        // Verifies that user-provided context is included in the synthesis prompt.
 
         let temp = setup_test_repo();
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        // Create prompt files that show context in both round1 and roundN.
         std::fs::write(
             prompts_dir.join("prd_new_round1_questions.md"),
-            "Round1 for {{slug}}{{#if user_context}} with context: {{user_context}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "RoundN for {{slug}}{{#if user_context}} with persisted context: {{user_context}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_synthesize_prd.md"),
-            "Synthesize PRD",
-        )
-        .unwrap();
-
-        let prd_content = r"---
-id: PRD-0004
-title: Persistence Test
-status: draft
-tasks: []
----
-# Summary
-";
-
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. First question?"),
-            crate::runner::RunnerOutput::success("2. Follow-up question?"), // RoundN
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),    // RoundN ready signal
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
-
-        let config = PrdNewConfig {
-            root: temp.path(),
-            slug: "persistence-test",
-            description: None,
-            context: Some("Multi-tenant auth system with role-based access"),
-            stream: false,
-        };
-
-        let input = "Answer 1\n\nAnswer 2\n\n";
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
-
-        assert_eq!(result.prd.id(), "PRD-0004");
-        assert_eq!(result.rounds, 3, "Should have 3 rounds (round1 + 2 roundN)");
-
-        // Verify context in round1 prompt (index 0)
-        let recorded = runner.recorded_prompts();
-        assert!(
-            recorded[0].contains("with context:"),
-            "Round1 prompt should contain context marker"
-        );
-        assert!(
-            recorded[0].contains("Multi-tenant auth system with role-based access"),
-            "Round1 prompt should contain user context"
-        );
-
-        // Verify context persists in roundN prompt (index 1)
-        assert!(
-            recorded[1].contains("with persisted context:"),
-            "RoundN prompt should contain persisted context marker"
-        );
-        assert!(
-            recorded[1].contains("Multi-tenant auth system with role-based access"),
-            "RoundN prompt should contain the same user context"
-        );
-    }
-
-    #[test]
-    fn test_prd_new_context_synthesis() {
-        // UAT: uat-005 — Context included in final synthesis
-        // This test verifies that user-provided context is included in the final
-        // PRD synthesis prompt so the AI can use it during PRD generation.
-
-        let temp = setup_test_repo();
-        let prompts_dir = temp.path().join(".mr").join("prompts");
-        std::fs::create_dir_all(&prompts_dir).unwrap();
-
-        // Create prompt files, with synthesis prompt showing context inclusion.
-        std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
-            "Round1 for {{slug}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "RoundN for {{slug}}",
+            "Discovery for {{slug}}",
         )
         .unwrap();
         std::fs::write(
@@ -1366,7 +811,7 @@ tasks: []
         .unwrap();
 
         let prd_content = r"---
-id: PRD-0005
+id: PRD-0001
 title: Synthesis Context Test
 status: draft
 tasks: []
@@ -1374,11 +819,7 @@ tasks: []
 # Summary
 ";
 
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. First question?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
 
         let config = PrdNewConfig {
             root: temp.path(),
@@ -1388,21 +829,15 @@ tasks: []
             stream: false,
         };
 
-        let input = "Answer 1\n\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = create_prd(&config, &runner, &mut output).unwrap();
 
-        assert_eq!(result.prd.id(), "PRD-0005");
-        assert_eq!(
-            result.rounds, 2,
-            "Should have 2 rounds (round1 + ready signal)"
-        );
+        assert_eq!(result.prd.id(), "PRD-0001");
 
-        // Verify context in final synthesis prompt (index 2, after round1 and roundN ready signal)
+        // Verify context in synthesis prompt.
         let recorded = runner.recorded_prompts();
-        let synthesis_prompt = &recorded[2];
+        let synthesis_prompt = &recorded[0];
 
         assert!(
             synthesis_prompt.contains("with synthesis context:"),
@@ -1410,46 +845,91 @@ tasks: []
         );
         assert!(
             synthesis_prompt.contains("API Gateway with rate limiting and JWT auth"),
-            "Synthesis prompt should contain user context so AI can use it during PRD generation"
+            "Synthesis prompt should contain user context"
+        );
+    }
+
+    #[test]
+    fn test_prd_new_transcript_in_synthesis_prompt() {
+        // Verifies that the conversation transcript from the interactive session
+        // is passed through to the synthesis prompt.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_new_round1_questions.md"),
+            "Discovery for {{slug}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD for {{slug}}{{#if conversation_transcript}}\n\nTranscript:\n{{conversation_transcript}}{{/if}}",
+        )
+        .unwrap();
+
+        let prd_content = r"---
+id: PRD-0001
+title: Transcript Test
+status: draft
+tasks: []
+---
+# Summary
+";
+
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
+
+        // Set a custom interactive result with a known transcript.
+        runner.set_interactive_result(InteractiveResult {
+            session_id: None,
+            transcript: Some("User: I want feature X\nAgent: Tell me more about X".to_string()),
+        });
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "transcript-test",
+            description: None,
+            context: None,
+            stream: false,
+        };
+
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0001");
+
+        // Verify the synthesis prompt includes the transcript.
+        let recorded = runner.recorded_prompts();
+        assert!(
+            recorded[0].contains("I want feature X"),
+            "Synthesis prompt should contain transcript from interactive session"
         );
     }
 
     #[test]
     fn test_prd_new_parse_failure_warning() {
-        // This test verifies that when the runner returns unparseable content,
+        // Verifies that when the runner returns unparseable content,
         // we emit a warning and create a fallback PRD rather than failing.
 
         let temp = setup_test_repo();
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        // Create minimal prompt files.
-        std::fs::write(
-            prompts_dir.join("prd_new_round1_questions.md"),
-            "Generate questions",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "Continue Q/A",
-        )
-        .unwrap();
+        std::fs::write(prompts_dir.join("prd_new_round1_questions.md"), "Discovery").unwrap();
         std::fs::write(
             prompts_dir.join("prd_new_synthesize_prd.md"),
             "Synthesize PRD",
         )
         .unwrap();
 
-        // Return invalid PRD content that cannot be parsed
+        // Return invalid PRD content that cannot be parsed.
         let invalid_content = r"This is not valid PRD content.
 It has no frontmatter and will fail to parse.
 Just some random text.";
 
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. What is the goal?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(invalid_content),
-        ]);
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(invalid_content)]);
 
         let config = PrdNewConfig {
             root: temp.path(),
@@ -1459,12 +939,10 @@ Just some random text.";
             stream: false,
         };
 
-        let input = "Test goal\n\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        // This should NOT fail, even though the content is unparseable
-        let result = create_prd(&config, &runner, &mut input, &mut output);
+        // This should NOT fail, even though the content is unparseable.
+        let result = create_prd(&config, &runner, &mut output);
 
         assert!(
             result.is_ok(),
@@ -1473,12 +951,12 @@ Just some random text.";
 
         let result = result.unwrap();
 
-        // Verify we got a fallback PRD
+        // Verify we got a fallback PRD.
         assert_eq!(result.prd.id(), "PRD-0001");
         assert!(result.prd.title().contains("parse-fail-test"));
         assert_eq!(result.prd.status(), crate::prd::PrdStatus::Draft);
 
-        // Verify warning was emitted to output
+        // Verify warning was emitted to output.
         let output_str = String::from_utf8(output).unwrap();
         assert!(
             output_str.contains("Warning"),
@@ -1487,16 +965,15 @@ Just some random text.";
     }
 
     #[test]
-    fn test_constitution_prd_new() {
-        // UAT: constitution_prd_new — Verify prd new reads and respects constitution
-        // This test verifies that when a constitution file exists, its content
-        // is loaded and included in all prompts during PRD creation.
+    fn test_constitution_in_discovery_and_synthesis() {
+        // Verifies that when a constitution file exists, its content
+        // is loaded and included in both discovery and synthesis prompts.
 
         let temp = setup_test_repo();
         let prompts_dir = temp.path().join(".mr").join("prompts");
         std::fs::create_dir_all(&prompts_dir).unwrap();
 
-        // Create constitution file
+        // Create constitution file.
         let constitution_content = r"# Constitution
 
 ## Purpose
@@ -1512,15 +989,10 @@ Project governance rules.
         )
         .unwrap();
 
-        // Create prompt files that include constitution placeholder
+        // Create prompt files that include constitution placeholder.
         std::fs::write(
             prompts_dir.join("prd_new_round1_questions.md"),
-            "Round1 for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
-        )
-        .unwrap();
-        std::fs::write(
-            prompts_dir.join("prd_new_roundN_questions.md"),
-            "RoundN for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+            "Discovery for {{slug}}{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
         )
         .unwrap();
         std::fs::write(
@@ -1538,11 +1010,7 @@ tasks: []
 # Summary
 ";
 
-        let runner = MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("1. First question?"),
-            crate::runner::RunnerOutput::success("READY_TO_SYNTHESIZE"),
-            crate::runner::RunnerOutput::success(prd_content),
-        ]);
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
 
         let config = PrdNewConfig {
             root: temp.path(),
@@ -1552,32 +1020,23 @@ tasks: []
             stream: false,
         };
 
-        let input = "Answer 1\n\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = create_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = create_prd(&config, &runner, &mut output).unwrap();
 
         assert_eq!(result.prd.id(), "PRD-0001");
 
-        // Verify constitution was loaded and included in all prompts
-        let recorded = runner.recorded_prompts();
+        // Verify constitution in discovery prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("Acceptance tests must be codified"),
+            "Discovery prompt should contain constitution content"
+        );
 
-        // Round 1 should include constitution
+        // Verify constitution in synthesis prompt.
+        let recorded = runner.recorded_prompts();
         assert!(
             recorded[0].contains("Acceptance tests must be codified"),
-            "Round1 prompt should contain constitution content"
-        );
-
-        // Round N (ready signal response) should include constitution
-        assert!(
-            recorded[1].contains("Acceptance tests must be codified"),
-            "RoundN prompt should contain constitution content"
-        );
-
-        // Synthesis should include constitution
-        assert!(
-            recorded[2].contains("Acceptance tests must be codified"),
             "Synthesis prompt should contain constitution content"
         );
     }

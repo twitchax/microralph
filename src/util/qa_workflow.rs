@@ -246,6 +246,7 @@ pub fn parse_questions(output: &str) -> Vec<String> {
 /// Displays each question with proper formatting and prompts the user to provide
 /// an answer. Users can enter multiple lines by pressing Enter to continue,
 /// and press Enter twice (blank line) to finish the answer.
+#[allow(dead_code)] // Used in tests; full cleanup deferred to T-007
 pub fn collect_multiline_answers<I, O>(
     questions: &[String],
     input: &mut I,

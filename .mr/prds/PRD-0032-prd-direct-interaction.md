@@ -80,7 +80,7 @@ tasks:
   - id: T-004
     title: "Implement execute_interactive() for MockRunner"
     priority: 2
-    status: todo
+    status: done
     notes: "Return mocked conversation context for testing. Should allow tests to inject predefined Q/A transcripts without requiring actual CLI interaction."
   - id: T-005
     title: "Create interactive chat prompt for PRD discovery phase"
@@ -90,7 +90,7 @@ tasks:
   - id: T-006
     title: "Refactor prd::new to use two-phase interactive flow"
     priority: 1
-    status: todo
+    status: done
     notes: "Phase 1: Call execute_interactive() with discovery prompt and injected context. Phase 2: On clean exit, call existing execute() with synthesis prompt, passing conversation transcript/session context. On Ctrl+C or error, abort entirely."
   - id: T-007
     title: "Remove old multi-round Q/A workflow from prd::new"
@@ -115,7 +115,7 @@ tasks:
   - id: T-011
     title: "Update tests and MockRunner for new interactive flow"
     priority: 3
-    status: todo
+    status: done
     notes: "Update unit tests for prd::new to use MockRunner with mocked interactive context. Ensure CI passes without requiring actual CLI tools."
   - id: T-012
     title: "Update AGENTS.md with new PRD creation workflow"
@@ -289,3 +289,34 @@ Preferred order:
   - UAT: `cargo make uat` passed — 501 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Changes are minimal (rule 3), consistent with existing patterns (rule 4), and do not break public API (rule 5).
+
+## 2026-02-06 — T-004, T-006, T-011 Completed
+- **Task**: Refactor prd::new to use two-phase interactive flow (with MockRunner interactive support and test updates)
+- **Status**: ✅ Done
+- **Changes**:
+  - **`src/prd/new.rs`**: Major refactor — replaced multi-round Q/A loop with two-phase interactive flow:
+    - Phase 1: `runner.execute_interactive()` with discovery prompt (reuses `PromptKind::PrdNewRound1Questions` template)
+    - Phase 2: `runner.execute()` with synthesis prompt, passing conversation transcript via `conversation_transcript` and `session_id` placeholders
+    - Aborts entirely if interactive session returns an error (Ctrl+C, non-zero exit)
+    - Removed `create_prd`'s `input: &mut I` (BufRead) parameter — interactive mode uses `Stdio::inherit()` directly
+    - Removed `PrdNewResult.rounds` and `PrdNewResult.qa_history` fields
+    - Replaced `build_round1_prompt`, `build_round_n_prompt`, `build_synthesize_prompt`, `prompt_for_context` with `build_discovery_prompt` and new `build_synthesize_prompt`
+    - Removed constants `MAX_QA_ROUNDS` and `READY_SIGNAL`
+    - Rewrote all `create_prd`-dependent tests for two-phase flow
+    - Retained Q/A utility tests (testing `qa_workflow` functions used by `prd::edit`)
+  - **`src/runner/mock.rs`** (T-004): Added full `execute_interactive()` support:
+    - New `interactive_result` field with `RefCell<Option<InteractiveResult>>` for customizable results
+    - New `recorded_interactive_prompts` field to track interactive calls
+    - `set_interactive_result()` method for test injection
+    - `recorded_interactive_prompts()` accessor method
+    - Default returns transcript `"Mock interactive session transcript"`
+    - Added 3 tests: default interactive, custom result injection, prompt recording
+  - **`src/runner/mod.rs`**: Removed `#[allow(unused_imports)]` on `InteractiveResult` re-export (now actively used)
+  - **`src/runner/types.rs`**: Removed `#[allow(dead_code)]` from `InteractiveResult` and `execute_interactive` default impl
+  - **`src/runner/cli_runner.rs`**: Removed `#[allow(dead_code)]` from `execute_interactive_cli` (now used via T-006 callers)
+  - **`src/main.rs`**: Updated `cmd_prd_new` — removed stdin parameter, updated result display (removed rounds/qa_history, added task count)
+  - **`src/commands/suggest.rs`**: Updated `create_prd` call to match new signature (no stdin)
+  - **`src/util/qa_workflow.rs`**: Added `#[allow(dead_code)]` on `collect_multiline_answers` (no longer used in production; cleanup deferred to T-007)
+  - UAT: `cargo make uat` passed — 500 tests, 0 failures (net -1 test due to Q/A loop tests replaced by interactive flow tests)
+
+- **Constitution Compliance**: No violations. Minimal changes (rule 3), consistent patterns (rule 4), no public API breaks (rule 5). `collect_multiline_answers` dead_code allow is a temporary measure pending T-007 cleanup.

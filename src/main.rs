@@ -928,12 +928,10 @@ fn cmd_prd_new(
         stream,
     };
 
-    let stdin = std::io::stdin();
-    let mut stdin_lock = stdin.lock();
     let stdout = std::io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    let result = prd::new::create_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+    let result = prd::new::create_prd(&config, runner.as_ref(), &mut stdout_lock)?;
 
     println!();
     println!("{}", colors::success("PRD created successfully!"));
@@ -946,14 +944,9 @@ fn cmd_prd_new(
         "  {}",
         colors::dim(&format!("Path: {}", result.path.display()))
     );
-    println!(
-        "  {}",
-        colors::dim(&format!("Q/A Rounds: {}", result.rounds))
-    );
-    println!(
-        "  {}",
-        colors::dim(&format!("Questions answered: {}", result.qa_history.len()))
-    );
+
+    let task_count = result.prd.tasks().map_or(0, <[_]>::len);
+    println!("  {}", colors::dim(&format!("Tasks: {task_count}")));
 
     Ok(())
 }

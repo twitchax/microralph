@@ -88,7 +88,6 @@ impl TokenUsageInfo {
 /// Contains context from the interactive session that can be used
 /// for subsequent non-interactive calls (e.g., synthesis phase).
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // API surface for PRD-0032 interactive mode (T-002+)
 pub struct InteractiveResult {
     /// Optional session or conversation ID for resume-based context handoff.
     pub session_id: Option<String>,
@@ -212,7 +211,6 @@ pub trait Runner: Send + Sync {
     ///
     /// An [`InteractiveResult`] with session context, or an error if the
     /// session could not be started or was interrupted.
-    #[allow(dead_code)] // Callers arrive in T-006+
     fn execute_interactive(
         &self,
         _prompt: &str,

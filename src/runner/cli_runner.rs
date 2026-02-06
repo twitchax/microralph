@@ -82,7 +82,7 @@ pub trait CliRunnerConfig {
     /// Returns `None` if the runner does not support interactive mode.
     /// Implementors should return arguments that launch the CLI in interactive
     /// chat mode with the given prompt as initial context.
-    #[allow(dead_code)] // Used via blanket impl; callers arrive in T-006+
+    #[allow(dead_code)] // Interactive args for runners that support it
     fn build_interactive_args(&self, _prompt: &str) -> Option<Vec<String>> {
         None
     }
@@ -310,7 +310,6 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
 /// The process inherits stdin, stdout, and stderr so the user interacts
 /// directly with the underlying agent. On exit, returns an [`InteractiveResult`]
 /// with any available session context.
-#[allow(dead_code)] // Used via blanket impl; callers arrive in T-006+
 pub fn execute_interactive_cli<C: CliRunnerConfig + ?Sized>(
     config: &C,
     prompt: &str,

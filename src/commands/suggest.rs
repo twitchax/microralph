@@ -145,11 +145,9 @@ where
         stream: false,
     };
 
-    let stdin = io::stdin();
-    let mut input_handle = stdin.lock();
     let mut output = io::stdout();
 
-    let result = create_prd(&config, runner, &mut input_handle, &mut output)?;
+    let result = create_prd(&config, runner, &mut output)?;
 
     print_prd_result(&result);
 
