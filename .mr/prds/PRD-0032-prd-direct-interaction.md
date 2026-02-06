@@ -120,7 +120,7 @@ tasks:
   - id: T-012
     title: "Update AGENTS.md with new PRD creation workflow"
     priority: 4
-    status: todo
+    status: done
     notes: "Document the two-phase interactive flow, runner interactive mode, and any new flags or behaviors."
 ---
 
@@ -397,3 +397,19 @@ Preferred order:
   - UAT: `cargo make uat` passed — 511 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Prompts synchronized between `src/commands/init.rs` and `.mr/prompts/` per rule 7. Clippy pedantic clean per rule 8. Minimal changes per rule 3. No public API breaks per rule 5.
+
+## 2026-02-06 — T-012 Completed
+- **Task**: Update AGENTS.md with new PRD creation workflow
+- **Status**: ✅ Done
+- **Changes**:
+  - Added "PRD Creation Workflow (`mr new`)" section to `AGENTS.md` documenting:
+    - Two-phase interactive flow (discovery → synthesis)
+    - Runner interactive mode methods (`execute_interactive`, `execute_continue`, `execute`)
+    - Context handoff strategy table (Claude session resume vs Copilot transcript fallback)
+    - Error handling (`RunnerError::Interrupted` for Ctrl+C, `ProcessFailed` for other errors)
+    - Prompt files (`prd_new_discovery.md`, `prd_new_synthesize_prd.md`)
+    - Important notes (no Q/A workflow, mock testing, `InteractiveResult` structure)
+  - Updated "Runner Implementation Patterns" section with interactive support guidance (`build_interactive_args`, `build_continue_args`)
+  - UAT: `cargo make uat` passed — 511 tests, 0 failures
+
+- **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
