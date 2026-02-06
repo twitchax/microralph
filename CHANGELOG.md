@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📋 PRD Tasks
+
+- Prd(PRD-0032)feat(T-001): add execute_interactive() method to Runner trait
+- Prd(PRD-0032)feat(T-002): implement execute_interactive() for CopilotRunner
+- Prd(PRD-0032)feat(T-003): implement execute_interactive() for ClaudeRunner
+- Prd(PRD-0032)feat(T-006): refactor prd::new to two-phase interactive flow
+
+Replace multi-round Q/A workflow with two-phase interactive flow:
+- Phase 1: execute_interactive() for direct user-agent chat
+- Phase 2: execute() for PRD synthesis from conversation context
+- Abort on Ctrl+C/error without creating PRD
+
+Also completes T-004 (MockRunner interactive support) and T-011 (test updates).
+
+Files changed:
+- src/prd/new.rs: core refactor, new prompt builders, updated tests
+- src/runner/mock.rs: full execute_interactive() implementation
+- src/runner/types.rs, cli_runner.rs, mod.rs: remove dead_code allows
+- src/main.rs, src/commands/suggest.rs: updated callers
+- src/util/qa_workflow.rs: dead_code allow for deferred cleanup
+- Prd(PRD-0032)feat(T-005): add interactive discovery prompt for PRD creation
+- Prd(PRD-0032)feat(T-008): handle conversation context handoff between phases
+
+Add session-resume support for context handoff between interactive
+discovery (phase 1) and PRD synthesis (phase 2):
+
+- Add execute_continue() to Runner trait for session-resume execution
+- Add build_continue_args() to CliRunnerConfig for CLI-specific resume args
+- ClaudeRunner: implements --continue -p for session resume
+- CopilotRunner: returns None (no session resume support, uses transcript)
+- Update synthesis flow to prefer session resume, fall back to transcript
+- Update synthesis prompt: replace qa_history with conversation_transcript
+  and session_id placeholders for interactive flow context
+
+508 tests pass (net +8 new tests).
+- Prd(PRD-0032)feat(T-009): handle Ctrl+C and error cases in interactive mode
+
+- Add RunnerError::Interrupted variant for signal-based interruptions
+- Detect SIGINT/SIGTERM in execute_interactive_cli on Unix via ExitStatusExt::signal()
+- Provide user-friendly abort message in create_prd for Ctrl+C
+- Add set_interactive_error to MockRunner for testing error paths
+- Add 9 new tests covering signal detection, error classification, and abort behavior
+- UAT: 517 tests passed, 0 failures
+- Prd(PRD-0032)feat(T-007): remove old multi-round Q/A workflow
+
+Remove dead code from the old multi-round Q/A workflow that was replaced
+by the two-phase interactive flow in T-006:
+
+- Remove collect_multiline_answers() from qa_workflow.rs (dead code)
+- Remove PrdNewRound1Questions and PrdNewRoundNQuestions prompt variants
+- Remove PROMPT_PRD_NEW_ROUND1 and PROMPT_PRD_NEW_ROUNDN constants
+- Remove prd_new_round1_questions and prd_new_round_n_questions config fields
+- Delete materialized prompt files from .mr/prompts/
+- Remove 6 old Q/A tests from prd::new (covered by qa_workflow.rs tests)
+- Update test counts across prompt loader, init, and types
+
+Functions still used by prd::edit and config/constitution (parse_questions,
+collect_singleline_answers, extract_prd_content, etc.) are preserved.
+- Prd(PRD-0032)feat(T-010): update synthesis prompt for conversation transcript context
+- Prd(PRD-0032)feat(T-012): document two-phase interactive PRD creation workflow in AGENTS.md
+- Prd(PRD-0032)uat(uat-001): verify interactive session launches for CopilotRunner
+- Prd(PRD-0032)uat(uat-002): verify ClaudeRunner interactive session launch
+- Prd(PRD-0032)uat(uat-003): verify synthesis from conversation context
+- Prd(PRD-0032)uat(uat-004): verify Ctrl+C abort behavior with existing tests
+- Prd(PRD-0032)uat(uat-005): verify context injection into interactive session
+- Prd(PRD-0032)uat(uat-006): verify MockRunner interactive mode support
+- Prd(PRD-0032)uat(uat-007): verify old Q/A loop code removed from prd::new
+- Prd(PRD-0032)uat(uat-008): verify CI passes with clippy pedantic
+- Prd(PRD-0032)finalize: complete interactive PRD creation with docs updates
+
+## [0.5.3] - 2026-02-06
+
 ## [0.5.2] - 2026-02-06
 
 ## [0.5.1] - 2026-02-06
