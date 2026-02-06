@@ -54,7 +54,7 @@ No more 200k-token conversations that go off the rails. Just focused, atomic tas
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  1. mr init / mr bootstrap     ← Set up .mr/ structure     │
-│  2. mr new my-feature          ← Create PRD via guided Q/A │
+│  2. mr new my-feature          ← Create PRD interactively  │
 │  3. mr run                     ← Execute one task          │
 │  4. Agent implements, runs UAT, updates PRD, commits       │
 │  5. Repeat step 3 until all tasks are done                 │
@@ -71,7 +71,7 @@ Each `mr run` invocation:
 
 - **PRD-driven development**: Structure your work as markdown PRDs with YAML frontmatter
 - **One-task-per-run loop**: Context stays small, agents stay focused
-- **Guided PRD creation**: `mr new` runs an interactive Q/A to generate PRDs
+- **Interactive PRD creation**: `mr new` drops you into a direct chat with the AI agent to generate PRDs
 - **Bootstrap existing repos**: `mr bootstrap` scans your repo and generates starter PRDs
 - **Constitution-based governance**: Define project rules in `.mr/constitution.md` to guide PRD workflows
 - **Multi-language support**: Works with Rust, Python, Node.js, Go, Java (auto-detected)
@@ -161,7 +161,7 @@ mr bootstrap
 # Get AI-generated PRD suggestions
 mr suggest
 
-# Create a new PRD via guided Q/A
+# Create a new PRD via interactive chat
 mr new my-feature
 
 # List all PRDs
@@ -183,8 +183,8 @@ mr status
 | `mr bootstrap`                     | Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs             |
 | `mr restore`                       | Restore `.mr/prompts/` and `.mr/templates/` to built-in defaults (destructive)         |
 | `mr suggest`                       | Generate 5 AI-powered PRD suggestions based on codebase analysis and research          |
-| `mr new <slug>`                    | Create a new PRD via guided Q/A                                                        |
-| `mr new <slug> --context`          | Create a new PRD with upfront context to guide initial questions                       |
+| `mr new <slug>`                    | Create a new PRD via interactive chat                                                  |
+| `mr new <slug> --context`          | Create a new PRD with upfront context for the interactive session                      |
 | `mr edit <id> "<request>"`         | Edit an existing PRD via runner assistance                                             |
 | `mr constitution edit "<request>"` | Edit the constitution via LLM assistance                                               |
 | `mr list`                          | List all PRDs (regenerates `.mr/PRDS.md`)                                              |
@@ -436,7 +436,7 @@ mr init --language python        # or node, go, java
 
 # 3. Create your first PRD
 mr suggest                        # Get 5 AI-generated suggestions (pick one or ignore)
-mr new add-cli-parser            # Guided Q/A creates .mr/prds/PRD-0001-add-cli-parser.md
+mr new add-cli-parser            # Interactive chat creates .mr/prds/PRD-0001-add-cli-parser.md
 
 # 4. Run the loop until it's done
 mr run                           # Agent implements T-001, runs tests, commits
@@ -728,8 +728,8 @@ mr list --verbose                # More details in PRDS.md
 | Start new project       | `mr init`                          | Creates `.mr/` structure                 |
 | Bootstrap existing      | `mr bootstrap`                     | Scans repo, generates PRDs               |
 | Get AI suggestions      | `mr suggest`                       | Analyzes codebase, suggests 5 PRDs       |
-| Create PRD              | `mr new <slug>`                    | Guided Q/A creates PRD                   |
-| Create PRD with context | `mr new <slug> --context "..."`    | Skips some questions                     |
+| Create PRD              | `mr new <slug>`                    | Interactive chat creates PRD             |
+| Create PRD with context | `mr new <slug> --context "..."`    | Provides context for the chat session    |
 | Edit PRD                | `mr edit <id> "<request>"`         | LLM helps edit PRD                       |
 | Edit constitution       | `mr constitution edit "<request>"` | LLM updates project rules                |
 | Run next task           | `mr run`                           | Picks highest-priority task              |
@@ -904,47 +904,35 @@ Used for the final wrap-up task of a PRD.
 | `{{prd_id}}`      | string | PRD identifier     |
 | `{{prd_summary}}` | string | Summary of the PRD |
 
-### prd_new_round1_questions.md
+### prd_new_discovery.md
 
-Used for the first round of questions when creating a new PRD.
+Used for the interactive discovery phase when creating a new PRD. The user chats directly with the agent.
 
 | Placeholder               | Type   | Description                               |
 | ------------------------- | ------ | ----------------------------------------- |
 | `{{slug}}`                | string | The slug for the new PRD                  |
 | `{{user_description}}`    | string | Optional initial description from user    |
 | `{{user_context}}`        | string | Optional upfront context provided by user |
+| `{{constitution}}`        | string | Project constitution content              |
 | `{{#each existing_prds}}` | list   | Existing PRDs for context                 |
 | ↳ `{{id}}`                | string | PRD identifier                            |
 | ↳ `{{title}}`             | string | PRD title                                 |
 | ↳ `{{status}}`            | string | PRD status (draft/active/done/parked)     |
 
-### prd_new_roundN_questions.md
-
-Used for follow-up rounds of questions during PRD creation.
-
-| Placeholder            | Type   | Description                               |
-| ---------------------- | ------ | ----------------------------------------- |
-| `{{slug}}`             | string | The slug for the new PRD                  |
-| `{{user_context}}`     | string | Optional upfront context provided by user |
-| `{{#each qa_history}}` | list   | Previous Q/A pairs                        |
-| ↳ `{{question}}`       | string | The question that was asked               |
-| ↳ `{{answer}}`         | string | The user's answer                         |
-| ↳ `{{@index}}`         | number | 0-based index of the Q/A pair             |
-
 ### prd_new_synthesize_prd.md
 
-Used to synthesize the final PRD from collected Q/A.
+Used to synthesize the final PRD from the interactive conversation.
 
-| Placeholder               | Type   | Description                               |
-| ------------------------- | ------ | ----------------------------------------- |
-| `{{slug}}`                | string | The slug for the new PRD                  |
-| `{{user_context}}`        | string | Optional upfront context provided by user |
-| `{{#each qa_history}}`    | list   | All Q/A pairs from the session            |
-| ↳ `{{question}}`          | string | The question                              |
-| ↳ `{{answer}}`            | string | The answer                                |
-| `{{#each existing_prds}}` | list   | Existing PRDs for context                 |
-| ↳ `{{id}}`                | string | PRD identifier                            |
-| ↳ `{{title}}`             | string | PRD title                                 |
+| Placeholder                    | Type   | Description                               |
+| ------------------------------ | ------ | ----------------------------------------- |
+| `{{slug}}`                     | string | The slug for the new PRD                  |
+| `{{user_context}}`             | string | Optional upfront context provided by user |
+| `{{constitution}}`             | string | Project constitution content              |
+| `{{conversation_transcript}}`  | string | Transcript from interactive session       |
+| `{{session_id}}`               | string | Session ID for resume-based handoff       |
+| `{{#each existing_prds}}`      | list   | Existing PRDs for context                 |
+| ↳ `{{id}}`                     | string | PRD identifier                            |
+| ↳ `{{title}}`                  | string | PRD title                                 |
 
 ### prd_edit.md
 
