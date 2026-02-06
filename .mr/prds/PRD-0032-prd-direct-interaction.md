@@ -40,7 +40,7 @@ acceptance_tests:
   - id: uat-003
     name: "PRD is synthesized from conversation context after interactive session exits"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "Ctrl+C during interactive session aborts entirely without creating a PRD"
     command: cargo make uat
@@ -434,6 +434,15 @@ Preferred order:
   - `test_build_interactive_args_manual_mode` (src/runner/claude.rs) — Verifies interactive args omit permission flags in manual mode
   - `test_execute_interactive_cli_success` (src/runner/cli_runner.rs) — Verifies shared `execute_interactive_cli` spawns interactive process with `Stdio::inherit()` and returns `InteractiveResult`
   - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Verifies `mr new` invokes `execute_interactive` in discovery phase (runner-agnostic via MockRunner)
+  - `cargo make uat` passed — 511 tests, 0 failures
+
+## 2026-02-06 — uat-003 Verification
+- **UAT**: PRD is synthesized from conversation context after interactive session exits
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Tests the full two-phase flow: interactive discovery → synthesis → PRD creation. Verifies interactive session was called once (discovery) and synthesis (execute) was called once, producing a valid PRD file.
+  - `test_prd_new_transcript_in_synthesis_prompt` (src/prd/new.rs) — Verifies that conversation transcript from the interactive session is injected into the synthesis prompt via the `conversation_transcript` template variable, and that the resulting PRD is synthesized from that context.
   - `cargo make uat` passed — 511 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
