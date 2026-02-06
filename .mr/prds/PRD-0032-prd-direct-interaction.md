@@ -32,7 +32,7 @@ acceptance_tests:
   - id: uat-001
     name: "Interactive session launches for mr new with CopilotRunner"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: "Interactive session launches for mr new with ClaudeRunner"
     command: cargo make uat
@@ -411,5 +411,17 @@ Preferred order:
     - Important notes (no Q/A workflow, mock testing, `InteractiveResult` structure)
   - Updated "Runner Implementation Patterns" section with interactive support guidance (`build_interactive_args`, `build_continue_args`)
   - UAT: `cargo make uat` passed — 511 tests, 0 failures
+
+## 2026-02-06 — uat-001 Verification
+- **UAT**: Interactive session launches for mr new with CopilotRunner
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_build_interactive_args_yolo_mode` (src/runner/copilot.rs) — Verifies CopilotRunner builds correct interactive args (`-i`, `--allow-all`, `--no-ask-user`)
+  - `test_build_interactive_args_with_model` (src/runner/copilot.rs) — Verifies interactive args with model override
+  - `test_build_interactive_args_manual_mode` (src/runner/copilot.rs) — Verifies interactive args in manual permission mode
+  - `test_execute_interactive_cli_success` (src/runner/cli_runner.rs) — Verifies shared `execute_interactive_cli` spawns interactive process correctly
+  - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Verifies `mr new` invokes `execute_interactive` in discovery phase
+  - `cargo make uat` passed — 511 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
