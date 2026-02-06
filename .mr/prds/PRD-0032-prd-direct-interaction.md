@@ -70,7 +70,7 @@ tasks:
   - id: T-002
     title: "Implement execute_interactive() for CopilotRunner"
     priority: 1
-    status: todo
+    status: done
     notes: "Spawn gh copilot in interactive mode with Stdio::inherit(). Capture conversation transcript or session ID on exit. Investigate gh copilot flags for interactive chat and output capture."
   - id: T-003
     title: "Implement execute_interactive() for ClaudeRunner"
@@ -260,5 +260,18 @@ Preferred order:
   - Re-exported `InteractiveResult` from `src/runner/mod.rs`
   - Added tests: `InteractiveResult` construction, default trait error behavior, CLI interactive success/failure, `MockRunner` default interactive error
   - UAT: `cargo make uat` passed — 495 tests, 0 failures
+
+- **Constitution Compliance**: No violations. Changes are minimal (rule 3), consistent with existing patterns (rule 4), and do not break public API (rule 5).
+
+## 2026-02-06 — T-002 Completed
+- **Task**: Implement execute_interactive() for CopilotRunner
+- **Status**: ✅ Done
+- **Changes**:
+  - Implemented `build_interactive_args()` override in `CopilotRunner`'s `CliRunnerConfig` impl (`src/runner/copilot.rs`)
+  - Uses `-i <prompt>` flag (Copilot CLI's interactive mode) instead of `-p <prompt>` (non-interactive)
+  - Reuses `append_config_flags()` to include permission, model, and no-ask-user flags consistently
+  - Added 3 unit tests: `test_build_interactive_args_yolo_mode`, `test_build_interactive_args_with_model`, `test_build_interactive_args_manual_mode`
+  - Interactive execution is handled by the existing `execute_interactive_cli()` infrastructure from T-001 via the blanket impl
+  - UAT: `cargo make uat` passed — 498 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Changes are minimal (rule 3), consistent with existing patterns (rule 4), and do not break public API (rule 5).

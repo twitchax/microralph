@@ -326,6 +326,18 @@ impl CliRunnerConfig for CopilotRunner {
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
         self.format_display_parts_impl(working_dir)
     }
+
+    fn build_interactive_args(&self, prompt: &str) -> Option<Vec<String>> {
+        let mut args = Vec::new();
+
+        // Interactive mode with initial prompt.
+        args.push("-i".to_string());
+        args.push(prompt.to_string());
+
+        self.append_config_flags(&mut args);
+
+        Some(args)
+    }
 }
 
 // NOTE: `Runner` trait is automatically implemented via blanket impl in `cli_runner.rs`
@@ -530,6 +542,46 @@ mod tests {
         let cleaned = CopilotRunner::strip_usage_stats(output);
 
         assert_eq!(cleaned, output);
+    }
+
+    #[test]
+    fn test_build_interactive_args_yolo_mode() {
+        let runner = CopilotRunner::new();
+        let args = runner.build_interactive_args("discovery prompt").unwrap();
+
+        // Should use -i for interactive mode.
+        assert!(args.contains(&"-i".to_string()));
+        assert!(args.contains(&"discovery prompt".to_string()));
+
+        // Should NOT use -p (non-interactive).
+        assert!(!args.contains(&"-p".to_string()));
+
+        // Should include config flags.
+        assert!(args.contains(&"--allow-all".to_string()));
+        assert!(args.contains(&"--no-ask-user".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_with_model() {
+        let runner = CopilotRunner::with_model(Some("claude-sonnet-4".to_string()));
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"-i".to_string()));
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"claude-sonnet-4".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_manual_mode() {
+        let config = CopilotConfig::new()
+            .with_permission_mode(CopilotPermissionMode::Manual)
+            .with_no_ask_user(false);
+        let runner = CopilotRunner::with_config(config);
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"-i".to_string()));
+        assert!(!args.contains(&"--allow-all".to_string()));
+        assert!(!args.contains(&"--no-ask-user".to_string()));
     }
 
     // Note: Integration tests that actually invoke copilot should be
