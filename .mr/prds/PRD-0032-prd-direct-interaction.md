@@ -48,7 +48,7 @@ acceptance_tests:
   - id: uat-005
     name: "Existing context (PRDs, constitution, codebase scan) is injected into the interactive session"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "MockRunner supports interactive mode for unit tests"
     command: cargo make test
@@ -455,5 +455,16 @@ Preferred order:
   - `test_runner_error_is_interrupted` (src/runner/types.rs) — Verifies `RunnerError::Interrupted` is correctly detected by `is_interrupted()`.
   - `test_mock_runner_execute_interactive_returns_interrupted_error` (src/runner/mock.rs) — Verifies the mock runner correctly returns an `Interrupted` error with SIGINT details.
   - `cargo make test` passed — 511 tests, 0 failures
+
+## 2026-02-06 — uat-005 Verification
+- **UAT**: Existing context (PRDs, constitution, codebase scan) is injected into the interactive session
+- **Status**: ✅ Verified
+- **Method**: New test + existing tests
+- **Details**:
+  - `test_existing_prds_injected_into_discovery_prompt` (src/prd/new.rs) — New test verifying that existing PRD summaries (IDs, titles, statuses) are injected into the interactive discovery prompt via the `existing_prds` template variable.
+  - `test_constitution_in_discovery_and_synthesis` (src/prd/new.rs) — Existing test verifying constitution content is loaded and injected into the discovery prompt.
+  - `test_prd_new_context_in_discovery_prompt` (src/prd/new.rs) — Existing test verifying user-provided context is injected into the discovery prompt.
+  - Codebase scan is not injected as data; the discovery prompt template instructs the agent to scan the codebase (line 42 of prd_new_discovery.md).
+  - `cargo make uat` passed — 512 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).

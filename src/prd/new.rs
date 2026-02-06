@@ -975,6 +975,87 @@ tasks: []
     }
 
     #[test]
+    fn test_existing_prds_injected_into_discovery_prompt() {
+        // Verifies that existing PRD summaries are injected into the
+        // interactive discovery prompt so the agent has project context.
+
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Use the real template pattern for existing_prds.
+        std::fs::write(
+            prompts_dir.join("prd_new_discovery.md"),
+            "Discovery for {{slug}}\n\n{{#each existing_prds}}\n- {{id}}: {{title}} ({{status}})\n{{/each}}",
+        )
+        .unwrap();
+        std::fs::write(
+            prompts_dir.join("prd_new_synthesize_prd.md"),
+            "Synthesize PRD for {{slug}}",
+        )
+        .unwrap();
+
+        // Create existing PRD files in the prds directory.
+        let prds_dir = temp.path().join(".mr").join("prds");
+
+        std::fs::write(
+            prds_dir.join("PRD-0001-auth.md"),
+            "---\nid: PRD-0001\ntitle: Authentication System\nstatus: done\ntasks: []\n---\n# Summary\n",
+        )
+        .unwrap();
+
+        std::fs::write(
+            prds_dir.join("PRD-0002-api.md"),
+            "---\nid: PRD-0002\ntitle: REST API Layer\nstatus: active\ntasks: []\n---\n# Summary\n",
+        )
+        .unwrap();
+
+        let prd_content = r"---
+id: PRD-0003
+title: New Feature
+status: draft
+tasks: []
+---
+# Summary
+";
+
+        let runner = MockRunner::new(vec![crate::runner::RunnerOutput::success(prd_content)]);
+
+        let config = PrdNewConfig {
+            root: temp.path(),
+            slug: "new-feature",
+            description: None,
+            context: None,
+            stream: false,
+        };
+
+        let mut output = Vec::new();
+
+        let result = create_prd(&config, &runner, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0003");
+
+        // Verify existing PRDs appear in the discovery prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("PRD-0001"),
+            "Discovery prompt should contain existing PRD-0001"
+        );
+        assert!(
+            interactive_prompts[0].contains("Authentication System"),
+            "Discovery prompt should contain PRD-0001 title"
+        );
+        assert!(
+            interactive_prompts[0].contains("PRD-0002"),
+            "Discovery prompt should contain existing PRD-0002"
+        );
+        assert!(
+            interactive_prompts[0].contains("REST API Layer"),
+            "Discovery prompt should contain PRD-0002 title"
+        );
+    }
+
+    #[test]
     fn test_create_prd_aborts_on_interrupted_signal() {
         // Verifies that Ctrl+C (signal interruption) during the interactive
         // session aborts PRD creation entirely without creating a file.
