@@ -81,6 +81,21 @@ pub fn check_cli_available(binary_path: &str) -> bool {
     which::which(binary_path).is_ok()
 }
 
+/// Resolves a binary name to its full path on the system.
+///
+/// On Windows, this is critical because `Command::new("copilot")` uses
+/// `CreateProcessW` which only auto-appends `.exe`—it does NOT find `.cmd`
+/// or `.bat` wrappers (common for npm-installed CLIs). By resolving the
+/// full path via `which::which()`, we get the actual path including the
+/// correct extension (e.g., `C:\...\copilot.cmd`), which `Command::new()`
+/// can then execute directly.
+///
+/// On Unix systems, this is a no-op in practice (returns the same or
+/// absolute path), but it keeps the logic uniform.
+fn resolve_binary(binary_path: &str) -> String {
+    which::which(binary_path).map_or_else(|_| binary_path.to_string(), |p| p.display().to_string())
+}
+
 /// Formats the command display for logging/user feedback.
 pub fn format_command_display<C: CliRunnerConfig + ?Sized>(
     config: &C,
@@ -99,15 +114,16 @@ pub fn execute_cli<C: CliRunnerConfig + ?Sized>(
     working_dir: &Path,
 ) -> RunnerResult<RunnerOutput> {
     let args = config.build_args(prompt);
+    let resolved_binary = resolve_binary(config.binary_path());
 
     tracing::debug!(
-        binary = %config.binary_path(),
+        binary = %resolved_binary,
         working_dir = %working_dir.display(),
         args = ?args,
         "Executing CLI"
     );
 
-    let mut command = Command::new(config.binary_path());
+    let mut command = Command::new(&resolved_binary);
     command.args(&args).current_dir(working_dir);
 
     let output = command.output().map_err(|e| {
@@ -165,15 +181,16 @@ pub fn execute_cli_streaming<C: CliRunnerConfig + ?Sized>(
     println!("\n🔧 Executing: {cmd_display}");
 
     let args = config.build_args(prompt);
+    let resolved_binary = resolve_binary(config.binary_path());
 
     tracing::debug!(
-        binary = %config.binary_path(),
+        binary = %resolved_binary,
         working_dir = %working_dir.display(),
         args = ?args,
         "Executing CLI (streaming)"
     );
 
-    let mut command = Command::new(config.binary_path());
+    let mut command = Command::new(&resolved_binary);
     command
         .args(&args)
         .current_dir(working_dir)
@@ -296,6 +313,22 @@ mod tests {
     #[test]
     fn test_check_cli_available_nonexistent() {
         assert!(!check_cli_available("nonexistent-binary-xyz123"));
+    }
+
+    #[test]
+    fn test_resolve_binary_found() {
+        // 'cargo' is guaranteed to be on PATH; resolve should return an absolute path
+        let resolved = resolve_binary("cargo");
+        assert!(resolved.contains("cargo"));
+        // Should resolve to an absolute path (not just the bare name)
+        assert!(resolved.len() > "cargo".len());
+    }
+
+    #[test]
+    fn test_resolve_binary_not_found_falls_back() {
+        // Nonexistent binary should fall back to the original name
+        let resolved = resolve_binary("nonexistent-binary-xyz123");
+        assert_eq!(resolved, "nonexistent-binary-xyz123");
     }
 
     #[test]
