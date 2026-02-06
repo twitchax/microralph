@@ -44,7 +44,7 @@ acceptance_tests:
   - id: uat-004
     name: "Ctrl+C during interactive session aborts entirely without creating a PRD"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "Existing context (PRDs, constitution, codebase scan) is injected into the interactive session"
     command: cargo make uat
@@ -444,5 +444,16 @@ Preferred order:
   - `test_create_prd_two_phase_flow` (src/prd/new.rs) — Tests the full two-phase flow: interactive discovery → synthesis → PRD creation. Verifies interactive session was called once (discovery) and synthesis (execute) was called once, producing a valid PRD file.
   - `test_prd_new_transcript_in_synthesis_prompt` (src/prd/new.rs) — Verifies that conversation transcript from the interactive session is injected into the synthesis prompt via the `conversation_transcript` template variable, and that the resulting PRD is synthesized from that context.
   - `cargo make uat` passed — 511 tests, 0 failures
+
+## 2026-02-06 — uat-004 Verification
+- **UAT**: Ctrl+C during interactive session aborts entirely without creating a PRD
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_create_prd_aborts_on_interrupted_signal` (src/prd/new.rs) — Verifies that when the interactive session is interrupted by a signal (SIGINT/Ctrl+C), PRD creation fails with an error mentioning "interrupted", user-facing output mentions "aborted", and no PRD file is created on disk.
+  - `test_create_prd_aborts_on_process_failure` (src/prd/new.rs) — Verifies that a non-zero exit code (non-signal failure) also aborts PRD creation with no file written.
+  - `test_runner_error_is_interrupted` (src/runner/types.rs) — Verifies `RunnerError::Interrupted` is correctly detected by `is_interrupted()`.
+  - `test_mock_runner_execute_interactive_returns_interrupted_error` (src/runner/mock.rs) — Verifies the mock runner correctly returns an `Interrupted` error with SIGINT details.
+  - `cargo make test` passed — 511 tests, 0 failures
 
 - **Constitution Compliance**: No violations. Documentation-only changes (rule 3). Consistent with existing AGENTS.md patterns (rule 4).
