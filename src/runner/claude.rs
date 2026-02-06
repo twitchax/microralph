@@ -287,6 +287,18 @@ impl CliRunnerConfig for ClaudeRunner {
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
         self.format_display_parts_impl(working_dir)
     }
+
+    fn build_interactive_args(&self, prompt: &str) -> Option<Vec<String>> {
+        let mut args = Vec::new();
+
+        // Initial prompt for the interactive session (no -p flag).
+        args.push("--initial-prompt".to_string());
+        args.push(prompt.to_string());
+
+        self.append_config_flags(&mut args);
+
+        Some(args)
+    }
 }
 
 // NOTE: `Runner` trait is automatically implemented via blanket impl in `cli_runner.rs`
@@ -585,6 +597,51 @@ mod tests {
 
         // Should return empty string for empty result
         assert_eq!(stripped, "");
+    }
+
+    #[test]
+    fn test_build_interactive_args_yolo_mode() {
+        let runner = ClaudeRunner::new();
+        let args = runner.build_interactive_args("discovery prompt").unwrap();
+
+        // Should use --initial-prompt for interactive mode.
+        assert!(args.contains(&"--initial-prompt".to_string()));
+        assert!(args.contains(&"discovery prompt".to_string()));
+
+        // Should NOT use -p (non-interactive).
+        assert!(!args.contains(&"-p".to_string()));
+
+        // Should NOT use --output-format json (would break interactive display).
+        assert!(!args.contains(&"--output-format".to_string()));
+
+        // Should include config flags.
+        assert!(args.contains(&"--dangerously-skip-permissions".to_string()));
+        assert!(args.contains(&"--permission-mode".to_string()));
+        assert!(args.contains(&"dontAsk".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_with_model() {
+        let runner = ClaudeRunner::with_model(Some("claude-sonnet-4".to_string()));
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"--initial-prompt".to_string()));
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"claude-sonnet-4".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_manual_mode() {
+        let config = ClaudeConfig::new()
+            .with_permission_mode(ClaudePermissionMode::Manual)
+            .with_no_ask_user(false);
+        let runner = ClaudeRunner::with_config(config);
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"--initial-prompt".to_string()));
+        assert!(!args.contains(&"--dangerously-skip-permissions".to_string()));
+        assert!(!args.contains(&"--permission-mode".to_string()));
+        assert!(!args.contains(&"dontAsk".to_string()));
     }
 
     #[test]
