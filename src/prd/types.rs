@@ -222,17 +222,6 @@ pub struct PromptsConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bootstrap_generate_prds: Option<String>,
 
-    /// PRD new round 1 questions prompt path.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prd_new_round1_questions: Option<String>,
-
-    /// PRD new round N questions prompt path.
-    #[serde(
-        rename = "prd_new_roundN_questions",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub prd_new_round_n_questions: Option<String>,
-
     /// PRD new synthesize PRD prompt path.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prd_new_synthesize_prd: Option<String>,

@@ -102,8 +102,6 @@ fn get_default_prompt(kind: PromptKind) -> &'static str {
         PromptKind::Init => init::PROMPT_INIT,
         PromptKind::BootstrapPlan => init::PROMPT_BOOTSTRAP_PLAN,
         PromptKind::BootstrapGeneratePrds => init::PROMPT_BOOTSTRAP_GENERATE_PRDS,
-        PromptKind::PrdNewRound1Questions => init::PROMPT_PRD_NEW_ROUND1,
-        PromptKind::PrdNewRoundNQuestions => init::PROMPT_PRD_NEW_ROUNDN,
         PromptKind::PrdNewSynthesizePrd => init::PROMPT_PRD_NEW_SYNTHESIZE,
         PromptKind::PrdNewDiscovery => init::PROMPT_PRD_NEW_DISCOVERY,
         PromptKind::RunTask => init::PROMPT_RUN_TASK,
@@ -274,13 +272,13 @@ mod tests {
         let missing = loader.missing_prompts();
 
         // All should be missing initially.
-        assert_eq!(missing.len(), 20);
+        assert_eq!(missing.len(), 18);
 
         // Create one prompt file.
         std::fs::write(prompts_dir.join("init.md"), "test").unwrap();
 
         let missing = loader.missing_prompts();
-        assert_eq!(missing.len(), 19);
+        assert_eq!(missing.len(), 17);
         assert!(!missing.contains(&PromptKind::Init));
     }
 

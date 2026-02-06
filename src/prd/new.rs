@@ -504,62 +504,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_questions_numbered_dot() {
-        let output = r"Here are some questions:
-
-1. What problem are you solving?
-2. What does success look like?
-3. Are there dependencies?
-";
-
-        let questions = qa_workflow::parse_questions(output);
-        assert_eq!(questions.len(), 3);
-        assert_eq!(questions[0], "What problem are you solving?");
-        assert_eq!(questions[1], "What does success look like?");
-        assert_eq!(questions[2], "Are there dependencies?");
-    }
-
-    #[test]
-    fn test_parse_questions_numbered_paren() {
-        let output = r"1) First question?
-2) Second question?
-";
-
-        let questions = qa_workflow::parse_questions(output);
-        assert_eq!(questions.len(), 2);
-    }
-
-    #[test]
-    fn test_parse_questions_empty() {
-        let output = "No questions here, just text.";
-        let questions = qa_workflow::parse_questions(output);
-        assert!(questions.is_empty());
-    }
-
-    #[test]
-    fn test_parse_questions_multiline_with_bullets() {
-        let output = r"Here are some questions:
-
-1. What problem are you solving?
-2. What features do you need?
-   - Feature A
-   - Feature B
-   - Feature C
-3. What is your timeline?
-
-Some additional text here.";
-
-        let questions = qa_workflow::parse_questions(output);
-        assert_eq!(questions.len(), 3);
-        assert_eq!(questions[0], "What problem are you solving?");
-        assert_eq!(
-            questions[1],
-            "What features do you need?\n- Feature A\n- Feature B\n- Feature C"
-        );
-        assert_eq!(questions[2], "What is your timeline?");
-    }
-
-    #[test]
     fn test_extract_prd_content_code_block() {
         let output = r"Here's the PRD:
 
@@ -660,40 +604,6 @@ title: Test
         let content = qa_workflow::extract_prd_content(output).unwrap();
         assert!(content.starts_with("---"), "Content was: {content}");
         assert!(content.contains("id: PRD-0001"));
-    }
-
-    #[test]
-    fn test_collect_answers() {
-        let questions = vec!["Question 1?".to_string(), "Question 2?".to_string()];
-
-        let input = "Answer 1\n\nAnswer 2\n\n";
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let pairs =
-            qa_workflow::collect_multiline_answers(&questions, &mut input, &mut output).unwrap();
-
-        assert_eq!(pairs.len(), 2);
-        assert_eq!(pairs[0].question, "Question 1?");
-        assert_eq!(pairs[0].answer, "Answer 1");
-        assert_eq!(pairs[1].question, "Question 2?");
-        assert_eq!(pairs[1].answer, "Answer 2");
-    }
-
-    #[test]
-    fn test_collect_answers_multiline() {
-        let questions = vec!["Describe your feature?".to_string()];
-
-        let input = "Line 1\nLine 2\nLine 3\n\n";
-        let mut input = input.as_bytes();
-        let mut output = Vec::new();
-
-        let pairs =
-            qa_workflow::collect_multiline_answers(&questions, &mut input, &mut output).unwrap();
-
-        assert_eq!(pairs.len(), 1);
-        assert_eq!(pairs[0].question, "Describe your feature?");
-        assert_eq!(pairs[0].answer, "Line 1\nLine 2\nLine 3");
     }
 
     #[test]

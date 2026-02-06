@@ -16,12 +16,6 @@ pub enum PromptKind {
     /// Bootstrap PRD generation prompt.
     BootstrapGeneratePrds,
 
-    /// First round of questions for `mr new`.
-    PrdNewRound1Questions,
-
-    /// Subsequent rounds of questions for `mr new`.
-    PrdNewRoundNQuestions,
-
     /// Final PRD synthesis prompt for `mr new`.
     PrdNewSynthesizePrd,
 
@@ -77,8 +71,6 @@ impl PromptKind {
             Self::Init => "init.md",
             Self::BootstrapPlan => "bootstrap_plan.md",
             Self::BootstrapGeneratePrds => "bootstrap_generate_prds.md",
-            Self::PrdNewRound1Questions => "prd_new_round1_questions.md",
-            Self::PrdNewRoundNQuestions => "prd_new_roundN_questions.md",
             Self::PrdNewSynthesizePrd => "prd_new_synthesize_prd.md",
             Self::PrdNewDiscovery => "prd_new_discovery.md",
             Self::RunTask => "run_task.md",
@@ -103,8 +95,6 @@ impl PromptKind {
             Self::Init,
             Self::BootstrapPlan,
             Self::BootstrapGeneratePrds,
-            Self::PrdNewRound1Questions,
-            Self::PrdNewRoundNQuestions,
             Self::PrdNewSynthesizePrd,
             Self::PrdNewDiscovery,
             Self::RunTask,
@@ -140,15 +130,15 @@ mod tests {
         assert_eq!(PromptKind::Init.filename(), "init.md");
         assert_eq!(PromptKind::RunTask.filename(), "run_task.md");
         assert_eq!(
-            PromptKind::PrdNewRound1Questions.filename(),
-            "prd_new_round1_questions.md"
+            PromptKind::PrdNewSynthesizePrd.filename(),
+            "prd_new_synthesize_prd.md"
         );
     }
 
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 20);
+        assert_eq!(all.len(), 18);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

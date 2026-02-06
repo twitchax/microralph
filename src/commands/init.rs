@@ -388,139 +388,6 @@ Each task in the frontmatter MUST have these fields:
 Confirm PRDs are generated and update `.mr/PRDS.md` index.
 "#;
 
-/// Default content for the PRD new round 1 questions prompt.
-pub const PROMPT_PRD_NEW_ROUND1: &str = r#"# microralph — PRD New Round 1 Questions Prompt
-
-## Objective
-
-Generate follow-up questions to clarify a new PRD request.
-
-## Context
-
-The user wants to create a new PRD with slug: `{{slug}}`
-
-{{#if user_description}}
-User's initial description:
-> {{user_description}}
-{{/if}}
-
-{{#if user_context}}
-User's upfront context:
-> {{user_context}}
-{{/if}}
-
-{{#if constitution}}
-## Project Constitution
-
-The following governance rules and constraints apply to this project:
-
-{{constitution}}
-
-**Note**: Your questions and the resulting PRD should respect these constitutional rules.
-{{/if}}
-
-## Existing PRDs
-
-{{#each existing_prds}}
-- {{id}}: {{title}} ({{status}})
-{{/each}}
-
-## Required Actions
-
-1. Review the existing PRDs to understand context.
-2. Scan the codebase for relevant files, patterns, or entry points that could bootstrap specific tasks.
-3. Generate 3-7 clarifying questions to understand:
-   - What problem does this PRD solve?
-   - What are the success criteria?
-   - What are the acceptance tests?
-   - What are the dependencies or blockers?
-   - What is the scope (MVP vs full feature)?
-   - Are there specific sections in existing PRDs that are relevant (e.g., patterns, lessons learned)?
-   - Are there existing code files or modules that should be referenced?
-   - What is the high-level technical approach or implementation strategy?
-   - What assumptions does this feature rely on (preconditions, external dependencies)?
-   - What constraints limit implementation options (performance, compatibility, scope)?
-   - Would an architecture diagram help clarify the approach?
-
-## Output Format
-
-Return a numbered list of questions. Keep questions concise and actionable.
-
-Example:
-1. What specific problem are you trying to solve?
-2. What does "done" look like for this feature?
-3. Are there any existing patterns in the codebase to follow?
-4. What is the high-level technical approach for implementing this?
-5. Are there any assumptions or constraints we should document?
-"#;
-
-/// Default content for the PRD new round N questions prompt.
-pub const PROMPT_PRD_NEW_ROUNDN: &str = r#"# microralph — PRD New Round N Questions Prompt
-
-## Objective
-
-Continue the Q/A session for PRD creation, or signal readiness.
-
-## Context
-
-The user is creating a new PRD with slug: `{{slug}}`
-
-{{#if user_context}}
-### User-Provided Context
-
-{{user_context}}
-
-{{/if}}
-{{#if constitution}}
-### Project Constitution
-
-The following governance rules and constraints apply to this project:
-
-{{constitution}}
-
-**Note**: Your questions and the resulting PRD should respect these constitutional rules.
-
-{{/if}}
-## Previous Q/A
-
-{{#each qa_history}}
-**Q{{@index}}**:
-
-{{question}}
-
-**A{{@index}}**:
-
-{{answer}}
-
-{{/each}}
-
-## Required Actions
-
-1. Review the Q/A history.
-2. Determine if you have enough information to synthesize a PRD.
-3. If more clarification is needed, ask 1-5 additional **genuine questions** that require new information from the user.
-4. If ready, respond with exactly: `READY_TO_SYNTHESIZE`
-
-## Output Format
-
-Either:
-- A numbered list of follow-up questions (1-5 max)
-- Or the exact text: `READY_TO_SYNTHESIZE`
-
-## CRITICAL: What Counts as a Question
-
-**DO NOT** output confirmations, summaries, or restatements of previous answers. These are NOT questions:
-- "**`--scaffold` flag**: Uses hybrid detection..." ❌ (This is a summary)
-- "**Feature X**: Confirmed as discussed" ❌ (This is a confirmation)
-
-**DO** ask questions that require the user to provide NEW information:
-- "What error behavior should occur if X fails?" ✓
-- "Should this feature support Y use case?" ✓
-- "How should the system handle edge case Z?" ✓
-
-If you have no genuine questions requiring new information, output `READY_TO_SYNTHESIZE`.
-"#;
-
 /// Default content for the PRD new synthesize prompt.
 pub const PROMPT_PRD_NEW_SYNTHESIZE: &str = r#"# microralph — PRD New Synthesize Prompt
 
@@ -2072,8 +1939,6 @@ const PROMPT_FILES: &[(&str, &str)] = &[
     ("init.md", PROMPT_INIT),
     ("bootstrap_plan.md", PROMPT_BOOTSTRAP_PLAN),
     ("bootstrap_generate_prds.md", PROMPT_BOOTSTRAP_GENERATE_PRDS),
-    ("prd_new_round1_questions.md", PROMPT_PRD_NEW_ROUND1),
-    ("prd_new_roundN_questions.md", PROMPT_PRD_NEW_ROUNDN),
     ("prd_new_synthesize_prd.md", PROMPT_PRD_NEW_SYNTHESIZE),
     ("prd_new_discovery.md", PROMPT_PRD_NEW_DISCOVERY),
     ("run_task.md", PROMPT_RUN_TASK),
@@ -2336,14 +2201,6 @@ mod tests {
         assert!(root.join(".mr/prompts/init.md").exists());
         assert!(root.join(".mr/prompts/bootstrap_plan.md").exists());
         assert!(root.join(".mr/prompts/bootstrap_generate_prds.md").exists());
-        assert!(
-            root.join(".mr/prompts/prd_new_round1_questions.md")
-                .exists()
-        );
-        assert!(
-            root.join(".mr/prompts/prd_new_roundN_questions.md")
-                .exists()
-        );
         assert!(root.join(".mr/prompts/prd_new_synthesize_prd.md").exists());
         assert!(root.join(".mr/prompts/prd_new_discovery.md").exists());
         assert!(root.join(".mr/prompts/run_task.md").exists());
@@ -2370,7 +2227,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 25); // 1 template + 20 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 23); // 1 template + 18 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -2381,13 +2238,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 25);
+        assert_eq!(result1.files_created, 23);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 25);
+        assert_eq!(result2.files_skipped, 23);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -2480,8 +2337,6 @@ mod tests {
                 "PROMPT_BOOTSTRAP_GENERATE_PRDS",
                 PROMPT_BOOTSTRAP_GENERATE_PRDS,
             ),
-            ("PROMPT_PRD_NEW_ROUND1", PROMPT_PRD_NEW_ROUND1),
-            ("PROMPT_PRD_NEW_ROUNDN", PROMPT_PRD_NEW_ROUNDN),
             ("PROMPT_PRD_NEW_SYNTHESIZE", PROMPT_PRD_NEW_SYNTHESIZE),
             ("PROMPT_PRD_NEW_DISCOVERY", PROMPT_PRD_NEW_DISCOVERY),
             ("PROMPT_RUN_TASK", PROMPT_RUN_TASK),
@@ -2524,9 +2379,6 @@ mod tests {
 
     #[test]
     fn test_prompts_contain_placeholders() {
-        // Round 1 questions should have slug placeholder.
-        assert!(PROMPT_PRD_NEW_ROUND1.contains("{{slug}}"));
-
         // Discovery prompt should have slug placeholder.
         assert!(PROMPT_PRD_NEW_DISCOVERY.contains("{{slug}}"));
 

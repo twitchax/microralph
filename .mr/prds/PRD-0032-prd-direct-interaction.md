@@ -95,7 +95,7 @@ tasks:
   - id: T-007
     title: "Remove old multi-round Q/A workflow from prd::new"
     priority: 3
-    status: todo
+    status: done
     notes: "Remove the iterative question-answer loop code. Clean up qa_workflow.rs if it becomes unused. Remove any related prompts that are no longer needed."
   - id: T-008
     title: "Handle conversation context handoff between phases"
@@ -368,3 +368,18 @@ Preferred order:
   - UAT: `cargo make uat` passed — 517 tests, 0 failures (net +9 tests)
 
 - **Constitution Compliance**: No violations. Minimal changes (rule 3), consistent with existing error handling patterns (rule 4), no public API breaks (rule 5 — new enum variant is additive), clippy pedantic clean (rule 8).
+
+## 2026-02-06 — T-007 Completed
+- **Task**: Remove old multi-round Q/A workflow from prd::new
+- **Status**: ✅ Done
+- **Changes**:
+  - **`src/util/qa_workflow.rs`**: Removed `collect_multiline_answers()` function (dead code since T-006 replaced the multi-round Q/A loop with interactive flow). Removed associated `#[allow(dead_code)]` annotation. Functions still used by `prd::edit` and `config/constitution` (`parse_questions`, `collect_singleline_answers`, `extract_prd_content`, `to_placeholder_list`, `QaPair`, `strip_ansi_escapes`) are preserved.
+  - **`src/prd/new.rs`**: Removed 6 old Q/A tests: `test_parse_questions_numbered_dot`, `test_parse_questions_numbered_paren`, `test_parse_questions_empty`, `test_parse_questions_multiline_with_bullets`, `test_collect_answers`, `test_collect_answers_multiline`. These tested `qa_workflow` functions no longer used by `prd::new`. Equivalent tests remain in `qa_workflow.rs` and `prd::edit.rs`.
+  - **`src/prompt/types.rs`**: Removed `PrdNewRound1Questions` and `PrdNewRoundNQuestions` variants from `PromptKind` enum. Updated `all()` list and test counts (20→18).
+  - **`src/prompt/loader.rs`**: Removed `PrdNewRound1Questions` and `PrdNewRoundNQuestions` mappings from `get_default_prompt()`. Updated missing prompts test counts (20→18, 19→17).
+  - **`src/commands/init.rs`**: Removed `PROMPT_PRD_NEW_ROUND1` and `PROMPT_PRD_NEW_ROUNDN` constants (~130 lines of prompt content). Removed from `PROMPT_FILES` array. Updated test counts in `test_init_creates_structure` (25→23) and `test_init_is_idempotent` (25→23). Removed round1 prompt file assertions. Removed `PROMPT_PRD_NEW_ROUND1` from `test_prompts_are_workflow_focused_no_philosophy` and `test_prompts_contain_placeholders`.
+  - **`src/prd/types.rs`**: Removed `prd_new_round1_questions` and `prd_new_round_n_questions` fields from `PromptsConfig` struct.
+  - **`.mr/prompts/`**: Deleted `prd_new_round1_questions.md` and `prd_new_roundN_questions.md` materialized prompt files.
+  - UAT: `cargo make uat` passed — 511 tests, 0 failures (net -6 tests from removed old Q/A tests)
+
+- **Constitution Compliance**: No violations. Prompt management synchronized between `src/commands/init.rs` and `.mr/prompts/` (rule 7). Minimal changes focused on dead code removal (rule 3). No public API breaks (rule 5). Clippy pedantic clean (rule 8).
