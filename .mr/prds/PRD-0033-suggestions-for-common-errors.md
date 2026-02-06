@@ -61,7 +61,7 @@ tasks:
   - id: T-004
     title: "Add suggestion to invalid PRD format errors"
     priority: 2
-    status: todo
+    status: done
     notes: "In src/prd/parser.rs, when frontmatter parsing fails, suggest checking PRD format or recreating with `mr new`"
   - id: T-005
     title: "Improve interactive session failure messages"
@@ -175,4 +175,15 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Updated `src/prd/finalize.rs` line 51: enhanced `FinalizeError::PrdNotFound` `#[error]` message with the same suggestion
   - Updated `src/commands/run.rs`: enhanced all 5 `ok_or_else` PRD-not-found closures (`run_task`, `process_uat_iteration_outcome`, `run_uat_verification_loop` ×3) with the suggestion
   - UAT passed: 498 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-06 — T-004 Completed
+- **Task**: Add suggestion to invalid PRD format errors
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd/parser.rs` line 87: enhanced `bail!` for missing opening `---` delimiter to include `Suggestion: Check the PRD format or recreate with \`mr new\`.`
+  - Updated `src/prd/parser.rs` line 100: enhanced `anyhow!` for missing closing `---` delimiter with the same suggestion
+  - Updated `src/prd/parser.rs` line 40: enhanced `map_err` for YAML parse failure with the same suggestion
+  - Added 3 unit tests (`test_missing_frontmatter_includes_suggestion`, `test_unclosed_frontmatter_includes_suggestion`, `test_invalid_yaml_frontmatter_includes_suggestion`) verifying suggestion text is present
+  - UAT passed: 501 tests, 0 failures
 - **Constitution Compliance**: No violations.

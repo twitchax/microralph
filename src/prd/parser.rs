@@ -37,7 +37,7 @@ pub fn parse_prd(content: &str) -> Result<Prd> {
     let (frontmatter_str, body) = split_frontmatter(content)?;
 
     let frontmatter: PrdFrontmatter = serde_yaml::from_str(&frontmatter_str)
-        .map_err(|e| anyhow::anyhow!("Failed to parse PRD frontmatter as YAML: {e}"))?;
+        .map_err(|e| anyhow::anyhow!("Failed to parse PRD frontmatter as YAML: {e}.\n  Suggestion: Check the PRD format or recreate with `mr new`."))?;
 
     Ok(Prd::new(frontmatter, body))
 }
@@ -84,7 +84,9 @@ fn split_frontmatter(content: &str) -> Result<(String, String)> {
 
     // Check for opening delimiter.
     if !trimmed.starts_with(FRONTMATTER_DELIMITER) {
-        anyhow::bail!("PRD file must start with '---' frontmatter delimiter");
+        anyhow::bail!(
+            "PRD file must start with '---' frontmatter delimiter.\n  Suggestion: Check the PRD format or recreate with `mr new`."
+        );
     }
 
     // Move past the opening "---" delimiter and any trailing newline.
@@ -97,7 +99,7 @@ fn split_frontmatter(content: &str) -> Result<(String, String)> {
     let close_pos = after_open
         .find(&format!("\n{FRONTMATTER_DELIMITER}"))
         .ok_or_else(|| {
-            anyhow::anyhow!("PRD file is missing closing '---' frontmatter delimiter")
+            anyhow::anyhow!("PRD file is missing closing '---' frontmatter delimiter.\n  Suggestion: Check the PRD format or recreate with `mr new`.")
         })?;
 
     // Extract YAML frontmatter (everything before the closing delimiter).
@@ -367,5 +369,32 @@ status: {status_str}
 
         // Body should contain History section.
         assert!(prd.body.contains("# History"));
+    }
+
+    #[test]
+    fn test_missing_frontmatter_includes_suggestion() {
+        let content = "# Just markdown\n\nNo frontmatter here.";
+        let err = parse_prd(content).unwrap_err().to_string();
+
+        assert!(err.contains("Suggestion:"));
+        assert!(err.contains("mr new"));
+    }
+
+    #[test]
+    fn test_unclosed_frontmatter_includes_suggestion() {
+        let content = "---\nid: PRD-0001\ntitle: Test\n\n# Body without closing delimiter";
+        let err = parse_prd(content).unwrap_err().to_string();
+
+        assert!(err.contains("Suggestion:"));
+        assert!(err.contains("mr new"));
+    }
+
+    #[test]
+    fn test_invalid_yaml_frontmatter_includes_suggestion() {
+        let content = "---\n: invalid yaml: [broken\n---\n\n# Body\n";
+        let err = parse_prd(content).unwrap_err().to_string();
+
+        assert!(err.contains("Suggestion:"));
+        assert!(err.contains("mr new"));
     }
 }
