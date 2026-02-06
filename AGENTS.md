@@ -40,27 +40,15 @@ cargo make devcontainer
 
 ## PRD Creation Workflow (`mr new`)
 
-The `mr new` command creates a new PRD through a two-phase interactive flow:
+The `mr new` command creates a new PRD through a single-phase interactive flow:
 
-1. **Phase 1 — Interactive Discovery**: The user is dropped directly into an interactive chat session with the underlying agent (Copilot or Claude). The agent has full project context (existing PRDs, constitution, codebase scan) injected via the discovery prompt. The user discusses the PRD until the agent has enough information, then exits.
-2. **Phase 2 — Synthesis**: On clean exit, a second non-interactive call synthesizes a PRD from the conversation. Context handoff prefers session resume (`execute_continue()`) when available, falling back to transcript injection.
+1. **Interactive Session**: The user is dropped directly into an interactive chat session with the underlying agent (Copilot or Claude). The agent has full project context (existing PRDs, constitution, codebase scan) injected via the prompt — along with the next PRD ID and target file path. The agent gathers info from the user, writes the PRD file directly to disk in `.mr/prds/`, and tells the user to exit.
+2. **Validation**: On clean exit, the Rust side scans `.mr/prds/` for the newly created PRD file, validates it, and regenerates the index. If no file was created, a placeholder PRD is generated.
 3. **Abort on Ctrl+C**: If the user force-quits (Ctrl+C / SIGINT) during the interactive session, PRD creation is aborted entirely — no partial PRD is created.
 
 ### Runner Interactive Mode
 
-The `Runner` trait provides three methods supporting this flow:
-
-- **`execute_interactive(prompt, working_dir)`**: Spawns the CLI with `Stdio::inherit()` for direct user interaction. Returns `InteractiveResult` containing `session_id` and/or `transcript`.
-- **`execute_continue(prompt, working_dir)`**: Resumes a previous session for synthesis. Returns `None` if the runner doesn't support session resume.
-- **`execute(prompt, working_dir)`**: Standard non-interactive execution, used as fallback for synthesis when session resume is unavailable.
-
-### Context Handoff Strategy
-
-| Runner        | Interactive Mode            | Session Resume        | Synthesis Fallback       |
-| ------------- | --------------------------- | --------------------- | ------------------------ |
-| ClaudeRunner  | `--initial-prompt <prompt>` | ✅ `--continue` flag   | Transcript injection     |
-| CopilotRunner | `-i <prompt>` flag          | ❌ Not supported       | Transcript injection     |
-| MockRunner    | Returns mock transcript     | ❌ Returns `None`      | Transcript injection     |
+The `Runner` trait provides `execute_interactive(prompt, working_dir)` which spawns the CLI with `Stdio::inherit()` for direct user interaction. The agent writes the PRD file directly to disk during this session.
 
 ### Error Handling
 
@@ -70,15 +58,14 @@ The `Runner` trait provides three methods supporting this flow:
 
 ### Prompts
 
-- **Discovery prompt** (`prd_new_discovery.md`): Instructs the agent to have a natural conversation, asking questions until it has enough information for a PRD. Defined in `src/commands/init.rs` as `PROMPT_PRD_NEW_DISCOVERY`.
-- **Synthesis prompt** (`prd_new_synthesize_prd.md`): Accepts conversation transcript or session context as input and generates structured PRD output. Defined in `src/commands/init.rs` as `PROMPT_PRD_NEW_SYNTHESIZE`.
+- **Interactive prompt** (`prd_new_interactive.md`): Single prompt that instructs the agent to gather information from the user interactively and then write the PRD file directly to disk. Includes `{{next_id}}`, `{{prd_path}}`, and `{{slug}}` placeholders so the agent knows where to write. Defined in `src/commands/init.rs` as `PROMPT_PRD_NEW_INTERACTIVE`.
 
 ### Important Notes
 
+- **Single-phase architecture**: The agent both gathers info and writes the PRD during the interactive session. There is no separate synthesis phase.
 - **No Q/A workflow**: The old multi-round Q/A loop has been fully removed. There is no `--legacy` or `--non-interactive` fallback.
 - **Prompt management**: All prompts are defined in `src/commands/init.rs` and materialized to `.mr/prompts/` per constitution rule 7.
-- **`InteractiveResult`**: Defined in `src/runner/types.rs` with `session_id: Option<String>` and `transcript: Option<String>`.
-- **Mock testing**: `MockRunner` supports `set_interactive_result()` and `set_interactive_error()` for testing both success and error paths without requiring actual CLI tools.
+- **Mock testing**: `MockRunner` supports `set_interactive_error()` for testing error paths without requiring actual CLI tools.
 
 ## Suggest Command Workflow
 
@@ -382,7 +369,7 @@ When implementing new runners (e.g., ClaudeRunner, CopilotRunner):
 - **Mock for tests**: All runner tests should use mocked binaries (via test-only constructors) and never require actual CLI installation. This ensures CI can run without external dependencies.
 - **Default to yolo mode**: Runners default to non-interactive mode with permissions auto-granted (`--dangerously-skip-permissions` for Claude, similar for others) to enable autonomous operation.
 - **Streaming support**: Implement both `execute()` (non-streaming) and `execute_streaming()` (real-time output) methods from the `Runner` trait.
-- **Interactive support**: Implement `build_interactive_args()` on `CliRunnerConfig` to enable `execute_interactive()`. Optionally implement `build_continue_args()` for session resume support via `execute_continue()`. Interactive mode spawns the CLI with `Stdio::inherit()` for direct user interaction.
+- **Interactive support**: Implement `build_interactive_args()` on `CliRunnerConfig` to enable `execute_interactive()`. Interactive mode spawns the CLI with `Stdio::inherit()` for direct user interaction.
 
 ## PRD Format
 

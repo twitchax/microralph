@@ -1,5 +1,6 @@
 // Deny unwrap_used in production code to ensure proper error handling.
 // Test code and mock runner are allowed to use unwrap via #[cfg(test)] and module-level allows.
+#![deny(unused)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::pedantic)]
 
@@ -904,7 +905,7 @@ fn cmd_prd_new(
     runner_name: &str,
     cli_model: Option<&str>,
     context: Option<&str>,
-    stream: bool,
+    _stream: bool,
 ) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
@@ -925,7 +926,6 @@ fn cmd_prd_new(
         slug,
         description: None,
         context,
-        stream,
     };
 
     let stdout = std::io::stdout();

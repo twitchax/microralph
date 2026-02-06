@@ -904,13 +904,15 @@ Used for the final wrap-up task of a PRD.
 | `{{prd_id}}`      | string | PRD identifier     |
 | `{{prd_summary}}` | string | Summary of the PRD |
 
-### prd_new_discovery.md
+### prd_new_interactive.md
 
-Used for the interactive discovery phase when creating a new PRD. The user chats directly with the agent.
+Used for the single-phase interactive PRD creation. The agent gathers info from the user and writes the PRD file directly to disk.
 
 | Placeholder               | Type   | Description                               |
 | ------------------------- | ------ | ----------------------------------------- |
 | `{{slug}}`                | string | The slug for the new PRD                  |
+| `{{next_id}}`             | string | The next PRD ID (e.g., PRD-0004)          |
+| `{{prd_path}}`            | string | Target file path for the PRD              |
 | `{{user_description}}`    | string | Optional initial description from user    |
 | `{{user_context}}`        | string | Optional upfront context provided by user |
 | `{{constitution}}`        | string | Project constitution content              |
@@ -918,21 +920,6 @@ Used for the interactive discovery phase when creating a new PRD. The user chats
 | ↳ `{{id}}`                | string | PRD identifier                            |
 | ↳ `{{title}}`             | string | PRD title                                 |
 | ↳ `{{status}}`            | string | PRD status (draft/active/done/parked)     |
-
-### prd_new_synthesize_prd.md
-
-Used to synthesize the final PRD from the interactive conversation.
-
-| Placeholder                    | Type   | Description                               |
-| ------------------------------ | ------ | ----------------------------------------- |
-| `{{slug}}`                     | string | The slug for the new PRD                  |
-| `{{user_context}}`             | string | Optional upfront context provided by user |
-| `{{constitution}}`             | string | Project constitution content              |
-| `{{conversation_transcript}}`  | string | Transcript from interactive session       |
-| `{{session_id}}`               | string | Session ID for resume-based handoff       |
-| `{{#each existing_prds}}`      | list   | Existing PRDs for context                 |
-| ↳ `{{id}}`                     | string | PRD identifier                            |
-| ↳ `{{title}}`                  | string | PRD title                                 |
 
 ### prd_edit.md
 

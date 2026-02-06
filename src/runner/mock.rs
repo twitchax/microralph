@@ -7,12 +7,12 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::sync::Mutex;
 
-use super::types::{InteractiveResult, Runner, RunnerError, RunnerOutput, RunnerResult};
+use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult};
 
 /// A mock runner for deterministic testing.
 ///
 /// The mock runner returns pre-configured responses in sequence.
-/// This allows testing the two-phase interactive flow without invoking a real runner.
+/// This allows testing the interactive flow without invoking a real runner.
 #[derive(Debug)]
 pub struct MockRunner {
     /// The name of this runner.
@@ -23,9 +23,6 @@ pub struct MockRunner {
 
     /// Recorded prompts that were executed.
     recorded_prompts: Mutex<Vec<String>>,
-
-    /// Pre-configured interactive result to return from `execute_interactive()`.
-    interactive_result: Mutex<Option<InteractiveResult>>,
 
     /// Pre-configured interactive error to return from `execute_interactive()`.
     interactive_error: Mutex<Option<RunnerError>>,
@@ -43,7 +40,6 @@ impl MockRunner {
             name: "mock".to_string(),
             responses: Mutex::new(responses.into()),
             recorded_prompts: Mutex::new(Vec::new()),
-            interactive_result: Mutex::new(None),
             interactive_error: Mutex::new(None),
             recorded_interactive_prompts: Mutex::new(Vec::new()),
         }
@@ -52,12 +48,6 @@ impl MockRunner {
     /// Creates an empty mock runner.
     pub fn empty() -> Self {
         Self::new(Vec::new())
-    }
-
-    /// Sets the interactive result to return from `execute_interactive()`.
-    #[cfg(test)]
-    pub fn set_interactive_result(&self, result: InteractiveResult) {
-        *self.interactive_result.lock().unwrap() = Some(result);
     }
 
     /// Sets an error to return from `execute_interactive()`.
@@ -134,11 +124,7 @@ impl Runner for MockRunner {
         true
     }
 
-    fn execute_interactive(
-        &self,
-        prompt: &str,
-        _working_dir: &Path,
-    ) -> RunnerResult<InteractiveResult> {
+    fn execute_interactive(&self, prompt: &str, _working_dir: &Path) -> RunnerResult<()> {
         // Record the interactive prompt.
         self.recorded_interactive_prompts
             .lock()
@@ -150,18 +136,7 @@ impl Runner for MockRunner {
             return Err(error);
         }
 
-        // Return the pre-configured interactive result, or a default.
-        let result = self
-            .interactive_result
-            .lock()
-            .unwrap()
-            .clone()
-            .unwrap_or(InteractiveResult {
-                session_id: None,
-                transcript: Some("Mock interactive session transcript".to_string()),
-            });
-
-        Ok(result)
+        Ok(())
     }
 }
 
@@ -264,30 +239,12 @@ mod tests {
     }
 
     #[test]
-    fn test_mock_runner_execute_interactive_returns_default() {
+    fn test_mock_runner_execute_interactive_returns_ok() {
         let runner = MockRunner::empty();
         let path = Path::new(".");
 
         let result = runner.execute_interactive("test", path);
         assert!(result.is_ok(), "MockRunner should support interactive mode");
-
-        let interactive = result.unwrap();
-        assert!(interactive.transcript.is_some());
-    }
-
-    #[test]
-    fn test_mock_runner_execute_interactive_with_custom_result() {
-        let runner = MockRunner::empty();
-        let path = Path::new(".");
-
-        runner.set_interactive_result(InteractiveResult {
-            session_id: Some("session-42".to_string()),
-            transcript: Some("User: Tell me about X\nAgent: X is...".to_string()),
-        });
-
-        let result = runner.execute_interactive("test", path).unwrap();
-        assert_eq!(result.session_id.as_deref(), Some("session-42"));
-        assert!(result.transcript.unwrap().contains("Tell me about X"));
     }
 
     #[test]
@@ -306,18 +263,6 @@ mod tests {
         assert_eq!(prompts.len(), 2);
         assert_eq!(prompts[0], "interactive prompt 1");
         assert_eq!(prompts[1], "interactive prompt 2");
-    }
-
-    #[test]
-    fn test_mock_runner_execute_continue_returns_none() {
-        let runner = MockRunner::empty();
-        let path = Path::new(".");
-
-        let result = runner.execute_continue("test", path);
-        assert!(
-            result.is_none(),
-            "MockRunner should return None for execute_continue (no session resume)"
-        );
     }
 
     #[test]

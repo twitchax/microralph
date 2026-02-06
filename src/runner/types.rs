@@ -94,19 +94,6 @@ impl TokenUsageInfo {
     }
 }
 
-/// Result from an interactive runner session.
-///
-/// Contains context from the interactive session that can be used
-/// for subsequent non-interactive calls (e.g., synthesis phase).
-#[derive(Debug, Clone)]
-pub struct InteractiveResult {
-    /// Optional session or conversation ID for resume-based context handoff.
-    pub session_id: Option<String>,
-
-    /// Optional transcript of the interactive conversation.
-    pub transcript: Option<String>,
-}
-
 /// Output from a runner invocation.
 #[derive(Debug, Clone)]
 pub struct RunnerOutput {
@@ -209,44 +196,21 @@ pub trait Runner: Send + Sync {
 
     /// Launches an interactive session with inherited stdio.
     ///
-    /// The user interacts directly with the underlying agent. On clean exit,
-    /// returns an [`InteractiveResult`] containing a session ID and/or transcript
-    /// for context handoff to a subsequent non-interactive call.
+    /// The user interacts directly with the underlying agent. The agent
+    /// gathers information and writes results directly to disk.
     ///
     /// # Arguments
     ///
     /// * `prompt` - Initial prompt/context to seed the interactive session
     /// * `working_dir` - The working directory for the runner
-    ///
-    /// # Returns
-    ///
-    /// An [`InteractiveResult`] with session context, or an error if the
-    /// session could not be started or was interrupted.
     fn execute_interactive(
         &self,
         _prompt: &str,
         _working_dir: &std::path::Path,
-    ) -> RunnerResult<InteractiveResult> {
+    ) -> RunnerResult<()> {
         Err(RunnerError::ProcessFailed(
             "interactive mode is not supported by this runner".to_string(),
         ))
-    }
-
-    /// Executes a prompt by continuing/resuming the most recent session.
-    ///
-    /// Some runners (e.g., Claude) support session resume, which provides
-    /// full conversational context from a previous interactive session without
-    /// needing to pass a transcript in the prompt.
-    ///
-    /// Returns `None` if the runner does not support session resume,
-    /// in which case the caller should fall back to [`execute`] with
-    /// transcript context injected into the prompt.
-    fn execute_continue(
-        &self,
-        _prompt: &str,
-        _working_dir: &std::path::Path,
-    ) -> Option<RunnerResult<RunnerOutput>> {
-        None
     }
 }
 
@@ -404,28 +368,6 @@ mod tests {
         assert!(total.is_none());
     }
 
-    #[test]
-    fn test_interactive_result_default_fields() {
-        let result = InteractiveResult {
-            session_id: None,
-            transcript: None,
-        };
-
-        assert!(result.session_id.is_none());
-        assert!(result.transcript.is_none());
-    }
-
-    #[test]
-    fn test_interactive_result_with_data() {
-        let result = InteractiveResult {
-            session_id: Some("session-123".to_string()),
-            transcript: Some("User: Hello\nAgent: Hi!".to_string()),
-        };
-
-        assert_eq!(result.session_id.as_deref(), Some("session-123"));
-        assert!(result.transcript.unwrap().contains("Hello"));
-    }
-
     /// A minimal runner that only implements required methods, using defaults for the rest.
     struct MinimalRunner;
 
@@ -454,17 +396,6 @@ mod tests {
         assert!(
             err.to_string().contains("not supported"),
             "Expected 'not supported' error, got: {err}"
-        );
-    }
-
-    #[test]
-    fn test_runner_default_execute_continue_returns_none() {
-        let runner = MinimalRunner;
-        let result = runner.execute_continue("test", std::path::Path::new("."));
-
-        assert!(
-            result.is_none(),
-            "Default execute_continue should return None"
         );
     }
 

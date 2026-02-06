@@ -16,11 +16,11 @@ pub enum PromptKind {
     /// Bootstrap PRD generation prompt.
     BootstrapGeneratePrds,
 
-    /// Final PRD synthesis prompt for `mr new`.
-    PrdNewSynthesizePrd,
-
-    /// Interactive discovery prompt for `mr new`.
-    PrdNewDiscovery,
+    /// Interactive PRD creation prompt for `mr new`.
+    ///
+    /// Single-phase: the agent gathers info from the user interactively,
+    /// writes the PRD file directly, then tells the user to exit.
+    PrdNewInteractive,
 
     /// Task execution prompt for `mr run`.
     RunTask,
@@ -71,8 +71,7 @@ impl PromptKind {
             Self::Init => "init.md",
             Self::BootstrapPlan => "bootstrap_plan.md",
             Self::BootstrapGeneratePrds => "bootstrap_generate_prds.md",
-            Self::PrdNewSynthesizePrd => "prd_new_synthesize_prd.md",
-            Self::PrdNewDiscovery => "prd_new_discovery.md",
+            Self::PrdNewInteractive => "prd_new_interactive.md",
             Self::RunTask => "run_task.md",
             Self::RunTaskFinalize => "run_task_finalize.md",
             Self::RunUatVerify => "run_uat_verify.md",
@@ -95,8 +94,7 @@ impl PromptKind {
             Self::Init,
             Self::BootstrapPlan,
             Self::BootstrapGeneratePrds,
-            Self::PrdNewSynthesizePrd,
-            Self::PrdNewDiscovery,
+            Self::PrdNewInteractive,
             Self::RunTask,
             Self::RunTaskFinalize,
             Self::RunUatVerify,
@@ -130,15 +128,15 @@ mod tests {
         assert_eq!(PromptKind::Init.filename(), "init.md");
         assert_eq!(PromptKind::RunTask.filename(), "run_task.md");
         assert_eq!(
-            PromptKind::PrdNewSynthesizePrd.filename(),
-            "prd_new_synthesize_prd.md"
+            PromptKind::PrdNewInteractive.filename(),
+            "prd_new_interactive.md"
         );
     }
 
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 18);
+        assert_eq!(all.len(), 17);
         assert!(all.contains(&PromptKind::Init));
         assert!(all.contains(&PromptKind::PrdEdit));
         assert!(all.contains(&PromptKind::AdaptLanguage));

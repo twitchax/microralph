@@ -19,7 +19,7 @@ pub use mock::MockRunner;
 pub use types::Runner;
 
 // Re-export for internal crate use (tests, other modules).
-pub(crate) use types::{InteractiveResult, RunnerOutput, TokenUsageInfo};
+pub(crate) use types::{RunnerOutput, TokenUsageInfo};
 
 // Re-export RunnerError for test code in other modules.
 #[cfg(test)]
