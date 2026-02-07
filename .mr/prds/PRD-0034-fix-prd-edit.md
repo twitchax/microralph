@@ -31,7 +31,7 @@ acceptance_tests:
   - id: uat-005
     name: "stream flag is removed from prd new CLI definition"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "existing unit tests for edit and new continue to pass"
     command: cargo make test
@@ -350,4 +350,16 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
 - **Method**: New test
 - **Details**:
   - Created `src/prd/edit.rs::test_edit_prd_validates_and_regenerates_index` — sets up a PRD, simulates agent writing updated content during interactive session, calls `edit_prd()`, and asserts: (1) returned PRD has correct id and updated title (validation passed), (2) `.mr/PRDS.md` exists and contains the updated title (index regenerated), (3) output contains "Updated PRD index" (confirming index regeneration ran).
+  - UAT passed: 513 tests, 513 passed, 0 skipped
+
+---
+
+## 2026-02-07 — uat-005 Verification
+- **UAT**: stream flag is removed from prd new CLI definition
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/main.rs::test_args_parse_prd_new` — exhaustively destructures `Command::New { slug, runner, model, context }` with no `stream` field. This would fail to compile if `stream` were still present in the `New` variant.
+  - `src/main.rs::test_args_parse_prd_new_with_model` — same exhaustive destructuring confirming `stream` is absent from the `New` CLI definition.
+  - The `New` struct (line 102-118) contains only `slug`, `runner`, `model`, and `context` — no `stream` field.
   - UAT passed: 513 tests, 513 passed, 0 skipped
