@@ -21,7 +21,7 @@ acceptance_tests:
   - id: uat-002
     name: "Malformed config.toml produces suggestion to run mr restore"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "PRD not found produces suggestion to run mr status"
     command: cargo make uat
@@ -227,4 +227,13 @@ The changes are localized to individual error sites — no cross-cutting changes
 - **Details**:
   - Test: `config::constitution::tests::test_constitution_missing_includes_suggestion` in `src/config/constitution.rs`
   - Verifies that when constitution file is missing, error contains "Suggestion:", "mr restore", and "mr init"
+  - All 506 tests passed
+
+## 2026-02-07 — uat-002 Verification
+- **UAT**: Malformed config.toml produces suggestion to run mr restore
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `config::tests::test_config_load_malformed_includes_suggestion` in `src/config/mod.rs`
+  - Creates a malformed `config.toml`, loads it, and asserts the error message contains `mr restore`
   - All 506 tests passed
