@@ -60,7 +60,7 @@ tasks:
   - id: T-005
     title: "Register new prompt in PromptKind enum and init logic"
     priority: 2
-    status: todo
+    status: done
     notes: "Add PrdEditInteractive variant to PromptKind, add file name mapping, and ensure it is materialized to .mr/prompts/ during init."
   - id: T-006
     title: "Remove or update the old prd_edit.md prompt"
@@ -240,3 +240,21 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - UAT passed: 504 tests, 504 passed, 0 skipped
 
 - **Constitution Compliance**: No violations. Changes minimal per rule 3. Dead code removed per rule 6 (root cause).
+
+---
+
+## 2026-02-07 — T-005 Completed
+- **Task**: Register new prompt in PromptKind enum and init logic
+- **Status**: ✅ Done (no-op — already completed as part of T-001)
+- **Changes**:
+  - Verified that all T-005 requirements were already implemented during T-001:
+    - `PrdEditInteractive` variant exists in `PromptKind` enum (`src/prompt/types.rs:41`)
+    - Filename mapping `"prd_edit_interactive.md"` exists (`src/prompt/types.rs:85`)
+    - Included in `PromptKind::all()` (`src/prompt/types.rs:109`)
+    - Fallback mapping in `src/prompt/loader.rs:110` (`PromptKind::PrdEditInteractive => init::PROMPT_PRD_EDIT_INTERACTIVE`)
+    - Entry in `PROMPT_FILES` array in `src/commands/init.rs:1982`
+    - `PROMPT_PRD_EDIT_INTERACTIVE` constant defined in `src/commands/init.rs:1061`
+  - No code changes needed — task was a no-op
+  - UAT passed: 504 tests, 504 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. No changes made (rule 3 — minimal changes).
