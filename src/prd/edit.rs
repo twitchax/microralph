@@ -40,8 +40,8 @@ pub struct PrdEditConfig<'a> {
     /// The PRD ID to edit (e.g., "PRD-0001").
     pub prd_id: &'a str,
 
-    /// The user's edit request.
-    pub request: &'a str,
+    /// Optional upfront context from the user (via --context flag).
+    pub context: Option<&'a str>,
 }
 
 /// Runs the PRD edit flow using an interactive session.
@@ -165,7 +165,7 @@ fn build_edit_prompt(
 
     ctx.insert("prd_path", prd_path.display().to_string());
     ctx.insert("prd_content", prd_content);
-    ctx.insert("context", config.request);
+    ctx.insert("context", config.context.unwrap_or(""));
 
     // Load constitution if available.
     if let Ok(Some(constitution)) = load_constitution(config.root) {
@@ -309,7 +309,7 @@ An updated test PRD.
         let config = PrdEditConfig {
             root: temp.path(),
             prd_id: "PRD-0001",
-            request: "Add a new task T-002 for testing",
+            context: Some("Add a new task T-002 for testing"),
         };
 
         let mut output = Vec::new();
@@ -342,7 +342,7 @@ An updated test PRD.
         let config = PrdEditConfig {
             root: temp.path(),
             prd_id: "PRD-0001",
-            request: "Add a new task",
+            context: Some("Add a new task"),
         };
 
         let mut output = Vec::new();
@@ -393,7 +393,7 @@ An updated test PRD.
         let config = PrdEditConfig {
             root: temp.path(),
             prd_id: "PRD-0001",
-            request: "Add a new task",
+            context: Some("Add a new task"),
         };
 
         let mut output = Vec::new();
@@ -464,7 +464,7 @@ An updated test PRD.
         let config = PrdEditConfig {
             root: temp.path(),
             prd_id: "PRD-0001",
-            request: "add a logging task",
+            context: Some("add a logging task"),
         };
 
         let mut output = Vec::new();

@@ -127,8 +127,9 @@ enum Command {
         /// The PRD ID to edit (e.g., "PRD-0001").
         prd_id: String,
 
-        /// The edit request (what changes to make).
-        request: String,
+        /// Optional upfront context to guide the edit session.
+        #[arg(long)]
+        context: Option<String>,
 
         /// The runner to use for the edit session.
         #[arg(long, default_value = "copilot")]
@@ -425,13 +426,13 @@ fn main() -> Result<()> {
         }
         Some(Command::Edit {
             prd_id,
-            request,
+            context,
             runner,
             model,
         }) => {
             let prd_id = normalize_prd_id(&prd_id);
             tracing::info!(prd_id = %prd_id, runner = %runner, "Editing PRD...");
-            cmd_prd_edit(&prd_id, &request, &runner, model.as_deref())?;
+            cmd_prd_edit(&prd_id, context.as_deref(), &runner, model.as_deref())?;
         }
         Some(Command::List { done }) => {
             tracing::info!(done = %done, "Listing PRDs...");
@@ -956,7 +957,7 @@ fn cmd_prd_new(
 /// Runs the `mr edit` command.
 fn cmd_prd_edit(
     prd_id: &str,
-    request: &str,
+    context: Option<&str>,
     runner_name: &str,
     cli_model: Option<&str>,
 ) -> Result<()> {
@@ -977,7 +978,7 @@ fn cmd_prd_edit(
     let config = prd::edit::PrdEditConfig {
         root: &cwd,
         prd_id,
-        request,
+        context,
     };
 
     let stdout = std::io::stdout();
@@ -2412,16 +2413,16 @@ mod tests {
 
     #[test]
     fn test_args_parse_edit() {
-        // Verify edit command works at top level with prd_id and request arguments
-        let args = Args::try_parse_from(["mr", "edit", "PRD-0001", "test edit"]).unwrap();
+        // Verify edit command works at top level with prd_id argument
+        let args = Args::try_parse_from(["mr", "edit", "PRD-0001"]).unwrap();
         if let Some(Command::Edit {
-            prd_id, request, ..
+            prd_id, context, ..
         }) = args.command
         {
             assert_eq!(prd_id, "PRD-0001");
-            assert_eq!(request, "test edit");
+            assert!(context.is_none());
         } else {
-            panic!("Expected Edit command with prd_id 'PRD-0001' and request 'test edit'");
+            panic!("Expected Edit command with prd_id 'PRD-0001'");
         }
     }
 

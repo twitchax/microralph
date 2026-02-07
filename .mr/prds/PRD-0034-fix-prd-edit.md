@@ -50,7 +50,7 @@ tasks:
   - id: T-003
     title: "Update PrdEditConfig to replace required request with optional context"
     priority: 1
-    status: todo
+    status: done
     notes: "Change request field to context: Option<&'a str>. Remove BufRead generic (no longer reading stdin in Rust)."
   - id: T-004
     title: "Update Edit CLI variant in main.rs"
@@ -210,3 +210,18 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
 - **Constitution Compliance**: No violations. All changes minimal per rule 3. Consistent with `new.rs` pattern per rule 4.
 
 ---
+
+## 2026-02-07 — T-003 Completed
+- **Task**: Update PrdEditConfig to replace required request with optional context
+- **Status**: ✅ Done
+- **Changes**:
+  - Changed `PrdEditConfig.request: &'a str` to `context: Option<&'a str>` in `src/prd/edit.rs`
+  - Updated `build_edit_prompt()` to unwrap optional context with `unwrap_or("")`
+  - Changed CLI `Edit` variant in `src/main.rs`: `request` positional arg → `--context` optional flag
+  - Updated `cmd_prd_edit()` signature: `request: &str` → `context: Option<&str>`
+  - Updated match arm dispatch to pass `context.as_deref()`
+  - Updated all test configs from `request: "..."` to `context: Some("...")`
+  - Updated `test_args_parse_edit` to test without required positional arg and assert `context.is_none()`
+  - UAT passed: 504 tests, 504 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. Changes minimal per rule 3. Consistent with `PrdNewConfig` pattern per rule 4.
