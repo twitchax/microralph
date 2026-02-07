@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📋 PRD Tasks
+
+- Prd(PRD-0034)feat(T-001): add PROMPT_PRD_EDIT_INTERACTIVE template and PrdEditInteractive prompt kind
+- Prd(PRD-0034)feat(T-002): rewrite edit_prd() to use execute_interactive()
+- Prd(PRD-0034)feat(T-003): replace required request with optional --context in prd edit
+- Prd(PRD-0034)feat(T-004): remove --stream flag from prd new CLI
+- Prd(PRD-0034)feat(T-005): register PrdEditInteractive prompt (no-op, already done in T-001)
+- Prd(PRD-0034)feat(T-006): remove old PrdEdit prompt variant and PROMPT_PRD_EDIT constant
+- Prd(PRD-0034)feat(T-007): add comprehensive tests for interactive edit flow
+- Prd(PRD-0034)feat(T-008): document prd edit interactive workflow in AGENTS.md
+- Prd(PRD-0034)uat(uat-001): verify interactive session with existing PRD context
+- Prd(PRD-0034)uat(uat-002): verify --context passes upfront context to interactive prompt
+- Prd(PRD-0034)uat(uat-003): verify Ctrl+C abort preserves PRD integrity
+- Prd(PRD-0034)uat(uat-004): add test for post-edit validation and index regeneration
+- Prd(PRD-0034)uat(uat-005): verify stream flag removed from prd new CLI
+- Prd(PRD-0034)uat(uat-006): verify existing edit and new unit tests pass
+- Prd(PRD-0031)finalize: cross-platform CLI checks with which crate
+- Prd(PRD-0034)finalize: Switch prd edit to interactive mode with all 8 tasks complete
+
+## [0.7.2] - 2026-02-07
+
 ## [0.7.1] - 2026-02-07
 
 ## [0.7.0] - 2026-02-07
