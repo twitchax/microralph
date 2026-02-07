@@ -1,83 +1,83 @@
 ---
 id: PRD-0033
-title: "Suggestions for Common Errors"
-status: active
+title: Suggestions for Common Errors
+status: done
 owner: twitchax
 created: 2026-02-06
 updated: 2026-02-06
 principles:
-  - Improve user experience by adding actionable suggestions to common error messages
-  - Keep changes minimal — enhance existing bail!/context messages inline
-  - Do not introduce new error types or abstractions; use simple string improvements
-  - Follow existing color/formatting patterns (colors::warning, colors::error)
+- Improve user experience by adding actionable suggestions to common error messages
+- Keep changes minimal — enhance existing bail!/context messages inline
+- Do not introduce new error types or abstractions; use simple string improvements
+- Follow existing color/formatting patterns (colors::warning, colors::error)
 references:
-  - name: "anyhow error handling"
-    url: "https://docs.rs/anyhow/latest/anyhow/"
+- name: anyhow error handling
+  url: https://docs.rs/anyhow/latest/anyhow/
 acceptance_tests:
-  - id: uat-001
-    name: "Constitution missing produces suggestion to run mr restore or mr init"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: "Malformed config.toml produces suggestion to run mr restore"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-003
-    name: "PRD not found produces suggestion to run mr status"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-004
-    name: "Invalid PRD format produces suggestion about correct format"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-005
-    name: "Interactive session failure produces suggestion to retry"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-006
-    name: "Partial init state produces suggestion to run mr init or mr restore"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-007
-    name: "All existing tests continue to pass"
-    command: cargo make ci
-    uat_status: verified
+- id: uat-001
+  name: Constitution missing produces suggestion to run mr restore or mr init
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Malformed config.toml produces suggestion to run mr restore
+  command: cargo make uat
+  uat_status: verified
+- id: uat-003
+  name: PRD not found produces suggestion to run mr status
+  command: cargo make uat
+  uat_status: verified
+- id: uat-004
+  name: Invalid PRD format produces suggestion about correct format
+  command: cargo make uat
+  uat_status: verified
+- id: uat-005
+  name: Interactive session failure produces suggestion to retry
+  command: cargo make uat
+  uat_status: verified
+- id: uat-006
+  name: Partial init state produces suggestion to run mr init or mr restore
+  command: cargo make uat
+  uat_status: verified
+- id: uat-007
+  name: All existing tests continue to pass
+  command: cargo make ci
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Improve constitution-missing error with restore/init suggestion"
-    priority: 1
-    status: done
-    notes: "In src/config/constitution.rs, when constitution file is not found, add suggestion to run `mr restore` or `mr init`"
-  - id: T-002
-    title: "Add suggestion for malformed config.toml parse errors"
-    priority: 1
-    status: done
-    notes: "In src/config/mod.rs, wrap TOML parse errors with a suggestion to run `mr restore` to reset config"
-  - id: T-003
-    title: "Add suggestion to PRD-not-found errors"
-    priority: 1
-    status: done
-    notes: "In src/prd/edit.rs, src/prd/finalize.rs, and src/commands/run.rs — add suggestion to run `mr status` to list available PRDs"
-  - id: T-004
-    title: "Add suggestion to invalid PRD format errors"
-    priority: 2
-    status: done
-    notes: "In src/prd/parser.rs, when frontmatter parsing fails, suggest checking PRD format or recreating with `mr new`"
-  - id: T-005
-    title: "Improve interactive session failure messages"
-    priority: 2
-    status: done
-    notes: "In src/prd/new.rs, improve Ctrl+C and runner crash messages with clearer retry guidance"
-  - id: T-006
-    title: "Improve partial init state detection and messaging"
-    priority: 2
-    status: done
-    notes: "In src/commands/init.rs ensure_initialized(), when .mr/ exists but subdirectories are missing, suggest `mr init` or `mr restore` instead of generic init message"
-  - id: T-007
-    title: "Add unit tests for improved error messages"
-    priority: 3
-    status: done
-    notes: "Add tests verifying that error messages contain the expected suggestion text for each improved error path"
+- id: T-001
+  title: Improve constitution-missing error with restore/init suggestion
+  priority: 1
+  status: done
+  notes: In src/config/constitution.rs, when constitution file is not found, add suggestion to run `mr restore` or `mr init`
+- id: T-002
+  title: Add suggestion for malformed config.toml parse errors
+  priority: 1
+  status: done
+  notes: In src/config/mod.rs, wrap TOML parse errors with a suggestion to run `mr restore` to reset config
+- id: T-003
+  title: Add suggestion to PRD-not-found errors
+  priority: 1
+  status: done
+  notes: In src/prd/edit.rs, src/prd/finalize.rs, and src/commands/run.rs — add suggestion to run `mr status` to list available PRDs
+- id: T-004
+  title: Add suggestion to invalid PRD format errors
+  priority: 2
+  status: done
+  notes: In src/prd/parser.rs, when frontmatter parsing fails, suggest checking PRD format or recreating with `mr new`
+- id: T-005
+  title: Improve interactive session failure messages
+  priority: 2
+  status: done
+  notes: In src/prd/new.rs, improve Ctrl+C and runner crash messages with clearer retry guidance
+- id: T-006
+  title: Improve partial init state detection and messaging
+  priority: 2
+  status: done
+  notes: In src/commands/init.rs ensure_initialized(), when .mr/ exists but subdirectories are missing, suggest `mr init` or `mr restore` instead of generic init message
+- id: T-007
+  title: Add unit tests for improved error messages
+  priority: 3
+  status: done
+  notes: Add tests verifying that error messages contain the expected suggestion text for each improved error path
 ---
 
 # Summary
@@ -286,3 +286,13 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Ran `cargo make ci` which executes fmt, clippy, and nextest
   - All 506 tests passed with 0 failures and 0 skipped
   - Full CI pipeline completed successfully in ~3 seconds
+
+## 2026-02-07 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 7 tasks (T-001 through T-007)
+- **Outcome**: All tasks completed, acceptance tests passed (506/506 tests)
+- **Cleanup**: None required — no temporary files, debug macros, or resolved TODOs found
+- **Summary**:
+  - Added actionable `Suggestion: ...` text to 6 major error categories: missing constitution, malformed config, PRD not found, invalid PRD format, interactive session failures, and partial init state
+  - Enhanced `ensure_initialized()` with granular partial-init detection listing missing items
+  - Added 9 new unit tests verifying suggestion text presence across all error paths
