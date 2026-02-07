@@ -19,7 +19,7 @@ acceptance_tests:
   - id: uat-002
     name: "prd edit with --context passes upfront context to the interactive prompt"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "prd edit aborts cleanly on Ctrl+C (SIGINT) without corrupting the PRD"
     command: cargo make uat
@@ -320,4 +320,14 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - `src/prd/edit.rs::test_edit_prd_interactive_flow` — verifies `edit_prd` launches an interactive session via `execute_interactive()`, writes the updated PRD to disk, and returns the updated PRD. Asserts `recorded_interactive_prompts().len() == 1` and no non-interactive calls.
   - `src/prd/edit.rs::test_edit_prd_prd_content_in_prompt` — verifies existing PRD content (title, summary) is injected into the interactive prompt.
   - `src/prd/edit.rs::test_edit_prd_context_in_interactive_prompt` — verifies user-provided context is passed through to the interactive prompt.
+  - UAT passed: 512 tests, 512 passed, 0 skipped
+
+---
+
+## 2026-02-07 — uat-002 Verification
+- **UAT**: prd edit with --context passes upfront context to the interactive prompt
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/prd/edit.rs::test_edit_prd_context_in_interactive_prompt` — verifies that when `context: Some("add a logging task")` is provided in `PrdEditConfig`, the interactive prompt contains both the context marker (`"with context:"`) and the actual user context string (`"add a logging task"`).
   - UAT passed: 512 tests, 512 passed, 0 skipped
