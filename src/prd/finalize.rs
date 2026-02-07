@@ -1057,4 +1057,19 @@ Project governance rules.
             "Finalize prompt should contain full constitution content"
         );
     }
+
+    #[test]
+    fn test_prd_not_found_error_includes_suggestion() {
+        let err = FinalizeError::PrdNotFound("PRD-9999".to_string());
+        let msg = err.to_string();
+
+        assert!(
+            msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {msg}"
+        );
+        assert!(
+            msg.contains("mr status"),
+            "Error should suggest `mr status`, got: {msg}"
+        );
+    }
 }

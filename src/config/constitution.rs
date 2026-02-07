@@ -304,4 +304,38 @@ Project governance rules
         assert!(updated_content.contains("New rule added by edit"));
         assert!(!updated_content.contains("Original rule"));
     }
+
+    #[test]
+    fn test_constitution_missing_includes_suggestion() {
+        let temp = tempfile::TempDir::new().unwrap();
+        let mr_dir = temp.path().join(".mr");
+        let prompts_dir = mr_dir.join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // No constitution file created — it should be missing.
+
+        let mock_runner = MockRunner::empty();
+        let config = ConstitutionEditConfig {
+            root: temp.path(),
+            request: "add a rule",
+        };
+        let mut input = std::io::Cursor::new(b"" as &[u8]);
+        let mut output = Vec::new();
+
+        let err = edit_constitution(&config, &mock_runner, &mut input, &mut output).unwrap_err();
+        let msg = err.to_string();
+
+        assert!(
+            msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {msg}"
+        );
+        assert!(
+            msg.contains("mr restore"),
+            "Error should suggest `mr restore`, got: {msg}"
+        );
+        assert!(
+            msg.contains("mr init"),
+            "Error should suggest `mr init`, got: {msg}"
+        );
+    }
 }

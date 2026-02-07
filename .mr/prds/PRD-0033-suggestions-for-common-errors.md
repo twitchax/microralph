@@ -76,7 +76,7 @@ tasks:
   - id: T-007
     title: "Add unit tests for improved error messages"
     priority: 3
-    status: todo
+    status: done
     notes: "Add tests verifying that error messages contain the expected suggestion text for each improved error path"
 ---
 
@@ -206,4 +206,16 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Added `test_ensure_initialized_partial_init_includes_suggestion` unit test verifying partial init detection lists missing items and includes both `mr init` and `mr restore` suggestions.
   - Added `test_ensure_initialized_no_mr_dir_generic_message` unit test verifying the generic message path when `.mr/` doesn't exist.
   - UAT passed: 503 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-07 — T-007 Completed
+- **Task**: Add unit tests for improved error messages
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `test_constitution_missing_includes_suggestion` in `src/config/constitution.rs`: verifies missing constitution error contains "Suggestion:", "mr restore", and "mr init"
+  - Added `test_find_prd_not_found_includes_suggestion` in `src/prd/edit.rs`: verifies PRD-not-found error contains "Suggestion:" and "mr status"
+  - Added `test_prd_not_found_error_includes_suggestion` in `src/prd/finalize.rs`: verifies `FinalizeError::PrdNotFound` contains "Suggestion:" and "mr status"
+  - Enhanced `test_create_prd_aborts_on_interrupted_signal` in `src/prd/new.rs`: added assertions for "Suggestion:" and "mr new" in interrupted session error
+  - Enhanced `test_create_prd_aborts_on_process_failure` in `src/prd/new.rs`: added assertions for "Suggestion:" and "mr new" in failed session error
+  - UAT passed: 506 tests, 0 failures (3 new tests added)
 - **Constitution Compliance**: No violations.

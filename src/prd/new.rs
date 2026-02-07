@@ -759,6 +759,14 @@ Project governance rules.
             err_msg.contains("interrupted"),
             "Error should mention interruption, got: {err_msg}"
         );
+        assert!(
+            err_msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("mr new"),
+            "Error should suggest `mr new`, got: {err_msg}"
+        );
 
         // Verify user-facing output mentions abort.
         let output_str = String::from_utf8(output).unwrap();
@@ -808,6 +816,14 @@ Project governance rules.
         assert!(
             err_msg.contains("failed"),
             "Error should mention failure, got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("mr new"),
+            "Error should suggest `mr new`, got: {err_msg}"
         );
 
         // Verify no PRD file was created.

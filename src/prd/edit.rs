@@ -311,6 +311,22 @@ A test PRD.
     }
 
     #[test]
+    fn test_find_prd_not_found_includes_suggestion() {
+        let temp = setup_test_repo();
+        let err = find_prd(temp.path(), "PRD-9999").unwrap_err();
+        let msg = err.to_string();
+
+        assert!(
+            msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {msg}"
+        );
+        assert!(
+            msg.contains("mr status"),
+            "Error should suggest `mr status`, got: {msg}"
+        );
+    }
+
+    #[test]
     fn test_parse_questions() {
         let output = r"I need some clarification:
 
