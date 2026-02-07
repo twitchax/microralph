@@ -36,6 +36,7 @@ pub fn info(msg: &str) -> String {
 }
 
 /// Returns a string styled for question prompts (blue + bold + ❓ emoji).
+#[allow(dead_code)]
 pub fn question(msg: &str) -> String {
     format!(
         "❓ {}",

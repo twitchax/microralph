@@ -1,26 +1,25 @@
-//! PRD editing via runner-assisted modifications.
+//! PRD editing via interactive runner session.
 //!
-//! This module implements `mr edit` which allows quick modifications to
-//! existing PRDs via a runner Q/A session.
+//! This module implements `mr edit` which drops the user into an interactive
+//! chat session with the underlying agent. The agent reads the existing PRD,
+//! discusses changes with the user, and writes the updated PRD directly to disk.
+//!
+//! On Ctrl+C or error during the interactive phase, the process aborts
+//! without corrupting the PRD file.
 
-use std::io::{BufRead, Write};
+use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use super::{Prd, generate_index_from_root, parse_prd, scan_prds};
+use super::{Prd, PrdSummary, generate_index_from_root, parse_prd, scan_prd_summaries, scan_prds};
+use crate::config::load_constitution;
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
 };
 use crate::runner::Runner;
-use crate::util::qa_workflow::{self, QaPair};
-
-/// Maximum number of Q/A rounds before forcing application.
-const MAX_QA_ROUNDS: usize = 3;
-
-/// The ready signal from the runner.
-const READY_SIGNAL: &str = "READY_TO_APPLY";
 
 /// Result of the PRD edit process.
 #[derive(Debug)]
@@ -30,12 +29,6 @@ pub struct PrdEditResult {
 
     /// The path where the PRD was written.
     pub path: PathBuf,
-
-    /// Number of Q/A rounds.
-    pub rounds: usize,
-
-    /// The Q/A history (if any follow-up questions were asked).
-    pub qa_history: Vec<QaPair>,
 }
 
 /// Configuration for the PRD edit command.
@@ -51,24 +44,16 @@ pub struct PrdEditConfig<'a> {
     pub request: &'a str,
 }
 
-/// Runs the PRD edit flow.
+/// Runs the PRD edit flow using an interactive session.
 ///
 /// This function:
 /// 1. Loads the existing PRD
-/// 2. Invokes the runner with the edit prompt
-/// 3. Optionally collects user answers for follow-up questions
-/// 4. Applies changes when runner signals ready
-/// 5. Writes the updated PRD to disk
-/// 6. Updates the index
-pub fn edit_prd<R, I, O>(
-    config: &PrdEditConfig,
-    runner: &R,
-    input: &mut I,
-    output: &mut O,
-) -> Result<PrdEditResult>
+/// 2. Launches an interactive session with the runner
+/// 3. The agent chats with the user and writes the updated PRD to disk
+/// 4. Validates the modified PRD and regenerates the index
+pub fn edit_prd<R, O>(config: &PrdEditConfig, runner: &R, output: &mut O) -> Result<PrdEditResult>
 where
     R: Runner + ?Sized,
-    I: BufRead,
     O: Write,
 {
     writeln!(output, "Editing PRD: {}", config.prd_id)?;
@@ -79,136 +64,76 @@ where
 
     tracing::debug!(prd_id = %config.prd_id, prd_path = %prd_path.display(), runner = %runner.name(), "Starting PRD edit");
 
-    // Initial edit request.
-    writeln!(output, "Analyzing edit request...")?;
+    // Scan existing PRDs for context.
+    let existing_prds = scan_prd_summaries(config.root)?;
 
-    let mut qa_history: Vec<QaPair> = Vec::new();
-    let mut rounds = 0;
+    // Build the interactive prompt with all context.
+    let interactive_prompt = build_edit_prompt(config, &prd_content, &prd_path, &existing_prds);
 
-    loop {
-        rounds += 1;
-
-        if rounds > MAX_QA_ROUNDS {
-            writeln!(output)?;
-            writeln!(
-                output,
-                "Maximum Q/A rounds reached, proceeding with current context..."
-            )?;
-            break;
-        }
-
-        let prompt = build_edit_prompt(config, &prd_content, &qa_history);
-
-        tracing::info!(
-            runner = %runner.name(),
-            prd_id = %config.prd_id,
-            round = rounds,
-            "Invoking runner for PRD edit"
-        );
-
-        let runner_output = runner
-            .execute(&prompt, config.root)
-            .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
-
-        if !runner_output.success {
-            bail!("Runner failed during edit: {}", runner_output.text);
-        }
-
-        // Check if ready to apply.
-        if runner_output.text.contains(READY_SIGNAL) {
-            tracing::debug!("Runner signaled ready to apply");
-            let new_content = qa_workflow::extract_prd_content(&runner_output.text)?;
-            let new_prd = write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
-
-            return Ok(PrdEditResult {
-                prd: new_prd,
-                path: prd_path,
-                rounds,
-                qa_history,
-            });
-        }
-
-        // Parse follow-up questions.
-        let questions = qa_workflow::parse_questions(&runner_output.text);
-
-        if questions.is_empty() {
-            // No questions and no ready signal - try to extract content anyway
-            if let Ok(new_content) = qa_workflow::extract_prd_content(&runner_output.text) {
-                let new_prd =
-                    write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
-
-                return Ok(PrdEditResult {
-                    prd: new_prd,
-                    path: prd_path,
-                    rounds,
-                    qa_history,
-                });
-            }
-
-            bail!("Runner did not provide updated PRD content or follow-up questions");
-        }
-
-        writeln!(output)?;
-        writeln!(output, "The runner needs some clarification:")?;
-        writeln!(output)?;
-
-        // Collect answers (single-line for prd_edit).
-        let additional_qa = qa_workflow::collect_singleline_answers(&questions, input, output)?;
-        qa_history.extend(additional_qa);
-    }
-
-    // If we hit max rounds without ready signal, try to get final result
-    let final_prompt = build_edit_prompt(config, &prd_content, &qa_history);
+    writeln!(
+        output,
+        "Launching interactive session with {}...",
+        runner.name()
+    )?;
+    writeln!(
+        output,
+        "💡 Discuss your PRD changes with the agent. It will write the file when ready."
+    )?;
+    writeln!(output)?;
 
     tracing::info!(
         runner = %runner.name(),
         prd_id = %config.prd_id,
-        "Invoking runner for final PRD edit attempt"
+        prd_path = %prd_path.display(),
+        "Launching interactive PRD edit session"
     );
 
-    let final_output = runner
-        .execute(&final_prompt, config.root)
-        .map_err(|e| anyhow::anyhow!("Runner failed: {e}"))?;
+    // Launch interactive session — agent discusses changes and writes the PRD file.
+    match runner.execute_interactive(&interactive_prompt, config.root) {
+        Ok(()) => {}
+        Err(e) => {
+            if e.is_interrupted() {
+                writeln!(output)?;
+                writeln!(
+                    output,
+                    "⚠️  Interactive session interrupted. PRD edit aborted — no changes were made."
+                )?;
+                tracing::info!("Interactive session interrupted by signal, aborting PRD edit");
+                bail!(
+                    "Interactive session interrupted (Ctrl+C or signal): {e}\n  Suggestion: Re-run `mr edit` to start a fresh PRD edit session."
+                );
+            }
 
-    if !final_output.success {
-        bail!(
-            "Runner failed during final edit attempt: {}",
-            final_output.text
-        );
+            tracing::error!(error = %e, "Interactive session failed");
+            bail!(
+                "Interactive session failed: {e}\n  Suggestion: Re-run `mr edit` to retry. If the problem persists, check that your runner (e.g., `copilot` or `claude` CLI) is installed and working."
+            );
+        }
     }
 
-    let new_content = qa_workflow::extract_prd_content(&final_output.text)?;
-    let new_prd = write_prd_and_update_index(config.root, &prd_path, &new_content, output)?;
+    writeln!(output)?;
+    writeln!(output, "Interactive session complete.")?;
 
-    Ok(PrdEditResult {
-        prd: new_prd,
-        path: prd_path,
-        rounds,
-        qa_history,
-    })
-}
+    // Validation: re-read the PRD file to validate the agent's changes.
+    let updated_content = std::fs::read_to_string(&prd_path)
+        .with_context(|| format!("Failed to read PRD file after edit: {}", prd_path.display()))?;
 
-/// Writes the updated PRD content and regenerates the index.
-fn write_prd_and_update_index<O: Write>(
-    root: &Path,
-    prd_path: &Path,
-    new_content: &str,
-    output: &mut O,
-) -> Result<Prd> {
-    let new_prd = parse_prd(new_content).context("Failed to parse updated PRD")?;
-
-    std::fs::write(prd_path, new_content).context("Failed to write updated PRD")?;
+    let prd = parse_prd(&updated_content).context("Failed to parse updated PRD")?;
 
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
-    crate::commands::validate::validate_prd_frontmatter(prd_path);
+    crate::commands::validate::validate_prd_frontmatter(&prd_path);
 
     writeln!(output)?;
     writeln!(output, "Updated PRD: {}", prd_path.display())?;
 
-    generate_index_from_root(root)?;
+    // Regenerate the index.
+    generate_index_from_root(config.root)?;
     writeln!(output, "Updated PRD index")?;
 
-    Ok(new_prd)
+    Ok(PrdEditResult {
+        prd,
+        path: prd_path,
+    })
 }
 
 /// Finds a PRD by ID and returns its path and content.
@@ -227,23 +152,41 @@ fn find_prd(root: &Path, prd_id: &str) -> Result<(PathBuf, String)> {
     bail!("PRD not found: {prd_id}.\n  Suggestion: Run `mr status` to list available PRDs.")
 }
 
-/// Builds the edit prompt with context.
-fn build_edit_prompt(config: &PrdEditConfig, prd_content: &str, qa_history: &[QaPair]) -> String {
-    let template = load_prompt_with_fallback(config.root, PromptKind::PrdEdit);
+/// Builds the interactive edit prompt with context.
+fn build_edit_prompt(
+    config: &PrdEditConfig,
+    prd_content: &str,
+    prd_path: &Path,
+    existing_prds: &[PrdSummary],
+) -> String {
+    let template = load_prompt_with_fallback(config.root, PromptKind::PrdEditInteractive);
 
     let mut ctx = PlaceholderContext::new();
 
-    let prds_dir = config.root.join(".mr").join("prds");
-    let prd_path = prds_dir.join(format!("{}.md", config.prd_id));
     ctx.insert("prd_path", prd_path.display().to_string());
-    ctx.insert("user_request", config.request);
     ctx.insert("prd_content", prd_content);
+    ctx.insert("context", config.request);
 
-    // Build Q/A history.
-    ctx.insert(
-        "qa_history",
-        PlaceholderValue::List(qa_workflow::to_placeholder_list(qa_history)),
-    );
+    // Load constitution if available.
+    if let Ok(Some(constitution)) = load_constitution(config.root) {
+        ctx.insert("constitution", constitution);
+    }
+
+    // Build existing PRDs list.
+    let prd_list: Vec<HashMap<String, String>> = existing_prds
+        .iter()
+        .map(|p| {
+            [
+                ("id".to_string(), p.id.clone()),
+                ("title".to_string(), p.title.clone()),
+                ("status".to_string(), p.status.to_string()),
+            ]
+            .into_iter()
+            .collect()
+        })
+        .collect();
+
+    ctx.insert("existing_prds", PlaceholderValue::List(prd_list));
 
     expand_placeholders(&template, &ctx)
 }
@@ -252,8 +195,7 @@ fn build_edit_prompt(config: &PrdEditConfig, prd_content: &str, qa_history: &[Qa
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::runner::{MockRunner, RunnerOutput};
-    use crate::util::qa_workflow;
+    use crate::runner::MockRunner;
     use tempfile::TempDir;
 
     fn setup_test_repo() -> TempDir {
@@ -327,81 +269,12 @@ A test PRD.
     }
 
     #[test]
-    fn test_parse_questions() {
-        let output = r"I need some clarification:
-
-1. What should the new task priority be?
-2. Should this replace the existing task?
-";
-
-        let questions = qa_workflow::parse_questions(output);
-        assert_eq!(questions.len(), 2);
-        assert!(questions[0].contains("priority"));
-        assert!(questions[1].contains("replace"));
-    }
-
-    #[test]
-    fn test_parse_questions_with_ready_signal() {
-        let output = r"READY_TO_APPLY
-
-```markdown
----
-id: PRD-0001
-...
-```
-";
-
-        let questions = qa_workflow::parse_questions(output);
-        assert!(questions.is_empty());
-    }
-
-    #[test]
-    fn test_extract_prd_content_markdown_block() {
-        let output = r"READY_TO_APPLY
-
-```markdown
----
-id: PRD-0001
-title: Updated PRD
-status: active
-tasks: []
----
-
-# Summary
-
-Updated content.
-```
-";
-
-        let content = qa_workflow::extract_prd_content(output).unwrap();
-        assert!(content.starts_with("---"));
-        assert!(content.contains("PRD-0001"));
-    }
-
-    #[test]
-    fn test_extract_prd_content_plain() {
-        let output = r"READY_TO_APPLY
-
----
-id: PRD-0001
-title: Test
-status: active
-tasks: []
----
-
-# Summary
-";
-
-        let content = qa_workflow::extract_prd_content(output).unwrap();
-        assert!(content.starts_with("---"));
-    }
-
-    #[test]
-    fn test_edit_prd_basic_flow() {
+    fn test_edit_prd_interactive_flow() {
         let temp = setup_test_repo();
-        create_test_prd(&temp, "PRD-0001", "Original Title");
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
 
-        let updated_prd = r#"---
+        // Simulate the agent writing the updated PRD during the interactive session.
+        let updated_content = r#"---
 id: PRD-0001
 title: "Updated Title"
 status: active
@@ -427,9 +300,11 @@ An updated test PRD.
 (Entries appended by `mr run` will go below this line.)
 "#;
 
-        let runner = MockRunner::new(vec![RunnerOutput::success(format!(
-            "READY_TO_APPLY\n\n```markdown\n{updated_prd}\n```"
-        ))]);
+        // The mock runner's interactive handler writes the updated PRD to disk,
+        // simulating what the real agent does during the interactive session.
+        std::fs::write(&prd_path, updated_content).unwrap();
+
+        let runner = MockRunner::empty();
 
         let config = PrdEditConfig {
             root: temp.path(),
@@ -437,84 +312,174 @@ An updated test PRD.
             request: "Add a new task T-002 for testing",
         };
 
-        let input = "";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = edit_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = edit_prd(&config, &runner, &mut output).unwrap();
 
         assert_eq!(result.prd.id(), "PRD-0001");
         assert_eq!(result.prd.title(), "Updated Title");
-        assert_eq!(result.rounds, 1);
-        assert!(result.qa_history.is_empty());
+
+        // Verify interactive session was called.
+        assert_eq!(runner.recorded_interactive_prompts().len(), 1);
+
+        // Verify no non-interactive execute was called.
+        assert_eq!(runner.recorded_prompts().len(), 0);
     }
 
     #[test]
-    fn test_edit_prd_with_followup() {
+    fn test_edit_prd_aborts_on_interrupted_signal() {
         let temp = setup_test_repo();
-        create_test_prd(&temp, "PRD-0001", "Original Title");
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
 
-        let updated_prd = r#"---
-id: PRD-0001
-title: "Original Title"
-status: active
+        // Save original content to verify it's unchanged after abort.
+        let original_content = std::fs::read_to_string(&prd_path).unwrap();
 
-tasks:
-  - id: T-001
-    title: Initial task
-    priority: 1
-    status: todo
-  - id: T-002
-    title: High priority task
-    priority: 1
-    status: todo
-
----
-
-# Summary
-
-A test PRD with a new high priority task.
-
-# History
-
-(Entries appended by `mr run` will go below this line.)
-"#;
-
-        let runner = MockRunner::new(vec![
-            RunnerOutput::success("1. What priority should the new task have?"),
-            RunnerOutput::success(format!("READY_TO_APPLY\n\n```markdown\n{updated_prd}\n```")),
-        ]);
+        let runner = MockRunner::empty();
+        runner.set_interactive_error(crate::runner::RunnerError::Interrupted(
+            "Interactive session terminated by signal 2 (SIGINT/Ctrl+C)".to_string(),
+        ));
 
         let config = PrdEditConfig {
             root: temp.path(),
             prd_id: "PRD-0001",
-            request: "Add a new task T-002",
+            request: "Add a new task",
         };
 
-        let input = "High priority\n";
-        let mut input = input.as_bytes();
         let mut output = Vec::new();
 
-        let result = edit_prd(&config, &runner, &mut input, &mut output).unwrap();
+        let result = edit_prd(&config, &runner, &mut output);
 
-        assert_eq!(result.rounds, 2);
-        assert_eq!(result.qa_history.len(), 1);
-        assert!(result.qa_history[0].answer.contains("High priority"));
+        assert!(result.is_err(), "PRD edit should fail on interrupt");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("interrupted"),
+            "Error should mention interruption, got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("mr edit"),
+            "Error should suggest `mr edit`, got: {err_msg}"
+        );
+
+        // Verify user-facing output mentions abort.
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(
+            output_str.contains("aborted"),
+            "Output should mention abort, got: {output_str}"
+        );
+
+        // Verify PRD file is unchanged.
+        let content_after = std::fs::read_to_string(&prd_path).unwrap();
+        assert_eq!(
+            original_content, content_after,
+            "PRD should not be modified on interrupt"
+        );
     }
 
     #[test]
-    fn test_collect_answers() {
-        let questions = vec!["Question 1?".to_string(), "Question 2?".to_string()];
+    fn test_edit_prd_aborts_on_process_failure() {
+        let temp = setup_test_repo();
+        create_test_prd(&temp, "PRD-0001", "Original Title");
 
-        let input = "Answer 1\nAnswer 2\n";
-        let mut input = input.as_bytes();
+        let runner = MockRunner::empty();
+        runner.set_interactive_error(crate::runner::RunnerError::ProcessFailed(
+            "Interactive session exited with status: exit status: 1".to_string(),
+        ));
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            request: "Add a new task",
+        };
+
         let mut output = Vec::new();
 
-        let pairs =
-            qa_workflow::collect_singleline_answers(&questions, &mut input, &mut output).unwrap();
+        let result = edit_prd(&config, &runner, &mut output);
 
-        assert_eq!(pairs.len(), 2);
-        assert_eq!(pairs[0].question, "Question 1?");
-        assert_eq!(pairs[0].answer, "Answer 1");
+        assert!(result.is_err(), "PRD edit should fail on process error");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("failed"),
+            "Error should mention failure, got: {err_msg}"
+        );
+        assert!(
+            err_msg.contains("Suggestion:"),
+            "Error should contain 'Suggestion:', got: {err_msg}"
+        );
+    }
+
+    /// Verify old Q/A loop code is fully removed from `prd::edit`.
+    #[test]
+    fn test_old_qa_loop_code_removed() {
+        let source = include_str!("edit.rs");
+
+        // Split source at `#[cfg(test)]` to only inspect the non-test code.
+        let production_code = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source should contain #[cfg(test)]");
+
+        for pattern in [
+            "parse_questions",
+            "collect_singleline_answers",
+            "QaPair",
+            "MAX_QA_ROUNDS",
+            "qa_history",
+            "READY_TO_APPLY",
+            "READY_SIGNAL",
+            "extract_prd_content",
+        ] {
+            assert!(
+                !production_code.contains(pattern),
+                "Old Q/A pattern `{pattern}` should not appear in production code of prd::edit"
+            );
+        }
+    }
+
+    #[test]
+    fn test_edit_prd_context_in_interactive_prompt() {
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_edit_interactive.md"),
+            "Edit PRD at {{prd_path}}{{#if context}} with context: {{context}}{{/if}}",
+        )
+        .unwrap();
+
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Test PRD");
+
+        // Simulate agent updating the PRD during interactive session.
+        let updated = "---\nid: PRD-0001\ntitle: \"Test PRD\"\nstatus: active\ntasks:\n  - id: T-001\n    title: Initial task\n    priority: 1\n    status: todo\n---\n# Summary\nUpdated.\n";
+        std::fs::write(&prd_path, updated).unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            request: "add a logging task",
+        };
+
+        let mut output = Vec::new();
+
+        edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify the interactive prompt includes user request as context.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("with context:"),
+            "Interactive prompt should contain context marker"
+        );
+        assert!(
+            interactive_prompts[0].contains("add a logging task"),
+            "Interactive prompt should contain actual user request"
+        );
     }
 }

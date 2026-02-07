@@ -964,6 +964,9 @@ fn cmd_prd_edit(
 
     init::ensure_initialized(&cwd)?;
 
+    // Show dev container warning for safety.
+    devcontainer::show_dev_container_warning();
+
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
     let model = cfg.effective_model(cli_model);
@@ -977,12 +980,10 @@ fn cmd_prd_edit(
         request,
     };
 
-    let stdin = std::io::stdin();
-    let mut stdin_lock = stdin.lock();
     let stdout = std::io::stdout();
     let mut stdout_lock = stdout.lock();
 
-    let result = prd::edit::edit_prd(&config, runner.as_ref(), &mut stdin_lock, &mut stdout_lock)?;
+    let result = prd::edit::edit_prd(&config, runner.as_ref(), &mut stdout_lock)?;
 
     println!();
     println!("{}", colors::success("PRD edited successfully!"));
@@ -995,17 +996,6 @@ fn cmd_prd_edit(
         "  {}",
         colors::dim(&format!("Path: {}", result.path.display()))
     );
-    println!(
-        "  {}",
-        colors::dim(&format!("Q/A Rounds: {}", result.rounds))
-    );
-
-    if !result.qa_history.is_empty() {
-        println!(
-            "  {}",
-            colors::dim(&format!("Questions answered: {}", result.qa_history.len()))
-        );
-    }
 
     Ok(())
 }

@@ -46,6 +46,7 @@ pub fn to_placeholder_list(qa_history: &[QaPair]) -> Vec<HashMap<String, String>
 /// - Usage statistics stripping
 /// - Multiple code fence formats
 /// - Nested code blocks
+#[allow(dead_code)]
 pub fn extract_prd_content(output: &str) -> Result<String> {
     // First, strip any ANSI escape sequences that might be in the output.
     let cleaned = strip_ansi_escapes(output);
@@ -143,6 +144,7 @@ pub fn extract_prd_content(output: &str) -> Result<String> {
 /// Strips ANSI escape sequences from a string.
 ///
 /// Removes control sequences like color codes that might appear in runner output.
+#[allow(dead_code)]
 pub fn strip_ansi_escapes(s: &str) -> String {
     // Simple regex-like removal of ANSI escape sequences.
     // Matches: ESC [ ... (letter) sequences.
@@ -244,6 +246,7 @@ pub fn parse_questions(output: &str) -> Vec<String> {
 /// Collects single-line answers from the user for each question.
 ///
 /// Simpler version for commands that don't need multi-line input.
+#[allow(dead_code)]
 pub fn collect_singleline_answers<I, O>(
     questions: &[String],
     input: &mut I,

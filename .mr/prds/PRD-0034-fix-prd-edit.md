@@ -45,7 +45,7 @@ tasks:
   - id: T-002
     title: "Rewrite edit_prd() to use execute_interactive() instead of the Q/A loop"
     priority: 1
-    status: todo
+    status: done
     notes: "Mirror the pattern from create_prd() in new.rs. Remove the multi-round loop, READY_TO_APPLY signal parsing, qa_history, and collect_singleline_answers. Add interrupt/signal handling like new.rs."
   - id: T-003
     title: "Update PrdEditConfig to replace required request with optional context"
@@ -191,5 +191,22 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - UAT passed: 506 tests, 506 passed, 0 skipped
 
 - **Constitution Compliance**: No violations. Prompt defined in `src/commands/init.rs` as embedded constant per rule 7. All changes minimal per rule 3.
+
+---
+
+## 2026-02-07 — T-002 Completed
+- **Task**: Rewrite edit_prd() to use execute_interactive() instead of the Q/A loop
+- **Status**: ✅ Done
+- **Changes**:
+  - Rewrote `src/prd/edit.rs`: removed Q/A loop (`MAX_QA_ROUNDS`, `READY_SIGNAL`, `qa_history`, `BufRead` generic), replaced with single `runner.execute_interactive()` call mirroring `create_prd()` pattern from `new.rs`
+  - Updated `PrdEditResult`: removed `rounds` and `qa_history` fields (no longer applicable with interactive mode)
+  - Updated `build_edit_prompt()`: now uses `PromptKind::PrdEditInteractive` prompt, injects `prd_path`, `prd_content`, `context`, `constitution`, and `existing_prds` placeholders
+  - Added interrupt/signal handling: Ctrl+C aborts cleanly without corrupting the PRD file, matching `new.rs` error handling pattern
+  - Updated `cmd_prd_edit()` in `src/main.rs`: removed stdin lock (no longer needed), removed Q/A stats output, added dev container warning
+  - Added `#[allow(dead_code)]` to now-unused functions in `qa_workflow.rs` (`extract_prd_content`, `strip_ansi_escapes`, `collect_singleline_answers`), `colors.rs` (`question`), and `copilot.rs` (`strip_usage_stats`) — these are kept for potential future use per PRD non-goals
+  - Updated tests: replaced old Q/A-based tests with interactive-mode tests covering success flow, interrupt handling, process failure, context injection, and old Q/A code removal verification
+  - UAT passed: 504 tests, 504 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. All changes minimal per rule 3. Consistent with `new.rs` pattern per rule 4.
 
 ---

@@ -289,6 +289,7 @@ impl CopilotRunner {
     ///
     /// This function removes that section while preserving the actual response.
     /// It's useful when runner output will be written to files where stats shouldn't appear.
+    #[allow(dead_code)]
     pub fn strip_usage_stats(text: &str) -> String {
         // Find the start of the stats section
         // It typically starts with "Total usage est:" or "API time spent:"
