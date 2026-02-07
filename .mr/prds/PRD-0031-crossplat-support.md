@@ -1,64 +1,59 @@
 ---
 id: PRD-0031
-title: "Cross-Platform Support: Fix Platform-Specific CLI Checks"
-status: active
+title: 'Cross-Platform Support: Fix Platform-Specific CLI Checks'
+status: done
 owner: twitchax
 created: 2026-02-05
 updated: 2026-02-05
-
 principles:
-- "Use cross-platform crates (e.g., `which`) over platform-specific shell commands"
-- "Conditional compilation (`#[cfg]`) is acceptable but should be a last resort when a cross-platform crate exists"
-- "Minimal changes: only fix platform-specific patterns, do not refactor unrelated code"
-- "Assume `git` and other tools are on PATH; only fix the lookup mechanism"
-
+- Use cross-platform crates (e.g., `which`) over platform-specific shell commands
+- Conditional compilation (`#[cfg]`) is acceptable but should be a last resort when a cross-platform crate exists
+- 'Minimal changes: only fix platform-specific patterns, do not refactor unrelated code'
+- Assume `git` and other tools are on PATH; only fix the lookup mechanism
 references:
-- name: "which crate on crates.io"
+- name: which crate on crates.io
   url: https://crates.io/crates/which
-- name: "Rust cfg conditional compilation"
+- name: Rust cfg conditional compilation
   url: https://doc.rust-lang.org/reference/conditional-compilation.html
-
 acceptance_tests:
 - id: uat-001
-  name: "Existing CI pipeline passes after changes"
+  name: Existing CI pipeline passes after changes
   command: cargo make ci
   uat_status: verified
 - id: uat-002
-  name: "check_cli_available works without shelling out to `which`"
+  name: check_cli_available works without shelling out to `which`
   command: cargo make test
   uat_status: verified
 - id: uat-003
-  name: "Binary compiles for Windows target"
+  name: Binary compiles for Windows target
   command: cargo check --target x86_64-pc-windows-msvc
   uat_status: verified
-
 tasks:
 - id: T-001
-  title: "Add `which` crate as a dependency in Cargo.toml"
+  title: Add `which` crate as a dependency in Cargo.toml
   priority: 1
   status: done
-  notes: "Add the `which` crate to [dependencies] in Cargo.toml."
+  notes: Add the `which` crate to [dependencies] in Cargo.toml.
 - id: T-002
-  title: "Replace `Command::new(\"which\")` with `which::which()` in cli_runner.rs"
+  title: Replace `Command::new("which")` with `which::which()` in cli_runner.rs
   priority: 1
   status: done
-  notes: "Rewrite `check_cli_available()` to use `which::which(binary_path).is_ok()` instead of shelling out. This handles Windows (`where.exe`), macOS, and Linux transparently."
+  notes: Rewrite `check_cli_available()` to use `which::which(binary_path).is_ok()` instead of shelling out. This handles Windows (`where.exe`), macOS, and Linux transparently.
 - id: T-003
-  title: "Update unit tests for check_cli_available"
+  title: Update unit tests for check_cli_available
   priority: 2
   status: done
-  notes: "Ensure existing tests in cli_runner.rs still pass with the new implementation. No behavioral change expected."
+  notes: Ensure existing tests in cli_runner.rs still pass with the new implementation. No behavioral change expected.
 - id: T-004
-  title: "Fix `command -v` in Makefile.toml devcontainer task"
+  title: Fix `command -v` in Makefile.toml devcontainer task
   priority: 3
   status: done
-  notes: "Replace `command -v devcontainer` with a cross-platform check. Options include using `which` from the shell (available on most systems with Git Bash), or using cargo-make's built-in condition system. This is lower priority and not required for release."
+  notes: Replace `command -v devcontainer` with a cross-platform check. Options include using `which` from the shell (available on most systems with Git Bash), or using cargo-make's built-in condition system. This is lower priority and not required for release.
 - id: T-005
-  title: "Audit for other platform-specific shell assumptions"
+  title: Audit for other platform-specific shell assumptions
   priority: 3
   status: done
-  notes: "Scan for any other `Command::new` calls or shell-outs that assume Unix-only tooling. Document findings but only fix if trivially resolvable."
-
+  notes: Scan for any other `Command::new` calls or shell-outs that assume Unix-only tooling. Document findings but only fix if trivially resolvable.
 ---
 
 # Summary
@@ -253,3 +248,15 @@ Replace the `command -v devcontainer` check with `which devcontainer` or use car
   - Ran `cargo check --target x86_64-pc-windows-msvc` — compiled successfully with 0 errors
   - All 105 crates (including `microralph v0.5.0`) type-checked cleanly for the Windows MSVC target
   - Confirms cross-platform compatibility achieved by the `which` crate migration
+
+---
+
+## 2026-02-07 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 5 tasks (T-001 through T-005)
+- **Outcome**: All tasks completed, acceptance tests passed (513/513 tests)
+- **Cleanup**: None required — no temporary files, debug statements, or stale TODOs found
+- **Summary**:
+  - Replaced Unix-specific `Command::new("which")` with the cross-platform `which` Rust crate in `check_cli_available()`
+  - Fixed `command -v` Bash-ism in `Makefile.toml` devcontainer task by migrating to duckscript
+  - Verified Windows cross-compilation via `cargo check --target x86_64-pc-windows-msvc`
