@@ -55,7 +55,7 @@ tasks:
   - id: T-004
     title: "Update Edit CLI variant in main.rs"
     priority: 1
-    status: todo
+    status: done
     notes: "Change request from positional required to --context optional. Remove stream flag from New variant."
   - id: T-005
     title: "Register new prompt in PromptKind enum and init logic"
@@ -225,3 +225,18 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - UAT passed: 504 tests, 504 passed, 0 skipped
 
 - **Constitution Compliance**: No violations. Changes minimal per rule 3. Consistent with `PrdNewConfig` pattern per rule 4.
+
+---
+
+## 2026-02-07 — T-004 Completed
+- **Task**: Update Edit CLI variant in main.rs
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `stream: bool` field from the `New` CLI variant in `src/main.rs` (dead code since interactive mode inherits stdio)
+  - Removed `stream` from the `New` match arm destructuring and `tracing::info!` call
+  - Removed `_stream: bool` parameter from `cmd_prd_new()` function signature
+  - Updated `test_args_parse_prd_new` and `test_args_parse_prd_new_with_model` tests to no longer destructure or assert `stream`
+  - Note: `Edit` variant already had `--context` as optional (completed in T-003)
+  - UAT passed: 504 tests, 504 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. Changes minimal per rule 3. Dead code removed per rule 6 (root cause).
