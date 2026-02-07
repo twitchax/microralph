@@ -755,4 +755,71 @@ An updated test PRD.
 
         assert_eq!(result.prd.id(), "PRD-0001");
     }
+
+    #[test]
+    fn test_edit_prd_validates_and_regenerates_index() {
+        let temp = setup_test_repo();
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
+
+        // Simulate the agent writing the updated PRD during the interactive session.
+        let updated_content = r#"---
+id: PRD-0001
+title: "Validated Updated Title"
+status: active
+
+tasks:
+  - id: T-001
+    title: Initial task
+    priority: 1
+    status: todo
+
+---
+
+# Summary
+
+An updated test PRD after edit.
+
+# History
+
+(Entries appended by `mr run` will go below this line.)
+"#;
+
+        std::fs::write(&prd_path, updated_content).unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: Some("update the title"),
+        };
+
+        let mut output = Vec::new();
+
+        let result = edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify validation passed: returned PRD has correct data.
+        assert_eq!(result.prd.id(), "PRD-0001");
+        assert_eq!(result.prd.title(), "Validated Updated Title");
+
+        // Verify index regeneration: PRDS.md exists and contains the updated title.
+        let index_path = temp.path().join(".mr").join("PRDS.md");
+        assert!(
+            index_path.exists(),
+            "PRDS.md should be regenerated after edit"
+        );
+
+        let index_content = std::fs::read_to_string(&index_path).unwrap();
+        assert!(
+            index_content.contains("Validated Updated Title"),
+            "PRDS.md should contain the updated PRD title, got: {index_content}"
+        );
+
+        // Verify output mentions index update.
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(
+            output_str.contains("Updated PRD index"),
+            "Output should confirm index regeneration, got: {output_str}"
+        );
+    }
 }

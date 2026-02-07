@@ -27,7 +27,7 @@ acceptance_tests:
   - id: uat-004
     name: "prd edit validates the modified PRD and regenerates the index after interactive session"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "stream flag is removed from prd new CLI definition"
     command: cargo make uat
@@ -341,3 +341,13 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
 - **Details**:
   - `src/prd/edit.rs::test_edit_prd_aborts_on_interrupted_signal` — sets up a PRD, configures `MockRunner` with `RunnerError::Interrupted` (simulating SIGINT/Ctrl+C), calls `edit_prd()`, and asserts: (1) the result is an error mentioning "interrupted", (2) user-facing output mentions "aborted", and (3) the PRD file content is identical to the original (no corruption).
   - UAT passed: 512 tests, 512 passed, 0 skipped
+
+---
+
+## 2026-02-07 — uat-004 Verification
+- **UAT**: prd edit validates the modified PRD and regenerates the index after interactive session
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `src/prd/edit.rs::test_edit_prd_validates_and_regenerates_index` — sets up a PRD, simulates agent writing updated content during interactive session, calls `edit_prd()`, and asserts: (1) returned PRD has correct id and updated title (validation passed), (2) `.mr/PRDS.md` exists and contains the updated title (index regenerated), (3) output contains "Updated PRD index" (confirming index regeneration ran).
+  - UAT passed: 513 tests, 513 passed, 0 skipped
