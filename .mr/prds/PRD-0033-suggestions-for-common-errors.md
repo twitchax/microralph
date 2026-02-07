@@ -66,7 +66,7 @@ tasks:
   - id: T-005
     title: "Improve interactive session failure messages"
     priority: 2
-    status: todo
+    status: done
     notes: "In src/prd/new.rs, improve Ctrl+C and runner crash messages with clearer retry guidance"
   - id: T-006
     title: "Improve partial init state detection and messaging"
@@ -185,5 +185,15 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Updated `src/prd/parser.rs` line 100: enhanced `anyhow!` for missing closing `---` delimiter with the same suggestion
   - Updated `src/prd/parser.rs` line 40: enhanced `map_err` for YAML parse failure with the same suggestion
   - Added 3 unit tests (`test_missing_frontmatter_includes_suggestion`, `test_unclosed_frontmatter_includes_suggestion`, `test_invalid_yaml_frontmatter_includes_suggestion`) verifying suggestion text is present
+  - UAT passed: 501 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-07 — T-005 Completed
+- **Task**: Improve interactive session failure messages
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/prd/new.rs` line 121: enhanced interrupted session `bail!` to include `Suggestion: Re-run \`mr new\` to start a fresh PRD creation session.`
+  - Updated `src/prd/new.rs` line 125: enhanced failed session `bail!` to include `Suggestion: Re-run \`mr new\` to retry. If the problem persists, check that your runner (e.g., \`copilot\` or \`claude\` CLI) is installed and working.`
+  - Existing tests (`test_create_prd_aborts_on_interrupted_signal`, `test_create_prd_aborts_on_process_failure`) continue to pass with new messages
   - UAT passed: 501 tests, 0 failures
 - **Constitution Compliance**: No violations.

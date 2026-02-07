@@ -118,11 +118,15 @@ where
                     "⚠️  Interactive session interrupted. PRD creation aborted — no PRD was created."
                 )?;
                 tracing::info!("Interactive session interrupted by signal, aborting PRD creation");
-                bail!("Interactive session interrupted (Ctrl+C or signal): {e}");
+                bail!(
+                    "Interactive session interrupted (Ctrl+C or signal): {e}\n  Suggestion: Re-run `mr new` to start a fresh PRD creation session."
+                );
             }
 
             tracing::error!(error = %e, "Interactive session failed");
-            bail!("Interactive session failed: {e}");
+            bail!(
+                "Interactive session failed: {e}\n  Suggestion: Re-run `mr new` to retry. If the problem persists, check that your runner (e.g., `copilot` or `claude` CLI) is installed and working."
+            );
         }
     }
 
