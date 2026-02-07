@@ -151,8 +151,15 @@ jobs:
         permissions:
             packages: write
         steps:
-            - uses: cargo-bins/cargo-binstall@main
-            - run: cargo binstall wkg --no-confirm
+            - uses: dtolnay/rust-toolchain@nightly
+              with:
+                  toolchain: ${{ env.RUST_TOOLCHAIN }}
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-all-crates: "true"
+            # NOTE: wkg has no binstall candidate, so we use cargo install + rust-cache
+            #       instead of cargo-binstall (which falls back to a full compile with no caching).
+            - run: cargo install wkg
             - uses: actions/download-artifact@v4
               with:
                   name: mr_wasm32-wasip2
