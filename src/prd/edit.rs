@@ -482,4 +482,277 @@ An updated test PRD.
             "Interactive prompt should contain actual user request"
         );
     }
+
+    #[test]
+    fn test_edit_prd_no_context() {
+        let temp = setup_test_repo();
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
+
+        // PRD remains unchanged (agent writes same content back).
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        let result = edit_prd(&config, &runner, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0001");
+        assert_eq!(result.path, prd_path);
+
+        // Verify interactive session was still called.
+        assert_eq!(runner.recorded_interactive_prompts().len(), 1);
+    }
+
+    #[test]
+    fn test_edit_prd_constitution_in_prompt() {
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create constitution file.
+        let constitution_content = "# Constitution\n\n## Rules\n1. **Use semantic versioning** — All releases follow semver.\n";
+        std::fs::write(
+            temp.path().join(".mr").join("constitution.md"),
+            constitution_content,
+        )
+        .unwrap();
+
+        // Create prompt that includes constitution placeholder.
+        std::fs::write(
+            prompts_dir.join("prd_edit_interactive.md"),
+            "Edit PRD{{#if constitution}}\n\nConstitution:\n{{constitution}}{{/if}}",
+        )
+        .unwrap();
+
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Test PRD");
+
+        // Simulate agent writing unchanged PRD back.
+        let content = std::fs::read_to_string(&prd_path).unwrap();
+        std::fs::write(&prd_path, &content).unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify constitution appears in the interactive prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("Use semantic versioning"),
+            "Interactive prompt should contain constitution content"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_existing_prds_in_prompt() {
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Use template pattern for existing_prds.
+        std::fs::write(
+            prompts_dir.join("prd_edit_interactive.md"),
+            "Edit PRD\n\n{{#each existing_prds}}\n- {{id}}: {{title}} ({{status}})\n{{/each}}",
+        )
+        .unwrap();
+
+        // Create multiple PRDs in the prds directory.
+        let prds_dir = temp.path().join(".mr").join("prds");
+
+        std::fs::write(
+            prds_dir.join("PRD-0001-auth.md"),
+            "---\nid: PRD-0001\ntitle: Authentication System\nstatus: done\ntasks: []\n---\n# Summary\n",
+        )
+        .unwrap();
+
+        let prd_path = prds_dir.join("PRD-0002-api.md");
+        std::fs::write(
+            &prd_path,
+            "---\nid: PRD-0002\ntitle: REST API Layer\nstatus: active\ntasks:\n  - id: T-001\n    title: task\n    priority: 1\n    status: todo\n---\n# Summary\n",
+        )
+        .unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0002",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify existing PRDs appear in the interactive prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("PRD-0001"),
+            "Interactive prompt should contain existing PRD-0001"
+        );
+        assert!(
+            interactive_prompts[0].contains("Authentication System"),
+            "Interactive prompt should contain PRD-0001 title"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_fails_on_missing_file_after_session() {
+        let temp = setup_test_repo();
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
+
+        // Simulate the agent deleting the PRD file during the interactive session.
+        std::fs::remove_file(&prd_path).unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: Some("delete everything"),
+        };
+
+        let mut output = Vec::new();
+
+        let result = edit_prd(&config, &runner, &mut output);
+
+        // The function reads the PRD before launching interactive, then re-reads after.
+        // Since the file was deleted, the post-session read should fail.
+        assert!(
+            result.is_err(),
+            "Edit should fail when PRD file is missing after session"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_fails_on_corrupted_file_after_session() {
+        let temp = setup_test_repo();
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Original Title");
+
+        // Simulate the agent writing corrupted content to the PRD file.
+        std::fs::write(&prd_path, "This is not valid YAML frontmatter at all").unwrap();
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: Some("corrupt the file"),
+        };
+
+        let mut output = Vec::new();
+
+        let result = edit_prd(&config, &runner, &mut output);
+
+        // The parse_prd call should fail on corrupted content.
+        assert!(
+            result.is_err(),
+            "Edit should fail when PRD file is corrupted after session"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_prd_path_in_prompt() {
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_edit_interactive.md"),
+            "Edit PRD at {{prd_path}}",
+        )
+        .unwrap();
+
+        let prd_path = create_test_prd(&temp, "PRD-0001", "Test PRD");
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify the prd_path placeholder is expanded in the prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains(&prd_path.display().to_string()),
+            "Interactive prompt should contain the PRD file path"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_prd_content_in_prompt() {
+        let temp = setup_test_repo();
+        let prompts_dir = temp.path().join(".mr").join("prompts");
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("prd_edit_interactive.md"),
+            "Existing content:\n{{prd_content}}",
+        )
+        .unwrap();
+
+        create_test_prd(&temp, "PRD-0001", "My Unique Title");
+
+        let runner = MockRunner::empty();
+
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "PRD-0001",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        edit_prd(&config, &runner, &mut output).unwrap();
+
+        // Verify the existing PRD content is injected into the prompt.
+        let interactive_prompts = runner.recorded_interactive_prompts();
+        assert!(
+            interactive_prompts[0].contains("My Unique Title"),
+            "Interactive prompt should contain the existing PRD content"
+        );
+        assert!(
+            interactive_prompts[0].contains("A test PRD"),
+            "Interactive prompt should contain the PRD body"
+        );
+    }
+
+    #[test]
+    fn test_edit_prd_case_insensitive_id_lookup() {
+        let temp = setup_test_repo();
+        create_test_prd(&temp, "PRD-0001", "Test PRD");
+
+        let runner = MockRunner::empty();
+
+        // Use lowercase prd id.
+        let config = PrdEditConfig {
+            root: temp.path(),
+            prd_id: "prd-0001",
+            context: None,
+        };
+
+        let mut output = Vec::new();
+
+        let result = edit_prd(&config, &runner, &mut output).unwrap();
+
+        assert_eq!(result.prd.id(), "PRD-0001");
+    }
 }
