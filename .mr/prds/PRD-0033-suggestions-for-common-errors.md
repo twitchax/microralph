@@ -17,7 +17,7 @@ acceptance_tests:
   - id: uat-001
     name: "Constitution missing produces suggestion to run mr restore or mr init"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: "Malformed config.toml produces suggestion to run mr restore"
     command: cargo make uat
@@ -219,3 +219,12 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Enhanced `test_create_prd_aborts_on_process_failure` in `src/prd/new.rs`: added assertions for "Suggestion:" and "mr new" in failed session error
   - UAT passed: 506 tests, 0 failures (3 new tests added)
 - **Constitution Compliance**: No violations.
+
+## 2026-02-07 — uat-001 Verification
+- **UAT**: Constitution missing produces suggestion to run mr restore or mr init
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `config::constitution::tests::test_constitution_missing_includes_suggestion` in `src/config/constitution.rs`
+  - Verifies that when constitution file is missing, error contains "Suggestion:", "mr restore", and "mr init"
+  - All 506 tests passed
