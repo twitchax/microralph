@@ -25,7 +25,7 @@ acceptance_tests:
   - id: uat-003
     name: "PRD not found produces suggestion to run mr status"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "Invalid PRD format produces suggestion about correct format"
     command: cargo make uat
@@ -236,4 +236,14 @@ The changes are localized to individual error sites — no cross-cutting changes
 - **Details**:
   - Test: `config::tests::test_config_load_malformed_includes_suggestion` in `src/config/mod.rs`
   - Creates a malformed `config.toml`, loads it, and asserts the error message contains `mr restore`
+  - All 506 tests passed
+
+## 2026-02-07 — uat-003 Verification
+- **UAT**: PRD not found produces suggestion to run mr status
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `prd::edit::tests::test_find_prd_not_found_includes_suggestion` in `src/prd/edit.rs`
+  - Test: `prd::finalize::tests::test_prd_not_found_error_includes_suggestion` in `src/prd/finalize.rs`
+  - Both tests verify that PRD-not-found errors contain "Suggestion:" and "mr status"
   - All 506 tests passed
