@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📋 PRD Tasks
 
+- Prd(PRD-0033)feat(T-001): add suggestion to constitution-missing error
+- Prd(PRD-0033)feat(T-002): add suggestion for malformed config.toml parse errors
+- Prd(PRD-0033)feat(T-003): add suggestion to PRD-not-found errors
+- Prd(PRD-0033)feat(T-004): add suggestions to invalid PRD format errors
+- Prd(PRD-0033)feat(T-005): improve interactive session failure messages with retry suggestions
+- Prd(PRD-0033)feat(T-006): improve partial init state detection and messaging
+- Prd(PRD-0033)feat(T-007): add unit tests for improved error messages
+- Prd(PRD-0033)uat(uat-001): verify constitution missing suggestion test
+- Prd(PRD-0033)uat(uat-002): verify malformed config.toml suggests mr restore
+- Prd(PRD-0033)uat(uat-003): verify PRD-not-found suggests mr status
+- Prd(PRD-0033)uat(uat-004): verify invalid PRD format suggestion tests
+- Prd(PRD-0033)uat(uat-005): verify interactive session failure retry suggestion
+- Prd(PRD-0033)uat(uat-006): verify partial init state suggestion test
+- Prd(PRD-0033)uat(uat-007): verify all existing tests pass via cargo make ci
+- Prd(PRD-0033)finalize: actionable suggestion text for common CLI errors
+
+## [0.6.0] - 2026-02-06
+
+### 📋 PRD Tasks
+
 - Prd(PRD-0032)feat(T-001): add execute_interactive() method to Runner trait
 - Prd(PRD-0032)feat(T-002): implement execute_interactive() for CopilotRunner
 - Prd(PRD-0032)feat(T-003): implement execute_interactive() for ClaudeRunner
