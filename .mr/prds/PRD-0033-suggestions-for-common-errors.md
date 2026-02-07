@@ -33,7 +33,7 @@ acceptance_tests:
   - id: uat-005
     name: "Interactive session failure produces suggestion to retry"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "Partial init state produces suggestion to run mr init or mr restore"
     command: cargo make uat
@@ -257,4 +257,14 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Test: `prd::parser::tests::test_unclosed_frontmatter_includes_suggestion` in `src/prd/parser.rs`
   - Test: `prd::parser::tests::test_invalid_yaml_frontmatter_includes_suggestion` in `src/prd/parser.rs`
   - All three tests verify that invalid PRD format errors contain "Suggestion:" and "mr new"
+  - All 506 tests passed
+
+## 2026-02-07 — uat-005 Verification
+- **UAT**: Interactive session failure produces suggestion to retry
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `prd::new::tests::test_create_prd_aborts_on_interrupted_signal` in `src/prd/new.rs` — verifies interrupted (Ctrl+C) session error contains "Suggestion:" and "mr new"
+  - Test: `prd::new::tests::test_create_prd_aborts_on_process_failure` in `src/prd/new.rs` — verifies process failure error contains "Suggestion:" and "mr new"
+  - Both tests confirm interactive session failures produce actionable retry suggestions
   - All 506 tests passed
