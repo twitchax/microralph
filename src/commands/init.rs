@@ -983,76 +983,6 @@ Report what happened:
 - What was committed (if anything)
 "#;
 
-/// Default content for the PRD edit prompt.
-pub const PROMPT_PRD_EDIT: &str = r#"# microralph — PRD Edit Prompt
-
-## Objective
-
-Make targeted edits to an existing PRD based on user request.
-
-## Context
-
-The user wants to modify the PRD at `{{prd_path}}`.
-
-## User Request
-
-{{user_request}}
-
-## Current PRD Content
-
-```markdown
-{{prd_content}}
-```
-
-## Q/A History (if any)
-
-{{#each qa_history}}
-**Q**: {{question}}
-**A**: {{answer}}
-
-{{/each}}
-
-## Required Actions
-
-1. **Understand the request**: Read the user's request carefully.
-2. **Analyze the PRD**: Review the current PRD content.
-3. **Apply changes**: Make the requested modifications.
-4. **Preserve structure**: Keep the YAML frontmatter valid and the Markdown body properly formatted.
-
-## Constraints
-
-- Do not change the PRD ID.
-- Do not remove existing History entries.
-- Keep the overall structure intact (frontmatter, Summary, Problem, Goals, Non-Goals, History sections).
-- If adding tasks, assign appropriate IDs (T-NNN) and priorities.
-- If adding acceptance tests, assign appropriate IDs (uat-NNN).
-- **YAML Quoting**: Strings containing colons (`:`) or hashes (`#`) MUST be quoted to avoid parse errors. Example: `title: "Fix: Bug in parser"`
-
-## Output Format
-
-If you need more information, respond with a numbered list of questions (1-3 max):
-```
-1. Question one?
-2. Question two?
-```
-
-If you have enough information, respond with exactly `READY_TO_APPLY` on its own line, followed by the complete updated PRD content in a markdown code block:
-```
-READY_TO_APPLY
-
-```markdown
----
-id: PRD-XXXX
-...
----
-# Summary
-...
-```
-```
-
-Ensure the output is the complete PRD file, not just the changed sections.
-"#;
-
 /// Default content for the PRD edit interactive prompt.
 ///
 /// This is a single-phase prompt: the agent reads the existing PRD, chats with
@@ -1978,7 +1908,6 @@ const PROMPT_FILES: &[(&str, &str)] = &[
     ("run_task.md", PROMPT_RUN_TASK),
     ("run_task_finalize.md", PROMPT_RUN_TASK_FINALIZE),
     ("run_uat_verify.md", PROMPT_RUN_UAT_VERIFY),
-    ("prd_edit.md", PROMPT_PRD_EDIT),
     ("prd_edit_interactive.md", PROMPT_PRD_EDIT_INTERACTIVE),
     ("constitution_edit.md", PROMPT_CONSTITUTION_EDIT),
     ("devcontainer_generate.md", PROMPT_DEVCONTAINER_GENERATE),
@@ -2280,7 +2209,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 3);
-        assert_eq!(result.files_created, 23); // 1 template + 18 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
+        assert_eq!(result.files_created, 22); // 1 template + 17 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -2291,13 +2220,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 23);
+        assert_eq!(result1.files_created, 22);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 23);
+        assert_eq!(result2.files_skipped, 22);
         assert_eq!(result2.dirs_created, 0);
     }
 
@@ -2449,7 +2378,6 @@ mod tests {
             ("PROMPT_RUN_TASK", PROMPT_RUN_TASK),
             ("PROMPT_RUN_TASK_FINALIZE", PROMPT_RUN_TASK_FINALIZE),
             ("PROMPT_RUN_UAT_VERIFY", PROMPT_RUN_UAT_VERIFY),
-            ("PROMPT_PRD_EDIT", PROMPT_PRD_EDIT),
             ("PROMPT_PRD_EDIT_INTERACTIVE", PROMPT_PRD_EDIT_INTERACTIVE),
             ("PROMPT_CONSTITUTION_EDIT", PROMPT_CONSTITUTION_EDIT),
             ("PROMPT_ADAPT_LANGUAGE", PROMPT_ADAPT_LANGUAGE),

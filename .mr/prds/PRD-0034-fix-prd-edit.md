@@ -65,7 +65,7 @@ tasks:
   - id: T-006
     title: "Remove or update the old prd_edit.md prompt"
     priority: 2
-    status: todo
+    status: done
     notes: "The old Q/A-style prompt becomes dead code. Either remove the old PromptKind::PrdEdit variant or repurpose it."
   - id: T-007
     title: "Update tests for the new interactive edit flow"
@@ -258,3 +258,21 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - UAT passed: 504 tests, 504 passed, 0 skipped
 
 - **Constitution Compliance**: No violations. No changes made (rule 3 — minimal changes).
+
+---
+
+## 2026-02-07 — T-006 Completed
+- **Task**: Remove or update the old prd_edit.md prompt
+- **Status**: ✅ Done
+- **Changes**:
+  - Removed `PrdEdit` variant from `PromptKind` enum in `src/prompt/types.rs`
+  - Removed `prd_edit.md` filename mapping and `all()` entry in `src/prompt/types.rs`
+  - Removed `PROMPT_PRD_EDIT` constant (~68 lines of old Q/A-style prompt) from `src/commands/init.rs`
+  - Removed `("prd_edit.md", PROMPT_PRD_EDIT)` entry from `PROMPT_FILES` array in `src/commands/init.rs`
+  - Removed `PrdEdit` fallback mapping from `get_default_prompt()` in `src/prompt/loader.rs`
+  - Removed `("PROMPT_PRD_EDIT", PROMPT_PRD_EDIT)` from test array in `src/commands/init.rs`
+  - Updated count assertions: 18→17 in `types.rs`, 23→22 in `init.rs` tests, 17→16 in `loader.rs` test
+  - Updated test assertion from `PrdEdit` to `PrdEditInteractive` in `test_prompt_kind_all`
+  - UAT passed: 504 tests, 504 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. Dead code removed per rule 6 (root cause). Changes minimal per rule 3. Prompt management updated per rule 7.

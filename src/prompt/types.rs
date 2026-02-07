@@ -31,9 +31,6 @@ pub enum PromptKind {
     /// UAT verification prompt for verifying a single acceptance test.
     RunUatVerify,
 
-    /// PRD edit prompt for quick modifications.
-    PrdEdit,
-
     /// Interactive PRD edit prompt for `mr prd edit`.
     ///
     /// Single-phase: the agent reads the existing PRD, chats with the user
@@ -81,7 +78,6 @@ impl PromptKind {
             Self::RunTask => "run_task.md",
             Self::RunTaskFinalize => "run_task_finalize.md",
             Self::RunUatVerify => "run_uat_verify.md",
-            Self::PrdEdit => "prd_edit.md",
             Self::PrdEditInteractive => "prd_edit_interactive.md",
             Self::ConstitutionEdit => "constitution_edit.md",
             Self::AdaptLanguage => "adapt_language.md",
@@ -105,7 +101,6 @@ impl PromptKind {
             Self::RunTask,
             Self::RunTaskFinalize,
             Self::RunUatVerify,
-            Self::PrdEdit,
             Self::PrdEditInteractive,
             Self::ConstitutionEdit,
             Self::AdaptLanguage,
@@ -144,9 +139,9 @@ mod tests {
     #[test]
     fn test_prompt_kind_all() {
         let all = PromptKind::all();
-        assert_eq!(all.len(), 18);
+        assert_eq!(all.len(), 17);
         assert!(all.contains(&PromptKind::Init));
-        assert!(all.contains(&PromptKind::PrdEdit));
+        assert!(all.contains(&PromptKind::PrdEditInteractive));
         assert!(all.contains(&PromptKind::AdaptLanguage));
         assert!(all.contains(&PromptKind::Reindex));
         assert!(all.contains(&PromptKind::PickPrd));
