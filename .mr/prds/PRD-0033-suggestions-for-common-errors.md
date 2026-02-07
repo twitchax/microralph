@@ -71,7 +71,7 @@ tasks:
   - id: T-006
     title: "Improve partial init state detection and messaging"
     priority: 2
-    status: todo
+    status: done
     notes: "In src/commands/init.rs ensure_initialized(), when .mr/ exists but subdirectories are missing, suggest `mr init` or `mr restore` instead of generic init message"
   - id: T-007
     title: "Add unit tests for improved error messages"
@@ -196,4 +196,14 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Updated `src/prd/new.rs` line 125: enhanced failed session `bail!` to include `Suggestion: Re-run \`mr new\` to retry. If the problem persists, check that your runner (e.g., \`copilot\` or \`claude\` CLI) is installed and working.`
   - Existing tests (`test_create_prd_aborts_on_interrupted_signal`, `test_create_prd_aborts_on_process_failure`) continue to pass with new messages
   - UAT passed: 501 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-07 — T-006 Completed
+- **Task**: Improve partial init state detection and messaging
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `src/commands/init.rs` `ensure_initialized()`: expanded from a single `bail!` into a two-branch check — when `.mr/` exists but subdirectories/files are missing, reports "partially initialized" with a list of missing items and suggests `mr init` or `mr restore`; when `.mr/` doesn't exist at all, keeps the original generic message.
+  - Added `test_ensure_initialized_partial_init_includes_suggestion` unit test verifying partial init detection lists missing items and includes both `mr init` and `mr restore` suggestions.
+  - Added `test_ensure_initialized_no_mr_dir_generic_message` unit test verifying the generic message path when `.mr/` doesn't exist.
+  - UAT passed: 503 tests, 0 failures
 - **Constitution Compliance**: No violations.

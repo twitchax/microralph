@@ -2126,10 +2126,29 @@ pub fn is_initialized(root: impl AsRef<Path>) -> bool {
 
 /// Ensures the project is initialized, returning an error if not.
 pub fn ensure_initialized(root: impl AsRef<Path>) -> Result<()> {
-    if !is_initialized(root) {
-        anyhow::bail!("microralph is not initialized. Run `mr init` first.");
+    let root = root.as_ref();
+
+    if is_initialized(root) {
+        return Ok(());
     }
-    Ok(())
+
+    let mr_dir = root.join(".mr");
+
+    if mr_dir.exists() {
+        // Partial init: .mr/ exists but some subdirectories/files are missing.
+        let missing: Vec<&str> = ["prds", "templates", "prompts", "PRDS.md"]
+            .iter()
+            .filter(|name| !mr_dir.join(name).exists())
+            .copied()
+            .collect();
+
+        anyhow::bail!(
+            "microralph is partially initialized — missing: {}.\n  Suggestion: Run `mr init` to complete initialization, or `mr restore` to reset to defaults.",
+            missing.join(", ")
+        );
+    }
+
+    anyhow::bail!("microralph is not initialized. Run `mr init` first.");
 }
 
 #[cfg(test)]
@@ -2237,6 +2256,61 @@ mod tests {
 
         // Now initialized.
         assert!(is_initialized(root));
+    }
+
+    #[test]
+    fn test_ensure_initialized_partial_init_includes_suggestion() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Create only .mr/ and prds/ — missing templates, prompts, PRDS.md.
+        std::fs::create_dir_all(root.join(".mr/prds")).unwrap();
+
+        let err = ensure_initialized(root).unwrap_err();
+        let msg = err.to_string();
+
+        assert!(
+            msg.contains("partially initialized"),
+            "Expected 'partially initialized' in: {msg}"
+        );
+        assert!(
+            msg.contains("templates"),
+            "Expected missing 'templates' in: {msg}"
+        );
+        assert!(
+            msg.contains("prompts"),
+            "Expected missing 'prompts' in: {msg}"
+        );
+        assert!(
+            msg.contains("PRDS.md"),
+            "Expected missing 'PRDS.md' in: {msg}"
+        );
+        assert!(
+            msg.contains("mr init"),
+            "Expected 'mr init' suggestion in: {msg}"
+        );
+        assert!(
+            msg.contains("mr restore"),
+            "Expected 'mr restore' suggestion in: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_ensure_initialized_no_mr_dir_generic_message() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        let err = ensure_initialized(root).unwrap_err();
+        let msg = err.to_string();
+
+        assert!(
+            msg.contains("not initialized"),
+            "Expected 'not initialized' in: {msg}"
+        );
+        assert!(
+            !msg.contains("partially"),
+            "Should not say 'partially' when .mr/ doesn't exist: {msg}"
+        );
     }
 
     #[test]
