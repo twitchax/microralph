@@ -151,7 +151,6 @@ jobs:
         permissions:
             packages: write
         steps:
-            - uses: actions/checkout@v4
             - uses: cargo-bins/cargo-binstall@main
             - run: cargo binstall wkg --no-confirm
             - uses: actions/download-artifact@v4
