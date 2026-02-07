@@ -23,7 +23,7 @@ acceptance_tests:
   - id: uat-003
     name: "prd edit aborts cleanly on Ctrl+C (SIGINT) without corrupting the PRD"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "prd edit validates the modified PRD and regenerates the index after interactive session"
     command: cargo make uat
@@ -330,4 +330,14 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
 - **Method**: Existing test
 - **Details**:
   - `src/prd/edit.rs::test_edit_prd_context_in_interactive_prompt` — verifies that when `context: Some("add a logging task")` is provided in `PrdEditConfig`, the interactive prompt contains both the context marker (`"with context:"`) and the actual user context string (`"add a logging task"`).
+  - UAT passed: 512 tests, 512 passed, 0 skipped
+
+---
+
+## 2026-02-07 — uat-003 Verification
+- **UAT**: prd edit aborts cleanly on Ctrl+C (SIGINT) without corrupting the PRD
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/prd/edit.rs::test_edit_prd_aborts_on_interrupted_signal` — sets up a PRD, configures `MockRunner` with `RunnerError::Interrupted` (simulating SIGINT/Ctrl+C), calls `edit_prd()`, and asserts: (1) the result is an error mentioning "interrupted", (2) user-facing output mentions "aborted", and (3) the PRD file content is identical to the original (no corruption).
   - UAT passed: 512 tests, 512 passed, 0 skipped
