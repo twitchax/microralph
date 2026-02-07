@@ -10,6 +10,8 @@ pub enum RunnerError {
     ProcessFailed(String),
 
     /// The runner process was interrupted by a signal (e.g., Ctrl+C / SIGINT).
+    /// Only constructed on Unix (via `ExitStatusExt::signal()`), so allow dead code on other targets.
+    #[cfg_attr(not(unix), allow(dead_code))]
     Interrupted(String),
 
     /// IO error.
