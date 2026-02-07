@@ -41,7 +41,7 @@ acceptance_tests:
   - id: uat-007
     name: "All existing tests continue to pass"
     command: cargo make ci
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Improve constitution-missing error with restore/init suggestion"
@@ -277,3 +277,12 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Test: `commands::init::tests::test_ensure_initialized_partial_init_includes_suggestion` in `src/commands/init.rs` — creates `.mr/prds/` only (partial state), verifies error contains "partially initialized", lists missing items, and includes both "mr init" and "mr restore" suggestions
   - Test: `commands::init::tests::test_ensure_initialized_no_mr_dir_generic_message` in `src/commands/init.rs` — verifies distinct generic message when `.mr/` doesn't exist at all
   - All 506 tests passed
+
+## 2026-02-07 — uat-007 Verification
+- **UAT**: All existing tests continue to pass
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make ci` which executes fmt, clippy, and nextest
+  - All 506 tests passed with 0 failures and 0 skipped
+  - Full CI pipeline completed successfully in ~3 seconds
