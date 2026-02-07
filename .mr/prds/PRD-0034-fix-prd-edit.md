@@ -1,7 +1,7 @@
 ---
 id: PRD-0034
 title: "Fix PRD Edit: Switch to Interactive Mode"
-status: draft
+status: active
 owner: twitchax
 created: 2026-02-07
 updated: 2026-02-07
@@ -40,7 +40,7 @@ tasks:
   - id: T-001
     title: "Create new interactive prompt template for prd edit (PROMPT_PRD_EDIT_INTERACTIVE)"
     priority: 1
-    status: todo
+    status: done
     notes: "Define in src/commands/init.rs as an embedded constant. Template should inject existing PRD content, constitution, existing PRDs list, prd_path, and optional user context. Agent reads the PRD, chats with user, and writes updated PRD directly to disk."
   - id: T-002
     title: "Rewrite edit_prd() to use execute_interactive() instead of the Q/A loop"
@@ -178,5 +178,18 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
 - Removing `qa_workflow.rs` entirely (it may still be used elsewhere or kept for future use).
 
 # History
+
+## 2026-02-07 — T-001 Completed
+- **Task**: Create new interactive prompt template for prd edit (PROMPT_PRD_EDIT_INTERACTIVE)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `PROMPT_PRD_EDIT_INTERACTIVE` constant in `src/commands/init.rs` — mirrors `PROMPT_PRD_NEW_INTERACTIVE` but adapted for editing existing PRDs with `{{prd_path}}`, `{{prd_content}}`, `{{context}}`, `{{constitution}}`, and `{{existing_prds}}` placeholders
+  - Added `PrdEditInteractive` variant to `PromptKind` enum in `src/prompt/types.rs` with filename `prd_edit_interactive.md`
+  - Added fallback mapping in `src/prompt/loader.rs` (`PromptKind::PrdEditInteractive => init::PROMPT_PRD_EDIT_INTERACTIVE`)
+  - Added new prompt to `PROMPT_FILES` array and test arrays in `src/commands/init.rs`
+  - Updated all hard-coded prompt count assertions (17→18 in types.rs, 22→23 in init.rs tests, 17→18/16→17 in loader.rs tests)
+  - UAT passed: 506 tests, 506 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. Prompt defined in `src/commands/init.rs` as embedded constant per rule 7. All changes minimal per rule 3.
 
 ---
