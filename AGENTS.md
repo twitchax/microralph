@@ -67,6 +67,47 @@ The `Runner` trait provides `execute_interactive(prompt, working_dir)` which spa
 - **Prompt management**: All prompts are defined in `src/commands/init.rs` and materialized to `.mr/prompts/` per constitution rule 7.
 - **Mock testing**: `MockRunner` supports `set_interactive_error()` for testing error paths without requiring actual CLI tools.
 
+## PRD Edit Workflow (`mr prd edit`)
+
+The `mr prd edit` command modifies an existing PRD through a single-phase interactive flow, matching the pattern established by `mr new`:
+
+1. **Interactive Session**: The user is dropped into an interactive chat session with the underlying agent. The agent receives full context — existing PRD content, constitution, existing PRDs list, the PRD file path, and optional user-provided `--context`. The agent discusses changes with the user and writes the updated PRD directly to disk (overwriting the original file).
+2. **Validation**: On clean exit, the Rust side re-reads the PRD file, validates it, and regenerates the index.
+3. **Abort on Ctrl+C**: If the user force-quits (Ctrl+C / SIGINT) during the interactive session, the edit is aborted — the original PRD is preserved unchanged.
+
+### Usage
+
+```bash
+# Edit a PRD interactively
+mr prd edit PRD-0001
+
+# Edit with upfront context to guide the session
+mr prd edit PRD-0001 --context "add a new task for logging"
+
+# Use a specific runner and model
+mr prd edit PRD-0001 --runner claude --model claude-sonnet-4.5
+```
+
+### Flags Reference
+
+| Flag        | Default | Description                                         |
+| ----------- | ------- | --------------------------------------------------- |
+| `--context` | None    | Optional upfront context to guide the edit session   |
+| `--runner`  | copilot | Runner to use (copilot, claude)                      |
+| `--model`   | None    | Model override for the runner                        |
+
+### Prompts
+
+- **Interactive prompt** (`prd_edit_interactive.md`): Instructs the agent to read the existing PRD, engage the user in conversation about desired changes, and write the updated PRD directly to disk. Includes `{{prd_path}}`, `{{prd_content}}`, `{{context}}`, `{{constitution}}`, and `{{existing_prds}}` placeholders. Defined in `src/commands/init.rs` as `PROMPT_PRD_EDIT_INTERACTIVE`.
+
+### Important Notes
+
+- **Mirrors `prd new`**: The edit flow uses the same single-phase interactive architecture — no separate synthesis phase, no Q/A loop.
+- **PRD ID preserved**: The PRD ID must not change during editing (enforced by prompt instructions and post-session validation).
+- **History preserved**: Existing History entries in the PRD are preserved across edits.
+- **No `--stream` flag**: Interactive mode inherits stdio directly, so streaming is not applicable.
+- **Mock testing**: `MockRunner` supports `set_interactive_error()` for testing error paths without requiring actual CLI tools.
+
 ## Suggest Command Workflow
 
 The `mr suggest` command uses AI to analyze the codebase and generate PRD suggestions:

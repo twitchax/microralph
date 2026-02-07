@@ -75,7 +75,7 @@ tasks:
   - id: T-008
     title: "Update AGENTS.md with new prd edit workflow documentation"
     priority: 3
-    status: todo
+    status: done
     notes: "Document that prd edit now uses interactive mode, matching prd new."
 ---
 
@@ -296,3 +296,16 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - UAT passed: 512 tests, 512 passed, 0 skipped (504 → 512)
 
 - **Constitution Compliance**: No violations. Tests are minimal and follow existing patterns per rules 3 and 4.
+
+---
+
+## 2026-02-07 — T-008 Completed
+- **Task**: Update AGENTS.md with new prd edit workflow documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Added "PRD Edit Workflow (`mr prd edit`)" section to `AGENTS.md`, placed after the PRD Creation Workflow section
+  - Documents the interactive flow (matching `mr new` pattern), usage examples, flags reference, prompt details, and important notes
+  - Covers: interactive session lifecycle, `--context` flag, Ctrl+C abort behavior, validation/index regeneration, and mock testing patterns
+  - UAT passed: 512 tests, 512 passed, 0 skipped
+
+- **Constitution Compliance**: No violations. Documentation-only change per rule 3 (minimal changes).
