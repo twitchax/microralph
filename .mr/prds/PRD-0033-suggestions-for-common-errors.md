@@ -29,7 +29,7 @@ acceptance_tests:
   - id: uat-004
     name: "Invalid PRD format produces suggestion about correct format"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "Interactive session failure produces suggestion to retry"
     command: cargo make uat
@@ -246,4 +246,15 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Test: `prd::edit::tests::test_find_prd_not_found_includes_suggestion` in `src/prd/edit.rs`
   - Test: `prd::finalize::tests::test_prd_not_found_error_includes_suggestion` in `src/prd/finalize.rs`
   - Both tests verify that PRD-not-found errors contain "Suggestion:" and "mr status"
+  - All 506 tests passed
+
+## 2026-02-07 — uat-004 Verification
+- **UAT**: Invalid PRD format produces suggestion about correct format
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `prd::parser::tests::test_missing_frontmatter_includes_suggestion` in `src/prd/parser.rs`
+  - Test: `prd::parser::tests::test_unclosed_frontmatter_includes_suggestion` in `src/prd/parser.rs`
+  - Test: `prd::parser::tests::test_invalid_yaml_frontmatter_includes_suggestion` in `src/prd/parser.rs`
+  - All three tests verify that invalid PRD format errors contain "Suggestion:" and "mr new"
   - All 506 tests passed
