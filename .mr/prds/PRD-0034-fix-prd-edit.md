@@ -1,82 +1,82 @@
 ---
 id: PRD-0034
-title: "Fix PRD Edit: Switch to Interactive Mode"
-status: active
+title: 'Fix PRD Edit: Switch to Interactive Mode'
+status: done
 owner: twitchax
 created: 2026-02-07
 updated: 2026-02-07
 principles:
-  - Follow the same interactive pattern established by PRD-0032 for prd new
-  - Minimize divergence between prd new and prd edit code paths
-  - Remove the multi-round Q/A loop and READY_TO_APPLY signal machinery
-  - Remove the unused --stream flag from prd new CLI (dead code since interactive mode inherits stdio)
-  - Do not add --stream to prd edit since interactive mode does not use it
+- Follow the same interactive pattern established by PRD-0032 for prd new
+- Minimize divergence between prd new and prd edit code paths
+- Remove the multi-round Q/A loop and READY_TO_APPLY signal machinery
+- Remove the unused --stream flag from prd new CLI (dead code since interactive mode inherits stdio)
+- Do not add --stream to prd edit since interactive mode does not use it
 acceptance_tests:
-  - id: uat-001
-    name: "prd edit drops user into interactive session with existing PRD context"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: "prd edit with --context passes upfront context to the interactive prompt"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-003
-    name: "prd edit aborts cleanly on Ctrl+C (SIGINT) without corrupting the PRD"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-004
-    name: "prd edit validates the modified PRD and regenerates the index after interactive session"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-005
-    name: "stream flag is removed from prd new CLI definition"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-006
-    name: "existing unit tests for edit and new continue to pass"
-    command: cargo make test
-    uat_status: verified
+- id: uat-001
+  name: prd edit drops user into interactive session with existing PRD context
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: prd edit with --context passes upfront context to the interactive prompt
+  command: cargo make uat
+  uat_status: verified
+- id: uat-003
+  name: prd edit aborts cleanly on Ctrl+C (SIGINT) without corrupting the PRD
+  command: cargo make uat
+  uat_status: verified
+- id: uat-004
+  name: prd edit validates the modified PRD and regenerates the index after interactive session
+  command: cargo make uat
+  uat_status: verified
+- id: uat-005
+  name: stream flag is removed from prd new CLI definition
+  command: cargo make uat
+  uat_status: verified
+- id: uat-006
+  name: existing unit tests for edit and new continue to pass
+  command: cargo make test
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Create new interactive prompt template for prd edit (PROMPT_PRD_EDIT_INTERACTIVE)"
-    priority: 1
-    status: done
-    notes: "Define in src/commands/init.rs as an embedded constant. Template should inject existing PRD content, constitution, existing PRDs list, prd_path, and optional user context. Agent reads the PRD, chats with user, and writes updated PRD directly to disk."
-  - id: T-002
-    title: "Rewrite edit_prd() to use execute_interactive() instead of the Q/A loop"
-    priority: 1
-    status: done
-    notes: "Mirror the pattern from create_prd() in new.rs. Remove the multi-round loop, READY_TO_APPLY signal parsing, qa_history, and collect_singleline_answers. Add interrupt/signal handling like new.rs."
-  - id: T-003
-    title: "Update PrdEditConfig to replace required request with optional context"
-    priority: 1
-    status: done
-    notes: "Change request field to context: Option<&'a str>. Remove BufRead generic (no longer reading stdin in Rust)."
-  - id: T-004
-    title: "Update Edit CLI variant in main.rs"
-    priority: 1
-    status: done
-    notes: "Change request from positional required to --context optional. Remove stream flag from New variant."
-  - id: T-005
-    title: "Register new prompt in PromptKind enum and init logic"
-    priority: 2
-    status: done
-    notes: "Add PrdEditInteractive variant to PromptKind, add file name mapping, and ensure it is materialized to .mr/prompts/ during init."
-  - id: T-006
-    title: "Remove or update the old prd_edit.md prompt"
-    priority: 2
-    status: done
-    notes: "The old Q/A-style prompt becomes dead code. Either remove the old PromptKind::PrdEdit variant or repurpose it."
-  - id: T-007
-    title: "Update tests for the new interactive edit flow"
-    priority: 2
-    status: done
-    notes: "Update MockRunner tests to use set_interactive_error() for error paths. Add tests for interrupt handling, missing file after interactive session, and successful edit flow."
-  - id: T-008
-    title: "Update AGENTS.md with new prd edit workflow documentation"
-    priority: 3
-    status: done
-    notes: "Document that prd edit now uses interactive mode, matching prd new."
+- id: T-001
+  title: Create new interactive prompt template for prd edit (PROMPT_PRD_EDIT_INTERACTIVE)
+  priority: 1
+  status: done
+  notes: Define in src/commands/init.rs as an embedded constant. Template should inject existing PRD content, constitution, existing PRDs list, prd_path, and optional user context. Agent reads the PRD, chats with user, and writes updated PRD directly to disk.
+- id: T-002
+  title: Rewrite edit_prd() to use execute_interactive() instead of the Q/A loop
+  priority: 1
+  status: done
+  notes: Mirror the pattern from create_prd() in new.rs. Remove the multi-round loop, READY_TO_APPLY signal parsing, qa_history, and collect_singleline_answers. Add interrupt/signal handling like new.rs.
+- id: T-003
+  title: Update PrdEditConfig to replace required request with optional context
+  priority: 1
+  status: done
+  notes: 'Change request field to context: Option<&''a str>. Remove BufRead generic (no longer reading stdin in Rust).'
+- id: T-004
+  title: Update Edit CLI variant in main.rs
+  priority: 1
+  status: done
+  notes: Change request from positional required to --context optional. Remove stream flag from New variant.
+- id: T-005
+  title: Register new prompt in PromptKind enum and init logic
+  priority: 2
+  status: done
+  notes: Add PrdEditInteractive variant to PromptKind, add file name mapping, and ensure it is materialized to .mr/prompts/ during init.
+- id: T-006
+  title: Remove or update the old prd_edit.md prompt
+  priority: 2
+  status: done
+  notes: The old Q/A-style prompt becomes dead code. Either remove the old PromptKind::PrdEdit variant or repurpose it.
+- id: T-007
+  title: Update tests for the new interactive edit flow
+  priority: 2
+  status: done
+  notes: Update MockRunner tests to use set_interactive_error() for error paths. Add tests for interrupt handling, missing file after interactive session, and successful edit flow.
+- id: T-008
+  title: Update AGENTS.md with new prd edit workflow documentation
+  priority: 3
+  status: done
+  notes: Document that prd edit now uses interactive mode, matching prd new.
 ---
 
 # Summary
@@ -374,3 +374,15 @@ User runs: mr prd edit PRD-0001 --context "add a new task for logging"
   - Ran `cargo make test` which executes the full test suite including all edit and new unit tests.
   - All 513 tests passed (513 passed, 0 skipped) — covering edit tests (`test_edit_prd_interactive_flow`, `test_edit_prd_no_context`, `test_edit_prd_constitution_in_prompt`, `test_edit_prd_existing_prds_in_prompt`, `test_edit_prd_context_in_interactive_prompt`, `test_edit_prd_aborts_on_interrupted_signal`, `test_edit_prd_process_failure`, `test_edit_prd_fails_on_missing_file_after_session`, `test_edit_prd_fails_on_corrupted_file_after_session`, `test_edit_prd_prd_path_in_prompt`, `test_edit_prd_prd_content_in_prompt`, `test_edit_prd_case_insensitive_id_lookup`, `test_edit_prd_validates_and_regenerates_index`) and new tests (`test_create_prd_interactive_flow`, `test_create_prd_aborts_on_interrupted_signal`, `test_create_prd_process_failure`).
   - No regressions detected.
+
+---
+
+## 2026-02-07 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 8 tasks (T-001 through T-008)
+- **Outcome**: All tasks completed, acceptance tests passed (513/513 tests)
+- **Cleanup**: None required — no debug artifacts, temporary files, or stale TODOs found
+- **Summary**:
+  - Replaced multi-round Q/A loop in `prd edit` with single interactive session via `execute_interactive()`, matching `prd new` pattern
+  - Changed `request` positional arg to optional `--context` flag; removed unused `--stream` from `prd new`
+  - Added 13 comprehensive tests covering interactive flow, interrupt handling, prompt injection, validation, and index regeneration
