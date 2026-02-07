@@ -37,7 +37,7 @@ acceptance_tests:
   - id: uat-006
     name: "Partial init state produces suggestion to run mr init or mr restore"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-007
     name: "All existing tests continue to pass"
     command: cargo make ci
@@ -267,4 +267,13 @@ The changes are localized to individual error sites — no cross-cutting changes
   - Test: `prd::new::tests::test_create_prd_aborts_on_interrupted_signal` in `src/prd/new.rs` — verifies interrupted (Ctrl+C) session error contains "Suggestion:" and "mr new"
   - Test: `prd::new::tests::test_create_prd_aborts_on_process_failure` in `src/prd/new.rs` — verifies process failure error contains "Suggestion:" and "mr new"
   - Both tests confirm interactive session failures produce actionable retry suggestions
+  - All 506 tests passed
+
+## 2026-02-07 — uat-006 Verification
+- **UAT**: Partial init state produces suggestion to run mr init or mr restore
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test: `commands::init::tests::test_ensure_initialized_partial_init_includes_suggestion` in `src/commands/init.rs` — creates `.mr/prds/` only (partial state), verifies error contains "partially initialized", lists missing items, and includes both "mr init" and "mr restore" suggestions
+  - Test: `commands::init::tests::test_ensure_initialized_no_mr_dir_generic_message` in `src/commands/init.rs` — verifies distinct generic message when `.mr/` doesn't exist at all
   - All 506 tests passed
