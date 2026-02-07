@@ -1,7 +1,7 @@
 [package]
 name = "microralph"
 authors = ["Aaron Roney <twitchax@gmail.com>"]
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 description = "A tiny CLI for creating and executing PRDs with coding agents"
 license = "MIT"
