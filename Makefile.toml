@@ -467,13 +467,16 @@ if [ -d "target/release-artifacts" ]; then
         parent_dir=$(basename "$(dirname "$file")")
         filename=$(basename "$file")
         # Get extension if any
-        if [[ "$filename" == *.* ]]; then
-            ext=".${filename##*.}"
-            base="${filename%.*}"
-        else
-            ext=""
-            base="$filename"
-        fi
+        case "$filename" in
+            *.*)
+                ext=".${filename##*.}"
+                base="${filename%.*}"
+                ;;
+            *)
+                ext=""
+                base="$filename"
+                ;;
+        esac
         # Create unique name: mr-x86_64-unknown-linux-gnu or mr-x86_64-pc-windows-gnu.exe
         new_name="${parent_dir}${ext}"
         staged_file="$STAGING_DIR/$new_name"
