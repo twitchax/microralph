@@ -38,7 +38,7 @@ acceptance_tests:
   - id: uat-005
     name: "CodexRunner build_args produces correct CLI invocation"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "Token usage parsing extracts input/output tokens from JSON"
     command: cargo make test
@@ -282,4 +282,17 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Test verifies `--runner codex` is accepted by CLI arg parser and parsed correctly
   - Also confirmed `cargo run -- run --help` lists `codex` in `--runner` options
   - UAT passed: `cargo make uat` — 543 tests, 0 failures ✅
+
+## 2026-02-08 — uat-005 Verification
+- **UAT**: CodexRunner build_args produces correct CLI invocation
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Five existing tests in `src/runner/codex.rs` cover `build_args` CLI invocation:
+    - `test_build_args_yolo_mode` — verifies `exec`, prompt, `--full-auto`
+    - `test_build_args_manual_mode` — verifies `exec`, prompt, no `--full-auto`
+    - `test_build_args_with_model` — verifies `--model` flag present
+    - `test_build_args_without_model` — verifies no `--model` when unset
+    - `test_with_model_constructor` — verifies model + default flags together
+  - All 543 tests passed with `cargo make test` ✅
 
