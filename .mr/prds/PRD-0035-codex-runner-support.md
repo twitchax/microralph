@@ -100,7 +100,7 @@ tasks:
   - id: T-010
     title: "Write unit tests for build_args and parse_usage"
     priority: 2
-    status: todo
+    status: done
     notes: "Test non-interactive args, interactive args, model override, usage parsing from sample JSON, and post-processing."
   - id: T-011
     title: "Update AGENTS.md with CodexRunner documentation"
@@ -225,4 +225,14 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Added unit tests for config defaults, builder pattern, and with_config
   - UAT passed: `cargo make uat` ✅
 - **Constitution Compliance**: No violations. Followed existing ClaudeRunner patterns exactly (Rule 4), minimal changes (Rule 3), clippy::pedantic enabled (Rule 8).
+
+## 2026-02-08 — T-010 Completed
+- **Task**: Write unit tests for build_args and parse_usage
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 28 comprehensive unit tests to `src/runner/codex.rs` (replacing the initial 3 config-only tests)
+  - Tests cover: `build_args` (yolo mode, manual mode, with/without model, `with_model` constructor), `parse_usage` (valid JSON, missing fields, no usage object, plain text), `extract_result_from_json` (valid, invalid, missing result), `post_process_output` (via trait, JSON and plain text), `format_command_display` (with and without model), `strip_usage_stats` (full JSON, plain text, multiline, empty, missing result), Runner trait (`name`, `default`), `build_interactive_args` (yolo, with model, manual mode)
+  - Test patterns mirror ClaudeRunner and CopilotRunner tests for consistency
+  - UAT passed: `cargo make uat` — 542 tests, 0 failures ✅
+- **Constitution Compliance**: No violations. Tests follow existing patterns (Rule 4), minimal changes (Rule 3), clippy::pedantic enabled with test-only suppression (Rule 8).
 

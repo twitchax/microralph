@@ -263,7 +263,12 @@ impl CliRunnerConfig for CodexRunner {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
+    use crate::runner::Runner;
+
+    // ── Config tests ──────────────────────────────────────────────────
 
     #[test]
     fn test_codex_config_default() {
@@ -293,5 +298,339 @@ mod tests {
 
         assert_eq!(runner.config.codex_path, "/custom/codex");
         assert_eq!(runner.config.permission_mode, CodexPermissionMode::Manual);
+    }
+
+    // ── build_args tests (non-interactive) ────────────────────────────
+
+    #[test]
+    fn test_build_args_yolo_mode() {
+        let runner = CodexRunner::new();
+        let args = runner.build_args("test prompt");
+
+        assert!(args.contains(&"exec".to_string()));
+        assert!(args.contains(&"test prompt".to_string()));
+        assert!(args.contains(&"--full-auto".to_string()));
+    }
+
+    #[test]
+    fn test_build_args_manual_mode() {
+        let config = CodexConfig::new().with_permission_mode(CodexPermissionMode::Manual);
+        let runner = CodexRunner::with_config(config);
+        let args = runner.build_args("test prompt");
+
+        assert!(args.contains(&"exec".to_string()));
+        assert!(args.contains(&"test prompt".to_string()));
+        assert!(!args.contains(&"--full-auto".to_string()));
+    }
+
+    #[test]
+    fn test_build_args_with_model() {
+        let runner = CodexRunner::with_model(Some("o4-mini".to_string()));
+        let args = runner.build_args("test prompt");
+
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"o4-mini".to_string()));
+    }
+
+    #[test]
+    fn test_build_args_without_model() {
+        let runner = CodexRunner::new();
+        let args = runner.build_args("test prompt");
+
+        assert!(!args.contains(&"--model".to_string()));
+    }
+
+    #[test]
+    fn test_with_model_constructor() {
+        let runner = CodexRunner::with_model(Some("o3".to_string()));
+        let args = runner.build_args("prompt");
+
+        // Should have model flag.
+        let model_idx = args.iter().position(|a| a == "--model").unwrap();
+        assert_eq!(args[model_idx + 1], "o3");
+
+        // Should still have other default flags.
+        assert!(args.contains(&"--full-auto".to_string()));
+    }
+
+    // ── parse_usage tests ─────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_usage_returns_none() {
+        let output = "Hello world\nThis is just normal output.";
+
+        let usage = CodexRunner::parse_usage(output);
+
+        assert!(usage.is_none());
+    }
+
+    #[test]
+    fn test_parse_usage_from_json() {
+        let json_output = r#"{
+            "result": "The answer is 42",
+            "usage": {
+                "input_tokens": 26549,
+                "output_tokens": 1590
+            }
+        }"#;
+
+        let usage = CodexRunner::parse_usage(json_output).unwrap();
+
+        assert_eq!(usage.input, Some(26549));
+        assert_eq!(usage.output, Some(1590));
+        assert_eq!(usage.total, Some(28139));
+    }
+
+    #[test]
+    fn test_parse_usage_missing_fields() {
+        let json_output = r#"{
+            "result": "partial",
+            "usage": {
+                "input_tokens": 100
+            }
+        }"#;
+
+        let usage = CodexRunner::parse_usage(json_output).unwrap();
+
+        assert_eq!(usage.input, Some(100));
+        assert_eq!(usage.output, None);
+        assert_eq!(usage.total, None);
+    }
+
+    #[test]
+    fn test_parse_usage_no_usage_object() {
+        let json_output = r#"{
+            "result": "no usage here"
+        }"#;
+
+        let usage = CodexRunner::parse_usage(json_output);
+
+        assert!(usage.is_none());
+    }
+
+    // ── post_process_output / extract_result tests ────────────────────
+
+    #[test]
+    fn test_extract_result_from_json() {
+        let json_output = r#"{
+            "result": "Hello, world!",
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+            }
+        }"#;
+
+        let result = CodexRunner::extract_result_from_json(json_output);
+
+        assert_eq!(result, "Hello, world!");
+    }
+
+    #[test]
+    fn test_extract_result_from_invalid_json() {
+        let invalid_json = "This is not JSON";
+
+        let result = CodexRunner::extract_result_from_json(invalid_json);
+
+        assert_eq!(result, "This is not JSON");
+    }
+
+    #[test]
+    fn test_extract_result_missing_result_field() {
+        let json_output = r#"{
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let result = CodexRunner::extract_result_from_json(json_output);
+
+        assert_eq!(result, json_output);
+    }
+
+    // ── post_process_output via trait ─────────────────────────────────
+
+    #[test]
+    fn test_post_process_output_extracts_result() {
+        let runner = CodexRunner::new();
+        let json_output = r#"{
+            "result": "extracted text",
+            "usage": { "input_tokens": 5, "output_tokens": 3 }
+        }"#;
+
+        let result = runner.post_process_output(json_output);
+
+        assert_eq!(result, "extracted text");
+    }
+
+    #[test]
+    fn test_post_process_output_plain_text() {
+        let runner = CodexRunner::new();
+        let plain = "plain text output";
+
+        let result = runner.post_process_output(plain);
+
+        assert_eq!(result, "plain text output");
+    }
+
+    // ── format_display_parts tests ────────────────────────────────────
+
+    #[test]
+    fn test_format_command_display() {
+        let runner = CodexRunner::with_model(Some("o4-mini".to_string()));
+        let prompt = "test prompt";
+        let working_dir = Path::new("/home/user/project");
+
+        let cmd_display = runner.format_command_display(prompt, working_dir).unwrap();
+
+        // Should include codex path.
+        assert!(cmd_display.contains("codex"));
+        // Should include exec subcommand.
+        assert!(cmd_display.contains("exec"));
+        // Should include permission flag.
+        assert!(cmd_display.contains("--full-auto"));
+        // Should include model.
+        assert!(cmd_display.contains("--model"));
+        assert!(cmd_display.contains("o4-mini"));
+        // Should include prompt placeholder.
+        assert!(cmd_display.contains("<prompt>"));
+        // Should include --cd and working directory.
+        assert!(cmd_display.contains("--cd"));
+        assert!(cmd_display.contains("/home/user/project"));
+        // Should NOT include the actual prompt content.
+        assert!(!cmd_display.contains("test prompt"));
+    }
+
+    #[test]
+    fn test_format_command_display_no_model() {
+        let runner = CodexRunner::new();
+        let prompt = "test";
+        let working_dir = Path::new("/tmp");
+
+        let cmd_display = runner.format_command_display(prompt, working_dir).unwrap();
+
+        // Should NOT include model flags.
+        assert!(!cmd_display.contains("--model"));
+    }
+
+    // ── strip_usage_stats tests ───────────────────────────────────────
+
+    #[test]
+    fn test_strip_usage_stats_with_full_json() {
+        let json_output = r#"{
+            "result": "Hello, world!",
+            "usage": {
+                "input_tokens": 1234,
+                "output_tokens": 56
+            }
+        }"#;
+
+        let stripped = CodexRunner::strip_usage_stats(json_output);
+
+        assert_eq!(stripped, "Hello, world!");
+        assert!(!stripped.contains("usage"));
+        assert!(!stripped.contains("input_tokens"));
+    }
+
+    #[test]
+    fn test_strip_usage_stats_with_plain_text() {
+        let plain_text = "This is just plain text output";
+
+        let stripped = CodexRunner::strip_usage_stats(plain_text);
+
+        assert_eq!(stripped, plain_text);
+    }
+
+    #[test]
+    fn test_strip_usage_stats_preserves_multiline_result() {
+        let json_output = r#"{
+            "result": "Line 1\nLine 2\nLine 3",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 50
+            }
+        }"#;
+
+        let stripped = CodexRunner::strip_usage_stats(json_output);
+
+        assert_eq!(stripped, "Line 1\nLine 2\nLine 3");
+    }
+
+    #[test]
+    fn test_strip_usage_stats_with_empty_result() {
+        let json_output = r#"{
+            "result": "",
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let stripped = CodexRunner::strip_usage_stats(json_output);
+
+        assert_eq!(stripped, "");
+    }
+
+    #[test]
+    fn test_strip_usage_stats_missing_result_field() {
+        let json_output = r#"{
+            "error": "Something went wrong",
+            "usage": {
+                "input_tokens": 10
+            }
+        }"#;
+
+        let stripped = CodexRunner::strip_usage_stats(json_output);
+
+        assert_eq!(stripped, json_output);
+    }
+
+    // ── Runner trait tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_runner_name() {
+        let runner = CodexRunner::new();
+        assert_eq!(Runner::name(&runner), "codex");
+    }
+
+    #[test]
+    fn test_runner_default() {
+        let runner = CodexRunner::default();
+        assert_eq!(Runner::name(&runner), "codex");
+    }
+
+    // ── Interactive args tests ────────────────────────────────────────
+
+    #[test]
+    fn test_build_interactive_args_yolo_mode() {
+        let runner = CodexRunner::new();
+        let args = runner.build_interactive_args("discovery prompt").unwrap();
+
+        // Should include prompt text.
+        assert!(args.contains(&"discovery prompt".to_string()));
+
+        // Should NOT use exec subcommand.
+        assert!(!args.contains(&"exec".to_string()));
+
+        // Should include permission flags.
+        assert!(args.contains(&"--full-auto".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_with_model() {
+        let runner = CodexRunner::with_model(Some("o4-mini".to_string()));
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"--model".to_string()));
+        assert!(args.contains(&"o4-mini".to_string()));
+        assert!(args.contains(&"prompt".to_string()));
+    }
+
+    #[test]
+    fn test_build_interactive_args_manual_mode() {
+        let config = CodexConfig::new().with_permission_mode(CodexPermissionMode::Manual);
+        let runner = CodexRunner::with_config(config);
+        let args = runner.build_interactive_args("prompt").unwrap();
+
+        assert!(args.contains(&"prompt".to_string()));
+        assert!(!args.contains(&"--full-auto".to_string()));
     }
 }
