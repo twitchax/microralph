@@ -34,7 +34,7 @@ acceptance_tests:
   - id: uat-004
     name: "Runner is selectable via --runner codex flag"
     command: cargo run -- --help
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "CodexRunner build_args produces correct CLI invocation"
     command: cargo make test
@@ -272,4 +272,14 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Ran `cargo make clippy` which completed successfully (exit code 0)
   - Clippy ran with `-D warnings` flag — zero warnings emitted
   - All targets and features checked (`--all-targets --all-features`)
+
+## 2026-02-08 — uat-004 Verification
+- **UAT**: Runner is selectable via --runner codex flag
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_args_parse_run_with_runner_codex` in `src/main.rs` (tests module)
+  - Test verifies `--runner codex` is accepted by CLI arg parser and parsed correctly
+  - Also confirmed `cargo run -- run --help` lists `codex` in `--runner` options
+  - UAT passed: `cargo make uat` — 543 tests, 0 failures ✅
 

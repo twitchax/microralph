@@ -2098,6 +2098,16 @@ mod tests {
     }
 
     #[test]
+    fn test_args_parse_run_with_runner_codex() {
+        let args = Args::try_parse_from(["mr", "run", "--runner", "codex"]).unwrap();
+        if let Some(Command::Run { runner, .. }) = args.command {
+            assert_eq!(runner, "codex");
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
     fn test_args_parse_run_with_model() {
         let args = Args::try_parse_from(["mr", "run", "--model", "claude-sonnet-4.5"]).unwrap();
         if let Some(Command::Run { runner, model, .. }) = args.command {
