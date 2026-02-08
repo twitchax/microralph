@@ -46,7 +46,7 @@ acceptance_tests:
   - id: uat-007
     name: "Interactive mode produces correct args for codex TUI"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-008
     name: "Full CI pipeline passes"
     command: cargo make ci
@@ -307,4 +307,15 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
     - `test_parse_usage_no_usage_object` — returns None when no usage object present
     - `test_parse_usage_returns_none` — returns None for plain text output
   - All 543 tests passed with `cargo make test` ✅
+
+## 2026-02-08 — uat-007 Verification
+- **UAT**: Interactive mode produces correct args for codex TUI
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Three existing tests in `src/runner/codex.rs` cover interactive args:
+    - `test_build_interactive_args_yolo_mode` — verifies prompt included, no `exec` subcommand, `--full-auto` present
+    - `test_build_interactive_args_with_model` — verifies `--model` and model name present in interactive args
+    - `test_build_interactive_args_manual_mode` — verifies prompt present and `--full-auto` absent in manual mode
+  - All 9 interactive-related tests passed ✅
 
