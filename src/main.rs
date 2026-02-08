@@ -58,7 +58,7 @@ enum Command {
         #[arg(long)]
         language: Option<String>,
 
-        /// The runner to use for language adaptation (only needed for non-Rust languages).
+        /// The runner to use for language adaptation [copilot, claude, codex] (only needed for non-Rust languages).
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -70,7 +70,7 @@ enum Command {
     /// [0] Ingest an existing repo into PRDs: generate `.mr/PRDS.md` and starter PRDs.
     #[command(display_order = 2)]
     Bootstrap {
-        /// The runner to use for bootstrapping.
+        /// The runner to use for bootstrapping [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -103,7 +103,7 @@ enum Command {
         /// The slug for the new PRD (e.g., "add-user-auth").
         slug: String,
 
-        /// The runner to use for the Q/A session.
+        /// The runner to use for the Q/A session [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -127,7 +127,7 @@ enum Command {
         #[arg(long)]
         context: Option<String>,
 
-        /// The runner to use for the edit session.
+        /// The runner to use for the edit session [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -142,7 +142,7 @@ enum Command {
         /// Optional PRD ID to run (e.g., "PRD-0001"). If omitted, runs the highest-priority active PRD.
         prd: Option<String>,
 
-        /// The runner to use for task execution.
+        /// The runner to use for task execution [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -170,7 +170,7 @@ enum Command {
         /// The PRD ID to finalize (e.g., "PRD-0001").
         prd_id: String,
 
-        /// The runner to use for finalization.
+        /// The runner to use for finalization [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -203,7 +203,7 @@ enum Command {
     /// [H] Generate AI-driven PRD suggestions based on codebase analysis.
     #[command(display_order = 10)]
     Suggest {
-        /// The runner to use for suggestion generation.
+        /// The runner to use for suggestion generation [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -236,7 +236,7 @@ enum Command {
         #[arg(long)]
         no_commit: bool,
 
-        /// The runner to use for refactoring.
+        /// The runner to use for refactoring [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -266,7 +266,7 @@ enum Command {
     /// [C] Regenerate `.mr/PRDS.md` index and fix inter-PRD/code links in PRDs.
     #[command(display_order = 14)]
     Reindex {
-        /// The runner to use for link verification/fixing.
+        /// The runner to use for link verification/fixing [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -291,7 +291,7 @@ enum Command {
 enum DevcontainerCommand {
     /// Generate a dev container configuration from repository analysis.
     Generate {
-        /// The runner to use for generation.
+        /// The runner to use for generation [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 
@@ -308,7 +308,7 @@ enum ConstitutionCommand {
         /// The edit request (what changes to make).
         request: String,
 
-        /// The runner to use for the edit session.
+        /// The runner to use for the edit session [copilot, claude, codex].
         #[arg(long, default_value = "copilot")]
         runner: String,
 

@@ -9,7 +9,7 @@ This document provides detailed workflows and troubleshooting for AI coding agen
   - `config/`: Configuration loading and constitution editing
   - `prd/`: PRD types, parsing, indexing, and operations (edit, new, finalize)
   - `prompt/`: Prompt loading and expansion
-  - `runner/`: Runner implementations (copilot, claude, mock)
+  - `runner/`: Runner implementations (copilot, claude, codex, mock)
   - `util/`: Shared utilities (colors, spinner, qa_workflow)
   - `main.rs`: CLI entry point
   - `changelog.rs`: Changelog generation
@@ -93,7 +93,7 @@ mr prd edit PRD-0001 --runner claude --model claude-sonnet-4.5
 | Flag        | Default | Description                                         |
 | ----------- | ------- | --------------------------------------------------- |
 | `--context` | None    | Optional upfront context to guide the edit session   |
-| `--runner`  | copilot | Runner to use (copilot, claude)                      |
+| `--runner`  | copilot | Runner to use (copilot, claude, codex)                |
 | `--model`   | None    | Model override for the runner                        |
 
 ### Prompts
@@ -149,7 +149,7 @@ mr bootstrap --scaffold
 | Flag         | Default | Description                                                                      |
 | ------------ | ------- | -------------------------------------------------------------------------------- |
 | `--scaffold` | false   | Skip git history analysis; create an initial PRD for bootstrapping new projects |
-| `--runner`   | copilot | Runner to use (copilot, claude)                                                  |
+| `--runner`   | copilot | Runner to use (copilot, claude, codex)                                           |
 | `--model`    | None    | Model override for the runner                                                    |
 | `--language` | None    | Target language hint (rust, python, node, go, java)                              |
 | `--stream`   | false   | Stream runner output in real-time                                                |
@@ -292,7 +292,7 @@ mr refactor --stream
 | `--path`      | None    | Constrain scope to specific directory/file pattern          |
 | `--dry-run`   | false   | Preview suggestions without applying changes                |
 | `--no-commit` | false   | Leave changes uncommitted for manual review                 |
-| `--runner`    | copilot | Runner to use (copilot, claude)                             |
+| `--runner`    | copilot | Runner to use (copilot, claude, codex)                      |
 | `--model`     | None    | Model override for the runner                               |
 | `--stream`    | false   | Stream runner output in real-time                           |
 
@@ -400,15 +400,15 @@ This separation provides a single source of truth for agent behavior. To change 
 
 ### Runner Implementation Patterns
 
-When implementing new runners (e.g., ClaudeRunner, CopilotRunner):
+When implementing new runners (e.g., ClaudeRunner, CopilotRunner, CodexRunner):
 
 - **Mirror the CopilotRunner surface area**: New runners should provide the same API as existing runners for consistency.
-- **Config struct with permission modes**: Each runner has a config struct (e.g., `ClaudeConfig`) with fields for binary path, permission mode (Yolo/Manual), no_ask_user flag, and optional model.
+- **Config struct with permission modes**: Each runner has a config struct (e.g., `ClaudeConfig`, `CodexConfig`) with fields for binary path, permission mode (Yolo/Manual), no_ask_user flag, and optional model.
 - **Build args method**: Implement `build_args()` to construct CLI flags based on config. Keep this private and unit-testable.
-- **Token usage parsing**: Parse token usage from CLI output if available. For Claude, use `--output-format json` and extract from the `usage` object. Return `Option<UsageInfo>` with `input_tokens`, `output_tokens`, and `total_tokens`.
-- **Output stripping**: Implement a public `strip_usage_stats()` method to remove metadata from CLI output. For JSON-based CLIs (like Claude), extract only the `result` field. For text-based CLIs (like Copilot), use regex to strip stats sections.
+- **Token usage parsing**: Parse token usage from CLI output if available. For Claude, use `--output-format json` and extract from the `usage` object. For Codex, use `--json` and extract from the `usage` object. Return `Option<UsageInfo>` with `input_tokens`, `output_tokens`, and `total_tokens`.
+- **Output stripping**: Implement a public `strip_usage_stats()` method to remove metadata from CLI output. For JSON-based CLIs (like Claude and Codex), extract only the `result` field. For text-based CLIs (like Copilot), use regex to strip stats sections.
 - **Mock for tests**: All runner tests should use mocked binaries (via test-only constructors) and never require actual CLI installation. This ensures CI can run without external dependencies.
-- **Default to yolo mode**: Runners default to non-interactive mode with permissions auto-granted (`--dangerously-skip-permissions` for Claude, similar for others) to enable autonomous operation.
+- **Default to yolo mode**: Runners default to non-interactive mode with permissions auto-granted (`--dangerously-skip-permissions` for Claude, `--full-auto` for Codex, similar for others) to enable autonomous operation.
 - **Streaming support**: Implement both `execute()` (non-streaming) and `execute_streaming()` (real-time output) methods from the `Runner` trait.
 - **Interactive support**: Implement `build_interactive_args()` on `CliRunnerConfig` to enable `execute_interactive()`. Interactive mode spawns the CLI with `Stdio::inherit()` for direct user interaction.
 

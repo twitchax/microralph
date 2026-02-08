@@ -95,7 +95,7 @@ tasks:
   - id: T-009
     title: "Update --runner CLI argument help text and defaults"
     priority: 3
-    status: todo
+    status: done
     notes: "Update help strings to mention codex as a supported runner option."
   - id: T-010
     title: "Write unit tests for build_args and parse_usage"
@@ -105,7 +105,7 @@ tasks:
   - id: T-011
     title: "Update AGENTS.md with CodexRunner documentation"
     priority: 3
-    status: todo
+    status: done
     notes: "Document Codex runner patterns, CLI flags, and any differences from existing runners."
 ---
 
@@ -235,4 +235,15 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Test patterns mirror ClaudeRunner and CopilotRunner tests for consistency
   - UAT passed: `cargo make uat` — 542 tests, 0 failures ✅
 - **Constitution Compliance**: No violations. Tests follow existing patterns (Rule 4), minimal changes (Rule 3), clippy::pedantic enabled with test-only suppression (Rule 8).
+
+## 2026-02-08 — T-009 and T-011 Completed
+- **Task**: Update --runner CLI argument help text and AGENTS.md documentation
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated all 11 `--runner` CLI argument doc comments in `src/main.rs` to include `[copilot, claude, codex]` in help text
+  - Updated `AGENTS.md` workspace overview to list codex in runner implementations
+  - Updated `AGENTS.md` flag reference tables for Edit, Bootstrap, and Refactor commands to include codex
+  - Updated `AGENTS.md` Runner Implementation Patterns section to document CodexRunner patterns (CodexConfig, `--json` for token parsing, `--full-auto` for yolo mode)
+  - UAT passed: `cargo make uat` — 542 tests, 0 failures ✅
+- **Constitution Compliance**: No violations. Minimal changes (Rule 3), consistent with existing patterns (Rule 4).
 
