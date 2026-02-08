@@ -50,7 +50,7 @@ acceptance_tests:
   - id: uat-008
     name: "Full CI pipeline passes"
     command: cargo make ci
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Create CodexPermissionMode enum and CodexConfig struct"
@@ -318,4 +318,13 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
     - `test_build_interactive_args_with_model` — verifies `--model` and model name present in interactive args
     - `test_build_interactive_args_manual_mode` — verifies prompt present and `--full-auto` absent in manual mode
   - All 9 interactive-related tests passed ✅
+
+## 2026-02-08 — uat-008 Verification
+- **UAT**: Full CI pipeline passes
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make ci` which completed successfully (exit code 0)
+  - Full pipeline: fmt check, clippy (pedantic, -D warnings), nextest (543 tests)
+  - All 543 tests passed, 0 skipped, 0 failures
 
