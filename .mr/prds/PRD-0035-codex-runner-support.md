@@ -26,7 +26,7 @@ acceptance_tests:
   - id: uat-002
     name: "All existing tests pass with new runner added"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "Clippy pedantic passes with no new warnings"
     command: cargo make clippy
@@ -254,4 +254,13 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
 - **Details**:
   - Ran `cargo build` which completed successfully with exit code 0
   - The codex runner module compiles without errors or warnings
+
+## 2026-02-08 — uat-002 Verification
+- **UAT**: All existing tests pass with new runner added
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make test` which completed successfully (exit code 0)
+  - All 542 tests passed, 0 skipped, 0 failures
+  - Codex runner unit tests (28 tests) included in the passing suite
 
