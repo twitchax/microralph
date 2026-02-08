@@ -22,7 +22,7 @@ acceptance_tests:
   - id: uat-001
     name: "Project builds cleanly with codex runner module"
     command: cargo build
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: "All existing tests pass with new runner added"
     command: cargo make test
@@ -246,4 +246,12 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Updated `AGENTS.md` Runner Implementation Patterns section to document CodexRunner patterns (CodexConfig, `--json` for token parsing, `--full-auto` for yolo mode)
   - UAT passed: `cargo make uat` — 542 tests, 0 failures ✅
 - **Constitution Compliance**: No violations. Minimal changes (Rule 3), consistent with existing patterns (Rule 4).
+
+## 2026-02-08 — uat-001 Verification
+- **UAT**: Project builds cleanly with codex runner module
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo build` which completed successfully with exit code 0
+  - The codex runner module compiles without errors or warnings
 
