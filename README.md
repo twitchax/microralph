@@ -10,7 +10,7 @@
 
 > *A small ralph so you can ralph your ralphs.* 🦙
 
-**microralph** is a tiny CLI that wraps your favorite AI coding agent (including [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide) and [Claude Code CLI](https://docs.anthropic.com/en/docs/build-with-claude/claude-for-command-line)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.
+**microralph** is a tiny CLI that wraps your favorite AI coding agent (including [GitHub Copilot CLI](https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-chat-in-your-ide), [Claude Code CLI](https://docs.anthropic.com/en/docs/build-with-claude/claude-for-command-line), and [OpenAI Codex CLI](https://github.com/openai/codex)) and turns it into a **PRD-driven task loop**. You write PRDs (Product Requirements Documents), and microralph repeatedly invokes the agent—one task at a time—until everything is done.
 
 Oh, and yes: **microralph was entirely `ralph`'d into existence by microralph itself**. Dogfooding at its finest. 🐕
 
@@ -77,7 +77,7 @@ Each `mr run` invocation:
 - **Multi-language support**: Works with Rust, Python, Node.js, Go, Java (auto-detected)
 - **Streaming output**: `mr run --stream` shows agent output in real-time
 - **Git-native state**: PRDs are versioned markdown; no databases or JSON blobs
-- **Runner abstraction**: Pluggable adapters (Copilot, mock for testing, more to come)
+- **Runner abstraction**: Pluggable adapters (Copilot, Claude, Codex, mock for testing)
 
 ## Installation
 
@@ -206,7 +206,7 @@ mr status
 | ------------------- | ---------------------------------------------------------------- |
 | `-v, --verbose`     | Enable verbose output                                            |
 | `-q, --quiet`       | Suppress non-essential output                                    |
-| `--runner <runner>` | Specify runner: `copilot`, `claude`, `mock` (default: `copilot`) |
+| `--runner <runner>` | Specify runner: `copilot`, `claude`, `codex`, `mock` (default: `copilot`) |
 | `--model <model>`   | Specify model (passed through to runner)                         |
 | `--stream`          | Stream runner output in real-time (for `mr run`)                 |
 
@@ -549,6 +549,9 @@ mr run --runner copilot --model claude-sonnet-4.5 --stream
 
 # Or use Claude Code CLI instead
 mr run --runner claude --model claude-sonnet-4.5 --stream
+
+# Or use OpenAI Codex CLI
+mr run --runner codex --model o4-mini --stream
 
 # Persistent config (set once, forget)
 cat > .mr/config.toml <<EOF
@@ -1040,7 +1043,7 @@ Traditional Ralph implementations are simple loop scripts: run the agent → che
 3. **Git-native state**: PRDs are markdown files that track progress and history
 4. **Multi-task orchestration**: Automatically picks the next task from active PRDs
 5. **Guided workflows**: `mr new` and `mr bootstrap` help structure work
-6. **Runner abstraction**: Pluggable backends (Copilot, others to come)
+6. **Runner abstraction**: Pluggable backends (Copilot, Claude, Codex)
 
 Think of microralph as "Ralph with a project management system built in."
 

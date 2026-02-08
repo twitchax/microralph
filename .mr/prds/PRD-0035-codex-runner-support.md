@@ -1,112 +1,112 @@
 ---
 id: PRD-0035
-title: "Codex Runner Support"
-status: active
+title: Codex Runner Support
+status: done
 owner: twitchax
 created: 2026-02-08
 updated: 2026-02-08
 principles:
-  - "Mirror existing runner patterns (CopilotRunner, ClaudeRunner) for consistency"
-  - "Implement full CliRunnerConfig trait for automatic Runner blanket implementation"
-  - "Default to autonomous mode (--full-auto) for non-interactive execution"
-  - "Parse token usage from JSON output when available"
-  - "No new dependencies required — reuse existing serde_json, regex, and which crates"
+- Mirror existing runner patterns (CopilotRunner, ClaudeRunner) for consistency
+- Implement full CliRunnerConfig trait for automatic Runner blanket implementation
+- Default to autonomous mode (--full-auto) for non-interactive execution
+- Parse token usage from JSON output when available
+- No new dependencies required — reuse existing serde_json, regex, and which crates
 references:
-  - name: "OpenAI Codex CLI Reference"
-    url: "https://developers.openai.com/codex/cli/reference"
-  - name: "Codex CLI npm package"
-    url: "https://www.npmjs.com/package/@openai/codex"
-  - name: "PRD-0013 Add Claude CLI Runner"
-    url: ".mr/prds/PRD-0013-add-claude-cli-runner.md"
+- name: OpenAI Codex CLI Reference
+  url: https://developers.openai.com/codex/cli/reference
+- name: Codex CLI npm package
+  url: https://www.npmjs.com/package/@openai/codex
+- name: PRD-0013 Add Claude CLI Runner
+  url: .mr/prds/PRD-0013-add-claude-cli-runner.md
 acceptance_tests:
-  - id: uat-001
-    name: "Project builds cleanly with codex runner module"
-    command: cargo build
-    uat_status: verified
-  - id: uat-002
-    name: "All existing tests pass with new runner added"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-003
-    name: "Clippy pedantic passes with no new warnings"
-    command: cargo make clippy
-    uat_status: verified
-  - id: uat-004
-    name: "Runner is selectable via --runner codex flag"
-    command: cargo run -- --help
-    uat_status: verified
-  - id: uat-005
-    name: "CodexRunner build_args produces correct CLI invocation"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-006
-    name: "Token usage parsing extracts input/output tokens from JSON"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-007
-    name: "Interactive mode produces correct args for codex TUI"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-008
-    name: "Full CI pipeline passes"
-    command: cargo make ci
-    uat_status: verified
+- id: uat-001
+  name: Project builds cleanly with codex runner module
+  command: cargo build
+  uat_status: verified
+- id: uat-002
+  name: All existing tests pass with new runner added
+  command: cargo make test
+  uat_status: verified
+- id: uat-003
+  name: Clippy pedantic passes with no new warnings
+  command: cargo make clippy
+  uat_status: verified
+- id: uat-004
+  name: Runner is selectable via --runner codex flag
+  command: cargo run -- --help
+  uat_status: verified
+- id: uat-005
+  name: CodexRunner build_args produces correct CLI invocation
+  command: cargo make test
+  uat_status: verified
+- id: uat-006
+  name: Token usage parsing extracts input/output tokens from JSON
+  command: cargo make test
+  uat_status: verified
+- id: uat-007
+  name: Interactive mode produces correct args for codex TUI
+  command: cargo make test
+  uat_status: verified
+- id: uat-008
+  name: Full CI pipeline passes
+  command: cargo make ci
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Create CodexPermissionMode enum and CodexConfig struct"
-    priority: 1
-    status: done
-    notes: "Mirror ClaudePermissionMode pattern. Default Yolo uses --full-auto. Add model and codex_path fields."
-  - id: T-002
-    title: "Create CodexRunner struct with constructors"
-    priority: 1
-    status: done
-    notes: "Implement new(), with_model(), and test-only constructors. Follow CopilotRunner/ClaudeRunner patterns."
-  - id: T-003
-    title: "Implement append_config_flags for CodexRunner"
-    priority: 1
-    status: done
-    notes: "Handle --full-auto (Yolo mode), --model flag, and any codex-specific flags."
-  - id: T-004
-    title: "Implement CliRunnerConfig trait for CodexRunner"
-    priority: 1
-    status: done
-    notes: "Implement binary_path, build_args (codex exec -p prompt --json --full-auto), parse_usage (JSON), post_process_output (extract result from JSON), format_display_parts, build_interactive_args (codex prompt, no exec subcommand)."
-  - id: T-005
-    title: "Implement token usage parsing from Codex JSON output"
-    priority: 2
-    status: done
-    notes: "Parse JSON output for usage.input_tokens and usage.output_tokens fields. Return TokenUsageInfo."
-  - id: T-006
-    title: "Implement post_process_output to extract result from JSON"
-    priority: 2
-    status: done
-    notes: "Similar to ClaudeRunner's extract_result_from_json. Extract meaningful text from Codex JSON response."
-  - id: T-007
-    title: "Export CodexRunner in src/runner/mod.rs"
-    priority: 2
-    status: done
-    notes: "Add mod codex and pub use codex::CodexRunner."
-  - id: T-008
-    title: "Add codex arm to create_runner() in main.rs"
-    priority: 2
-    status: done
-    notes: "Add match arm for 'codex' in create_runner(). Update error message to list codex as supported runner."
-  - id: T-009
-    title: "Update --runner CLI argument help text and defaults"
-    priority: 3
-    status: done
-    notes: "Update help strings to mention codex as a supported runner option."
-  - id: T-010
-    title: "Write unit tests for build_args and parse_usage"
-    priority: 2
-    status: done
-    notes: "Test non-interactive args, interactive args, model override, usage parsing from sample JSON, and post-processing."
-  - id: T-011
-    title: "Update AGENTS.md with CodexRunner documentation"
-    priority: 3
-    status: done
-    notes: "Document Codex runner patterns, CLI flags, and any differences from existing runners."
+- id: T-001
+  title: Create CodexPermissionMode enum and CodexConfig struct
+  priority: 1
+  status: done
+  notes: Mirror ClaudePermissionMode pattern. Default Yolo uses --full-auto. Add model and codex_path fields.
+- id: T-002
+  title: Create CodexRunner struct with constructors
+  priority: 1
+  status: done
+  notes: Implement new(), with_model(), and test-only constructors. Follow CopilotRunner/ClaudeRunner patterns.
+- id: T-003
+  title: Implement append_config_flags for CodexRunner
+  priority: 1
+  status: done
+  notes: Handle --full-auto (Yolo mode), --model flag, and any codex-specific flags.
+- id: T-004
+  title: Implement CliRunnerConfig trait for CodexRunner
+  priority: 1
+  status: done
+  notes: Implement binary_path, build_args (codex exec -p prompt --json --full-auto), parse_usage (JSON), post_process_output (extract result from JSON), format_display_parts, build_interactive_args (codex prompt, no exec subcommand).
+- id: T-005
+  title: Implement token usage parsing from Codex JSON output
+  priority: 2
+  status: done
+  notes: Parse JSON output for usage.input_tokens and usage.output_tokens fields. Return TokenUsageInfo.
+- id: T-006
+  title: Implement post_process_output to extract result from JSON
+  priority: 2
+  status: done
+  notes: Similar to ClaudeRunner's extract_result_from_json. Extract meaningful text from Codex JSON response.
+- id: T-007
+  title: Export CodexRunner in src/runner/mod.rs
+  priority: 2
+  status: done
+  notes: Add mod codex and pub use codex::CodexRunner.
+- id: T-008
+  title: Add codex arm to create_runner() in main.rs
+  priority: 2
+  status: done
+  notes: Add match arm for 'codex' in create_runner(). Update error message to list codex as supported runner.
+- id: T-009
+  title: Update --runner CLI argument help text and defaults
+  priority: 3
+  status: done
+  notes: Update help strings to mention codex as a supported runner option.
+- id: T-010
+  title: Write unit tests for build_args and parse_usage
+  priority: 2
+  status: done
+  notes: Test non-interactive args, interactive args, model override, usage parsing from sample JSON, and post-processing.
+- id: T-011
+  title: Update AGENTS.md with CodexRunner documentation
+  priority: 3
+  status: done
+  notes: Document Codex runner patterns, CLI flags, and any differences from existing runners.
 ---
 
 # Summary
@@ -327,4 +327,14 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
   - Ran `cargo make ci` which completed successfully (exit code 0)
   - Full pipeline: fmt check, clippy (pedantic, -D warnings), nextest (543 tests)
   - All 543 tests passed, 0 skipped, 0 failures
+
+## 2026-02-08 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 11 tasks (T-001 through T-011)
+- **Outcome**: All tasks completed, acceptance tests passed (543/543 tests)
+- **Cleanup**: Updated README.md to document codex as a supported runner; no temp files or debug statements found
+- **Summary**:
+  - Implemented full `CodexRunner` with `CliRunnerConfig` trait, supporting non-interactive, streaming, and interactive modes
+  - Added 28 unit tests covering build_args, parse_usage, post_process_output, interactive args, and strip_usage_stats
+  - Integrated codex runner into CLI (`--runner codex`), updated all help text, AGENTS.md, and README.md documentation
 
