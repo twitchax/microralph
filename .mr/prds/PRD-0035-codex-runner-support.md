@@ -42,7 +42,7 @@ acceptance_tests:
   - id: uat-006
     name: "Token usage parsing extracts input/output tokens from JSON"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-007
     name: "Interactive mode produces correct args for codex TUI"
     command: cargo make test
@@ -294,5 +294,17 @@ The parser will extract `input_tokens` and `output_tokens`, compute `total_token
     - `test_build_args_with_model` — verifies `--model` flag present
     - `test_build_args_without_model` — verifies no `--model` when unset
     - `test_with_model_constructor` — verifies model + default flags together
+  - All 543 tests passed with `cargo make test` ✅
+
+## 2026-02-08 — uat-006 Verification
+- **UAT**: Token usage parsing extracts input/output tokens from JSON
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Four existing tests in `src/runner/codex.rs` cover token usage parsing:
+    - `test_parse_usage_from_json` — parses JSON with `input_tokens: 26549`, `output_tokens: 1590`, verifies extraction and total computation (28139)
+    - `test_parse_usage_missing_fields` — handles partial usage (only `input_tokens`)
+    - `test_parse_usage_no_usage_object` — returns None when no usage object present
+    - `test_parse_usage_returns_none` — returns None for plain text output
   - All 543 tests passed with `cargo make test` ✅
 
