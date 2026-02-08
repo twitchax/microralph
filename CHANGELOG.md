@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] 
+## [Unreleased]
+
+### 📋 PRD Tasks
+
+- Prd(PRD-0035)feat(T-001): add CodexRunner with full CliRunnerConfig implementation
+- Prd(PRD-0035)feat(T-010): add comprehensive unit tests for CodexRunner
+- Prd(PRD-0035)feat(T-009): update --runner help text and AGENTS.md for codex runner
+- Prd(PRD-0035)uat(uat-001): verify project builds cleanly with codex runner module
+- Prd(PRD-0035)uat(uat-002): verify all 542 tests pass with codex runner
+- Prd(PRD-0035)uat(uat-003): verify clippy pedantic passes with no warnings
+- Prd(PRD-0035)uat(uat-004): verify runner selectable via --runner codex flag
+- Prd(PRD-0035)uat(uat-005): verify build_args produces correct CLI invocation
+- Prd(PRD-0035)uat(uat-006): verify token usage parsing with existing tests
+- Prd(PRD-0035)uat(uat-007): verify interactive mode args via existing tests
+- Prd(PRD-0035)uat(uat-008): verify full CI pipeline passes
+- Prd(PRD-0035)finalize: Codex runner support with full test coverage and documentation
+
+## [0.8.0] - 2026-02-07
 
 ### 📋 PRD Tasks
 
