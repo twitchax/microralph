@@ -9,11 +9,13 @@
 
 mod claude;
 mod cli_runner;
+mod codex;
 mod copilot;
 mod mock;
 mod types;
 
 pub use claude::ClaudeRunner;
+pub use codex::CodexRunner;
 pub use copilot::CopilotRunner;
 pub use mock::MockRunner;
 pub use types::Runner;

@@ -606,7 +606,18 @@ fn create_runner(runner_name: &str, model: Option<String>) -> Result<Box<dyn run
 
             Ok(Box::new(claude))
         }
-        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, claude, mock"),
+        "codex" => {
+            let codex = runner::CodexRunner::with_model(model);
+
+            if !codex.is_available() {
+                anyhow::bail!(
+                    "Codex CLI is not available. Install it or use `--runner mock` for testing."
+                );
+            }
+
+            Ok(Box::new(codex))
+        }
+        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, claude, codex, mock"),
     }
 }
 
