@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🚜 Refactor
+
+- Extract shared JSON parsing helpers from Claude/Codex runners
+- Remove redundant delegation methods in Claude/Codex runners
+- Extract PrdSummary::to_placeholder_list to eliminate DRY violation
+
+## [0.8.1] - 2026-02-08
+
 ### 📋 PRD Tasks
 
 - Prd(PRD-0035)feat(T-001): add CodexRunner with full CliRunnerConfig implementation
