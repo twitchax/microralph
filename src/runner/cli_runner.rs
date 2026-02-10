@@ -154,56 +154,60 @@ fn resolve_binary(binary_path: &str) -> String {
     which::which(binary_path).map_or_else(|_| binary_path.to_string(), |p| p.display().to_string())
 }
 
-/// Quotes an argument for safe passage through cmd.exe when invoking batch files.
+/// Quotes an argument for safe passage through PowerShell.
 ///
-/// Inside double-quoted strings, cmd.exe treats most characters literally
-/// except `%` (variable expansion) and `"` (end of quote). This function:
-/// - Wraps the argument in double quotes
-/// - Doubles internal `"` characters (`""` is cmd.exe's escape sequence)
-/// - Doubles `%` characters to prevent variable expansion
+/// In PowerShell single-quoted strings, the only special character is `'`
+/// itself, which is escaped by doubling it (`''`). This makes single-quoted
+/// strings ideal for passing arbitrary content — including newlines, `<`, `>`,
+/// `&`, `|`, `"`, `%`, etc. — without any interpretation.
 #[cfg(windows)]
-fn quote_for_cmd(arg: &str) -> String {
-    let mut result = String::with_capacity(arg.len() + 4);
-    result.push('"');
-
-    for c in arg.chars() {
-        match c {
-            '"' => result.push_str("\"\""),
-            '%' => result.push_str("%%"),
-            _ => result.push(c),
-        }
-    }
-
-    result.push('"');
-    result
+fn quote_for_powershell(arg: &str) -> String {
+    let escaped = arg.replace('\'', "''");
+    format!("'{escaped}'")
 }
 
 /// Creates a [`Command`] with proper argument handling for all platforms.
 ///
 /// On Windows, `.cmd`/`.bat` files (common for npm-installed CLIs like `copilot`)
-/// are internally executed through cmd.exe. Rust 1.77.2+ validates arguments
-/// passed to batch files and rejects characters special to cmd.exe (CVE-2024-24576).
-/// Since runner prompts routinely contain these characters (`<`, `>`, `&`, `|`, `"`,
-/// etc.), this function uses `raw_arg` with cmd.exe-safe quoting to bypass the
-/// validation when the target is a batch file.
+/// are internally executed through cmd.exe, which **cannot handle newlines in
+/// arguments** — it treats the newline as a command terminator, so multi-line
+/// prompts are truncated to the first line. To avoid this, `.cmd`/`.bat` targets
+/// are invoked through `PowerShell`, which correctly handles multi-line arguments
+/// via single-quoted strings.
 fn build_command(resolved_binary: &str, args: &[String], working_dir: &Path) -> Command {
-    let mut command = Command::new(resolved_binary);
-    command.current_dir(working_dir);
-
     #[cfg(windows)]
     {
         let lower = resolved_binary.to_lowercase();
         if lower.ends_with(".cmd") || lower.ends_with(".bat") {
-            use std::os::windows::process::CommandExt;
+            // Use PowerShell to invoke batch files. cmd.exe (which processes
+            // .cmd/.bat files directly) cannot handle newlines in arguments,
+            // causing multi-line prompts to be truncated to the first line.
+            // PowerShell handles multi-line arguments correctly via
+            // single-quoted strings.
+            let mut ps_command = String::from("& ");
+            ps_command.push_str(&quote_for_powershell(resolved_binary));
 
             for arg in args {
-                command.raw_arg(quote_for_cmd(arg));
+                ps_command.push(' ');
+                ps_command.push_str(&quote_for_powershell(arg));
             }
+
+            let mut command = Command::new("powershell.exe");
+            command.current_dir(working_dir);
+            command.args([
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                &ps_command,
+            ]);
 
             return command;
         }
     }
 
+    let mut command = Command::new(resolved_binary);
+    command.current_dir(working_dir);
     command.args(args);
     command
 }
@@ -627,34 +631,46 @@ mod tests {
 
     #[cfg(windows)]
     #[test]
-    fn test_quote_for_cmd_simple() {
-        assert_eq!(quote_for_cmd("hello"), "\"hello\"");
+    fn test_quote_for_powershell_simple() {
+        assert_eq!(quote_for_powershell("hello"), "'hello'");
     }
 
     #[cfg(windows)]
     #[test]
-    fn test_quote_for_cmd_with_special_chars() {
-        // Double quotes should be doubled.
-        assert_eq!(quote_for_cmd("say \"hi\""), "\"say \"\"hi\"\"\"");
+    fn test_quote_for_powershell_with_special_chars() {
+        // Single quotes should be doubled.
+        assert_eq!(quote_for_powershell("it's"), "'it''s'");
 
-        // Percent signs should be doubled.
-        assert_eq!(quote_for_cmd("100%"), "\"100%%\"");
-
-        // cmd.exe special chars inside quotes are literal (no escaping needed).
-        assert_eq!(quote_for_cmd("a & b | c < d > e"), "\"a & b | c < d > e\"");
+        // Double quotes, percent, and cmd.exe specials are literal in PS single-quoted strings.
+        assert_eq!(quote_for_powershell("say \"hi\""), "'say \"hi\"'");
+        assert_eq!(quote_for_powershell("100%"), "'100%'");
+        assert_eq!(
+            quote_for_powershell("a & b | c < d > e"),
+            "'a & b | c < d > e'"
+        );
     }
 
     #[cfg(windows)]
     #[test]
-    fn test_build_command_batch_file_uses_raw_arg() {
+    fn test_quote_for_powershell_multiline() {
+        let multiline = "line1\nline2\nline3";
+        assert_eq!(quote_for_powershell(multiline), "'line1\nline2\nline3'");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_build_command_batch_file_uses_powershell() {
         let working_dir = Path::new("C:\\test");
-        let args = vec!["-p".to_string(), "prompt with <special> chars".to_string()];
+        let args = vec!["-p".to_string(), "prompt with\nnewlines".to_string()];
 
-        // Should not panic even with special characters when target is .cmd.
+        // .cmd files should be routed through powershell.exe.
         let command = build_command("C:\\path\\to\\copilot.cmd", &args, working_dir);
 
         let program = format!("{:?}", command.get_program());
-        assert!(program.contains("copilot.cmd"));
+        assert!(
+            program.contains("powershell"),
+            "Expected powershell.exe, got: {program}"
+        );
     }
 
     #[test]
