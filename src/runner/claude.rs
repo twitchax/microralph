@@ -158,22 +158,6 @@ impl ClaudeRunner {
         parts
     }
 
-    /// Attempts to parse token usage information from Claude CLI output.
-    ///
-    /// Delegates to [`cli_runner::parse_json_usage`] which handles the common JSON
-    /// format shared by Claude and Codex CLIs.
-    fn parse_usage(text: &str) -> Option<TokenUsageInfo> {
-        super::cli_runner::parse_json_usage(text)
-    }
-
-    /// Extracts the actual response text from Claude CLI JSON output.
-    ///
-    /// Delegates to [`cli_runner::extract_json_result`] which handles the common JSON
-    /// format shared by Claude and Codex CLIs.
-    fn extract_result_from_json(text: &str) -> String {
-        super::cli_runner::extract_json_result(text)
-    }
-
     /// Strips the statistics metadata from Claude CLI JSON output.
     ///
     /// Returns only the actual response text (the `result` field).
@@ -215,11 +199,11 @@ impl CliRunnerConfig for ClaudeRunner {
     }
 
     fn parse_usage(&self, text: &str) -> Option<TokenUsageInfo> {
-        Self::parse_usage(text)
+        super::cli_runner::parse_json_usage(text)
     }
 
     fn post_process_output(&self, text: &str) -> String {
-        Self::extract_result_from_json(text)
+        super::cli_runner::extract_json_result(text)
     }
 
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
@@ -247,6 +231,7 @@ impl CliRunnerConfig for ClaudeRunner {
 mod tests {
     use super::*;
     use crate::runner::Runner;
+    use crate::runner::cli_runner::{extract_json_result, parse_json_usage};
 
     #[test]
     fn test_claude_config_default() {
@@ -346,7 +331,7 @@ mod tests {
     fn test_parse_usage_returns_none() {
         let output = "Hello world\nThis is just normal output.";
 
-        let usage = ClaudeRunner::parse_usage(output);
+        let usage = parse_json_usage(output);
 
         assert!(usage.is_none());
     }
@@ -365,7 +350,7 @@ mod tests {
             }
         }"#;
 
-        let usage = ClaudeRunner::parse_usage(json_output).unwrap();
+        let usage = parse_json_usage(json_output).unwrap();
 
         assert_eq!(usage.input, Some(1234));
         assert_eq!(usage.output, Some(56));
@@ -381,7 +366,7 @@ mod tests {
             }
         }"#;
 
-        let usage = ClaudeRunner::parse_usage(json_output).unwrap();
+        let usage = parse_json_usage(json_output).unwrap();
 
         assert_eq!(usage.input, Some(100));
         assert_eq!(usage.output, None);
@@ -399,7 +384,7 @@ mod tests {
             }
         }"#;
 
-        let result = ClaudeRunner::extract_result_from_json(json_output);
+        let result = extract_json_result(json_output);
 
         assert_eq!(result, "Hello, world!");
     }
@@ -408,7 +393,7 @@ mod tests {
     fn test_extract_result_from_invalid_json() {
         let invalid_json = "This is not JSON";
 
-        let result = ClaudeRunner::extract_result_from_json(invalid_json);
+        let result = extract_json_result(invalid_json);
 
         assert_eq!(result, "This is not JSON");
     }
@@ -422,7 +407,7 @@ mod tests {
             }
         }"#;
 
-        let result = ClaudeRunner::extract_result_from_json(json_output);
+        let result = extract_json_result(json_output);
 
         // Should return original text if result field is missing
         assert_eq!(result, json_output);

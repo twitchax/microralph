@@ -141,22 +141,6 @@ impl CodexRunner {
         parts
     }
 
-    /// Attempts to parse token usage information from Codex CLI JSON output.
-    ///
-    /// Delegates to [`cli_runner::parse_json_usage`] which handles the common JSON
-    /// format shared by Claude and Codex CLIs.
-    fn parse_usage(text: &str) -> Option<TokenUsageInfo> {
-        super::cli_runner::parse_json_usage(text)
-    }
-
-    /// Extracts the actual response text from Codex CLI JSON output.
-    ///
-    /// Delegates to [`cli_runner::extract_json_result`] which handles the common JSON
-    /// format shared by Claude and Codex CLIs.
-    fn extract_result_from_json(text: &str) -> String {
-        super::cli_runner::extract_json_result(text)
-    }
-
     /// Strips the statistics metadata from Codex CLI JSON output.
     ///
     /// Returns only the actual response text (the `result` field).
@@ -196,11 +180,11 @@ impl CliRunnerConfig for CodexRunner {
     }
 
     fn parse_usage(&self, text: &str) -> Option<TokenUsageInfo> {
-        Self::parse_usage(text)
+        super::cli_runner::parse_json_usage(text)
     }
 
     fn post_process_output(&self, text: &str) -> String {
-        Self::extract_result_from_json(text)
+        super::cli_runner::extract_json_result(text)
     }
 
     fn format_display_parts(&self, working_dir: &Path) -> Vec<String> {
@@ -229,6 +213,7 @@ mod tests {
 
     use super::*;
     use crate::runner::Runner;
+    use crate::runner::cli_runner::{extract_json_result, parse_json_usage};
 
     // ── Config tests ──────────────────────────────────────────────────
 
@@ -321,7 +306,7 @@ mod tests {
     fn test_parse_usage_returns_none() {
         let output = "Hello world\nThis is just normal output.";
 
-        let usage = CodexRunner::parse_usage(output);
+        let usage = parse_json_usage(output);
 
         assert!(usage.is_none());
     }
@@ -336,7 +321,7 @@ mod tests {
             }
         }"#;
 
-        let usage = CodexRunner::parse_usage(json_output).unwrap();
+        let usage = parse_json_usage(json_output).unwrap();
 
         assert_eq!(usage.input, Some(26549));
         assert_eq!(usage.output, Some(1590));
@@ -352,7 +337,7 @@ mod tests {
             }
         }"#;
 
-        let usage = CodexRunner::parse_usage(json_output).unwrap();
+        let usage = parse_json_usage(json_output).unwrap();
 
         assert_eq!(usage.input, Some(100));
         assert_eq!(usage.output, None);
@@ -365,7 +350,7 @@ mod tests {
             "result": "no usage here"
         }"#;
 
-        let usage = CodexRunner::parse_usage(json_output);
+        let usage = parse_json_usage(json_output);
 
         assert!(usage.is_none());
     }
@@ -382,7 +367,7 @@ mod tests {
             }
         }"#;
 
-        let result = CodexRunner::extract_result_from_json(json_output);
+        let result = extract_json_result(json_output);
 
         assert_eq!(result, "Hello, world!");
     }
@@ -391,7 +376,7 @@ mod tests {
     fn test_extract_result_from_invalid_json() {
         let invalid_json = "This is not JSON";
 
-        let result = CodexRunner::extract_result_from_json(invalid_json);
+        let result = extract_json_result(invalid_json);
 
         assert_eq!(result, "This is not JSON");
     }
@@ -404,7 +389,7 @@ mod tests {
             }
         }"#;
 
-        let result = CodexRunner::extract_result_from_json(json_output);
+        let result = extract_json_result(json_output);
 
         assert_eq!(result, json_output);
     }
