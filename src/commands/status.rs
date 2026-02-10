@@ -82,7 +82,7 @@ fn extract_last_history(body: &str) -> Option<String> {
     let history_section = &body[history_start..];
 
     // Find all `## ` entries after History header.
-    let mut entries: Vec<&str> = Vec::new();
+    let mut entries: Vec<String> = Vec::new();
     let mut current_start: Option<usize> = None;
 
     for (i, line) in history_section.lines().enumerate() {
@@ -92,7 +92,7 @@ fn extract_last_history(body: &str) -> Option<String> {
                 // End of previous entry (we'll collect it when we find the start of the next one).
                 let lines: Vec<&str> = history_section.lines().collect();
                 let entry: String = lines[start..i].join("\n");
-                entries.push(Box::leak(entry.into_boxed_str()));
+                entries.push(entry);
             }
 
             current_start = Some(i);
@@ -103,7 +103,7 @@ fn extract_last_history(body: &str) -> Option<String> {
     if let Some(start) = current_start {
         let lines: Vec<&str> = history_section.lines().collect();
         let entry: String = lines[start..].join("\n");
-        entries.push(Box::leak(entry.into_boxed_str()));
+        entries.push(entry);
     }
 
     // Return the last entry (most recent).

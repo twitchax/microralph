@@ -196,8 +196,16 @@ fn run_iteration(
     // Check if the runner reported success.
     if output.success {
         Ok(RefactorIterationResult::Applied {
-            summary: if text.len() > 500 {
-                format!("...{}", &text[text.len() - 500..])
+            summary: if text.chars().count() > 500 {
+                let last_500: String = text
+                    .chars()
+                    .rev()
+                    .take(500)
+                    .collect::<String>()
+                    .chars()
+                    .rev()
+                    .collect();
+                format!("...{last_500}")
             } else {
                 text.to_string()
             },

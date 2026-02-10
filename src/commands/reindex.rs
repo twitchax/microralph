@@ -307,8 +307,9 @@ fn extract_summary(body: &str) -> String {
         }
 
         // Return first 200 chars of first real content.
-        if trimmed.len() > 200 {
-            return format!("{}...", &trimmed[..197]);
+        if trimmed.chars().count() > 200 {
+            let first_197: String = trimmed.chars().take(197).collect();
+            return format!("{first_197}...");
         }
 
         return trimmed.to_string();

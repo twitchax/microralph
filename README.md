@@ -202,13 +202,13 @@ mr status
 
 ### Flags
 
-| Flag                | Description                                                      |
-| ------------------- | ---------------------------------------------------------------- |
-| `-v, --verbose`     | Enable verbose output                                            |
-| `-q, --quiet`       | Suppress non-essential output                                    |
+| Flag                | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| `-v, --verbose`     | Enable verbose output                                                     |
+| `-q, --quiet`       | Suppress non-essential output                                             |
 | `--runner <runner>` | Specify runner: `copilot`, `claude`, `codex`, `mock` (default: `copilot`) |
-| `--model <model>`   | Specify model (passed through to runner)                         |
-| `--stream`          | Stream runner output in real-time (for `mr run`)                 |
+| `--model <model>`   | Specify model (passed through to runner)                                  |
+| `--stream`          | Stream runner output in real-time (for `mr run`)                          |
 
 ### Configuration
 

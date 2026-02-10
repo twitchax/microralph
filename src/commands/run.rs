@@ -452,15 +452,7 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     tracing::debug!(prd_path = %prd_path.display(), "Validating PRD frontmatter after agent edit");
     super::validate::validate_prd_frontmatter(&prd_path);
 
-    // Summarize output (truncate if too long). Skip summary if we already streamed.
-    let output_summary = if config.stream {
-        "(output was streamed above)".to_string()
-    } else if output.text.len() > 500 {
-        let start = output.text.len() - 500;
-        format!("... (truncated)\n{}", &output.text[start..])
-    } else {
-        output.text
-    };
+    let output_summary = summarize_output(config.stream, output.text);
 
     Ok(RunResult::TaskExecuted {
         prd_id,
@@ -471,6 +463,27 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
         output_summary,
         usage: output.usage,
     })
+}
+
+/// Summarize runner output, truncating if too long. Returns a passthrough message if output was streamed.
+fn summarize_output(streamed: bool, text: String) -> String {
+    if streamed {
+        return "(output was streamed above)".to_string();
+    }
+
+    if text.chars().count() > 500 {
+        let last_500: String = text
+            .chars()
+            .rev()
+            .take(500)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
+        format!("... (truncated)\n{last_500}")
+    } else {
+        text
+    }
 }
 
 /// Default max iterations for UAT verification loop if not configured.
@@ -577,9 +590,17 @@ fn execute_uat_verification(
 
     // Display output if not already streamed.
     if !config.stream {
-        if output.text.len() > 500 {
-            let start = output.text.len() - 500;
-            println!("... (truncated)\n{}", &output.text[start..]);
+        if output.text.chars().count() > 500 {
+            let last_500: String = output
+                .text
+                .chars()
+                .rev()
+                .take(500)
+                .collect::<String>()
+                .chars()
+                .rev()
+                .collect();
+            println!("... (truncated)\n{last_500}");
         } else {
             println!("{}", output.text);
         }
