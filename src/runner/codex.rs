@@ -143,56 +143,18 @@ impl CodexRunner {
 
     /// Attempts to parse token usage information from Codex CLI JSON output.
     ///
-    /// Codex CLI with `--json` flag outputs JSON that includes a `usage` object:
-    /// ```json
-    /// {
-    ///   "usage": {
-    ///     "input_tokens": 26549,
-    ///     "output_tokens": 1590
-    ///   }
-    /// }
-    /// ```
+    /// Delegates to [`cli_runner::parse_json_usage`] which handles the common JSON
+    /// format shared by Claude and Codex CLIs.
     fn parse_usage(text: &str) -> Option<TokenUsageInfo> {
-        let json: serde_json::Value = serde_json::from_str(text).ok()?;
-
-        let usage = json.get("usage")?;
-
-        let input = usage
-            .get("input_tokens")
-            .and_then(serde_json::Value::as_u64);
-
-        let output = usage
-            .get("output_tokens")
-            .and_then(serde_json::Value::as_u64);
-
-        let total = match (input, output) {
-            (Some(i), Some(o)) => Some(i + o),
-            _ => None,
-        };
-
-        if input.is_some() || output.is_some() {
-            Some(TokenUsageInfo {
-                input,
-                output,
-                total,
-            })
-        } else {
-            None
-        }
+        super::cli_runner::parse_json_usage(text)
     }
 
     /// Extracts the actual response text from Codex CLI JSON output.
     ///
-    /// When using `--json`, Codex CLI returns structured JSON. This function
-    /// extracts the `result` field and returns it as plain text.
+    /// Delegates to [`cli_runner::extract_json_result`] which handles the common JSON
+    /// format shared by Claude and Codex CLIs.
     fn extract_result_from_json(text: &str) -> String {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(text)
-            && let Some(result) = json.get("result").and_then(|v| v.as_str())
-        {
-            return result.to_string();
-        }
-
-        text.to_string()
+        super::cli_runner::extract_json_result(text)
     }
 
     /// Strips the statistics metadata from Codex CLI JSON output.
@@ -200,7 +162,7 @@ impl CodexRunner {
     /// Returns only the actual response text (the `result` field).
     #[allow(dead_code)] // Public API for consistency with CopilotRunner
     pub fn strip_usage_stats(text: &str) -> String {
-        Self::extract_result_from_json(text)
+        super::cli_runner::extract_json_result(text)
     }
 }
 

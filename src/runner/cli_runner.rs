@@ -12,6 +12,55 @@ use std::process::{Command, Stdio};
 
 use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult, TokenUsageInfo};
 
+/// Parses token usage information from JSON CLI output.
+///
+/// Expects a JSON object with a `usage` field containing `input_tokens` and/or
+/// `output_tokens`. This is the common format used by Claude (`--output-format json`)
+/// and Codex (`--json`) CLIs.
+pub fn parse_json_usage(text: &str) -> Option<TokenUsageInfo> {
+    let json: serde_json::Value = serde_json::from_str(text).ok()?;
+
+    let usage = json.get("usage")?;
+
+    let input = usage
+        .get("input_tokens")
+        .and_then(serde_json::Value::as_u64);
+
+    let output = usage
+        .get("output_tokens")
+        .and_then(serde_json::Value::as_u64);
+
+    let total = match (input, output) {
+        (Some(i), Some(o)) => Some(i + o),
+        _ => None,
+    };
+
+    if input.is_some() || output.is_some() {
+        Some(TokenUsageInfo {
+            input,
+            output,
+            total,
+        })
+    } else {
+        None
+    }
+}
+
+/// Extracts the `result` field from JSON CLI output.
+///
+/// Expects a JSON object with a `result` string field. Falls back to the original
+/// text if parsing fails or the field is missing. This is the common format used
+/// by Claude (`--output-format json`) and Codex (`--json`) CLIs.
+pub fn extract_json_result(text: &str) -> String {
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(text)
+        && let Some(result) = json.get("result").and_then(|v| v.as_str())
+    {
+        return result.to_string();
+    }
+
+    text.to_string()
+}
+
 /// Reads lines from a stream, writes them to output, and captures them.
 ///
 /// This helper function handles the common pattern of reading from a process
@@ -726,5 +775,60 @@ mod tests {
     #[test]
     fn test_signal_name_unknown_signal() {
         assert_eq!(signal_name(42), "unknown signal");
+    }
+
+    // ── Shared JSON helper tests ──────────────────────────────────────
+
+    #[test]
+    fn test_parse_json_usage_valid() {
+        let json = r#"{
+            "result": "text",
+            "usage": {
+                "input_tokens": 1234,
+                "output_tokens": 56
+            }
+        }"#;
+
+        let usage = parse_json_usage(json).unwrap();
+        assert_eq!(usage.input, Some(1234));
+        assert_eq!(usage.output, Some(56));
+        assert_eq!(usage.total, Some(1290));
+    }
+
+    #[test]
+    fn test_parse_json_usage_partial() {
+        let json = r#"{ "usage": { "input_tokens": 100 } }"#;
+
+        let usage = parse_json_usage(json).unwrap();
+        assert_eq!(usage.input, Some(100));
+        assert_eq!(usage.output, None);
+        assert_eq!(usage.total, None);
+    }
+
+    #[test]
+    fn test_parse_json_usage_no_usage() {
+        assert!(parse_json_usage(r#"{ "result": "text" }"#).is_none());
+    }
+
+    #[test]
+    fn test_parse_json_usage_invalid_json() {
+        assert!(parse_json_usage("not json").is_none());
+    }
+
+    #[test]
+    fn test_extract_json_result_valid() {
+        let json = r#"{ "result": "Hello, world!", "usage": {} }"#;
+        assert_eq!(extract_json_result(json), "Hello, world!");
+    }
+
+    #[test]
+    fn test_extract_json_result_missing_field() {
+        let json = r#"{ "usage": {} }"#;
+        assert_eq!(extract_json_result(json), json);
+    }
+
+    #[test]
+    fn test_extract_json_result_invalid_json() {
+        assert_eq!(extract_json_result("plain text"), "plain text");
     }
 }

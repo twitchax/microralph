@@ -160,88 +160,26 @@ impl ClaudeRunner {
 
     /// Attempts to parse token usage information from Claude CLI output.
     ///
-    /// Claude CLI supports `--output-format json` which includes a `usage` object with:
-    /// - `input_tokens`: Number of input tokens
-    /// - `output_tokens`: Number of output tokens
-    /// - `cache_creation_input_tokens`: Tokens used for cache creation
-    /// - `cache_read_input_tokens`: Tokens read from cache
-    ///
-    /// This function parses the JSON output and extracts token usage.
+    /// Delegates to [`cli_runner::parse_json_usage`] which handles the common JSON
+    /// format shared by Claude and Codex CLIs.
     fn parse_usage(text: &str) -> Option<TokenUsageInfo> {
-        // Try to parse as JSON.
-        let json: serde_json::Value = serde_json::from_str(text).ok()?;
-
-        // Extract usage object.
-        let usage = json.get("usage")?;
-
-        let input = usage
-            .get("input_tokens")
-            .and_then(serde_json::Value::as_u64);
-
-        let output = usage
-            .get("output_tokens")
-            .and_then(serde_json::Value::as_u64);
-
-        let total = match (input, output) {
-            (Some(i), Some(o)) => Some(i + o),
-            _ => None,
-        };
-
-        // Return TokenUsageInfo if we found at least one piece of information.
-        if input.is_some() || output.is_some() {
-            Some(TokenUsageInfo {
-                input,
-                output,
-                total,
-            })
-        } else {
-            None
-        }
+        super::cli_runner::parse_json_usage(text)
     }
 
     /// Extracts the actual response text from Claude CLI JSON output.
     ///
-    /// When using `--output-format json`, Claude CLI returns:
-    /// ```json
-    /// {
-    ///   "type": "result",
-    ///   "result": "The actual response text...",
-    ///   "usage": {...},
-    ///   ...
-    /// }
-    /// ```
-    ///
-    /// This function extracts the `result` field and returns it as plain text.
+    /// Delegates to [`cli_runner::extract_json_result`] which handles the common JSON
+    /// format shared by Claude and Codex CLIs.
     fn extract_result_from_json(text: &str) -> String {
-        // Try to parse as JSON.
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(text)
-            && let Some(result) = json.get("result").and_then(|v| v.as_str())
-        {
-            return result.to_string();
-        }
-
-        // If parsing fails or result is missing, return original text.
-        text.to_string()
+        super::cli_runner::extract_json_result(text)
     }
 
     /// Strips the statistics metadata from Claude CLI JSON output.
     ///
-    /// When using `--output-format json`, Claude CLI returns JSON with usage stats,
-    /// type information, and other metadata. This function removes all metadata and
-    /// returns only the actual response text (the `result` field).
-    ///
-    /// This is analogous to `CopilotRunner::strip_usage_stats` but leverages Claude's
-    /// structured JSON output for cleaner parsing.
-    ///
-    /// # Example
-    /// ```ignore
-    /// let json_output = r#"{"type": "result", "result": "Hello!", "usage": {...}}"#;
-    /// let clean = ClaudeRunner::strip_usage_stats(json_output);
-    /// assert_eq!(clean, "Hello!");
-    /// ```
+    /// Returns only the actual response text (the `result` field).
     #[allow(dead_code)] // Public API for consistency with CopilotRunner
     pub fn strip_usage_stats(text: &str) -> String {
-        Self::extract_result_from_json(text)
+        super::cli_runner::extract_json_result(text)
     }
 }
 
