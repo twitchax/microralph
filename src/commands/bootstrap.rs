@@ -12,13 +12,12 @@
 //! - Invokes runner with `bootstrap_generate_prds.md` to generate PRDs
 //! - Updates `.mr/PRDS.md` index
 
-use std::collections::HashMap;
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
 use super::init;
-use crate::prd::{generate_index_from_root, scan_prd_summaries};
+use crate::prd::{PrdSummary, generate_index_from_root, scan_prd_summaries};
 use crate::prompt::{
     PlaceholderContext, PlaceholderValue, PromptKind, expand_placeholders,
     load_prompt_with_fallback,
@@ -403,18 +402,7 @@ fn build_reconstruct_prompt(config: &BootstrapConfig) -> String {
     // Add existing PRDs for idempotency (skip/merge with existing PRDs).
     let existing_prds = scan_prd_summaries(config.root).unwrap_or_default();
 
-    let prd_list: Vec<HashMap<String, String>> = existing_prds
-        .iter()
-        .map(|p| {
-            [
-                ("id".to_string(), p.id.clone()),
-                ("title".to_string(), p.title.clone()),
-                ("status".to_string(), p.status.to_string()),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .collect();
+    let prd_list = PrdSummary::to_placeholder_list(&existing_prds);
 
     ctx.insert("existing_prds", PlaceholderValue::List(prd_list));
 

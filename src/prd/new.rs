@@ -12,7 +12,6 @@
 //! On Ctrl+C or error during the interactive phase, the process aborts
 //! entirely without creating a PRD.
 
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 
@@ -339,20 +338,10 @@ fn build_interactive_prompt(
     }
 
     // Build existing PRDs list.
-    let prd_list: Vec<HashMap<String, String>> = existing_prds
-        .iter()
-        .map(|p| {
-            [
-                ("id".to_string(), p.id.clone()),
-                ("title".to_string(), p.title.clone()),
-                ("status".to_string(), p.status.to_string()),
-            ]
-            .into_iter()
-            .collect()
-        })
-        .collect();
-
-    ctx.insert("existing_prds", PlaceholderValue::List(prd_list));
+    ctx.insert(
+        "existing_prds",
+        PlaceholderValue::List(PrdSummary::to_placeholder_list(existing_prds)),
+    );
 
     expand_placeholders(&template, &ctx)
 }

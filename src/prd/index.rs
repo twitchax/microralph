@@ -103,6 +103,25 @@ impl PrdSummary {
     pub fn progress(&self) -> String {
         format!("{}/{}", self.completed_tasks, self.total_tasks)
     }
+
+    /// Converts a slice of [`PrdSummary`] into a placeholder list for prompt expansion.
+    ///
+    /// Each summary becomes a `HashMap` with `id`, `title`, and `status` keys,
+    /// suitable for use with `PlaceholderValue::List` in prompt templates.
+    pub fn to_placeholder_list(summaries: &[Self]) -> Vec<HashMap<String, String>> {
+        summaries
+            .iter()
+            .map(|p| {
+                [
+                    ("id".to_string(), p.id.clone()),
+                    ("title".to_string(), p.title.clone()),
+                    ("status".to_string(), p.status.to_string()),
+                ]
+                .into_iter()
+                .collect()
+            })
+            .collect()
+    }
 }
 
 /// Extracts references to other PRDs from a PRD's body text.
