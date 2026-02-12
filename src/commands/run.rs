@@ -917,10 +917,7 @@ mod tests {
             extract_prd_id("PRD-0001-build-something"),
             Some("PRD-0001".to_string())
         );
-        assert_eq!(
-            extract_prd_id("PRD-0002."),
-            Some("PRD-0002".to_string())
-        );
+        assert_eq!(extract_prd_id("PRD-0002."), Some("PRD-0002".to_string()));
     }
 
     #[test]

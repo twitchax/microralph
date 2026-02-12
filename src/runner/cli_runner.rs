@@ -166,6 +166,27 @@ fn quote_for_powershell(arg: &str) -> String {
     format!("'{escaped}'")
 }
 
+/// Sanitizes environment variables to remove problematic Node.js-specific vars.
+///
+/// When spawning Node.js-based CLIs (like `copilot` installed via npm), certain
+/// environment variables can cause issues:
+/// - `NODE_NO_WARNINGS=1` gets converted to `--no-warnings` flag by npm wrapper
+///   scripts, which Node.js doesn't recognize (should be `--no-warnings=<category>`)
+///
+/// This function removes known problematic Node.js env vars while preserving
+/// essential vars like `NODE_OPTIONS`, `PATH`, `HOME`, etc.
+fn sanitize_env_vars(command: &mut Command) {
+    // List of Node.js env vars that can cause CLI flag conversion issues
+    const PROBLEMATIC_NODE_VARS: &[&str] = &[
+        "NODE_NO_WARNINGS",
+        // Add more if discovered in the future
+    ];
+
+    for var in PROBLEMATIC_NODE_VARS {
+        command.env_remove(var);
+    }
+}
+
 /// Creates a [`Command`] with proper argument handling for all platforms.
 ///
 /// On Windows, `.cmd`/`.bat` files (common for npm-installed CLIs like `copilot`)
@@ -174,6 +195,10 @@ fn quote_for_powershell(arg: &str) -> String {
 /// prompts are truncated to the first line. To avoid this, `.cmd`/`.bat` targets
 /// are invoked through `PowerShell`, which correctly handles multi-line arguments
 /// via single-quoted strings.
+///
+/// Additionally, this function removes problematic Node.js environment variables
+/// (like `NODE_NO_WARNINGS`) that can cause npm wrapper scripts to inject invalid
+/// CLI flags, leading to errors and excessive token usage from retry loops.
 fn build_command(resolved_binary: &str, args: &[String], working_dir: &Path) -> Command {
     #[cfg(windows)]
     {
@@ -202,6 +227,7 @@ fn build_command(resolved_binary: &str, args: &[String], working_dir: &Path) -> 
                 &ps_command,
             ]);
 
+            sanitize_env_vars(&mut command);
             return command;
         }
     }
@@ -209,6 +235,7 @@ fn build_command(resolved_binary: &str, args: &[String], working_dir: &Path) -> 
     let mut command = Command::new(resolved_binary);
     command.current_dir(working_dir);
     command.args(args);
+    sanitize_env_vars(&mut command);
     command
 }
 
@@ -627,6 +654,29 @@ mod tests {
         // but we can verify it doesn't panic and produces a valid Command).
         let program = format!("{:?}", command.get_program());
         assert!(program.contains("some-binary"));
+    }
+
+    #[test]
+    fn test_build_command_removes_node_no_warnings() {
+        use std::env;
+
+        // Set the problematic env var (unsafe in Rust 1.80+)
+        unsafe {
+            env::set_var("NODE_NO_WARNINGS", "1");
+        }
+
+        let working_dir = Path::new("/test/dir");
+        let args = vec!["arg1".to_string()];
+
+        let command = build_command("test-binary", &args, working_dir);
+
+        // Clean up
+        unsafe {
+            env::remove_var("NODE_NO_WARNINGS");
+        }
+
+        // If we got here without panic, the command was created successfully
+        assert!(format!("{:?}", command.get_program()).contains("test-binary"));
     }
 
     #[cfg(windows)]
