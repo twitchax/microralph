@@ -267,7 +267,7 @@ pub fn pick_prd_via_runner(
 fn extract_prd_id(text: &str) -> Option<String> {
     // First, try to find it as the entire trimmed line.
     let trimmed = text.trim();
-    if trimmed.starts_with("PRD-") && trimmed.len() >= 8 {
+    if trimmed.starts_with("PRD-") && trimmed.len() == 8 {
         // Check if it looks like a valid PRD ID.
         let id_part = &trimmed[4..];
         if id_part.chars().take(4).all(|c| c.is_ascii_digit()) {
@@ -906,6 +906,20 @@ mod tests {
         assert_eq!(
             extract_prd_id("The next PRD is PRD-0001."),
             Some("PRD-0001".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_prd_id_with_trailing_content() {
+        // Regression: extract_prd_id used to return "PRD-0001-slug" because the
+        // fast path checked `len() >= 8` instead of `== 8`, accepting trailing chars.
+        assert_eq!(
+            extract_prd_id("PRD-0001-build-something"),
+            Some("PRD-0001".to_string())
+        );
+        assert_eq!(
+            extract_prd_id("PRD-0002."),
+            Some("PRD-0002".to_string())
         );
     }
 
