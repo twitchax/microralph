@@ -92,7 +92,7 @@ tasks:
   - id: T-008
     title: "Write unit tests for new UatStatus variant and finalize logic"
     priority: 8
-    status: todo
+    status: done
     notes: "Test UatStatus::Skipped serde round-trip, Display impl, and finalize acceptance of skipped UATs. Test that unverified UATs still block finalization."
 ---
 
@@ -261,3 +261,17 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Added new prompt: `prd_edit_interactive.md`, `prd_new_interactive.md` (replacing the old multi-phase prompts)
   - UAT passed: 562 tests run, 562 passed, 0 skipped
 - **Constitution Compliance**: No violations. Per constitution rule 7, `.mr/prompts/` is now synchronized with `src/commands/init.rs`.
+
+## 2026-02-21 — T-008 Completed
+- **Task**: Write unit tests for new UatStatus variant and finalize logic
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `test_uat_status_display` — tests Display impl for all 3 UatStatus variants
+  - Added `test_uat_status_serde_roundtrip` — tests serde_yaml serialize/deserialize round-trip for Unverified, Verified, and Skipped
+  - Added `test_uat_status_deserialize_skipped_from_yaml` — tests deserializing "skipped" string to `UatStatus::Skipped`
+  - Added `test_uat_status_default_is_unverified` — tests Default impl returns Unverified
+  - Added `test_acceptance_test_with_skipped_uat_roundtrip` — tests full AcceptanceTest struct serde round-trip with Skipped status
+  - All tests in `src/prd/types.rs` following existing patterns (e.g., `test_prd_status_display`, `test_task_status_display`)
+  - Finalize tests for skipped UATs already exist from T-002 in `src/prd/finalize.rs`
+  - UAT passed: 567 tests run, 567 passed, 0 skipped (5 new tests)
+- **Constitution Compliance**: No violations. Tests are minimal, follow existing patterns, and use clippy::pedantic-compliant code.

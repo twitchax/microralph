@@ -500,6 +500,60 @@ mod tests {
     }
 
     #[test]
+    fn test_uat_status_display() {
+        assert_eq!(UatStatus::Unverified.to_string(), "unverified");
+        assert_eq!(UatStatus::Verified.to_string(), "verified");
+        assert_eq!(UatStatus::Skipped.to_string(), "skipped");
+    }
+
+    #[test]
+    fn test_uat_status_serde_roundtrip() {
+        for (variant, expected_str) in [
+            (UatStatus::Unverified, "unverified"),
+            (UatStatus::Verified, "verified"),
+            (UatStatus::Skipped, "skipped"),
+        ] {
+            let yaml = serde_yaml::to_string(&variant).unwrap();
+            assert!(
+                yaml.contains(expected_str),
+                "Expected {expected_str} in serialized output, got: {yaml}"
+            );
+
+            let deserialized: UatStatus = serde_yaml::from_str(&yaml).unwrap();
+            assert_eq!(deserialized, variant);
+        }
+    }
+
+    #[test]
+    fn test_uat_status_deserialize_skipped_from_yaml() {
+        let yaml = "skipped";
+        let status: UatStatus = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(status, UatStatus::Skipped);
+    }
+
+    #[test]
+    fn test_uat_status_default_is_unverified() {
+        assert_eq!(UatStatus::default(), UatStatus::Unverified);
+    }
+
+    #[test]
+    fn test_acceptance_test_with_skipped_uat_roundtrip() {
+        let test = AcceptanceTest {
+            id: "uat-001".to_string(),
+            name: "Test skipped".to_string(),
+            command: "cargo test".to_string(),
+            uat_status: UatStatus::Skipped,
+        };
+
+        let yaml = serde_yaml::to_string(&test).unwrap();
+        assert!(yaml.contains("uat_status: skipped"));
+
+        let deserialized: AcceptanceTest = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(deserialized.uat_status, UatStatus::Skipped);
+        assert_eq!(deserialized.id, "uat-001");
+    }
+
+    #[test]
     fn test_prd_next_task() {
         let frontmatter = PrdFrontmatter {
             id: "PRD-0001".to_string(),
