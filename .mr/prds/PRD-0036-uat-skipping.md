@@ -48,7 +48,7 @@ acceptance_tests:
   - id: uat-007
     name: "--disallow-skip-uat prevents the agent from skipping UATs in prompt"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-008
     name: "--disallow-add-task prevents the agent from adding tasks in prompt"
     command: cargo make test
@@ -327,3 +327,10 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
 - **Details**:
   - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_true` (verifies the UAT verification prompt includes "Option D: Mark as Skipped" when `allow_skip_uat=true`, enabling the agent to mark a UAT as skipped)
   - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_false` (verifies the skip section is excluded when `allow_skip_uat=false`)
+
+## 2026-02-21 — uat-007 Verification
+- **UAT**: --disallow-skip-uat prevents the agent from skipping UATs in prompt
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_false` (verifies that when `allow_skip_uat=false` — which is what `--disallow-skip-uat` sets — the prompt does NOT contain "Option D: Mark as Skipped", effectively preventing the agent from skipping UATs)
