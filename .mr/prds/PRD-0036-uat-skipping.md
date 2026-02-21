@@ -87,7 +87,7 @@ tasks:
   - id: T-007
     title: "Restore .mr/prompts with updated prompt files"
     priority: 7
-    status: todo
+    status: done
     notes: "Run mr restore or update .mr/prompts/ to reflect the new prompt templates from init.rs. Per constitution rule 7, the two sources must stay synchronized."
   - id: T-008
     title: "Write unit tests for new UatStatus variant and finalize logic"
@@ -249,3 +249,15 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
     - `test_build_uat_verify_prompt_allow_skip_uat_false`: verifies both sections excluded when flags are false
   - UAT passed: 562 tests run, 562 passed, 0 skipped (4 new tests)
 - **Constitution Compliance**: No violations. Tests follow existing patterns, changes are minimal and additive.
+
+## 2026-02-21 — T-007 Completed
+- **Task**: Restore .mr/prompts with updated prompt files
+- **Status**: ✅ Done
+- **Changes**:
+  - Ran `mr restore` to regenerate `.mr/prompts/` from the prompt constants in `src/commands/init.rs`
+  - Reverted the constitution.md overwrite (restore replaces it with defaults, but project-specific rules 7 and 8 must be preserved)
+  - Updated prompts: `run_task.md` (added `{{#if allow_add_task}}` dynamic task addition section), `run_uat_verify.md` (added `{{#if allow_skip_uat}}` and `{{#if allow_add_task}}` sections with Options D and E)
+  - Removed obsolete prompts: `prd_edit.md`, `prd_new_discovery.md`, `prd_new_synthesize_prd.md` (no longer defined in init.rs)
+  - Added new prompt: `prd_edit_interactive.md`, `prd_new_interactive.md` (replacing the old multi-phase prompts)
+  - UAT passed: 562 tests run, 562 passed, 0 skipped
+- **Constitution Compliance**: No violations. Per constitution rule 7, `.mr/prompts/` is now synchronized with `src/commands/init.rs`.

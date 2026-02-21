@@ -83,6 +83,31 @@ Add a new History entry at the bottom of the PRD file with this format:
 - **Constitution Compliance**: If any constitutional rules were violated, note them here with reasoning. If fully compliant, you may omit this section or note "No violations."
 {{/if}}
 ```
+{{#if allow_add_task}}
+
+### Adding New Tasks (Dynamic Task Addition)
+
+During task execution, if you discover that additional work is needed — such as a missed prerequisite, supporting infrastructure for a UAT, or underestimated scope — you MAY add new tasks to the PRD's `tasks` array in the YAML frontmatter.
+
+**Guidelines for adding tasks:**
+- Assign the next available `T-XXX` ID (e.g., if the last task is `T-008`, use `T-009`).
+- Set the new task's `status: todo` and assign an appropriate `priority`.
+- Include a descriptive `title` and `notes` explaining why the task was added.
+- Document any added tasks in the History entry for the current task.
+
+**Prefer adding a task over skipping a UAT**: If a UAT cannot currently be verified but a new task could unblock it (e.g., by implementing missing infrastructure or test fixtures), add the task and leave the UAT as `unverified` for retry — rather than skipping the UAT entirely.
+
+**Example:**
+```yaml
+tasks:
+  # ... existing tasks ...
+  - id: T-009
+    title: "Add integration test helper for auth module"
+    priority: 9
+    status: todo
+    notes: "Added during T-004 execution: needed to unblock uat-003 verification."
+```
+{{/if}}
 
 ## Opportunistic UAT Verification (Per-Task)
 

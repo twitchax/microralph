@@ -1,12 +1,19 @@
-# microralph — PRD New Synthesize Prompt
+# microralph — PRD New Interactive Prompt
 
 ## Objective
 
-Synthesize a complete PRD from the interactive discovery conversation, following the template structure exactly.
+Have an interactive conversation with the user to gather enough information to create a well-defined PRD, then write it directly to disk.
 
 ## Context
 
-The user is creating a new PRD with slug: `{{slug}}`
+The user wants to create a new PRD with slug: `{{slug}}`
+The next available PRD ID is: `{{next_id}}`
+The PRD file should be written to: `{{prd_path}}`
+
+{{#if user_description}}
+User's initial description:
+> {{user_description}}
+{{/if}}
 
 {{#if user_context}}
 User's upfront context:
@@ -20,31 +27,36 @@ The following governance rules and constraints apply to this project:
 
 {{constitution}}
 
-**CRITICAL**: The PRD you synthesize MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
-{{/if}}
-
-{{#if conversation_transcript}}
-## Conversation Transcript
-
-The following is a transcript of the interactive discovery conversation between the user and the agent. Extract all requirements, constraints, decisions, and context from this conversation to inform the PRD:
-
-{{conversation_transcript}}
-
-**Synthesis guidance**: Identify the user's goals, technical preferences, scope boundaries, and any decisions made during the conversation. Transform discussion points into structured PRD sections — goals become Goals, discussed limitations become Constraints, and agreed-upon implementation details become the Technical Approach.
-{{/if}}
-
-{{#if session_id}}
-## Session Context
-
-This prompt is a continuation of a previous interactive session (session: {{session_id}}).
-Use the full conversational context from that session to inform PRD synthesis.
+**CRITICAL**: The PRD you create MUST respect these constitutional rules. If any aspect of the PRD would violate the constitution, adjust the approach or note the constraint explicitly.
 {{/if}}
 
 ## Existing PRDs
 
 {{#each existing_prds}}
-- {{id}}: {{title}}
+- {{id}}: {{title}} ({{status}})
 {{/each}}
+
+## Phase 1: Interactive Discovery
+
+1. Review the existing PRDs to understand project context.
+2. Scan the codebase for relevant files, patterns, or entry points.
+3. Engage the user in a natural conversation to understand:
+   - What problem does this PRD solve?
+   - What are the success criteria and acceptance tests?
+   - What are the dependencies or blockers?
+   - What is the scope (MVP vs full feature)?
+   - What is the high-level technical approach?
+   - What assumptions and constraints apply?
+4. Ask follow-up questions based on the user's responses.
+5. Reference existing PRDs and code when relevant.
+
+## Phase 2: Write the PRD
+
+When you have enough information, tell the user you're ready to write the PRD. Then:
+
+1. **Write the PRD file** directly to `{{prd_path}}` using your file editing tools.
+2. The PRD MUST follow the template structure below EXACTLY.
+3. After writing the file, tell the user the PRD has been created and they can exit the chat.
 
 ## PRD Template Structure
 
@@ -53,7 +65,7 @@ The PRD has two parts that you MUST follow exactly:
 ### 1. YAML Frontmatter (between `---` delimiters)
 
 The frontmatter contains ALL structured data:
-- `id`: PRD-NNNN (generate next ID based on existing PRDs)
+- `id`: `{{next_id}}`
 - `title`: Human-readable title
 - `status`: draft (for new PRDs)
 - `owner`: Owner name
@@ -76,15 +88,7 @@ The body contains ONLY narrative/exposition sections:
 - `# Non-Goals (MVP)` — What's explicitly out of scope
 - `# History` — Empty section for `mr run` to append entries
 
-**Technical Approach Guidance**: When the feature involves multiple components, services, or complex data flows, include an architecture diagram. Use ASCII art for simple diagrams or Mermaid syntax for more complex ones. Diagrams help AI agents during `mr run` understand the implementation strategy at a glance.
-
-## Required Actions
-
-1. Generate the next PRD ID (e.g., PRD-0006 if PRD-0005 exists).
-2. Scan the codebase for relevant files, patterns, or entry points.
-3. Review existing PRDs for related work or patterns.
-4. Create the PRD following the template structure EXACTLY.
-5. Update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
+**Technical Approach Guidance**: When the feature involves multiple components, services, or complex data flows, include an architecture diagram. Use ASCII art for simple diagrams or Mermaid syntax for more complex ones.
 
 ## Acceptance Tests Format
 
@@ -120,8 +124,13 @@ When in doubt, wrap the value in double quotes. This is especially important for
 - `notes` fields with complex descriptions
 - `name` fields in references and acceptance tests
 
-## Output
+## AGENTS.md
 
-CRITICAL: Output ONLY the raw PRD file content. Start your response IMMEDIATELY with the `---` frontmatter delimiter. Do NOT wrap the output in code blocks. Do NOT include any preamble, explanation, or commentary.
+After writing the PRD, update AGENTS.md if your changes introduce new patterns, workflows, or troubleshooting steps that future agents should know about.
 
-The first three characters of your response MUST be exactly: `---`
+## Important
+
+- The PRD ID MUST be `{{next_id}}`.
+- The PRD file MUST be written to `{{prd_path}}`.
+- Do NOT just output the PRD content to the chat — you MUST write it to disk using your file tools.
+- After writing the file, tell the user the PRD is ready and they can exit.
