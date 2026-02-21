@@ -193,6 +193,8 @@ mr status
 | `mr run <id>`                      | Run the next task from a specific PRD                                                  |
 | `mr run --stream`                  | Run with real-time streaming output                                                    |
 | `mr run --no-commit`               | Run without instructing the agent to commit (for manual review)                        |
+| `mr run --disallow-skip-uat`       | Prevent the agent from marking UATs as skipped                                         |
+| `mr run --disallow-add-task`       | Prevent the agent from adding new tasks to the PRD during execution                    |
 | `mr refactor`                      | Run iterative AI-driven code improvements (default 3 iterations)                       |
 | `mr refactor --context "<hint>"`   | Focus refactors on a specific improvement area                                         |
 | `mr refactor --path <dir>`         | Constrain refactors to a specific directory/file pattern                               |

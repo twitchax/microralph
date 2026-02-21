@@ -1,99 +1,99 @@
 ---
 id: PRD-0036
-title: "UAT Skipping and Dynamic Task Addition During Run"
-status: active
+title: UAT Skipping and Dynamic Task Addition During Run
+status: done
 owner: twitchax
 created: 2026-02-21
 updated: 2026-02-21
 principles:
-  - "Skipped is a valid terminal UAT state; history provides the justification"
-  - "Agents can autonomously add tasks during run for any reason"
-  - "Prefer adding a task over skipping a UAT when the task would unblock verification"
-  - "Opt-out flags give users control over autonomous behaviors"
-  - "Minimal changes to existing run loop; extend, don't rewrite"
+- Skipped is a valid terminal UAT state; history provides the justification
+- Agents can autonomously add tasks during run for any reason
+- Prefer adding a task over skipping a UAT when the task would unblock verification
+- Opt-out flags give users control over autonomous behaviors
+- Minimal changes to existing run loop; extend, don't rewrite
 references:
-  - name: "Run command implementation"
-    url: "src/commands/run.rs"
-  - name: "UAT status enum"
-    url: "src/prd/types.rs"
-  - name: "Finalize logic"
-    url: "src/prd/finalize.rs"
-  - name: "Prompt definitions"
-    url: "src/commands/init.rs"
+- name: Run command implementation
+  url: src/commands/run.rs
+- name: UAT status enum
+  url: src/prd/types.rs
+- name: Finalize logic
+  url: src/prd/finalize.rs
+- name: Prompt definitions
+  url: src/commands/init.rs
 acceptance_tests:
-  - id: uat-001
-    name: "UatStatus::Skipped deserializes from YAML and serializes back correctly"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-002
-    name: "Finalize accepts PRDs where all UATs are verified or skipped"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-003
-    name: "Finalize rejects PRDs with unverified UATs (existing behavior preserved)"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-004
-    name: "Run command accepts --disallow-skip-uat and --disallow-add-task flags"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-005
-    name: "Agent can add a new task to a PRD during task execution"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-006
-    name: "Agent can mark a UAT as skipped during UAT verification"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-007
-    name: "--disallow-skip-uat prevents the agent from skipping UATs in prompt"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-008
-    name: "--disallow-add-task prevents the agent from adding tasks in prompt"
-    command: cargo make test
-    uat_status: verified
+- id: uat-001
+  name: UatStatus::Skipped deserializes from YAML and serializes back correctly
+  command: cargo make test
+  uat_status: verified
+- id: uat-002
+  name: Finalize accepts PRDs where all UATs are verified or skipped
+  command: cargo make test
+  uat_status: verified
+- id: uat-003
+  name: Finalize rejects PRDs with unverified UATs (existing behavior preserved)
+  command: cargo make test
+  uat_status: verified
+- id: uat-004
+  name: Run command accepts --disallow-skip-uat and --disallow-add-task flags
+  command: cargo make test
+  uat_status: verified
+- id: uat-005
+  name: Agent can add a new task to a PRD during task execution
+  command: cargo make test
+  uat_status: verified
+- id: uat-006
+  name: Agent can mark a UAT as skipped during UAT verification
+  command: cargo make test
+  uat_status: verified
+- id: uat-007
+  name: --disallow-skip-uat prevents the agent from skipping UATs in prompt
+  command: cargo make test
+  uat_status: verified
+- id: uat-008
+  name: --disallow-add-task prevents the agent from adding tasks in prompt
+  command: cargo make test
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Add Skipped variant to UatStatus enum"
-    priority: 1
-    status: done
-    notes: "Add UatStatus::Skipped to src/prd/types.rs with serde rename 'skipped' and Display impl. This is purely additive."
-  - id: T-002
-    title: "Update finalize to accept skipped UATs"
-    priority: 2
-    status: done
-    notes: "Modify validate_all_uats_verified in src/prd/finalize.rs to treat Skipped as acceptable alongside Verified. Unverified remains blocking."
-  - id: T-003
-    title: "Add --disallow-skip-uat and --disallow-add-task CLI flags"
-    priority: 3
-    status: done
-    notes: "Add flags to the Run variant in src/main.rs clap args. Thread them through RunConfig into prompt building."
-  - id: T-004
-    title: "Update run task prompt to allow dynamic task addition"
-    priority: 4
-    status: done
-    notes: "Update PROMPT_RUN_TASK in src/commands/init.rs to instruct the agent it may add new tasks to the PRD frontmatter. Include guidance to prefer adding a task over skipping a UAT when the task would unblock verification. Conditioned on --disallow-add-task flag via placeholder."
-  - id: T-005
-    title: "Update UAT verification prompt to allow skipping"
-    priority: 5
-    status: done
-    notes: "Update PROMPT_RUN_UAT_VERIFY in src/commands/init.rs to add a new option for marking a UAT as skipped (set uat_status to skipped and append history). Conditioned on --disallow-skip-uat flag via placeholder. Also allow adding a task as alternative to skipping."
-  - id: T-006
-    title: "Thread new flags through prompt building"
-    priority: 6
-    status: done
-    notes: "Add allow_skip_uat and allow_add_task placeholders to build_prompt and build_uat_verify_prompt in run.rs. Pass negated flag values so prompts can conditionally include/exclude instructions."
-  - id: T-007
-    title: "Restore .mr/prompts with updated prompt files"
-    priority: 7
-    status: done
-    notes: "Run mr restore or update .mr/prompts/ to reflect the new prompt templates from init.rs. Per constitution rule 7, the two sources must stay synchronized."
-  - id: T-008
-    title: "Write unit tests for new UatStatus variant and finalize logic"
-    priority: 8
-    status: done
-    notes: "Test UatStatus::Skipped serde round-trip, Display impl, and finalize acceptance of skipped UATs. Test that unverified UATs still block finalization."
+- id: T-001
+  title: Add Skipped variant to UatStatus enum
+  priority: 1
+  status: done
+  notes: Add UatStatus::Skipped to src/prd/types.rs with serde rename 'skipped' and Display impl. This is purely additive.
+- id: T-002
+  title: Update finalize to accept skipped UATs
+  priority: 2
+  status: done
+  notes: Modify validate_all_uats_verified in src/prd/finalize.rs to treat Skipped as acceptable alongside Verified. Unverified remains blocking.
+- id: T-003
+  title: Add --disallow-skip-uat and --disallow-add-task CLI flags
+  priority: 3
+  status: done
+  notes: Add flags to the Run variant in src/main.rs clap args. Thread them through RunConfig into prompt building.
+- id: T-004
+  title: Update run task prompt to allow dynamic task addition
+  priority: 4
+  status: done
+  notes: Update PROMPT_RUN_TASK in src/commands/init.rs to instruct the agent it may add new tasks to the PRD frontmatter. Include guidance to prefer adding a task over skipping a UAT when the task would unblock verification. Conditioned on --disallow-add-task flag via placeholder.
+- id: T-005
+  title: Update UAT verification prompt to allow skipping
+  priority: 5
+  status: done
+  notes: Update PROMPT_RUN_UAT_VERIFY in src/commands/init.rs to add a new option for marking a UAT as skipped (set uat_status to skipped and append history). Conditioned on --disallow-skip-uat flag via placeholder. Also allow adding a task as alternative to skipping.
+- id: T-006
+  title: Thread new flags through prompt building
+  priority: 6
+  status: done
+  notes: Add allow_skip_uat and allow_add_task placeholders to build_prompt and build_uat_verify_prompt in run.rs. Pass negated flag values so prompts can conditionally include/exclude instructions.
+- id: T-007
+  title: Restore .mr/prompts with updated prompt files
+  priority: 7
+  status: done
+  notes: Run mr restore or update .mr/prompts/ to reflect the new prompt templates from init.rs. Per constitution rule 7, the two sources must stay synchronized.
+- id: T-008
+  title: Write unit tests for new UatStatus variant and finalize logic
+  priority: 8
+  status: done
+  notes: Test UatStatus::Skipped serde round-trip, Display impl, and finalize acceptance of skipped UATs. Test that unverified UATs still block finalization.
 ---
 
 # Summary
@@ -342,3 +342,15 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
 - **Details**:
   - `src/commands/run.rs` — `test_build_prompt_allow_add_task_false` (verifies that when `allow_add_task=false` — which is what `--disallow-add-task` sets — the task execution prompt does NOT contain "Adding New Tasks", effectively preventing the agent from adding tasks)
   - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_false` (also verifies that when `allow_add_task=false`, the UAT verification prompt does NOT contain "Option E: Add a Task")
+
+## 2026-02-21 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 8 tasks (T-001 through T-008)
+- **Outcome**: All tasks completed, acceptance tests passed (567/567 tests)
+- **Cleanup**: Updated README.md with new `--disallow-skip-uat` and `--disallow-add-task` flags. No temporary files or debug statements found.
+- **Summary**:
+  - Added `UatStatus::Skipped` as a valid terminal state that does not block finalization
+  - Added `--disallow-skip-uat` and `--disallow-add-task` CLI flags for user control
+  - Extended run task and UAT verification prompts with conditional sections for dynamic task addition and UAT skipping
+  - Synchronized `.mr/prompts/` with prompt constants per constitution rule 7
+  - Added 15 new tests covering serde, finalize logic, CLI parsing, and prompt building
