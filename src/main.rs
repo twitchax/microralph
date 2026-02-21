@@ -162,6 +162,16 @@ enum Command {
         /// When set, prompts say "Do NOT commit" instead of commit instructions.
         #[arg(long)]
         no_commit: bool,
+
+        /// Prevent the agent from skipping UATs during verification.
+        /// When set, the skip-UAT option is omitted from verification prompts.
+        #[arg(long)]
+        disallow_skip_uat: bool,
+
+        /// Prevent the agent from adding new tasks during execution.
+        /// When set, the add-task instructions are omitted from prompts.
+        #[arg(long)]
+        disallow_add_task: bool,
     },
 
     /// [3] Finalize a PRD after all tasks are complete.
@@ -451,16 +461,20 @@ fn main() -> Result<()> {
             model,
             stream,
             no_commit,
+            disallow_skip_uat,
+            disallow_add_task,
         }) => {
-            tracing::info!(prd = ?prd, runner = %runner, one = %one, stream = %stream, no_commit = %no_commit, "Running next task...");
-            cmd_run(
-                prd.as_deref(),
-                &runner,
+            tracing::info!(prd = ?prd, runner = %runner, one = %one, stream = %stream, no_commit = %no_commit, disallow_skip_uat = %disallow_skip_uat, disallow_add_task = %disallow_add_task, "Running next task...");
+            cmd_run(&CmdRunOpts {
+                prd_id: prd.as_deref(),
+                runner_name: &runner,
                 one,
-                model.as_deref(),
+                cli_model: model.as_deref(),
                 stream,
-                no_commit,
-            )?;
+                cli_no_commit: no_commit,
+                disallow_skip_uat,
+                disallow_add_task,
+            })?;
         }
         Some(Command::Status) => {
             tracing::info!("Showing status...");
@@ -1442,14 +1456,21 @@ fn handle_run_task_error(e: anyhow::Error, tasks_completed: u32) -> Result<Optio
 }
 
 /// Runs the `mr run` command.
-fn cmd_run(
-    prd_id: Option<&str>,
-    runner_name: &str,
+/// Options for the `mr run` CLI command.
+#[allow(clippy::struct_excessive_bools)]
+struct CmdRunOpts<'a> {
+    prd_id: Option<&'a str>,
+    runner_name: &'a str,
     one: bool,
-    cli_model: Option<&str>,
+    cli_model: Option<&'a str>,
     stream: bool,
     cli_no_commit: bool,
-) -> Result<()> {
+    disallow_skip_uat: bool,
+    disallow_add_task: bool,
+}
+
+#[allow(clippy::too_many_lines)]
+fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
     let cwd = std::env::current_dir()?;
 
     init::ensure_initialized(&cwd)?;
@@ -1458,22 +1479,22 @@ fn cmd_run(
     devcontainer::show_dev_container_warning();
 
     // Normalize PRD ID if provided (e.g., "5" -> "PRD-0005").
-    let normalized_prd_id = prd_id.map(normalize_prd_id);
+    let normalized_prd_id = opts.prd_id.map(normalize_prd_id);
 
     // Load config for model settings.
     let cfg = config::Config::load_or_default(&cwd)?;
-    let model = cfg.effective_model(cli_model);
+    let model = cfg.effective_model(opts.cli_model);
 
     // Compute effective no_commit setting (CLI flag supersedes config).
-    let no_commit = cfg.effective_no_commit(cli_no_commit.then_some(true));
+    let no_commit = cfg.effective_no_commit(opts.cli_no_commit.then_some(true));
 
     // Select runner based on name.
-    let runner = create_runner(runner_name, model)?;
+    let runner = create_runner(opts.runner_name, model)?;
 
     // If no PRD ID was provided, ask the runner to pick one.
     let active_prd_id = normalized_prd_id.map_or_else(
         || {
-            run::pick_prd_via_runner(&cwd, runner.as_ref(), stream)?.ok_or_else(|| {
+            run::pick_prd_via_runner(&cwd, runner.as_ref(), opts.stream)?.ok_or_else(|| {
                 anyhow::anyhow!(
                     "No active PRD with incomplete tasks found. Create a PRD with `mr new`."
                 )
@@ -1488,8 +1509,9 @@ fn cmd_run(
         let config = run::RunConfig {
             root: &cwd,
             prd_id: Some(&active_prd_id),
-            stream,
+            stream: opts.stream,
             no_commit,
+            allow_add_task: !opts.disallow_add_task,
         };
 
         let result = match run::run_task(&config, runner.as_ref()) {
@@ -1523,7 +1545,7 @@ fn cmd_run(
                 );
 
                 // Exit if --one flag is set or if the task failed.
-                if one || !runner_success {
+                if opts.one || !runner_success {
                     break;
                 }
 
@@ -1541,8 +1563,10 @@ fn cmd_run(
                 let uat_config = run::UatVerificationConfig {
                     root: &cwd,
                     prd_id: &prd_id,
-                    stream,
+                    stream: opts.stream,
                     max_iterations: None, // Use PRD config or default.
+                    allow_skip_uat: !opts.disallow_skip_uat,
+                    allow_add_task: !opts.disallow_add_task,
                 };
 
                 match run::run_uat_verification_loop(&uat_config, runner.as_ref()) {
@@ -2133,6 +2157,48 @@ mod tests {
         let args = Args::try_parse_from(["mr", "run"]).unwrap();
         if let Some(Command::Run { stream, .. }) = args.command {
             assert!(!stream);
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_with_disallow_skip_uat() {
+        let args = Args::try_parse_from(["mr", "run", "--disallow-skip-uat"]).unwrap();
+        if let Some(Command::Run {
+            disallow_skip_uat, ..
+        }) = args.command
+        {
+            assert!(disallow_skip_uat);
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_with_disallow_add_task() {
+        let args = Args::try_parse_from(["mr", "run", "--disallow-add-task"]).unwrap();
+        if let Some(Command::Run {
+            disallow_add_task, ..
+        }) = args.command
+        {
+            assert!(disallow_add_task);
+        } else {
+            panic!("Expected Run command");
+        }
+    }
+
+    #[test]
+    fn test_args_parse_run_default_disallow_flags_off() {
+        let args = Args::try_parse_from(["mr", "run"]).unwrap();
+        if let Some(Command::Run {
+            disallow_skip_uat,
+            disallow_add_task,
+            ..
+        }) = args.command
+        {
+            assert!(!disallow_skip_uat);
+            assert!(!disallow_add_task);
         } else {
             panic!("Expected Run command");
         }

@@ -67,7 +67,7 @@ tasks:
   - id: T-003
     title: "Add --disallow-skip-uat and --disallow-add-task CLI flags"
     priority: 3
-    status: todo
+    status: done
     notes: "Add flags to the Run variant in src/main.rs clap args. Thread them through RunConfig into prompt building."
   - id: T-004
     title: "Update run task prompt to allow dynamic task addition"
@@ -195,3 +195,17 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - UAT passed: 555 tests run, 555 passed, 0 skipped (3 new tests added)
 - **Opportunistic UAT verification**: uat-002 ("Finalize accepts PRDs where all UATs are verified or skipped") and uat-003 ("Finalize rejects PRDs with unverified UATs") are covered by the new tests, but left as `unverified` per instructions to defer to the UAT verification loop.
 - **Constitution Compliance**: No violations. Minimal changes, consistent with existing patterns.
+
+## 2026-02-21 — T-003 Completed
+- **Task**: Add --disallow-skip-uat and --disallow-add-task CLI flags
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `disallow_skip_uat` and `disallow_add_task` fields to the `Run` CLI variant in `src/main.rs`
+  - Created `CmdRunOpts` struct to group `cmd_run` parameters (avoids clippy `fn_params_excessive_bools`)
+  - Added `allow_add_task` field to `RunConfig` in `src/commands/run.rs`
+  - Added `allow_skip_uat` and `allow_add_task` fields to `UatVerificationConfig` in `src/commands/run.rs`
+  - Threaded `allow_add_task` into `build_prompt()` and `allow_skip_uat`/`allow_add_task` into `build_uat_verify_prompt()` as placeholder context values
+  - Added 3 new CLI arg parsing tests: `test_args_parse_run_with_disallow_skip_uat`, `test_args_parse_run_with_disallow_add_task`, `test_args_parse_run_default_disallow_flags_off`
+  - Updated all test `RunConfig` and `UatVerificationConfig` instantiations with new fields
+  - UAT passed: 558 tests run, 558 passed, 0 skipped
+- **Constitution Compliance**: Used `#[allow(clippy::struct_excessive_bools)]` on `CmdRunOpts` and `#[allow(clippy::too_many_lines)]` on `cmd_run` — necessary because the function inherently manages many independent boolean CLI flags and orchestrates the full run loop. No other violations.

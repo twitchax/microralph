@@ -35,6 +35,10 @@ pub struct RunConfig<'a> {
     /// Whether to instruct the agent NOT to commit changes.
     /// When true, prompts will say "Do NOT commit" instead of commit instructions.
     pub no_commit: bool,
+
+    /// Whether the agent is allowed to add new tasks during execution.
+    /// When false, the add-task instructions are omitted from prompts.
+    pub allow_add_task: bool,
 }
 
 /// Result from running a task or checking run status.
@@ -295,7 +299,14 @@ fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<Option<(String, Prd, Path
 }
 
 /// Builds the prompt for the runner.
-fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str, no_commit: bool) -> String {
+fn build_prompt(
+    root: &Path,
+    prd: &Prd,
+    prd_path: &Path,
+    task_id: &str,
+    no_commit: bool,
+    allow_add_task: bool,
+) -> String {
     let prompt_template = load_prompt_with_fallback(root, PromptKind::RunTask);
 
     let mut ctx = PlaceholderContext::new();
@@ -309,6 +320,9 @@ fn build_prompt(root: &Path, prd: &Prd, prd_path: &Path, task_id: &str, no_commi
     // When commit is true, prompts include commit instructions.
     // When commit is false, prompts say "Do NOT commit".
     ctx.insert("commit", !no_commit);
+
+    // Add allow_add_task placeholder for conditional prompt sections.
+    ctx.insert("allow_add_task", allow_add_task);
 
     // Add task details if available.
     if let Some(tasks) = prd.tasks()
@@ -408,7 +422,14 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     );
 
     // Build and execute the prompt.
-    let prompt = build_prompt(config.root, &prd, &prd_path, &task_id, config.no_commit);
+    let prompt = build_prompt(
+        config.root,
+        &prd,
+        &prd_path,
+        &task_id,
+        config.no_commit,
+        config.allow_add_task,
+    );
 
     tracing::info!(
         prompt_len = prompt.len(),
@@ -495,6 +516,8 @@ fn build_uat_verify_prompt(
     prd: &Prd,
     prd_path: &Path,
     uat: &AcceptanceTest,
+    allow_skip_uat: bool,
+    allow_add_task: bool,
 ) -> String {
     let prompt_template = load_prompt_with_fallback(root, PromptKind::RunUatVerify);
 
@@ -505,6 +528,10 @@ fn build_uat_verify_prompt(
     ctx.insert("uat_id", uat.id.as_str());
     ctx.insert("uat_name", uat.name.as_str());
     ctx.insert("uat_command", uat.command.as_str());
+
+    // Add allow_skip_uat and allow_add_task placeholders for conditional prompt sections.
+    ctx.insert("allow_skip_uat", allow_skip_uat);
+    ctx.insert("allow_add_task", allow_add_task);
 
     expand_placeholders(&prompt_template, &ctx)
 }
@@ -537,6 +564,12 @@ pub struct UatVerificationConfig<'a> {
 
     /// Maximum number of iterations (None = use default).
     pub max_iterations: Option<u32>,
+
+    /// Whether the agent is allowed to skip UATs during verification.
+    pub allow_skip_uat: bool,
+
+    /// Whether the agent is allowed to add new tasks during verification.
+    pub allow_add_task: bool,
 }
 
 /// Outcome of processing a single UAT verification iteration.
@@ -561,7 +594,14 @@ fn execute_uat_verification(
     current_uat_num: usize,
     all_uats: usize,
 ) -> Result<RunnerOutput> {
-    let prompt = build_uat_verify_prompt(config.root, prd, prd_path, uat);
+    let prompt = build_uat_verify_prompt(
+        config.root,
+        prd,
+        prd_path,
+        uat,
+        config.allow_skip_uat,
+        config.allow_add_task,
+    );
 
     // Print command info before spinner (only when not streaming).
     if !config.stream
@@ -965,6 +1005,7 @@ mod tests {
             prd_id: Some(&picked_prd),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1011,6 +1052,7 @@ mod tests {
             prd_id: Some("PRD-0002"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1091,6 +1133,7 @@ mod tests {
             prd_id: None,
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner);
@@ -1126,7 +1169,7 @@ mod tests {
         let prd = Prd::new(frontmatter, "# Body\n".to_string());
         let prd_path = root.join(".mr/prds/PRD-0001.md");
 
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
 
         assert!(prompt.contains("T-001"));
         assert!(prompt.contains("PRD-0001.md"));
@@ -1172,7 +1215,7 @@ mod tests {
         let prd_path = root.join(".mr/prds/PRD-0001.md");
 
         // no_commit=false means commit=true.
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
 
         // When commit=true, prompt should include commit instructions.
         assert!(
@@ -1226,7 +1269,7 @@ mod tests {
         let prd_path = root.join(".mr/prds/PRD-0001.md");
 
         // no_commit=true means commit=false.
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", true);
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", true, true);
 
         // When commit=false, prompt should include "Do NOT commit" instructions.
         assert!(
@@ -1279,6 +1322,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: true,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1347,6 +1391,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1416,6 +1461,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1473,6 +1519,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1517,6 +1564,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let result = run_task(&config, &runner).unwrap();
@@ -1594,7 +1642,7 @@ mod tests {
             uat_status: UatStatus::Unverified,
         };
 
-        let prompt = build_uat_verify_prompt(&root, &prd, &prd_path, &uat);
+        let prompt = build_uat_verify_prompt(&root, &prd, &prd_path, &uat, true, true);
 
         assert!(prompt.contains("uat-001"));
         assert!(prompt.contains("Test 1"));
@@ -1652,6 +1700,8 @@ mod tests {
             prd_id: "PRD-0001",
             stream: false,
             max_iterations: Some(5),
+            allow_skip_uat: true,
+            allow_add_task: true,
         };
 
         let result = run_uat_verification_loop(&config, &runner).unwrap();
@@ -1715,6 +1765,8 @@ mod tests {
             prd_id: "PRD-0001",
             stream: false,
             max_iterations: Some(1), // Only 1 iteration allowed.
+            allow_skip_uat: true,
+            allow_add_task: true,
         };
 
         let result = run_uat_verification_loop(&config, &runner).unwrap();
@@ -1789,6 +1841,8 @@ mod tests {
             prd_id: "PRD-0001",
             stream: false,
             max_iterations: Some(2),
+            allow_skip_uat: true,
+            allow_add_task: true,
         };
 
         let result = run_uat_verification_loop(&config, &runner).unwrap();
@@ -1882,6 +1936,7 @@ mod tests {
             prd_id: Some("PRD-0001"),
             stream: false,
             no_commit: false,
+            allow_add_task: true,
         };
 
         let run_result = run_task(&run_config, &run_runner).unwrap();
@@ -1911,6 +1966,8 @@ mod tests {
             prd_id: &prd_id,
             stream: false,
             max_iterations: Some(2),
+            allow_skip_uat: true,
+            allow_add_task: true,
         };
 
         let uat_result = run_uat_verification_loop(&uat_config, &uat_runner).unwrap();
@@ -2007,6 +2064,8 @@ mod tests {
             prd_id: "PRD-0099",
             stream: false,
             max_iterations: Some(2), // Stop after 2 iterations to avoid retrying opted-out UAT.
+            allow_skip_uat: true,
+            allow_add_task: true,
         };
 
         let uat_result = run_uat_verification_loop(&uat_config, &uat_runner).unwrap();
@@ -2087,7 +2146,7 @@ Project governance and best practices.
         let prd_path = root.join(".mr/prds/PRD-0001-test.md");
 
         // Build the prompt for the task.
-        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false);
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
 
         // Verify the constitution is included in the prompt.
         assert!(
