@@ -28,7 +28,7 @@ acceptance_tests:
   - id: uat-002
     name: "Finalize accepts PRDs where all UATs are verified or skipped"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "Finalize rejects PRDs with unverified UATs (existing behavior preserved)"
     command: cargo make test
@@ -284,3 +284,11 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - `src/prd/types.rs` — `test_uat_status_serde_roundtrip` (serde round-trip for all 3 variants including Skipped)
   - `src/prd/types.rs` — `test_uat_status_deserialize_skipped_from_yaml` (deserialize "skipped" string to `UatStatus::Skipped`)
   - `src/prd/types.rs` — `test_acceptance_test_with_skipped_uat_roundtrip` (full `AcceptanceTest` struct round-trip with Skipped status)
+
+## 2026-02-21 — uat-002 Verification
+- **UAT**: Finalize accepts PRDs where all UATs are verified or skipped
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/prd/finalize.rs` — `test_validate_all_uats_verified_with_all_skipped` (all UATs skipped → finalize accepts)
+  - `src/prd/finalize.rs` — `test_validate_uats_mixed_verified_and_skipped` (mix of verified and skipped → finalize accepts)
