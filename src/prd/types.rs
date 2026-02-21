@@ -95,6 +95,9 @@ pub enum UatStatus {
 
     /// UAT has been verified to exist (a real test exists or has been manually verified).
     Verified,
+
+    /// UAT was intentionally skipped with justification recorded in history.
+    Skipped,
 }
 
 impl std::fmt::Display for UatStatus {
@@ -102,6 +105,7 @@ impl std::fmt::Display for UatStatus {
         match self {
             Self::Unverified => write!(f, "unverified"),
             Self::Verified => write!(f, "verified"),
+            Self::Skipped => write!(f, "skipped"),
         }
     }
 }
