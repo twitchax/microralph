@@ -32,7 +32,7 @@ acceptance_tests:
   - id: uat-003
     name: "Finalize rejects PRDs with unverified UATs (existing behavior preserved)"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "Run command accepts --disallow-skip-uat and --disallow-add-task flags"
     command: cargo make test
@@ -292,3 +292,13 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
 - **Details**:
   - `src/prd/finalize.rs` — `test_validate_all_uats_verified_with_all_skipped` (all UATs skipped → finalize accepts)
   - `src/prd/finalize.rs` — `test_validate_uats_mixed_verified_and_skipped` (mix of verified and skipped → finalize accepts)
+
+## 2026-02-21 — uat-003 Verification
+- **UAT**: Finalize rejects PRDs with unverified UATs (existing behavior preserved)
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/prd/finalize.rs` — `test_validate_all_uats_verified_with_unverified` (one unverified UAT → finalize rejects with correct error)
+  - `src/prd/finalize.rs` — `test_validate_uats_skipped_with_unverified_fails` (skipped + unverified → finalize rejects)
+  - `src/prd/finalize.rs` — `test_validate_multiple_unverified_uats` (multiple unverified → finalize rejects with correct count)
+  - `src/prd/finalize.rs` — `test_validate_all_unverified_uats` (all unverified → finalize rejects)
