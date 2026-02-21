@@ -40,7 +40,7 @@ acceptance_tests:
   - id: uat-005
     name: "Agent can add a new task to a PRD during task execution"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "Agent can mark a UAT as skipped during UAT verification"
     command: cargo make test
@@ -311,3 +311,11 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - `src/main.rs` — `test_args_parse_run_with_disallow_skip_uat` (verifies `--disallow-skip-uat` flag is accepted and parsed as `true`)
   - `src/main.rs` — `test_args_parse_run_with_disallow_add_task` (verifies `--disallow-add-task` flag is accepted and parsed as `true`)
   - `src/main.rs` — `test_args_parse_run_default_disallow_flags_off` (verifies both flags default to `false` when not provided)
+
+## 2026-02-21 — uat-005 Verification
+- **UAT**: Agent can add a new task to a PRD during task execution
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/commands/run.rs` — `test_build_prompt_allow_add_task_true` (verifies the task execution prompt includes the "Adding New Tasks (Dynamic Task Addition)" section when `allow_add_task` is true, enabling the agent to add tasks during execution)
+  - `src/commands/run.rs` — `test_build_prompt_allow_add_task_false` (verifies the section is excluded when the flag is false)
