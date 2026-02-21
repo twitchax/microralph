@@ -72,7 +72,7 @@ tasks:
   - id: T-004
     title: "Update run task prompt to allow dynamic task addition"
     priority: 4
-    status: todo
+    status: done
     notes: "Update PROMPT_RUN_TASK in src/commands/init.rs to instruct the agent it may add new tasks to the PRD frontmatter. Include guidance to prefer adding a task over skipping a UAT when the task would unblock verification. Conditioned on --disallow-add-task flag via placeholder."
   - id: T-005
     title: "Update UAT verification prompt to allow skipping"
@@ -209,3 +209,16 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Updated all test `RunConfig` and `UatVerificationConfig` instantiations with new fields
   - UAT passed: 558 tests run, 558 passed, 0 skipped
 - **Constitution Compliance**: Used `#[allow(clippy::struct_excessive_bools)]` on `CmdRunOpts` and `#[allow(clippy::too_many_lines)]` on `cmd_run` — necessary because the function inherently manages many independent boolean CLI flags and orchestrates the full run loop. No other violations.
+
+## 2026-02-21 — T-004 Completed
+- **Task**: Update run task prompt to allow dynamic task addition
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `{{#if allow_add_task}}` conditional section to `PROMPT_RUN_TASK` in `src/commands/init.rs`
+  - Section instructs the agent it may add new tasks to the PRD frontmatter during execution
+  - Includes guidelines: next available T-XXX ID, `status: todo`, descriptive title/notes, document in History
+  - Includes guidance to prefer adding a task over skipping a UAT when the task would unblock verification
+  - Includes YAML example showing the expected task format
+  - Placed between "Append to History Section" and "Opportunistic UAT Verification" sections
+  - UAT passed: 558 tests run, 558 passed, 0 skipped
+- **Constitution Compliance**: No violations. Change is purely additive to prompt content, consistent with existing `{{#if ...}}` conditional patterns in the template.
