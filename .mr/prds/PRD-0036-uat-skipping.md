@@ -24,7 +24,7 @@ acceptance_tests:
   - id: uat-001
     name: "UatStatus::Skipped deserializes from YAML and serializes back correctly"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: "Finalize accepts PRDs where all UATs are verified or skipped"
     command: cargo make test
@@ -275,3 +275,12 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Finalize tests for skipped UATs already exist from T-002 in `src/prd/finalize.rs`
   - UAT passed: 567 tests run, 567 passed, 0 skipped (5 new tests)
 - **Constitution Compliance**: No violations. Tests are minimal, follow existing patterns, and use clippy::pedantic-compliant code.
+
+## 2026-02-21 — uat-001 Verification
+- **UAT**: UatStatus::Skipped deserializes from YAML and serializes back correctly
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/prd/types.rs` — `test_uat_status_serde_roundtrip` (serde round-trip for all 3 variants including Skipped)
+  - `src/prd/types.rs` — `test_uat_status_deserialize_skipped_from_yaml` (deserialize "skipped" string to `UatStatus::Skipped`)
+  - `src/prd/types.rs` — `test_acceptance_test_with_skipped_uat_roundtrip` (full `AcceptanceTest` struct round-trip with Skipped status)
