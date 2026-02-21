@@ -7,6 +7,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📋 PRD Tasks
+
+- Prd(PRD-0036)feat(T-001): add Skipped variant to UatStatus enum
+
+Add UatStatus::Skipped with serde rename 'skipped' and Display impl.
+This is a purely additive change that introduces a new terminal UAT
+state for intentionally skipped acceptance tests.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-002): Update finalize to accept skipped UATs
+
+Updated validate_all_uats_verified to explicitly document that both
+Verified and Skipped are acceptable terminal states. Added three new
+tests covering all-skipped, mixed verified/skipped, and skipped-with-
+unverified scenarios.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-003): Add --disallow-skip-uat and --disallow-add-task CLI flags
+
+Add two new flags to the 'mr run' command:
+- --disallow-skip-uat: prevents the agent from skipping UATs
+- --disallow-add-task: prevents the agent from adding tasks
+
+Thread these through RunConfig/UatVerificationConfig into prompt building
+functions as placeholder context values for conditional prompt sections.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-004): Update run task prompt to allow dynamic task addition
+
+Add a conditional {{#if allow_add_task}} section to PROMPT_RUN_TASK in
+src/commands/init.rs that instructs the agent it may add new tasks to the
+PRD frontmatter during execution. Includes guidelines for task ID
+assignment, status, and guidance to prefer adding a task over skipping a
+UAT when the task would unblock verification.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-005): update UAT verification prompt to allow skipping
+
+Add conditional sections to PROMPT_RUN_UAT_VERIFY for marking UATs as
+skipped (Option D) and adding tasks to unblock verification (Option E).
+Both sections are conditioned on allow_skip_uat and allow_add_task
+placeholders respectively.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-006): Thread new flags through prompt building
+
+Add tests verifying allow_add_task and allow_skip_uat conditional
+sections in build_prompt and build_uat_verify_prompt work correctly
+when flags are true and false. 4 new tests added (562 total).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-007): restore .mr/prompts with updated prompt files
+
+Sync .mr/prompts/ with src/commands/init.rs per constitution rule 7.
+Updated run_task.md and run_uat_verify.md with new conditional sections
+for UAT skipping and dynamic task addition. Removed obsolete prompts
+(prd_edit.md, prd_new_discovery.md, prd_new_synthesize_prd.md) and added
+new interactive prompts (prd_edit_interactive.md, prd_new_interactive.md).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)feat(T-008): add unit tests for UatStatus::Skipped serde and Display
+
+Add 5 new unit tests in src/prd/types.rs:
+- UatStatus Display impl for all variants
+- UatStatus serde_yaml round-trip for all variants
+- UatStatus::Skipped deserialization from YAML string
+- UatStatus default is Unverified
+- AcceptanceTest struct round-trip with Skipped status
+
+567 tests run, 567 passed, 0 skipped.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-001): verify UatStatus::Skipped serde round-trip
+
+Existing tests in src/prd/types.rs already cover deserialization
+from YAML and serialization back for UatStatus::Skipped.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-002): verify finalize accepts verified or skipped UATs
+
+Existing tests in src/prd/finalize.rs cover this criterion:
+- test_validate_all_uats_verified_with_all_skipped
+- test_validate_uats_mixed_verified_and_skipped
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-003): verify finalize rejects unverified UATs
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-004): verify --disallow-skip-uat and --disallow-add-task CLI flags
+
+Verified by existing tests:
+- test_args_parse_run_with_disallow_skip_uat
+- test_args_parse_run_with_disallow_add_task
+- test_args_parse_run_default_disallow_flags_off
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-005): verify agent can add tasks during execution
+
+Existing tests test_build_prompt_allow_add_task_true and
+test_build_prompt_allow_add_task_false in src/commands/run.rs verify
+that the task execution prompt correctly includes/excludes the dynamic
+task addition section based on the allow_add_task flag.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-006): verify agent can mark UAT as skipped
+
+Verified by existing test test_build_uat_verify_prompt_allow_skip_uat_true
+which confirms the UAT verification prompt includes "Option D: Mark as
+Skipped" when allow_skip_uat=true.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-007): verify --disallow-skip-uat excludes skip section from prompt
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)uat(uat-008): verify --disallow-add-task prevents add-task in prompt
+
+Verified by existing tests:
+- test_build_prompt_allow_add_task_false
+- test_build_uat_verify_prompt_allow_skip_uat_false
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0036)finalize: UAT skipping and dynamic task addition during run
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## [0.8.4] - 2026-02-12
+
 ## [0.8.3] - 2026-02-10
 
 ## [0.8.2] - 2026-02-10
