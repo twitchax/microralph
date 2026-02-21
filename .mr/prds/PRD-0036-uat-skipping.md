@@ -36,7 +36,7 @@ acceptance_tests:
   - id: uat-004
     name: "Run command accepts --disallow-skip-uat and --disallow-add-task flags"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "Agent can add a new task to a PRD during task execution"
     command: cargo make test
@@ -302,3 +302,12 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - `src/prd/finalize.rs` — `test_validate_uats_skipped_with_unverified_fails` (skipped + unverified → finalize rejects)
   - `src/prd/finalize.rs` — `test_validate_multiple_unverified_uats` (multiple unverified → finalize rejects with correct count)
   - `src/prd/finalize.rs` — `test_validate_all_unverified_uats` (all unverified → finalize rejects)
+
+## 2026-02-21 — uat-004 Verification
+- **UAT**: Run command accepts --disallow-skip-uat and --disallow-add-task flags
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/main.rs` — `test_args_parse_run_with_disallow_skip_uat` (verifies `--disallow-skip-uat` flag is accepted and parsed as `true`)
+  - `src/main.rs` — `test_args_parse_run_with_disallow_add_task` (verifies `--disallow-add-task` flag is accepted and parsed as `true`)
+  - `src/main.rs` — `test_args_parse_run_default_disallow_flags_off` (verifies both flags default to `false` when not provided)
