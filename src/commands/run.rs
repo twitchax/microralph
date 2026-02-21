@@ -1284,6 +1284,98 @@ mod tests {
     }
 
     #[test]
+    fn test_build_prompt_allow_add_task_true() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a prompt template with allow_add_task conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r"Execute task {{next_task_id}}
+{{#if allow_add_task}}
+### Adding New Tasks (Dynamic Task Addition)
+You may add new tasks.
+{{/if}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
+
+        assert!(
+            prompt.contains("Adding New Tasks"),
+            "Prompt should include add-task section when allow_add_task=true"
+        );
+    }
+
+    #[test]
+    fn test_build_prompt_allow_add_task_false() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // Create a prompt template with allow_add_task conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r"Execute task {{next_task_id}}
+{{#if allow_add_task}}
+### Adding New Tasks (Dynamic Task Addition)
+You may add new tasks.
+{{/if}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, false);
+
+        assert!(
+            !prompt.contains("Adding New Tasks"),
+            "Prompt should not include add-task section when allow_add_task=false"
+        );
+    }
+
+    #[test]
     fn test_run_task_with_no_commit_sends_correct_prompt() {
         let temp = TempDir::new().unwrap();
         let root = temp.path().to_path_buf();
@@ -1648,6 +1740,116 @@ mod tests {
         assert!(prompt.contains("Test 1"));
         assert!(prompt.contains("PRD-0001"));
         assert!(prompt.contains("cargo test"));
+    }
+
+    #[test]
+    fn test_build_uat_verify_prompt_allow_skip_uat_true() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("run_uat_verify.md"),
+            r"Verify UAT {{uat_id}}
+{{#if allow_skip_uat}}
+### Option D: Mark as Skipped
+You may skip this UAT.
+{{/if}}
+{{#if allow_add_task}}
+### Option E: Add a Task
+You may add a task.
+{{/if}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let uat = AcceptanceTest {
+            id: "uat-001".to_string(),
+            name: "Test 1".to_string(),
+            command: "cargo test".to_string(),
+            uat_status: UatStatus::Unverified,
+        };
+
+        let prompt = build_uat_verify_prompt(&root, &prd, &prd_path, &uat, true, true);
+
+        assert!(
+            prompt.contains("Option D: Mark as Skipped"),
+            "Prompt should include skip section when allow_skip_uat=true"
+        );
+        assert!(
+            prompt.contains("Option E: Add a Task"),
+            "Prompt should include add-task section when allow_add_task=true"
+        );
+    }
+
+    #[test]
+    fn test_build_uat_verify_prompt_allow_skip_uat_false() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        std::fs::write(
+            prompts_dir.join("run_uat_verify.md"),
+            r"Verify UAT {{uat_id}}
+{{#if allow_skip_uat}}
+### Option D: Mark as Skipped
+You may skip this UAT.
+{{/if}}
+{{#if allow_add_task}}
+### Option E: Add a Task
+You may add a task.
+{{/if}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let uat = AcceptanceTest {
+            id: "uat-001".to_string(),
+            name: "Test 1".to_string(),
+            command: "cargo test".to_string(),
+            uat_status: UatStatus::Unverified,
+        };
+
+        let prompt = build_uat_verify_prompt(&root, &prd, &prd_path, &uat, false, false);
+
+        assert!(
+            !prompt.contains("Option D: Mark as Skipped"),
+            "Prompt should not include skip section when allow_skip_uat=false"
+        );
+        assert!(
+            !prompt.contains("Option E: Add a Task"),
+            "Prompt should not include add-task section when allow_add_task=false"
+        );
     }
 
     #[test]

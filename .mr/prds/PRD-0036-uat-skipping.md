@@ -82,7 +82,7 @@ tasks:
   - id: T-006
     title: "Thread new flags through prompt building"
     priority: 6
-    status: todo
+    status: done
     notes: "Add allow_skip_uat and allow_add_task placeholders to build_prompt and build_uat_verify_prompt in run.rs. Pass negated flag values so prompts can conditionally include/exclude instructions."
   - id: T-007
     title: "Restore .mr/prompts with updated prompt files"
@@ -235,3 +235,17 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Updated Constraints and Output sections to mention skipping
   - UAT passed: 558 tests run, 558 passed, 0 skipped
 - **Constitution Compliance**: No violations. Change is purely additive to prompt content, consistent with existing `{{#if ...}}` conditional patterns in the template.
+
+## 2026-02-21 — T-006 Completed
+- **Task**: Thread new flags through prompt building
+- **Status**: ✅ Done
+- **Changes**:
+  - Verified that T-003 already threaded `allow_add_task` into `build_prompt()` and `allow_skip_uat`/`allow_add_task` into `build_uat_verify_prompt()` with `ctx.insert()` calls
+  - Verified negated flag values are passed from CLI via `!opts.disallow_skip_uat` and `!opts.disallow_add_task` in `src/main.rs`
+  - Added 4 new tests in `src/commands/run.rs`:
+    - `test_build_prompt_allow_add_task_true`: verifies add-task section included when flag is true
+    - `test_build_prompt_allow_add_task_false`: verifies add-task section excluded when flag is false
+    - `test_build_uat_verify_prompt_allow_skip_uat_true`: verifies both skip and add-task sections included when flags are true
+    - `test_build_uat_verify_prompt_allow_skip_uat_false`: verifies both sections excluded when flags are false
+  - UAT passed: 562 tests run, 562 passed, 0 skipped (4 new tests)
+- **Constitution Compliance**: No violations. Tests follow existing patterns, changes are minimal and additive.
