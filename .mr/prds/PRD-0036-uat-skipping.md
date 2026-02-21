@@ -52,7 +52,7 @@ acceptance_tests:
   - id: uat-008
     name: "--disallow-add-task prevents the agent from adding tasks in prompt"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Add Skipped variant to UatStatus enum"
@@ -334,3 +334,11 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
 - **Method**: Existing test
 - **Details**:
   - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_false` (verifies that when `allow_skip_uat=false` — which is what `--disallow-skip-uat` sets — the prompt does NOT contain "Option D: Mark as Skipped", effectively preventing the agent from skipping UATs)
+
+## 2026-02-21 — uat-008 Verification
+- **UAT**: --disallow-add-task prevents the agent from adding tasks in prompt
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/commands/run.rs` — `test_build_prompt_allow_add_task_false` (verifies that when `allow_add_task=false` — which is what `--disallow-add-task` sets — the task execution prompt does NOT contain "Adding New Tasks", effectively preventing the agent from adding tasks)
+  - `src/commands/run.rs` — `test_build_uat_verify_prompt_allow_skip_uat_false` (also verifies that when `allow_add_task=false`, the UAT verification prompt does NOT contain "Option E: Add a Task")
