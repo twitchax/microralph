@@ -62,7 +62,7 @@ tasks:
   - id: T-002
     title: "Update finalize to accept skipped UATs"
     priority: 2
-    status: todo
+    status: done
     notes: "Modify validate_all_uats_verified in src/prd/finalize.rs to treat Skipped as acceptable alongside Verified. Unverified remains blocking."
   - id: T-003
     title: "Add --disallow-skip-uat and --disallow-add-task CLI flags"
@@ -184,3 +184,14 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Doc comment: "UAT was intentionally skipped with justification recorded in history"
   - UAT passed: 552 tests run, 552 passed, 0 skipped
 - **Constitution Compliance**: No violations. Change is purely additive and minimal.
+
+## 2026-02-21 — T-002 Completed
+- **Task**: Update finalize to accept skipped UATs
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated doc comment on `validate_all_uats_verified` in `src/prd/finalize.rs` to explicitly state that both `Verified` and `Skipped` are acceptable terminal states
+  - Updated call-site comment to reflect terminal status semantics
+  - Added 3 new tests: `test_validate_all_uats_verified_with_all_skipped`, `test_validate_uats_mixed_verified_and_skipped`, `test_validate_uats_skipped_with_unverified_fails`
+  - UAT passed: 555 tests run, 555 passed, 0 skipped (3 new tests added)
+- **Opportunistic UAT verification**: uat-002 ("Finalize accepts PRDs where all UATs are verified or skipped") and uat-003 ("Finalize rejects PRDs with unverified UATs") are covered by the new tests, but left as `unverified` per instructions to defer to the UAT verification loop.
+- **Constitution Compliance**: No violations. Minimal changes, consistent with existing patterns.

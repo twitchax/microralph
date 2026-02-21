@@ -130,7 +130,10 @@ fn get_unverified_uats(prd: &Prd) -> Vec<&AcceptanceTest> {
     prd.unverified_uats()
 }
 
-/// Validates that all acceptance tests in the PRD are verified.
+/// Validates that all acceptance tests in the PRD have a terminal status.
+///
+/// Both `Verified` and `Skipped` are considered acceptable terminal states.
+/// Only `Unverified` UATs block finalization.
 fn validate_all_uats_verified(prd: &Prd) -> Result<(), FinalizeError> {
     let unverified = get_unverified_uats(prd);
 
@@ -298,7 +301,7 @@ pub fn finalize_prd(config: &PrdFinalizeConfig, runner: &dyn Runner) -> Result<P
         )
     })?;
 
-    // Validate all UATs are verified - this returns an error if any are unverified.
+    // Validate all UATs have a terminal status (verified or skipped).
     validate_all_uats_verified(&prd).with_context(|| {
         format!(
             "PRD {} cannot be finalized: unverified UATs remain",
@@ -899,6 +902,61 @@ mod tests {
 
         // No UATs means validation passes.
         assert!(validate_all_uats_verified(&prd).is_ok());
+    }
+
+    #[test]
+    fn test_validate_all_uats_verified_with_all_skipped() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Skipped),
+                make_uat("uat-002", UatStatus::Skipped),
+            ],
+        );
+
+        assert!(validate_all_uats_verified(&prd).is_ok());
+    }
+
+    #[test]
+    fn test_validate_uats_mixed_verified_and_skipped() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Verified),
+                make_uat("uat-002", UatStatus::Skipped),
+                make_uat("uat-003", UatStatus::Verified),
+            ],
+        );
+
+        assert!(validate_all_uats_verified(&prd).is_ok());
+    }
+
+    #[test]
+    fn test_validate_uats_skipped_with_unverified_fails() {
+        let prd = make_test_prd_with_uats(
+            "PRD-0001",
+            vec![make_task("T-001", TaskStatus::Done)],
+            vec![
+                make_uat("uat-001", UatStatus::Skipped),
+                make_uat("uat-002", UatStatus::Unverified),
+            ],
+        );
+
+        let result = validate_all_uats_verified(&prd);
+        assert!(result.is_err());
+
+        if let Err(FinalizeError::UnverifiedUats {
+            unverified_count,
+            uat_details,
+        }) = result
+        {
+            assert_eq!(unverified_count, 1);
+            assert_eq!(uat_details[0].0, "uat-002");
+        } else {
+            panic!("Expected UnverifiedUats error");
+        }
     }
 
     #[test]
