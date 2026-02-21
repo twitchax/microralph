@@ -77,7 +77,7 @@ tasks:
   - id: T-005
     title: "Update UAT verification prompt to allow skipping"
     priority: 5
-    status: todo
+    status: done
     notes: "Update PROMPT_RUN_UAT_VERIFY in src/commands/init.rs to add a new option for marking a UAT as skipped (set uat_status to skipped and append history). Conditioned on --disallow-skip-uat flag via placeholder. Also allow adding a task as alternative to skipping."
   - id: T-006
     title: "Thread new flags through prompt building"
@@ -220,5 +220,18 @@ The flags default to allowing both behaviors. When a `--disallow-*` flag is set,
   - Includes guidance to prefer adding a task over skipping a UAT when the task would unblock verification
   - Includes YAML example showing the expected task format
   - Placed between "Append to History Section" and "Opportunistic UAT Verification" sections
+  - UAT passed: 558 tests run, 558 passed, 0 skipped
+- **Constitution Compliance**: No violations. Change is purely additive to prompt content, consistent with existing `{{#if ...}}` conditional patterns in the template.
+
+## 2026-02-21 — T-005 Completed
+- **Task**: Update UAT verification prompt to allow skipping
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `{{#if allow_skip_uat}}` conditional section "Option D: Mark as Skipped" to `PROMPT_RUN_UAT_VERIFY` in `src/commands/init.rs`
+  - Added `{{#if allow_add_task}}` conditional section "Option E: Add a Task to Unblock Verification" to `PROMPT_RUN_UAT_VERIFY`
+  - Added conditional `uat_status: skipped` YAML example in "Updating the PRD" section
+  - Updated History template to include Skipped status option
+  - Added "On Skip" section with commit instructions, conditioned on `allow_skip_uat`
+  - Updated Constraints and Output sections to mention skipping
   - UAT passed: 558 tests run, 558 passed, 0 skipped
 - **Constitution Compliance**: No violations. Change is purely additive to prompt content, consistent with existing `{{#if ...}}` conditional patterns in the template.
