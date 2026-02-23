@@ -17,6 +17,7 @@ This document provides detailed workflows and troubleshooting for AI coding agen
   - `prds/`: PRD files
   - `templates/`: PRD templates
   - `prompts/`: Static prompt files for each stage
+  - `skills/`: Agent-managed persistent skills (learned techniques reused across runs)
   - `PRDS.md`: Auto-generated PRD index
 
 ## Quick Start
@@ -324,7 +325,8 @@ The `mr restore` command overwrites `.mr/prompts/`, `.mr/templates/`, `constitut
 2. **Deletion phase**: Removes `.mr/prompts/` and `.mr/templates/` directories using `std::fs::remove_dir_all`
 3. **Recreation phase**: Calls `init::init_prompts_and_templates()` to recreate directories with built-in defaults
 4. **Config restoration**: Calls `init::init_constitution_and_config()` to overwrite `constitution.md` and `config.toml`
-5. **No auto-commit**: Leaves changes uncommitted so users can review via Git workflow
+5. **Skills preservation**: Calls `init::init_skills()` to create `.mr/skills/` and `SKILLS.md` if missing, but preserves existing skills
+6. **No auto-commit**: Leaves changes uncommitted so users can review via Git workflow
 
 ### Use Cases
 
@@ -336,7 +338,7 @@ The `mr restore` command overwrites `.mr/prompts/`, `.mr/templates/`, `constitut
 
 - **Destructive**: Overwrites existing files with no backup (Git is the safety net)
 - **Git workflow**: Always use `git diff` to review changes before committing
-- **Scope**: Affects `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` (not PRDs or PRDS.md)
+- **Scope**: Affects `.mr/prompts/`, `.mr/templates/`, `constitution.md`, and `config.toml` (not PRDs, PRDS.md, or skills)
 - **Idempotent**: Running multiple times produces the same result (all files overwritten with built-in defaults)
 
 ### Implementation Pattern

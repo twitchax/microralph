@@ -1,77 +1,77 @@
 ---
 id: PRD-0038
-title: "Save Skills: Persistent Agent Learning Across Runs"
-status: active
+title: 'Save Skills: Persistent Agent Learning Across Runs'
+status: done
 owner: twitchax
 created: 2026-02-23
 updated: 2026-02-23
 principles:
-  - "Manifest pattern: inject a lightweight index into prompts, not full skill content"
-  - "Agent-managed lifecycle: no CLI commands for skill CRUD — agents create/update skills organically"
-  - "Selective persistence: bias toward saving only genuinely reusable techniques"
-  - "Survive restore: skills are learned artifacts, not defaults — mr restore must not delete them"
-  - "Prompt Management (Constitution Rule 7): new prompt content defined in init.rs and materialized to .mr/prompts/"
+- 'Manifest pattern: inject a lightweight index into prompts, not full skill content'
+- 'Agent-managed lifecycle: no CLI commands for skill CRUD — agents create/update skills organically'
+- 'Selective persistence: bias toward saving only genuinely reusable techniques'
+- 'Survive restore: skills are learned artifacts, not defaults — mr restore must not delete them'
+- 'Prompt Management (Constitution Rule 7): new prompt content defined in init.rs and materialized to .mr/prompts/'
 references:
-  - name: "RAG / Manifest pattern for agent memory"
-    url: "https://en.wikipedia.org/wiki/Retrieval-augmented_generation"
-  - name: "Run loop implementation"
-    url: "src/commands/run.rs"
-  - name: "Prompt constants and init"
-    url: "src/commands/init.rs"
-  - name: "Prompt expansion engine"
-    url: "src/prompt/expand.rs"
+- name: RAG / Manifest pattern for agent memory
+  url: https://en.wikipedia.org/wiki/Retrieval-augmented_generation
+- name: Run loop implementation
+  url: src/commands/run.rs
+- name: Prompt constants and init
+  url: src/commands/init.rs
+- name: Prompt expansion engine
+  url: src/prompt/expand.rs
 acceptance_tests:
-  - id: uat-001
-    name: "mr init creates .mr/skills/ directory and empty SKILLS.md"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-002
-    name: "mr restore creates .mr/skills/ if missing but does not overwrite existing skills"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-003
-    name: "build_prompt injects skills_manifest placeholder into run_task prompt"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-004
-    name: "run_task.md prompt includes skills manifest section and skill-saving instructions"
-    command: cargo make test
-    uat_status: verified
-  - id: uat-005
-    name: "Full CI passes (fmt, clippy, test)"
-    command: cargo make ci
-    uat_status: verified
+- id: uat-001
+  name: mr init creates .mr/skills/ directory and empty SKILLS.md
+  command: cargo make test
+  uat_status: verified
+- id: uat-002
+  name: mr restore creates .mr/skills/ if missing but does not overwrite existing skills
+  command: cargo make test
+  uat_status: verified
+- id: uat-003
+  name: build_prompt injects skills_manifest placeholder into run_task prompt
+  command: cargo make test
+  uat_status: verified
+- id: uat-004
+  name: run_task.md prompt includes skills manifest section and skill-saving instructions
+  command: cargo make test
+  uat_status: verified
+- id: uat-005
+  name: Full CI passes (fmt, clippy, test)
+  command: cargo make ci
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Create .mr/skills/ directory and SKILLS.md during mr init"
-    priority: 1
-    status: done
-    notes: "Add skills_dir creation to init_prompts_and_templates() or a new init_skills() helper in src/commands/init.rs. Create empty SKILLS.md with a header comment explaining the manifest format. Define SKILLS_TEMPLATE constant."
-  - id: T-002
-    title: "Handle skills directory in mr restore"
-    priority: 2
-    status: done
-    notes: "In the restore flow, create .mr/skills/ and SKILLS.md only if they do not already exist. Use create_dir_if_missing and create_file_if_missing (not create_file_always) to preserve learned skills."
-  - id: T-003
-    title: "Load skills manifest and inject into build_prompt()"
-    priority: 3
-    status: done
-    notes: "In src/commands/run.rs build_prompt(), read .mr/skills/SKILLS.md content. Insert as skills_manifest placeholder into PlaceholderContext. If the file is empty or missing, the placeholder expands to empty string (guarded by {{#if skills_manifest}} in the prompt)."
-  - id: T-004
-    title: "Update run_task.md prompt with skills manifest and saving instructions"
-    priority: 4
-    status: done
-    notes: "Add two sections to run_task.md: (1) A context section showing {{#if skills_manifest}}...{{/if}} with the manifest and a note to read .mr/skills/<name>/skill.md for details. (2) An end-of-task action instructing the agent to save reusable skills to .mr/skills/<slug>/skill.md and update SKILLS.md, with bias toward only saving genuinely useful skills."
-  - id: T-005
-    title: "Update PROMPT_RUN_TASK constant in init.rs to match run_task.md"
-    priority: 5
-    status: done
-    notes: "Per Constitution Rule 7, the embedded constant in init.rs must stay synchronized with the .mr/prompts/run_task.md file. Update PROMPT_RUN_TASK to include the new skills sections."
-  - id: T-006
-    title: "Add PromptKind support and tests"
-    priority: 6
-    status: done
-    notes: "No new PromptKind variant needed (skills manifest is data, not a prompt). Add unit tests for: init creating skills dir, restore preserving existing skills, build_prompt expanding skills_manifest placeholder. Ensure cargo make ci passes."
+- id: T-001
+  title: Create .mr/skills/ directory and SKILLS.md during mr init
+  priority: 1
+  status: done
+  notes: Add skills_dir creation to init_prompts_and_templates() or a new init_skills() helper in src/commands/init.rs. Create empty SKILLS.md with a header comment explaining the manifest format. Define SKILLS_TEMPLATE constant.
+- id: T-002
+  title: Handle skills directory in mr restore
+  priority: 2
+  status: done
+  notes: In the restore flow, create .mr/skills/ and SKILLS.md only if they do not already exist. Use create_dir_if_missing and create_file_if_missing (not create_file_always) to preserve learned skills.
+- id: T-003
+  title: Load skills manifest and inject into build_prompt()
+  priority: 3
+  status: done
+  notes: In src/commands/run.rs build_prompt(), read .mr/skills/SKILLS.md content. Insert as skills_manifest placeholder into PlaceholderContext. If the file is empty or missing, the placeholder expands to empty string (guarded by {{#if skills_manifest}} in the prompt).
+- id: T-004
+  title: Update run_task.md prompt with skills manifest and saving instructions
+  priority: 4
+  status: done
+  notes: 'Add two sections to run_task.md: (1) A context section showing {{#if skills_manifest}}...{{/if}} with the manifest and a note to read .mr/skills/<name>/skill.md for details. (2) An end-of-task action instructing the agent to save reusable skills to .mr/skills/<slug>/skill.md and update SKILLS.md, with bias toward only saving genuinely useful skills.'
+- id: T-005
+  title: Update PROMPT_RUN_TASK constant in init.rs to match run_task.md
+  priority: 5
+  status: done
+  notes: Per Constitution Rule 7, the embedded constant in init.rs must stay synchronized with the .mr/prompts/run_task.md file. Update PROMPT_RUN_TASK to include the new skills sections.
+- id: T-006
+  title: Add PromptKind support and tests
+  priority: 6
+  status: done
+  notes: 'No new PromptKind variant needed (skills manifest is data, not a prompt). Add unit tests for: init creating skills dir, restore preserving existing skills, build_prompt expanding skills_manifest placeholder. Ensure cargo make ci passes.'
 ---
 
 # Summary
@@ -306,3 +306,13 @@ Agent executes task
   - Ran `cargo make ci` which executes fmt, clippy, and test stages
   - All 584 tests passed, 0 failures
   - No fmt or clippy issues detected
+
+## 2026-02-23 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 6 tasks (T-001 through T-006)
+- **Outcome**: All tasks completed, acceptance tests passed (584/584 tests)
+- **Cleanup**: Updated AGENTS.md to document `.mr/skills/` directory, restore skills preservation, and scope clarification. No temporary files, debug prints, or resolved TODOs found.
+- **Summary**:
+  - Implemented persistent `.mr/skills/` directory with `SKILLS.md` manifest, created during `mr init` and preserved by `mr restore`
+  - Integrated skills manifest loading into `build_prompt()` with conditional injection via `{{#if skills_manifest}}` — only injects when skills exist beyond the default template
+  - Updated `run_task.md` prompt and `PROMPT_RUN_TASK` constant with skills context section and end-of-task saving instructions, kept in sync per Constitution Rule 7
