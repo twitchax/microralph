@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📋 PRD Tasks
+
+- Prd(PRD-0037)finalize: Fix run loop to re-enter task execution after UAT-added tasks
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-001): create .mr/skills/ directory and SKILLS.md during mr init
+
+Add SKILLS_TEMPLATE constant and create .mr/skills/ directory with
+SKILLS.md manifest file during mr init. The skills directory provides
+persistent storage for agent-learned techniques across runs.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-002): handle skills directory in mr restore
+
+Extract init_skills() helper from init() for DRY reuse. Call it from
+restore_impl() to create .mr/skills/ and SKILLS.md if missing while
+preserving existing learned skills. Add tests for both preservation
+and recreation scenarios.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-003): load skills manifest and inject into build_prompt()
+
+Read .mr/skills/SKILLS.md in build_prompt() and insert as skills_manifest
+placeholder into PlaceholderContext. Compares against default SKILLS_TEMPLATE
+to avoid injecting boilerplate when no real skills exist. Missing/empty/default
+files result in no placeholder, so {{#if skills_manifest}} evaluates to false.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-004): add skills manifest and saving instructions to run_task.md
+
+Add two new sections to the run_task.md prompt:
+- Skills manifest context section ({{#if skills_manifest}}) after Constitution,
+  showing available skills with a note to read full details on demand
+- Saving Skills (End-of-Task) section with instructions for creating skill
+  directories, writing skill.md files, updating SKILLS.md, and guidance
+  to bias toward saving only genuinely reusable techniques
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-005): sync PROMPT_RUN_TASK constant with run_task.md skills sections
+
+Add skills_manifest conditional block and Saving Skills end-of-task
+section to the PROMPT_RUN_TASK constant in init.rs, matching the
+changes made to .mr/prompts/run_task.md in T-004. Resolves the
+transient Constitution Rule 7 violation.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)feat(T-006): add unit tests for skills init and build_prompt expansion
+
+Add 6 unit tests covering the skills system:
+- init_skills(): creation, preservation, idempotency (3 tests in init.rs)
+- build_prompt(): skills_manifest injection, default omission, missing omission (3 tests in run.rs)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)uat(uat-001): verify mr init creates skills dir and SKILLS.md
+
+Existing tests test_init_creates_structure and test_init_skills_creates_dir_and_manifest
+already cover this acceptance criterion. All 583 tests pass.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)uat(uat-002): verify restore creates/preserves skills
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)uat(uat-003): verified build_prompt skills_manifest injection
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)uat(uat-004): add test verifying run_task prompt includes skills sections
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)uat(uat-005): verify full CI passes
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0038)finalize: persistent skills system with manifest-pattern prompt injection
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## [0.8.7] - 2026-02-23
+
 ## [0.8.6] - 2026-02-23
 
 ### 📋 PRD Tasks
