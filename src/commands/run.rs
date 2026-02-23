@@ -865,6 +865,9 @@ pub fn run_uat_verification_loop(
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::similar_names)]
 mod tests {
+    use std::collections::VecDeque;
+    use std::sync::Mutex;
+
     use super::*;
     use crate::prd::{PrdFrontmatter, Task};
     use crate::runner::MockRunner;
@@ -2383,5 +2386,361 @@ Project governance and best practices.
             prompt.contains("Constitution Compliance"),
             "Prompt should instruct runner to log constitution violations"
         );
+    }
+
+    // ─── PRD-0037 T-004: Tests for UAT loop early-break and outer loop re-entry ───
+
+    /// A runner that modifies the PRD file as a side effect on the first `execute()` call,
+    /// simulating an agent adding a new task during UAT verification.
+    struct SideEffectRunner {
+        prd_file: PathBuf,
+        updated_content: Mutex<Option<String>>,
+        responses: Mutex<VecDeque<RunnerOutput>>,
+    }
+
+    impl SideEffectRunner {
+        fn new(prd_file: PathBuf, updated_content: String, responses: Vec<RunnerOutput>) -> Self {
+            Self {
+                prd_file,
+                updated_content: Mutex::new(Some(updated_content)),
+                responses: Mutex::new(responses.into()),
+            }
+        }
+    }
+
+    impl Runner for SideEffectRunner {
+        fn name(&self) -> &'static str {
+            "side-effect-mock"
+        }
+
+        fn execute(
+            &self,
+            _prompt: &str,
+            _working_dir: &std::path::Path,
+        ) -> Result<RunnerOutput, crate::runner::RunnerError> {
+            // Apply the side effect (modify PRD) on the first call only.
+            if let Some(content) = self.updated_content.lock().unwrap().take() {
+                std::fs::write(&self.prd_file, content).unwrap();
+            }
+
+            let response = self
+                .responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or_else(|| RunnerOutput::success("Mock response"));
+
+            Ok(response)
+        }
+    }
+
+    #[test]
+    fn test_uat_loop_breaks_early_when_new_tasks_detected() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // Create a PRD with all tasks done and unverified UATs.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Early Break Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![
+                AcceptanceTest {
+                    id: "uat-001".to_string(),
+                    name: "Test 1".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+                AcceptanceTest {
+                    id: "uat-002".to_string(),
+                    name: "Test 2".to_string(),
+                    command: "cargo test".to_string(),
+                    uat_status: UatStatus::Unverified,
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, &content).unwrap();
+
+        // Build the updated PRD content: same PRD but with a new incomplete task added.
+        let mut updated_frontmatter = prd.frontmatter.clone();
+        updated_frontmatter.tasks.as_mut().unwrap().push(Task {
+            id: "T-002".to_string(),
+            title: "Newly added task".to_string(),
+            priority: 2,
+            status: TaskStatus::Todo,
+            notes: None,
+        });
+        let updated_prd = Prd::new(updated_frontmatter, "# Body\n".to_string());
+        let updated_content = crate::prd::serialize_prd(&updated_prd).unwrap();
+
+        // Use SideEffectRunner: on first execute(), it writes the updated PRD (adding new task).
+        let runner = SideEffectRunner::new(
+            prd_file.clone(),
+            updated_content,
+            vec![RunnerOutput::success("Verified test 1")],
+        );
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            stream: false,
+            max_iterations: Some(5),
+            allow_skip_uat: true,
+            allow_add_task: true,
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        // Should have broken early after 1 iteration with has_new_tasks = true.
+        assert!(result.has_new_tasks, "Should detect new incomplete tasks");
+        assert_eq!(result.iterations, 1, "Should break after first iteration");
+        assert!(!result.hit_max_iterations, "Should not hit max iterations");
+        assert_eq!(result.verified_count, 1);
+    }
+
+    #[test]
+    fn test_uat_loop_no_new_tasks_means_has_new_tasks_false() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // All tasks done, one unverified UAT.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Convergence Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Unverified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        let prd_file = prds_dir.join("PRD-0001-test.md");
+        std::fs::write(&prd_file, content).unwrap();
+
+        // Runner does NOT modify the PRD — no side effects.
+        let runner = MockRunner::new(vec![RunnerOutput::success("Verified test 1")]);
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            stream: false,
+            max_iterations: Some(1),
+            allow_skip_uat: true,
+            allow_add_task: true,
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        // No new tasks added, so has_new_tasks should be false (even though loop hit max).
+        assert!(!result.has_new_tasks, "Should NOT report new tasks");
+        assert!(result.hit_max_iterations);
+        assert_eq!(result.iterations, 1);
+    }
+
+    #[test]
+    fn test_uat_loop_convergence_all_uats_verified() {
+        use crate::prd::types::{AcceptanceTest, UatStatus};
+
+        let temp = TempDir::new().unwrap();
+        let root = setup_test_repo(&temp);
+        let prds_dir = root.join(".mr").join("prds");
+
+        // Create the UAT verify prompt.
+        std::fs::write(
+            root.join(".mr/prompts/run_uat_verify.md"),
+            "Verify UAT {{uat_id}}",
+        )
+        .unwrap();
+
+        // All tasks done, all UATs already verified — loop should terminate immediately.
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Already Verified PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Task 1".to_string(),
+                priority: 1,
+                status: TaskStatus::Done,
+                notes: None,
+            }]),
+            acceptance_tests: Some(vec![AcceptanceTest {
+                id: "uat-001".to_string(),
+                name: "Test 1".to_string(),
+                command: "cargo test".to_string(),
+                uat_status: UatStatus::Verified,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let content = crate::prd::serialize_prd(&prd).unwrap();
+        std::fs::write(prds_dir.join("PRD-0001-test.md"), content).unwrap();
+
+        // Runner should not be called at all.
+        let runner = MockRunner::new(vec![]);
+
+        let config = UatVerificationConfig {
+            root: &root,
+            prd_id: "PRD-0001",
+            stream: false,
+            max_iterations: Some(5),
+            allow_skip_uat: true,
+            allow_add_task: true,
+        };
+
+        let result = run_uat_verification_loop(&config, &runner).unwrap();
+
+        // Loop terminates immediately with no iterations.
+        assert_eq!(result.iterations, 0);
+        assert!(!result.has_new_tasks);
+        assert!(!result.hit_max_iterations);
+        assert_eq!(result.remaining_unverified, 0);
+    }
+
+    #[test]
+    fn test_uat_result_has_new_tasks_field_default() {
+        // Verify that UatVerificationLoopResult correctly reports has_new_tasks
+        // when constructed directly (unit test of the struct).
+        let result_no_tasks = UatVerificationLoopResult {
+            prd_id: "PRD-0001".to_string(),
+            prd_path: PathBuf::from("test.md"),
+            verified_count: 0,
+            opted_out_count: 0,
+            iterations: 0,
+            hit_max_iterations: false,
+            remaining_unverified: 0,
+            has_new_tasks: false,
+        };
+        assert!(!result_no_tasks.has_new_tasks);
+
+        let result_with_tasks = UatVerificationLoopResult {
+            prd_id: "PRD-0001".to_string(),
+            prd_path: PathBuf::from("test.md"),
+            verified_count: 1,
+            opted_out_count: 0,
+            iterations: 1,
+            hit_max_iterations: false,
+            remaining_unverified: 2,
+            has_new_tasks: true,
+        };
+        assert!(result_with_tasks.has_new_tasks);
+    }
+
+    #[test]
+    fn test_has_incomplete_tasks_with_all_done() {
+        let prd = Prd::new(
+            PrdFrontmatter {
+                id: "PRD-0001".to_string(),
+                title: "Test".to_string(),
+                status: PrdStatus::Active,
+                tasks: Some(vec![
+                    make_task("T-001", 1, TaskStatus::Done),
+                    make_task("T-002", 2, TaskStatus::Done),
+                ]),
+                ..Default::default()
+            },
+            "# Body\n".to_string(),
+        );
+
+        assert!(!prd.has_incomplete_tasks());
+    }
+
+    #[test]
+    fn test_has_incomplete_tasks_with_todo() {
+        let prd = Prd::new(
+            PrdFrontmatter {
+                id: "PRD-0001".to_string(),
+                title: "Test".to_string(),
+                status: PrdStatus::Active,
+                tasks: Some(vec![
+                    make_task("T-001", 1, TaskStatus::Done),
+                    make_task("T-002", 2, TaskStatus::Todo),
+                ]),
+                ..Default::default()
+            },
+            "# Body\n".to_string(),
+        );
+
+        assert!(prd.has_incomplete_tasks());
+    }
+
+    #[test]
+    fn test_has_incomplete_tasks_with_in_progress() {
+        let prd = Prd::new(
+            PrdFrontmatter {
+                id: "PRD-0001".to_string(),
+                title: "Test".to_string(),
+                status: PrdStatus::Active,
+                tasks: Some(vec![
+                    make_task("T-001", 1, TaskStatus::Done),
+                    make_task("T-002", 2, TaskStatus::InProgress),
+                ]),
+                ..Default::default()
+            },
+            "# Body\n".to_string(),
+        );
+
+        assert!(prd.has_incomplete_tasks());
+    }
+
+    #[test]
+    fn test_has_incomplete_tasks_with_no_tasks() {
+        let prd = Prd::new(
+            PrdFrontmatter {
+                id: "PRD-0001".to_string(),
+                title: "Test".to_string(),
+                status: PrdStatus::Active,
+                tasks: None,
+                ..Default::default()
+            },
+            "# Body\n".to_string(),
+        );
+
+        assert!(!prd.has_incomplete_tasks());
     }
 }

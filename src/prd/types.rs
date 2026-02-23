@@ -426,7 +426,6 @@ impl Prd {
     }
 
     /// Returns whether there are any incomplete tasks.
-    #[allow(dead_code)] // Will be consumed by UAT verification loop changes (T-002/T-003).
     pub fn has_incomplete_tasks(&self) -> bool {
         self.next_task().is_some()
     }
