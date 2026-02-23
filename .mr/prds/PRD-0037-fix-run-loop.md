@@ -48,7 +48,7 @@ tasks:
   - id: T-003
     title: "Update cmd_run outer loop to continue when new tasks exist after UAT"
     priority: 3
-    status: todo
+    status: done
     notes: "In cmd_run (main.rs:1555-1585), after run_uat_verification_loop completes, check if new incomplete tasks exist (via the result flag or by re-reading the PRD). If yes, continue the outer loop instead of break. Add a safety counter to prevent infinite cycling."
   - id: T-004
     title: "Add unit tests for new UAT loop early-break and outer loop re-entry"
@@ -191,4 +191,15 @@ cmd_run outer loop:
   - All three `UatVerificationLoopResult` construction sites include the new field
   - UAT passed: 567/567 tests pass
 - **Constitution Compliance**: No violations. Minimal changes, follows existing patterns, `require_prd_by_id` helper follows DRY principle.
+
+## 2026-02-23 — T-003 Completed
+- **Task**: Update cmd_run outer loop to continue when new tasks exist after UAT
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `cmd_run()` in `src/main.rs` to check `result.has_new_tasks` after UAT verification loop
+  - When `has_new_tasks` is true, the outer loop `continue`s back to task execution instead of `break`ing
+  - Added `uat_cycles` safety counter (limit: 10) to prevent infinite task→UAT cycling
+  - Displays user-friendly messages: "New tasks detected; re-entering task execution..." on re-entry, and a warning on safety limit
+  - UAT passed: 567/567 tests pass
+- **Constitution Compliance**: No violations. Minimal change to control flow only, no public API changes, follows existing patterns.
 

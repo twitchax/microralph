@@ -1510,7 +1510,9 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
         Ok,
     )?;
 
+    let max_uat_cycles = 10;
     let mut tasks_completed = 0;
+    let mut uat_cycles = 0;
 
     loop {
         let config = run::RunConfig {
@@ -1579,6 +1581,27 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
                 match run::run_uat_verification_loop(&uat_config, runner.as_ref()) {
                     Ok(result) => {
                         print_uat_result(&result);
+
+                        // If new tasks were added during UAT verification, re-enter
+                        // task execution (with a safety counter to prevent infinite loops).
+                        if result.has_new_tasks {
+                            uat_cycles += 1;
+                            if uat_cycles >= max_uat_cycles {
+                                println!(
+                                    "{}",
+                                    colors::warning(&format!(
+                                        "Safety limit reached ({max_uat_cycles} task→UAT cycles). Stopping."
+                                    ))
+                                );
+                                break;
+                            }
+
+                            println!(
+                                "---\n{}",
+                                colors::info("New tasks detected; re-entering task execution...")
+                            );
+                            continue;
+                        }
                     }
                     Err(e) => {
                         eprintln!(
