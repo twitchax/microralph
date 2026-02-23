@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📋 PRD Tasks
 
+- Prd(PRD-0037)feat(T-001): Add has_incomplete_tasks() public method to Prd
+
+Add has_incomplete_tasks() -> bool method to Prd struct that delegates
+to next_task().is_some(). This enables production code (T-002/T-003)
+to check for incomplete tasks after UAT verification.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)feat(T-002): UAT loop detects new incomplete tasks and breaks early
+
+Add has_new_tasks field to UatVerificationLoopResult. After each UAT
+verification iteration, reload the PRD and check has_incomplete_tasks().
+If new tasks exist, break out of the UAT loop early so the outer loop
+can re-enter task execution.
+
+Also add require_prd_by_id() helper to reduce repeated error-handling
+boilerplate (DRY), and display a warning in print_uat_result() when
+new tasks are detected.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)feat(T-003): outer loop re-enters task execution after UAT adds new tasks
+
+After UAT verification loop completes, check has_new_tasks flag on
+the result. If true, continue the outer loop to execute newly added
+tasks instead of breaking. A safety counter (max 10 cycles) prevents
+infinite task→UAT cycling.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)feat(T-004): add unit tests for UAT loop early-break and re-entry
+
+Add 8 tests covering:
+- UAT loop breaks early when new incomplete tasks detected (SideEffectRunner)
+- UAT loop reports has_new_tasks=false when no tasks added
+- UAT loop convergence (terminates with 0 iterations when all verified)
+- UatVerificationLoopResult has_new_tasks field
+- has_incomplete_tasks() for all_done, todo, in_progress, and no_tasks cases
+- Remove stale #[allow(dead_code)] on has_incomplete_tasks()
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)uat(uat-001): verified run loop re-entry on new tasks
+
+Existing test test_uat_loop_breaks_early_when_new_tasks_detected covers
+this acceptance criterion by simulating agent task addition during UAT
+verification and asserting has_new_tasks=true with early loop break.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)uat(uat-002): verified normal termination when no new tasks added
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)uat(uat-003): verify UAT loop breaks early on new tasks
+
+Verified by existing test test_uat_loop_breaks_early_when_new_tasks_detected
+which uses SideEffectRunner to simulate task addition during UAT and asserts
+has_new_tasks=true with early break after 1 iteration. 575/575 tests pass.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0037)uat(uat-004): verify run loop convergence via existing tests
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## [0.8.5] - 2026-02-21
+
+### 📋 PRD Tasks
+
 - Prd(PRD-0036)feat(T-001): add Skipped variant to UatStatus enum
 
 Add UatStatus::Skipped with serde rename 'skipped' and Display impl.
