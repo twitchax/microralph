@@ -1,60 +1,60 @@
 ---
 id: PRD-0037
-title: "Fix Run Loop: Return to Task Execution After UAT-Added Tasks"
-status: active
+title: 'Fix Run Loop: Return to Task Execution After UAT-Added Tasks'
+status: done
 owner: twitchax
 created: 2026-02-23
 updated: 2026-02-23
 principles:
-  - "Convergence over infinite loops: the loop must always terminate"
-  - "Minimal changes to existing run loop structure"
-  - "Reuse existing PRD reload and next_task() logic"
-  - "No breaking changes to CLI flags or public API"
+- 'Convergence over infinite loops: the loop must always terminate'
+- Minimal changes to existing run loop structure
+- Reuse existing PRD reload and next_task() logic
+- No breaking changes to CLI flags or public API
 references:
-  - name: "PRD-0036: UAT Skipping and Dynamic Task Addition"
-    url: ".mr/prds/PRD-0036-uat-skipping.md"
-  - name: "Run loop orchestration"
-    url: "src/main.rs"
-  - name: "Run task and UAT verification"
-    url: "src/commands/run.rs"
+- name: 'PRD-0036: UAT Skipping and Dynamic Task Addition'
+  url: .mr/prds/PRD-0036-uat-skipping.md
+- name: Run loop orchestration
+  url: src/main.rs
+- name: Run task and UAT verification
+  url: src/commands/run.rs
 acceptance_tests:
-  - id: uat-001
-    name: "Run loop re-enters task execution when UAT verification adds a new task"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-002
-    name: "Run loop terminates normally when no new tasks are added during UAT"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-003
-    name: "UAT verification loop breaks early when new incomplete tasks are detected"
-    command: cargo make uat
-    uat_status: verified
-  - id: uat-004
-    name: "Run loop converges and does not loop infinitely"
-    command: cargo make uat
-    uat_status: verified
+- id: uat-001
+  name: Run loop re-enters task execution when UAT verification adds a new task
+  command: cargo make uat
+  uat_status: verified
+- id: uat-002
+  name: Run loop terminates normally when no new tasks are added during UAT
+  command: cargo make uat
+  uat_status: verified
+- id: uat-003
+  name: UAT verification loop breaks early when new incomplete tasks are detected
+  command: cargo make uat
+  uat_status: verified
+- id: uat-004
+  name: Run loop converges and does not loop infinitely
+  command: cargo make uat
+  uat_status: verified
 tasks:
-  - id: T-001
-    title: "Add has_incomplete_tasks() public method to Prd"
-    priority: 1
-    status: done
-    notes: "The method already exists as #[cfg(test)]-only (incomplete_tasks at types.rs:429). Either remove the cfg(test) gate or add a new has_incomplete_tasks() -> bool helper. next_task().is_some() could also work."
-  - id: T-002
-    title: "Make UAT verification loop detect new incomplete tasks and break early"
-    priority: 2
-    status: done
-    notes: "In run_uat_verification_loop (run.rs:765), after each iteration reload the PRD and check next_task(). If a new incomplete task exists, break out of the UAT loop with a new result field (e.g., has_new_tasks: bool on UatVerificationLoopResult)."
-  - id: T-003
-    title: "Update cmd_run outer loop to continue when new tasks exist after UAT"
-    priority: 3
-    status: done
-    notes: "In cmd_run (main.rs:1555-1585), after run_uat_verification_loop completes, check if new incomplete tasks exist (via the result flag or by re-reading the PRD). If yes, continue the outer loop instead of break. Add a safety counter to prevent infinite cycling."
-  - id: T-004
-    title: "Add unit tests for new UAT loop early-break and outer loop re-entry"
-    priority: 4
-    status: done
-    notes: "Test that UatVerificationLoopResult correctly reports has_new_tasks. Test that the outer loop re-enters task execution when new tasks are found. Test convergence (loop terminates when no new tasks are added)."
+- id: T-001
+  title: Add has_incomplete_tasks() public method to Prd
+  priority: 1
+  status: done
+  notes: 'The method already exists as #[cfg(test)]-only (incomplete_tasks at types.rs:429). Either remove the cfg(test) gate or add a new has_incomplete_tasks() -> bool helper. next_task().is_some() could also work.'
+- id: T-002
+  title: Make UAT verification loop detect new incomplete tasks and break early
+  priority: 2
+  status: done
+  notes: 'In run_uat_verification_loop (run.rs:765), after each iteration reload the PRD and check next_task(). If a new incomplete task exists, break out of the UAT loop with a new result field (e.g., has_new_tasks: bool on UatVerificationLoopResult).'
+- id: T-003
+  title: Update cmd_run outer loop to continue when new tasks exist after UAT
+  priority: 3
+  status: done
+  notes: In cmd_run (main.rs:1555-1585), after run_uat_verification_loop completes, check if new incomplete tasks exist (via the result flag or by re-reading the PRD). If yes, continue the outer loop instead of break. Add a safety counter to prevent infinite cycling.
+- id: T-004
+  title: Add unit tests for new UAT loop early-break and outer loop re-entry
+  priority: 4
+  status: done
+  notes: Test that UatVerificationLoopResult correctly reports has_new_tasks. Test that the outer loop re-enters task execution when new tasks are found. Test convergence (loop terminates when no new tasks are added).
 ---
 
 # Summary
@@ -253,4 +253,15 @@ cmd_run outer loop:
   - `src/commands/run.rs::test_uat_verification_loop_all_verified_by_runner` — verifies convergence when runner marks UATs as verified
   - `src/main.rs` outer loop safety counter (`uat_cycles` limit of 10) prevents infinite task→UAT cycling (added in T-003)
   - UAT suite passed: 575/575 tests pass
+
+## 2026-02-23 — PRD Finalized
+- **Status**: ✅ Finalized
+- **Tasks Completed**: 4 tasks (T-001 through T-004)
+- **Outcome**: All tasks completed, acceptance tests passed (575/575 tests)
+- **Cleanup**: None required — no temporary files, debug statements, or resolved TODOs found
+- **Summary**:
+  - Added `has_incomplete_tasks()` public method to `Prd` for detecting pending work
+  - Modified UAT verification loop to detect new incomplete tasks and break early with `has_new_tasks` flag
+  - Updated `cmd_run()` outer loop to re-enter task execution when new tasks are detected, with a safety counter (limit: 10) to prevent infinite cycling
+  - Added 8 new tests covering the early-break behavior, convergence, and `has_incomplete_tasks()` method
 
