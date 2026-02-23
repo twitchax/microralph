@@ -29,7 +29,7 @@ acceptance_tests:
   - id: uat-003
     name: "UAT verification loop breaks early when new incomplete tasks are detected"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "Run loop converges and does not loop infinitely"
     command: cargo make uat
@@ -233,5 +233,13 @@ cmd_run outer loop:
 - **Details**:
   - `src/commands/run.rs::test_uat_loop_no_new_tasks_means_has_new_tasks_false` (line 2523) — uses `MockRunner` to run UAT verification without adding new tasks, then asserts `has_new_tasks: false` confirming normal termination
   - `src/commands/run.rs::test_uat_loop_convergence_all_uats_verified` (line 2584) — verifies the loop terminates immediately (0 iterations) when all UATs are already verified
+  - UAT suite passed: 575/575 tests pass
+
+## 2026-02-23 — uat-003 Verification
+- **UAT**: UAT verification loop breaks early when new incomplete tasks are detected
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `src/commands/run.rs::test_uat_loop_breaks_early_when_new_tasks_detected` (line 2438) — uses `SideEffectRunner` to simulate an agent adding a new incomplete task during UAT verification, then asserts `has_new_tasks: true` and early break after 1 iteration
   - UAT suite passed: 575/575 tests pass
 
