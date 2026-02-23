@@ -50,7 +50,7 @@ tasks:
   - id: T-002
     title: "Handle skills directory in mr restore"
     priority: 2
-    status: todo
+    status: done
     notes: "In the restore flow, create .mr/skills/ and SKILLS.md only if they do not already exist. Use create_dir_if_missing and create_file_if_missing (not create_file_always) to preserve learned skills."
   - id: T-003
     title: "Load skills manifest and inject into build_prompt()"
@@ -209,4 +209,17 @@ Agent executes task
   - Updated test assertions: `dirs_created` 3→4, `files_created` 22→23, `files_skipped` 22→23
   - Added test assertion for `.mr/skills/` and `.mr/skills/SKILLS.md` existence
   - UAT: `cargo make uat` passes — 575 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-23 — T-002 Completed
+- **Task**: Handle skills directory in mr restore
+- **Status**: ✅ Done
+- **Changes**:
+  - Extracted skills creation from `init()` into new `pub fn init_skills()` helper in `src/commands/init.rs` (DRY: reused by both `init()` and `restore_impl()`)
+  - Updated `init()` to delegate to `init_skills()` instead of inline code
+  - Added `init::init_skills(root)` call in `restore_impl()` in `src/main.rs` with user-facing messages for created/preserved skills
+  - Added `test_restore_preserves_existing_skills` test: verifies custom SKILLS.md and skill files survive restore
+  - Added `test_restore_creates_skills_if_missing` test: verifies skills dir/manifest are recreated if deleted
+  - Added skills assertions to `test_restore_fresh` test
+  - UAT: `cargo make uat` passes — 577 tests, 0 failures
 - **Constitution Compliance**: No violations.

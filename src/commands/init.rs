@@ -2056,9 +2056,12 @@ pub fn init(root: impl AsRef<Path>) -> Result<InitResult> {
     create_dir_if_missing(&prds_dir, &mut result)?;
 
     // Create .mr/skills directory for persistent agent skills.
-    let skills_dir = mr_dir.join("skills");
-    create_dir_if_missing(&skills_dir, &mut result)?;
-    create_file_if_missing(&skills_dir.join("SKILLS.md"), SKILLS_TEMPLATE, &mut result)?;
+    let skills_result = init_skills(root)?;
+    result.dirs_created += skills_result.dirs_created;
+    result.files_created += skills_result.files_created;
+    result.files_skipped += skills_result.files_skipped;
+    result.created_paths.extend(skills_result.created_paths);
+    result.skipped_paths.extend(skills_result.skipped_paths);
 
     // Initialize prompts and templates (skips existing files).
     let prompts_templates_dir = mr_dir.join("templates");
@@ -2159,6 +2162,21 @@ pub fn init_constitution_and_config(root: impl AsRef<Path>) -> Result<InitResult
         config::DEFAULT_CONFIG,
         &mut result,
     )?;
+
+    Ok(result)
+}
+
+/// Creates `.mr/skills/` directory and `SKILLS.md` if they do not already exist.
+///
+/// Uses `create_dir_if_missing` and `create_file_if_missing` to preserve
+/// existing learned skills. Used by both `init()` and `restore_impl()`.
+pub fn init_skills(root: impl AsRef<Path>) -> Result<InitResult> {
+    let root = root.as_ref();
+    let mut result = InitResult::default();
+
+    let skills_dir = root.join(".mr").join("skills");
+    create_dir_if_missing(&skills_dir, &mut result)?;
+    create_file_if_missing(&skills_dir.join("SKILLS.md"), SKILLS_TEMPLATE, &mut result)?;
 
     Ok(result)
 }

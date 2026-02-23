@@ -913,6 +913,21 @@ fn restore_impl(root: &Path) -> Result<()> {
         ))
     );
 
+    // Ensure .mr/skills/ and SKILLS.md exist (preserve existing skills).
+    let skills_result = init::init_skills(root)?;
+
+    if skills_result.dirs_created > 0 || skills_result.files_created > 0 {
+        println!(
+            "{}",
+            colors::success("✓ Created missing skills directory/manifest")
+        );
+    } else {
+        println!(
+            "{}",
+            colors::success("✓ Skills directory preserved (no changes)")
+        );
+    }
+
     Ok(())
 }
 
@@ -2609,6 +2624,8 @@ Generate a devcontainer.json configuration for:
         assert!(root.join(".mr/prompts/suggest_generate.md").exists());
         assert!(root.join(".mr/constitution.md").exists());
         assert!(root.join(".mr/config.toml").exists());
+        assert!(root.join(".mr/skills").exists());
+        assert!(root.join(".mr/skills/SKILLS.md").exists());
     }
 
     #[test]
@@ -2737,6 +2754,78 @@ Generate a devcontainer.json configuration for:
         assert!(
             result.unwrap_err().to_string().contains("not initialized"),
             "Error message should mention not initialized"
+        );
+    }
+
+    #[test]
+    fn test_restore_preserves_existing_skills() {
+        // Test scenario: Restore should not overwrite existing skills
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Initialize first.
+        init::init(root).unwrap();
+
+        // Write custom skills content.
+        let skills_md = root.join(".mr/skills/SKILLS.md");
+        let custom_skills = "# Skills\n\n- **my-skill**: A learned skill.\n";
+        std::fs::write(&skills_md, custom_skills).unwrap();
+
+        // Create a skill subdirectory with a skill file.
+        let skill_dir = root.join(".mr/skills/my-skill");
+        std::fs::create_dir_all(&skill_dir).unwrap();
+        std::fs::write(skill_dir.join("skill.md"), "# My Skill\nDetails here.").unwrap();
+
+        // Run restore.
+        let result = restore_impl(root);
+        assert!(result.is_ok(), "Restore should succeed: {result:?}");
+
+        // Verify skills were preserved (not overwritten).
+        let skills_after = std::fs::read_to_string(&skills_md).unwrap();
+        assert_eq!(
+            skills_after, custom_skills,
+            "Skills manifest should be preserved across restore"
+        );
+        assert!(
+            skill_dir.join("skill.md").exists(),
+            "Skill files should be preserved across restore"
+        );
+    }
+
+    #[test]
+    fn test_restore_creates_skills_if_missing() {
+        // Test scenario: Restore should create skills dir if it was deleted
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        // Initialize first.
+        init::init(root).unwrap();
+
+        // Delete skills directory to simulate it being missing.
+        let skills_dir = root.join(".mr/skills");
+        std::fs::remove_dir_all(&skills_dir).unwrap();
+        assert!(!skills_dir.exists());
+
+        // Run restore.
+        let result = restore_impl(root);
+        assert!(result.is_ok(), "Restore should succeed: {result:?}");
+
+        // Verify skills directory and SKILLS.md were recreated.
+        assert!(skills_dir.exists(), "Skills directory should be recreated");
+        assert!(
+            skills_dir.join("SKILLS.md").exists(),
+            "SKILLS.md should be recreated"
+        );
+
+        // Verify SKILLS.md has the default template content.
+        let content = std::fs::read_to_string(skills_dir.join("SKILLS.md")).unwrap();
+        assert!(
+            content.contains("# Skills"),
+            "Recreated SKILLS.md should have default template"
         );
     }
 
