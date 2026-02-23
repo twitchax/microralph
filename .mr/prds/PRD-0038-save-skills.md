@@ -70,7 +70,7 @@ tasks:
   - id: T-006
     title: "Add PromptKind support and tests"
     priority: 6
-    status: todo
+    status: done
     notes: "No new PromptKind variant needed (skills manifest is data, not a prompt). Add unit tests for: init creating skills dir, restore preserving existing skills, build_prompt expanding skills_manifest placeholder. Ensure cargo make ci passes."
 ---
 
@@ -252,3 +252,13 @@ Agent executes task
   - Both additions match the corresponding sections in `.mr/prompts/run_task.md` exactly, resolving the Rule 7 sync issue from T-004
   - UAT: `cargo make uat` passes — 577 tests, 0 failures
 - **Constitution Compliance**: No violations. This task resolves the transient Rule 7 violation introduced in T-004.
+
+## 2026-02-23 — T-006 Completed
+- **Task**: Add PromptKind support and tests
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 3 unit tests to `src/commands/init.rs`: `test_init_skills_creates_dir_and_manifest`, `test_init_skills_preserves_existing`, `test_init_skills_idempotent` — directly testing the `init_skills()` function
+  - Added 3 unit tests to `src/commands/run.rs`: `test_build_prompt_skills_manifest_injected`, `test_build_prompt_skills_manifest_omitted_when_default`, `test_build_prompt_skills_manifest_omitted_when_missing` — testing all three `build_prompt` code paths for skills_manifest expansion
+  - No new `PromptKind` variant needed (confirmed: skills manifest is data, not a prompt)
+  - UAT: `cargo make uat` passes — 583 tests, 0 failures
+- **Constitution Compliance**: No violations.

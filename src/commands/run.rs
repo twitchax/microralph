@@ -2753,4 +2753,165 @@ Project governance and best practices.
 
         assert!(!prd.has_incomplete_tasks());
     }
+
+    #[test]
+    fn test_build_prompt_skills_manifest_injected() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+        let skills_dir = root.join(".mr").join("skills");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+        std::fs::create_dir_all(&skills_dir).unwrap();
+
+        // Create a prompt template with skills_manifest conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r"Execute task {{next_task_id}}
+{{#if skills_manifest}}
+## Available Skills
+{{skills_manifest}}
+{{/if}}",
+        )
+        .unwrap();
+
+        // Write a non-default SKILLS.md with actual skill entries.
+        std::fs::write(
+            skills_dir.join("SKILLS.md"),
+            "# Skills\n\n- **fix-clippy-pedantic**: Resolve common clippy::pedantic lints.\n",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
+
+        assert!(
+            prompt.contains("Available Skills"),
+            "Prompt should include skills section when manifest has entries"
+        );
+        assert!(
+            prompt.contains("fix-clippy-pedantic"),
+            "Prompt should contain the skill entry from SKILLS.md"
+        );
+    }
+
+    #[test]
+    fn test_build_prompt_skills_manifest_omitted_when_default() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+        let skills_dir = root.join(".mr").join("skills");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+        std::fs::create_dir_all(&skills_dir).unwrap();
+
+        // Create a prompt template with skills_manifest conditional.
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r"Execute task {{next_task_id}}
+{{#if skills_manifest}}
+## Available Skills
+{{skills_manifest}}
+{{/if}}",
+        )
+        .unwrap();
+
+        // Write the default SKILLS.md (should NOT inject).
+        std::fs::write(
+            skills_dir.join("SKILLS.md"),
+            crate::commands::init::SKILLS_TEMPLATE,
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
+
+        assert!(
+            !prompt.contains("Available Skills"),
+            "Prompt should NOT include skills section when SKILLS.md is default template"
+        );
+    }
+
+    #[test]
+    fn test_build_prompt_skills_manifest_omitted_when_missing() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().to_path_buf();
+        let prds_dir = root.join(".mr").join("prds");
+        let prompts_dir = root.join(".mr").join("prompts");
+
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::create_dir_all(&prompts_dir).unwrap();
+
+        // No skills dir at all.
+
+        std::fs::write(
+            prompts_dir.join("run_task.md"),
+            r"Execute task {{next_task_id}}
+{{#if skills_manifest}}
+## Available Skills
+{{skills_manifest}}
+{{/if}}",
+        )
+        .unwrap();
+
+        let frontmatter = PrdFrontmatter {
+            id: "PRD-0001".to_string(),
+            title: "Test PRD".to_string(),
+            status: PrdStatus::Active,
+            tasks: Some(vec![Task {
+                id: "T-001".to_string(),
+                title: "Implement feature".to_string(),
+                priority: 1,
+                status: TaskStatus::Todo,
+                notes: None,
+            }]),
+            ..Default::default()
+        };
+
+        let prd = Prd::new(frontmatter, "# Body\n".to_string());
+        let prd_path = root.join(".mr/prds/PRD-0001.md");
+
+        let prompt = build_prompt(&root, &prd, &prd_path, "T-001", false, true);
+
+        assert!(
+            !prompt.contains("Available Skills"),
+            "Prompt should NOT include skills section when SKILLS.md is missing"
+        );
+    }
 }

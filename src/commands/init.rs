@@ -2698,4 +2698,61 @@ mod tests {
         assert!(PROMPT_ADAPT_LANGUAGE.contains("{{language}}"));
         assert!(PROMPT_ADAPT_LANGUAGE.contains("{{#each build_commands}}"));
     }
+
+    #[test]
+    fn test_init_skills_creates_dir_and_manifest() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Pre-create .mr/ so init_skills can create skills/ inside it.
+        std::fs::create_dir_all(root.join(".mr")).unwrap();
+
+        let result = init_skills(root).unwrap();
+
+        assert!(root.join(".mr/skills").exists());
+        assert!(root.join(".mr/skills/SKILLS.md").exists());
+        assert_eq!(result.dirs_created, 1);
+        assert_eq!(result.files_created, 1);
+
+        let content = std::fs::read_to_string(root.join(".mr/skills/SKILLS.md")).unwrap();
+        assert_eq!(content, SKILLS_TEMPLATE);
+    }
+
+    #[test]
+    fn test_init_skills_preserves_existing() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+
+        // Pre-create skills dir with custom content.
+        let skills_dir = root.join(".mr/skills");
+        std::fs::create_dir_all(&skills_dir).unwrap();
+        let custom = "# Skills\n\n- **my-skill**: A custom skill.\n";
+        std::fs::write(skills_dir.join("SKILLS.md"), custom).unwrap();
+
+        let result = init_skills(root).unwrap();
+
+        // Should not overwrite.
+        assert_eq!(result.dirs_created, 0);
+        assert_eq!(result.files_created, 0);
+        assert_eq!(result.files_skipped, 1);
+
+        let content = std::fs::read_to_string(skills_dir.join("SKILLS.md")).unwrap();
+        assert_eq!(content, custom);
+    }
+
+    #[test]
+    fn test_init_skills_idempotent() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join(".mr")).unwrap();
+
+        let r1 = init_skills(root).unwrap();
+        assert_eq!(r1.dirs_created, 1);
+        assert_eq!(r1.files_created, 1);
+
+        let r2 = init_skills(root).unwrap();
+        assert_eq!(r2.dirs_created, 0);
+        assert_eq!(r2.files_created, 0);
+        assert_eq!(r2.files_skipped, 1);
+    }
 }
