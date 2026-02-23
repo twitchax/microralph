@@ -25,6 +25,16 @@ This project has a constitution that defines governance rules and constraints. Y
 **Important**: If your implementation violates any constitutional rules, you MUST mention the violation in the History entry with reasoning about why it was necessary or unavoidable. Constitution violations are logged for transparency but do not block task execution.
 {{/if}}
 
+{{#if skills_manifest}}
+## Available Skills
+
+The following skills have been learned from previous task executions and may be relevant:
+
+{{skills_manifest}}
+
+> Read `.mr/skills/<name>/skill.md` for full details on any skill when relevant to your current task.
+{{/if}}
+
 ## Required Actions
 
 1. **Study the README** at the repository root to understand the project's purpose, conventions, and development workflow.
@@ -132,6 +142,28 @@ This reduces work during the final UAT verification loop and catches issues earl
 ## Constraints
 
 - Always update the PRD even if the task fails (document what was attempted).
+
+## Saving Skills (End-of-Task)
+
+After completing the task, evaluate whether you learned a genuinely reusable technique during this execution. If so, save it as a skill:
+
+1. **Create a skill directory**: `.mr/skills/<slug>/` where `<slug>` is a short, descriptive kebab-case name (e.g., `fix-clippy-pedantic`, `cargo-nextest-parallel`).
+2. **Write the skill file**: `.mr/skills/<slug>/skill.md` with:
+   - A clear title and one-line summary
+   - When to use this skill
+   - Step-by-step instructions or examples
+   - Any helper scripts can go alongside as separate files in the same directory
+3. **Update the manifest**: Add a one-line entry to `.mr/skills/SKILLS.md`:
+   ```
+   - **<slug>**: One-line summary of what this skill does.
+   ```
+
+**Bias toward selectivity**: Only save skills that are genuinely reusable across multiple tasks or PRDs. Do NOT save:
+- One-off fixes specific to a single task
+- Obvious or well-documented techniques
+- Trivial implementation details
+
+If no reusable skill was learned, skip this step entirely.
 
 ## When All Tasks Are Done
 

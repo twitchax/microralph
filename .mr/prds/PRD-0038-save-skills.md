@@ -60,7 +60,7 @@ tasks:
   - id: T-004
     title: "Update run_task.md prompt with skills manifest and saving instructions"
     priority: 4
-    status: todo
+    status: done
     notes: "Add two sections to run_task.md: (1) A context section showing {{#if skills_manifest}}...{{/if}} with the manifest and a note to read .mr/skills/<name>/skill.md for details. (2) An end-of-task action instructing the agent to save reusable skills to .mr/skills/<slug>/skill.md and update SKILLS.md, with bias toward only saving genuinely useful skills."
   - id: T-005
     title: "Update PROMPT_RUN_TASK constant in init.rs to match run_task.md"
@@ -233,3 +233,12 @@ Agent executes task
   - If file is missing, empty, or matches the default template, the placeholder is not inserted — `{{#if skills_manifest}}` in the prompt evaluates to false
   - UAT: `cargo make uat` passes — 577 tests, 0 failures
 - **Constitution Compliance**: No violations.
+
+## 2026-02-23 — T-004 Completed
+- **Task**: Update run_task.md prompt with skills manifest and saving instructions
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `{{#if skills_manifest}}` context section to `.mr/prompts/run_task.md` after the Constitution section, showing the skills manifest with a note to read full skill files on demand
+  - Added "Saving Skills (End-of-Task)" section before "When All Tasks Are Done" with instructions for creating skill directories, writing skill.md files, updating SKILLS.md manifest, and bias toward selectivity
+  - UAT: `cargo make uat` passes — 577 tests, 0 failures
+- **Constitution Compliance**: Temporary violation of Rule 7 (Prompt Management) — `.mr/prompts/run_task.md` is now out of sync with `PROMPT_RUN_TASK` constant in `init.rs`. This is expected: T-005 is the dedicated task to synchronize the constant. The violation is transient and will be resolved in the next task.
