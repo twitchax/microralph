@@ -65,7 +65,7 @@ tasks:
   - id: T-005
     title: "Update PROMPT_RUN_TASK constant in init.rs to match run_task.md"
     priority: 5
-    status: todo
+    status: done
     notes: "Per Constitution Rule 7, the embedded constant in init.rs must stay synchronized with the .mr/prompts/run_task.md file. Update PROMPT_RUN_TASK to include the new skills sections."
   - id: T-006
     title: "Add PromptKind support and tests"
@@ -242,3 +242,13 @@ Agent executes task
   - Added "Saving Skills (End-of-Task)" section before "When All Tasks Are Done" with instructions for creating skill directories, writing skill.md files, updating SKILLS.md manifest, and bias toward selectivity
   - UAT: `cargo make uat` passes — 577 tests, 0 failures
 - **Constitution Compliance**: Temporary violation of Rule 7 (Prompt Management) — `.mr/prompts/run_task.md` is now out of sync with `PROMPT_RUN_TASK` constant in `init.rs`. This is expected: T-005 is the dedicated task to synchronize the constant. The violation is transient and will be resolved in the next task.
+
+## 2026-02-23 — T-005 Completed
+- **Task**: Update PROMPT_RUN_TASK constant in init.rs to match run_task.md
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `{{#if skills_manifest}}` Available Skills section to `PROMPT_RUN_TASK` constant in `src/commands/init.rs`, after the Constitution `{{/if}}` block and before `## Required Actions`
+  - Added "Saving Skills (End-of-Task)" section to `PROMPT_RUN_TASK` constant, after `## Constraints` and before `## When All Tasks Are Done`
+  - Both additions match the corresponding sections in `.mr/prompts/run_task.md` exactly, resolving the Rule 7 sync issue from T-004
+  - UAT: `cargo make uat` passes — 577 tests, 0 failures
+- **Constitution Compliance**: No violations. This task resolves the transient Rule 7 violation introduced in T-004.
