@@ -32,7 +32,7 @@ acceptance_tests:
   - id: uat-003
     name: "build_prompt injects skills_manifest placeholder into run_task prompt"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "run_task.md prompt includes skills manifest section and skill-saving instructions"
     command: cargo make test
@@ -280,3 +280,11 @@ Agent executes task
   - `test_restore_preserves_existing_skills` (src/main.rs:2761) — verifies custom SKILLS.md content and skill subdirectory files survive `restore_impl()`
   - `test_restore_creates_skills_if_missing` (src/main.rs:2798) — verifies skills dir and SKILLS.md are recreated by `restore_impl()` when missing
   - Both tests pass
+
+## 2026-02-23 — uat-003 Verification
+- **UAT**: build_prompt injects skills_manifest placeholder into run_task prompt
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `test_build_prompt_skills_manifest_injected` (src/commands/run.rs:2758) — creates a non-default SKILLS.md with skill entries, calls `build_prompt()`, and asserts the expanded prompt contains "Available Skills" and the skill entry content
+  - Test passes
