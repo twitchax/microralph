@@ -24,7 +24,7 @@ acceptance_tests:
   - id: uat-001
     name: "mr init creates .mr/skills/ directory and empty SKILLS.md"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-002
     name: "mr restore creates .mr/skills/ if missing but does not overwrite existing skills"
     command: cargo make test
@@ -262,3 +262,12 @@ Agent executes task
   - No new `PromptKind` variant needed (confirmed: skills manifest is data, not a prompt)
   - UAT: `cargo make uat` passes — 583 tests, 0 failures
 - **Constitution Compliance**: No violations.
+
+## 2026-02-23 — uat-001 Verification
+- **UAT**: mr init creates .mr/skills/ directory and empty SKILLS.md
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - `test_init_creates_structure` (src/commands/init.rs:2313) — verifies `init()` creates `.mr/skills/` and `.mr/skills/SKILLS.md`
+  - `test_init_skills_creates_dir_and_manifest` (src/commands/init.rs:2703) — verifies `init_skills()` creates dir, manifest file, and correct content matching `SKILLS_TEMPLATE`
+  - All 583 tests pass
