@@ -40,7 +40,7 @@ acceptance_tests:
   - id: uat-005
     name: "Full CI passes (fmt, clippy, test)"
     command: cargo make ci
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Create .mr/skills/ directory and SKILLS.md during mr init"
@@ -297,3 +297,12 @@ Agent executes task
   - Created `test_run_task_prompt_includes_skills_sections` (src/commands/init.rs) — verifies `PROMPT_RUN_TASK` contains `{{#if skills_manifest}}`, `## Available Skills`, `{{skills_manifest}}`, `## Saving Skills (End-of-Task)`, `.mr/skills/`, and `SKILLS.md`
   - Both `PROMPT_RUN_TASK` constant and `.mr/prompts/run_task.md` contain the required sections
   - All 584 tests pass
+
+## 2026-02-23 — uat-005 Verification
+- **UAT**: Full CI passes (fmt, clippy, test)
+- **Status**: ✅ Verified
+- **Method**: Direct execution
+- **Details**:
+  - Ran `cargo make ci` which executes fmt, clippy, and test stages
+  - All 584 tests passed, 0 failures
+  - No fmt or clippy issues detected
