@@ -33,7 +33,7 @@ acceptance_tests:
   - id: uat-004
     name: "Run loop converges and does not loop infinitely"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Add has_incomplete_tasks() public method to Prd"
@@ -241,5 +241,16 @@ cmd_run outer loop:
 - **Method**: Existing test
 - **Details**:
   - `src/commands/run.rs::test_uat_loop_breaks_early_when_new_tasks_detected` (line 2438) — uses `SideEffectRunner` to simulate an agent adding a new incomplete task during UAT verification, then asserts `has_new_tasks: true` and early break after 1 iteration
+  - UAT suite passed: 575/575 tests pass
+
+## 2026-02-23 — uat-004 Verification
+- **UAT**: Run loop converges and does not loop infinitely
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `src/commands/run.rs::test_uat_verification_loop_max_iterations` — verifies the UAT loop stops at `max_iterations` even with unverified UATs remaining, preventing infinite looping
+  - `src/commands/run.rs::test_uat_loop_convergence_all_uats_verified` — verifies the loop terminates immediately (0 iterations) when all UATs are already verified (natural convergence)
+  - `src/commands/run.rs::test_uat_verification_loop_all_verified_by_runner` — verifies convergence when runner marks UATs as verified
+  - `src/main.rs` outer loop safety counter (`uat_cycles` limit of 10) prevents infinite task→UAT cycling (added in T-003)
   - UAT suite passed: 575/575 tests pass
 
