@@ -28,7 +28,7 @@ acceptance_tests:
   - id: uat-002
     name: "mr restore creates .mr/skills/ if missing but does not overwrite existing skills"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "build_prompt injects skills_manifest placeholder into run_task prompt"
     command: cargo make test
@@ -271,3 +271,12 @@ Agent executes task
   - `test_init_creates_structure` (src/commands/init.rs:2313) — verifies `init()` creates `.mr/skills/` and `.mr/skills/SKILLS.md`
   - `test_init_skills_creates_dir_and_manifest` (src/commands/init.rs:2703) — verifies `init_skills()` creates dir, manifest file, and correct content matching `SKILLS_TEMPLATE`
   - All 583 tests pass
+
+## 2026-02-23 — uat-002 Verification
+- **UAT**: mr restore creates .mr/skills/ if missing but does not overwrite existing skills
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `test_restore_preserves_existing_skills` (src/main.rs:2761) — verifies custom SKILLS.md content and skill subdirectory files survive `restore_impl()`
+  - `test_restore_creates_skills_if_missing` (src/main.rs:2798) — verifies skills dir and SKILLS.md are recreated by `restore_impl()` when missing
+  - Both tests pass
