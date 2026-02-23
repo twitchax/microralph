@@ -55,7 +55,7 @@ tasks:
   - id: T-003
     title: "Load skills manifest and inject into build_prompt()"
     priority: 3
-    status: todo
+    status: done
     notes: "In src/commands/run.rs build_prompt(), read .mr/skills/SKILLS.md content. Insert as skills_manifest placeholder into PlaceholderContext. If the file is empty or missing, the placeholder expands to empty string (guarded by {{#if skills_manifest}} in the prompt)."
   - id: T-004
     title: "Update run_task.md prompt with skills manifest and saving instructions"
@@ -221,5 +221,15 @@ Agent executes task
   - Added `test_restore_preserves_existing_skills` test: verifies custom SKILLS.md and skill files survive restore
   - Added `test_restore_creates_skills_if_missing` test: verifies skills dir/manifest are recreated if deleted
   - Added skills assertions to `test_restore_fresh` test
+  - UAT: `cargo make uat` passes — 577 tests, 0 failures
+- **Constitution Compliance**: No violations.
+
+## 2026-02-23 — T-003 Completed
+- **Task**: Load skills manifest and inject into build_prompt()
+- **Status**: ✅ Done
+- **Changes**:
+  - Added skills manifest loading to `build_prompt()` in `src/commands/run.rs` (lines 356-364)
+  - Reads `.mr/skills/SKILLS.md`, compares against default `SKILLS_TEMPLATE`; only injects `skills_manifest` placeholder when file contains actual skill entries beyond the default boilerplate
+  - If file is missing, empty, or matches the default template, the placeholder is not inserted — `{{#if skills_manifest}}` in the prompt evaluates to false
   - UAT: `cargo make uat` passes — 577 tests, 0 failures
 - **Constitution Compliance**: No violations.

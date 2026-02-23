@@ -353,6 +353,16 @@ fn build_prompt(
         ctx.insert("constitution", constitution);
     }
 
+    // Load skills manifest if available and non-default.
+    let skills_path = root.join(".mr/skills/SKILLS.md");
+    if let Ok(content) = std::fs::read_to_string(&skills_path) {
+        let trimmed = content.trim();
+        let default_trimmed = crate::commands::init::SKILLS_TEMPLATE.trim();
+        if !trimmed.is_empty() && trimmed != default_trimmed {
+            ctx.insert("skills_manifest", content);
+        }
+    }
+
     expand_placeholders(&prompt_template, &ctx)
 }
 
