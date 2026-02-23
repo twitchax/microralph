@@ -115,6 +115,9 @@ pub struct UatVerificationLoopResult {
 
     /// Remaining unverified UATs after the loop.
     pub remaining_unverified: usize,
+
+    /// Whether the loop broke early because new incomplete tasks were detected.
+    pub has_new_tasks: bool,
 }
 
 /// Summary of a PRD for the pick prompt.
@@ -296,6 +299,15 @@ fn find_prd_by_id(root: &Path, prd_id: &str) -> Result<Option<(String, Prd, Path
     }
 
     Ok(None)
+}
+
+/// Finds a PRD by ID, returning an error if not found.
+fn require_prd_by_id(root: &Path, prd_id: &str) -> Result<(String, Prd, PathBuf)> {
+    find_prd_by_id(root, prd_id)?.ok_or_else(|| {
+        anyhow::anyhow!(
+            "PRD not found: {prd_id}.\n  Suggestion: Run `mr status` to list available PRDs.",
+        )
+    })
 }
 
 /// Builds the prompt for the runner.
@@ -740,13 +752,7 @@ pub fn run_uat_verification_loop(
     config: &UatVerificationConfig,
     runner: &dyn Runner,
 ) -> Result<UatVerificationLoopResult> {
-    let (_filename, prd, prd_path) =
-        find_prd_by_id(config.root, config.prd_id)?.ok_or_else(|| {
-            anyhow::anyhow!(
-                "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
-                config.prd_id
-            )
-        })?;
+    let (_filename, prd, prd_path) = require_prd_by_id(config.root, config.prd_id)?;
 
     let max_iterations = config.max_iterations.unwrap_or_else(|| {
         prd.frontmatter
@@ -764,12 +770,7 @@ pub fn run_uat_verification_loop(
 
     loop {
         let (_filename, current_prd, current_prd_path) =
-            find_prd_by_id(config.root, config.prd_id)?.ok_or_else(|| {
-                anyhow::anyhow!(
-                    "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
-                    config.prd_id
-                )
-            })?;
+            require_prd_by_id(config.root, config.prd_id)?;
 
         let unverified = current_prd.unverified_uats();
 
@@ -788,6 +789,7 @@ pub fn run_uat_verification_loop(
                 iterations,
                 hit_max_iterations: true,
                 remaining_unverified: unverified.len(),
+                has_new_tasks: false,
             });
         }
 
@@ -822,15 +824,30 @@ pub fn run_uat_verification_loop(
             UatIterationOutcome::Verified => verified_count += 1,
             UatIterationOutcome::Inconclusive => {}
         }
+
+        // Check if the agent added new incomplete tasks during this iteration.
+        let (_filename, post_iteration_prd, _path) = require_prd_by_id(config.root, config.prd_id)?;
+
+        if post_iteration_prd.has_incomplete_tasks() {
+            tracing::info!(
+                prd_id = %config.prd_id,
+                "New incomplete tasks detected during UAT verification; breaking early"
+            );
+
+            return Ok(UatVerificationLoopResult {
+                prd_id: config.prd_id.to_string(),
+                prd_path,
+                verified_count,
+                opted_out_count,
+                iterations,
+                hit_max_iterations: false,
+                remaining_unverified: post_iteration_prd.unverified_uats().len(),
+                has_new_tasks: true,
+            });
+        }
     }
 
-    let (_filename, final_prd, _final_path) = find_prd_by_id(config.root, config.prd_id)?
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "PRD not found: {}.\n  Suggestion: Run `mr status` to list available PRDs.",
-                config.prd_id
-            )
-        })?;
+    let (_filename, final_prd, _final_path) = require_prd_by_id(config.root, config.prd_id)?;
 
     Ok(UatVerificationLoopResult {
         prd_id: config.prd_id.to_string(),
@@ -840,6 +857,7 @@ pub fn run_uat_verification_loop(
         iterations,
         hit_max_iterations: false,
         remaining_unverified: final_prd.unverified_uats().len(),
+        has_new_tasks: false,
     })
 }
 

@@ -43,7 +43,7 @@ tasks:
   - id: T-002
     title: "Make UAT verification loop detect new incomplete tasks and break early"
     priority: 2
-    status: todo
+    status: done
     notes: "In run_uat_verification_loop (run.rs:765), after each iteration reload the PRD and check next_task(). If a new incomplete task exists, break out of the UAT loop with a new result field (e.g., has_new_tasks: bool on UatVerificationLoopResult)."
   - id: T-003
     title: "Update cmd_run outer loop to continue when new tasks exist after UAT"
@@ -179,4 +179,16 @@ cmd_run outer loop:
   - Added `#[allow(dead_code)]` since the method will be consumed by T-002/T-003
   - UAT passed: 567/567 tests pass
 - **Constitution Compliance**: No violations. Minimal change (3 lines added), follows existing patterns.
+
+## 2026-02-23 — T-002 Completed
+- **Task**: Make UAT verification loop detect new incomplete tasks and break early
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `has_new_tasks: bool` field to `UatVerificationLoopResult` in `src/commands/run.rs`
+  - After each UAT iteration, reload the PRD and check `has_incomplete_tasks()`; if true, break early with `has_new_tasks: true`
+  - Added `require_prd_by_id()` helper to reduce repeated `find_prd_by_id()?.ok_or_else()` boilerplate (DRY principle)
+  - Updated `print_uat_result()` in `src/main.rs` to display a warning when new tasks are detected
+  - All three `UatVerificationLoopResult` construction sites include the new field
+  - UAT passed: 567/567 tests pass
+- **Constitution Compliance**: No violations. Minimal changes, follows existing patterns, `require_prd_by_id` helper follows DRY principle.
 

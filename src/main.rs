@@ -1398,6 +1398,13 @@ fn print_uat_result(result: &run::UatVerificationLoopResult) {
         println!("  {}", colors::warning("Hit max iterations limit."));
     }
 
+    if result.has_new_tasks {
+        println!(
+            "  {}",
+            colors::warning("New incomplete tasks detected during UAT verification.")
+        );
+    }
+
     if result.remaining_unverified > 0 {
         println!(
             "  {}",
