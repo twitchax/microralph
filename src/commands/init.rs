@@ -2582,6 +2582,19 @@ mod tests {
     }
 
     #[test]
+    fn test_run_task_prompt_includes_skills_sections() {
+        // Skills manifest conditional section.
+        assert!(PROMPT_RUN_TASK.contains("{{#if skills_manifest}}"));
+        assert!(PROMPT_RUN_TASK.contains("## Available Skills"));
+        assert!(PROMPT_RUN_TASK.contains("{{skills_manifest}}"));
+
+        // Skill-saving instructions section.
+        assert!(PROMPT_RUN_TASK.contains("## Saving Skills (End-of-Task)"));
+        assert!(PROMPT_RUN_TASK.contains(".mr/skills/"));
+        assert!(PROMPT_RUN_TASK.contains("SKILLS.md"));
+    }
+
+    #[test]
     fn test_init_result_created_paths() {
         let temp = TempDir::new().unwrap();
         let root = temp.path();

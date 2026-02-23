@@ -36,7 +36,7 @@ acceptance_tests:
   - id: uat-004
     name: "run_task.md prompt includes skills manifest section and skill-saving instructions"
     command: cargo make test
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "Full CI passes (fmt, clippy, test)"
     command: cargo make ci
@@ -288,3 +288,12 @@ Agent executes task
 - **Details**:
   - `test_build_prompt_skills_manifest_injected` (src/commands/run.rs:2758) — creates a non-default SKILLS.md with skill entries, calls `build_prompt()`, and asserts the expanded prompt contains "Available Skills" and the skill entry content
   - Test passes
+
+## 2026-02-23 — uat-004 Verification
+- **UAT**: run_task.md prompt includes skills manifest section and skill-saving instructions
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `test_run_task_prompt_includes_skills_sections` (src/commands/init.rs) — verifies `PROMPT_RUN_TASK` contains `{{#if skills_manifest}}`, `## Available Skills`, `{{skills_manifest}}`, `## Saving Skills (End-of-Task)`, `.mr/skills/`, and `SKILLS.md`
+  - Both `PROMPT_RUN_TASK` constant and `.mr/prompts/run_task.md` contain the required sections
+  - All 584 tests pass
