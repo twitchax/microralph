@@ -95,7 +95,7 @@ tasks:
   - id: T-003
     title: "Implement worktree path resolution and git helpers"
     priority: 1
-    status: todo
+    status: done
     notes: "Create src/worktree/git.rs. Resolve main worktree path via git rev-parse --git-common-dir. Create/remove worktrees. Compute modified files via git diff --name-only. Sibling directory convention: ../<repo>-prd-<id>/."
   - id: T-004
     title: "Implement IPC protocol over Unix domain socket"
@@ -421,4 +421,25 @@ src/
   - Updated `src/worktree/mod.rs` to export `pub mod state`
   - 11 unit tests: roundtrip, atomic write, modify with closure, error propagation, lock creation, path resolution, sequential modifies
   - UAT: `cargo make uat` — 604 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-003 Completed
+- **Task**: Implement worktree path resolution and git helpers
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/worktree/git.rs` — git helper functions for worktree orchestration:
+    - `git_output()` / `git_run()` — internal helpers for running git commands with error handling
+    - `resolve_main_worktree()` — resolves main worktree root via `git rev-parse --git-common-dir`
+    - `repo_name()` — extracts repository name from path
+    - `worktree_branch_name()` — derives branch name following `<repo>-prd-<numeric-id>` convention
+    - `worktree_path()` — derives sibling directory path `../<repo>-prd-<id>/`
+    - `create_branch()` / `delete_branch()` — branch management (idempotent create)
+    - `create_worktree()` / `remove_worktree()` — git worktree lifecycle
+    - `list_worktrees()` — parses `git worktree list --porcelain` output
+    - `modified_files()` — computes changed files via `git diff --name-only` (three-dot merge-base)
+    - `is_linked_worktree()` — detects if cwd is inside a linked worktree
+    - `current_branch()` — gets current branch name
+  - Updated `src/worktree/mod.rs` to export `pub mod git`
+  - 17 unit tests covering: path resolution from main and linked worktrees, branch/worktree create/remove, modified file detection, linked worktree detection, edge cases
+  - UAT: `cargo make uat` — 621 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
