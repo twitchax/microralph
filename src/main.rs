@@ -17,6 +17,7 @@ mod prd;
 mod prompt;
 mod runner;
 mod util;
+mod worktree;
 
 use commands::{bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest};
 
