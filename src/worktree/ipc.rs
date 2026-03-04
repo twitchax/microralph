@@ -10,7 +10,7 @@
 // IPC module is defined now but consumed by later tasks (T-005 .. T-018).
 #![allow(dead_code)]
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 
@@ -197,6 +197,19 @@ impl IpcServer {
             .context("failed to set non-blocking mode on daemon socket")
     }
 
+    /// Try to accept a connection without blocking.
+    ///
+    /// Returns `Ok(Some(stream))` if a connection was accepted, `Ok(None)` if
+    /// no connection is pending (requires non-blocking mode via
+    /// [`Self::set_nonblocking`]).
+    pub fn try_accept_stream(&self) -> Result<Option<UnixStream>> {
+        match self.listener.accept() {
+            Ok((stream, _)) => Ok(Some(stream)),
+            Err(e) if e.kind() == ErrorKind::WouldBlock => Ok(None),
+            Err(e) => Err(e).context("failed to accept connection on daemon socket"),
+        }
+    }
+
     /// Path to the socket file.
     #[must_use]
     pub fn socket_path(&self) -> &Path {
@@ -209,6 +222,58 @@ impl Drop for IpcServer {
         // Best-effort cleanup of the socket file.
         let _ = std::fs::remove_file(&self.path);
     }
+}
+
+// ── Stream handler ──────────────────────────────────────────────────
+
+/// Handle all messages on a Unix stream connection with timeout support.
+///
+/// Reads newline-delimited JSON messages, passes each to the `handler`,
+/// and writes the returned [`IpcResponse`] back to the stream.
+///
+/// Returns when the peer disconnects (EOF), a read timeout occurs, or
+/// an I/O error arises.  Timeout / `WouldBlock` errors are treated as
+/// graceful termination (not propagated).
+pub fn handle_stream<F>(stream: UnixStream, mut handler: F) -> Result<()>
+where
+    F: FnMut(IpcMessage) -> IpcResponse,
+{
+    let mut writer = stream
+        .try_clone()
+        .context("failed to clone unix stream for response writer")?;
+
+    let reader = BufReader::new(stream);
+
+    for line_result in reader.lines() {
+        let line = match line_result {
+            Ok(l) => l,
+            Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                break;
+            }
+            Err(e) => return Err(e).context("failed to read line from IPC connection"),
+        };
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let msg: IpcMessage = serde_json::from_str(&line)
+            .with_context(|| format!("failed to parse IPC message: {line}"))?;
+
+        let response = handler(msg);
+
+        let mut resp_json =
+            serde_json::to_string(&response).context("failed to serialize IPC response")?;
+        resp_json.push('\n');
+
+        writer
+            .write_all(resp_json.as_bytes())
+            .context("failed to write IPC response")?;
+
+        writer.flush().context("failed to flush IPC response")?;
+    }
+
+    Ok(())
 }
 
 // ── Tests ───────────────────────────────────────────────────────────

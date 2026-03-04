@@ -105,7 +105,7 @@ tasks:
   - id: T-005
     title: "Implement daemon core with heartbeat loop"
     priority: 2
-    status: todo
+    status: done
     notes: "Create src/worktree/daemon.rs. Two-tier heartbeat: Tier 1 (every 30s, mechanical) polls worktree liveness via kill -0, updates modified_files, recomputes overlap. Tier 2 (on significant events) uses agent for merge decisions and state commits. PID file at .mr/worktrees/daemon.pid. Auto-exit after 3h idle."
   - id: T-006
     title: "Implement mr wt run subcommand"
@@ -475,4 +475,30 @@ src/
   - Updated `src/worktree/mod.rs` to export `pub mod ipc`
   - 10 unit tests: socket path resolution, bind/drop lifecycle, stale socket handling, client-server roundtrip, error responses, all message types, daemon reachability, non-blocking accept
   - UAT: `cargo make uat` — 641 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-005 Completed
+- **Task**: Implement daemon core with heartbeat loop
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/worktree/daemon.rs` — full daemon core implementation:
+    - `Daemon` struct with configurable `DaemonConfig` and per-instance `shutdown` handle
+    - PID file management: `pid_path()`, `write_pid_file()`, `remove_pid_file()`, `read_pid()`
+    - Process liveness: `is_process_alive()` via `kill -0`, `is_running()`, `stop()` via SIGTERM
+    - State management: `register_daemon()` / `unregister_daemon()` in `state.yaml`
+    - Main event loop: non-blocking IPC accept, periodic Tier 1 heartbeat, idle timeout auto-exit
+    - Signal handling: `SIGTERM`/`SIGINT` via global `AtomicBool` + per-instance shutdown handle for testing
+    - IPC message processing: `HeartbeatRequest`, `RunStarted`, `TaskStarted`, `TaskCompleted`, `RunCompleted`, `RunFailed`
+    - Tier 1 heartbeat: polls worktree PID liveness, updates modified files via `git diff`, recomputes overlap warnings
+    - Overlap computation: `compute_overlaps()` classifies risk as low (≤2 files), medium (3–5), high (6+)
+  - Updated `src/worktree/ipc.rs`:
+    - Added `try_accept_stream()` to `IpcServer` for non-blocking accept
+    - Added public `handle_stream()` function with timeout/WouldBlock support
+  - Updated `src/worktree/mod.rs` to export `pub mod daemon`
+  - Updated `src/commands/worktree.rs`:
+    - Implemented `cmd_wt_daemon_start()` — runs daemon in foreground, checks for existing instance
+    - Implemented `cmd_wt_daemon_stop()` — sends SIGTERM to running daemon
+    - Implemented `cmd_wt_daemon_status()` — shows daemon running state, PID, worktree count
+  - 21 new tests (total 662): PID file lifecycle, process liveness, overlap computation (5 cases), IPC message processing (5 cases), daemon lifecycle (4 integration tests including IPC heartbeat roundtrip)
+  - UAT: `cargo make uat` — 662 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
