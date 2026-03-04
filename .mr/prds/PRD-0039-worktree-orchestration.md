@@ -90,7 +90,7 @@ tasks:
   - id: T-002
     title: "Implement state file read/write with advisory locking"
     priority: 1
-    status: todo
+    status: done
     notes: "Create src/worktree/state.rs. Read/write .mr/worktrees/state.yaml on main worktree. Use flock-based advisory locking via .mr/worktrees/state.lock. Atomic read-modify-write cycle."
   - id: T-003
     title: "Implement worktree path resolution and git helpers"
@@ -404,4 +404,21 @@ src/
   - Registered `mod worktree` in `src/main.rs`
   - 9 unit tests: YAML roundtrip, IPC JSON serialization, Display impls, defaults, minimal YAML deserialization
   - UAT: `cargo make uat` — 593 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-002 Completed
+- **Task**: Implement state file read/write with advisory locking
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/worktree/state.rs` — `StateManager` struct with full state file lifecycle:
+    - `read()` / `write()` for unlocked access (returns default when file missing)
+    - `lock_exclusive()` / `try_lock_exclusive()` using `libc::flock` advisory locking
+    - `read_locked()` for concurrent-safe reads
+    - `modify()` for atomic read-modify-write under flock
+    - `try_modify()` for non-blocking variant
+    - Atomic writes via temp file + rename
+  - Added `libc` as direct dependency in `Cargo.toml` (already transitive)
+  - Updated `src/worktree/mod.rs` to export `pub mod state`
+  - 11 unit tests: roundtrip, atomic write, modify with closure, error propagation, lock creation, path resolution, sequential modifies
+  - UAT: `cargo make uat` — 604 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.

@@ -391,6 +391,7 @@ dependencies = [
  "chrono",
  "clap",
  "indicatif",
+ "libc",
  "owo-colors",
  "regex",
  "serde",
