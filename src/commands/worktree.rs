@@ -1,14 +1,200 @@
 //! CLI subcommand handlers for worktree orchestration (`mr wt`).
 //!
-//! Provides stub implementations for most `wt` subcommands and
-//! working implementations for daemon start/stop/status.
+//! Provides working implementations for `wt run` and daemon start/stop/status,
+//! with stub implementations for the remaining `wt` subcommands.
 
-use anyhow::{Result, bail};
+use std::process::Command as ProcessCommand;
 
+use anyhow::{Context, Result, bail};
+
+use crate::prd::scan_prds;
 use crate::util::colors;
 use crate::worktree::daemon::Daemon;
+use crate::worktree::git;
+use crate::worktree::ipc;
 use crate::worktree::state::StateManager;
-use crate::worktree::types::WorktreeStatus;
+use crate::worktree::types::{EventType, WorktreeEntry, WorktreeEvent, WorktreeStatus};
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/// Generate the next `wt-NNN` identifier based on existing entries in state.
+fn next_wt_id(state: &crate::worktree::types::WorktreeState) -> String {
+    let max = state
+        .worktrees
+        .iter()
+        .filter_map(|w| w.id.strip_prefix("wt-").and_then(|n| n.parse::<u32>().ok()))
+        .max()
+        .unwrap_or(0);
+
+    format!("wt-{:03}", max + 1)
+}
+
+/// ISO 8601 UTC timestamp for the current moment.
+fn now_iso() -> String {
+    let d = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    // Simple ISO 8601 without pulling in chrono.
+    let secs = d.as_secs();
+    let (days, rem) = (secs / 86400, secs % 86400);
+    let (hours, rem) = (rem / 3600, rem % 3600);
+    let (mins, s) = (rem / 60, rem % 60);
+
+    // Days since Unix epoch → year/month/day (simplified leap-year aware).
+    let (y, m, d) = days_to_ymd(days);
+    format!("{y:04}-{m:02}-{d:02}T{hours:02}:{mins:02}:{s:02}Z")
+}
+
+/// Convert days since Unix epoch to (year, month, day).
+fn days_to_ymd(days: u64) -> (u64, u64, u64) {
+    // Algorithm from Howard Hinnant's `civil_from_days`.
+    let z = days.wrapping_add(719_468);
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y, m, d)
+}
+
+/// Validate that a PRD with the given ID exists in `.mr/prds/`.
+fn validate_prd_exists(root: &std::path::Path, prd_id: &str) -> Result<()> {
+    let prds_dir = root.join(".mr").join("prds");
+    let prds = scan_prds(&prds_dir)?;
+
+    let found = prds
+        .iter()
+        .any(|(_, prd, _)| prd.id().eq_ignore_ascii_case(prd_id));
+    if !found {
+        bail!("PRD not found: {prd_id}.\n  Run `mr status` to list available PRDs.");
+    }
+    Ok(())
+}
+
+/// Ensure the daemon is running, spawning it as a detached process if not.
+///
+/// Returns `Ok(())` once the daemon socket is reachable, or an error if
+/// the daemon could not be started within a reasonable timeout.
+fn ensure_daemon(root: &std::path::Path) -> Result<()> {
+    if Daemon::is_running(root) {
+        return Ok(());
+    }
+
+    println!(
+        "{}",
+        colors::info("Daemon is not running — starting in background...")
+    );
+
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+
+    // Spawn `mr wt daemon start` as a detached background process.
+    let child = ProcessCommand::new(&exe)
+        .args(["wt", "daemon", "start"])
+        .current_dir(root)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .context("failed to spawn daemon process")?;
+
+    tracing::info!(pid = child.id(), "Spawned daemon process");
+
+    // Wait for the socket to become reachable (up to 10 seconds).
+    let sock = ipc::socket_path(root);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+
+    while std::time::Instant::now() < deadline {
+        if ipc::is_daemon_reachable(&sock) {
+            println!("{}", colors::success("Daemon started."));
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+
+    // Daemon may still be starting — warn but don't fail.
+    println!(
+        "{}",
+        colors::warning("Daemon socket not yet reachable — proceeding anyway.")
+    );
+    Ok(())
+}
+
+/// Register a new worktree entry in `state.yaml` and return its assigned ID.
+fn register_worktree(
+    state_mgr: &StateManager,
+    prd_id: &str,
+    branch: &str,
+    wt_path_str: &str,
+) -> Result<String> {
+    let now = now_iso();
+    let prd_clone = prd_id.to_string();
+    let branch_clone = branch.to_string();
+    let path_clone = wt_path_str.to_string();
+
+    let updated = state_mgr.modify(|s| {
+        let id = next_wt_id(s);
+        s.worktrees.push(WorktreeEntry {
+            id: id.clone(),
+            prd: prd_clone,
+            branch: branch_clone,
+            path: path_clone,
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: now.clone(),
+            updated_at: now,
+            merge_target: "main".to_string(),
+            modified_files: Vec::new(),
+            events: vec![WorktreeEvent {
+                timestamp: now_iso(),
+                event_type: EventType::Created,
+                detail: None,
+            }],
+        });
+        Ok(())
+    })?;
+
+    Ok(updated
+        .worktrees
+        .last()
+        .map_or_else(|| String::from("wt-001"), |w| w.id.clone()))
+}
+
+/// Spawn `mr run <prd-id>` as a detached process in the given worktree directory.
+fn spawn_mr_run(
+    prd_id: &str,
+    runner_name: &str,
+    cli_model: Option<&str>,
+    stream: bool,
+    wt_path: &std::path::Path,
+) -> Result<u32> {
+    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+
+    let mut cmd = ProcessCommand::new(&exe);
+    cmd.arg("run").arg(prd_id);
+    cmd.arg("--runner").arg(runner_name);
+
+    if let Some(model) = cli_model {
+        cmd.arg("--model").arg(model);
+    }
+    if stream {
+        cmd.arg("--stream");
+    }
+
+    cmd.current_dir(wt_path);
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::null());
+    cmd.stderr(std::process::Stdio::null());
+
+    let child = cmd
+        .spawn()
+        .with_context(|| format!("failed to spawn `mr run {prd_id}` in {}", wt_path.display()))?;
+
+    Ok(child.id())
+}
 
 /// Handles `mr wt run <prd-id>`.
 ///
@@ -16,15 +202,93 @@ use crate::worktree::types::WorktreeStatus;
 /// in the worktree context.
 pub fn cmd_wt_run(
     prd_id: &str,
-    _runner_name: &str,
-    _cli_model: Option<&str>,
-    _stream: bool,
+    runner_name: &str,
+    cli_model: Option<&str>,
+    stream: bool,
 ) -> Result<()> {
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let main_root = git::resolve_main_worktree(&cwd).context("failed to resolve main worktree")?;
+
+    validate_prd_exists(&main_root, prd_id)?;
+
+    let repo = git::repo_name(&main_root)?;
+    let branch = git::worktree_branch_name(&repo, prd_id);
+    let wt_path = git::worktree_path(&main_root, &repo, prd_id);
+
+    // Guard against duplicate active worktrees.
+    let state_mgr = StateManager::new(&main_root);
+    let state = state_mgr.read()?;
+    if state
+        .worktrees
+        .iter()
+        .any(|w| w.prd.eq_ignore_ascii_case(prd_id) && w.status == WorktreeStatus::Active)
+    {
+        bail!(
+            "A worktree for {prd_id} is already active.\n  \
+             Run `mr wt status {prd_id}` to see details, or `mr wt remove {prd_id}` to clean up."
+        );
+    }
+
     println!(
         "{}",
-        colors::info(&format!("Worktree run for {prd_id} — not yet implemented."))
+        colors::header(&format!("Creating worktree for {prd_id}"))
     );
-    bail!("mr wt run is not yet implemented (see T-006)")
+    println!("{}", colors::dim(&format!("  Branch: {branch}")));
+
+    git::create_branch(&branch, "HEAD", &main_root)
+        .with_context(|| format!("failed to create branch {branch}"))?;
+
+    println!(
+        "{}",
+        colors::dim(&format!("  Path:   {}", wt_path.display()))
+    );
+
+    git::create_worktree(&wt_path, &branch, &main_root)
+        .with_context(|| format!("failed to create worktree at {}", wt_path.display()))?;
+
+    let wt_path_str = wt_path
+        .to_str()
+        .context("worktree path is not valid UTF-8")?;
+
+    let wt_id = register_worktree(&state_mgr, prd_id, &branch, wt_path_str)?;
+    println!("{}", colors::dim(&format!("  ID:     {wt_id}")));
+
+    ensure_daemon(&main_root)?;
+
+    let run_pid = spawn_mr_run(prd_id, runner_name, cli_model, stream, &wt_path)?;
+
+    // Record the run PID and a run_started event.
+    state_mgr.modify(|s| {
+        if let Some(wt) = s.worktrees.iter_mut().find(|w| w.id == wt_id) {
+            wt.run_pid = Some(run_pid);
+            wt.updated_at = now_iso();
+            wt.events.push(WorktreeEvent {
+                timestamp: now_iso(),
+                event_type: EventType::RunStarted,
+                detail: None,
+            });
+        }
+        Ok(())
+    })?;
+
+    println!();
+    println!(
+        "{}",
+        colors::success(&format!(
+            "Worktree created — {prd_id} running in background (pid {run_pid})"
+        ))
+    );
+    println!(
+        "{}",
+        colors::dim(&format!(
+            "  Monitor: mr wt status {prd_id}\n  \
+             Logs:    check the worktree directory at {}\n  \
+             Stop:    mr wt remove {prd_id}",
+            wt_path.display()
+        ))
+    );
+
+    Ok(())
 }
 
 /// Handles `mr wt list`.
@@ -163,17 +427,82 @@ pub fn cmd_wt_daemon_status() -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::worktree::types::WorktreeState;
 
     #[test]
-    fn test_cmd_wt_run_returns_not_implemented() {
+    fn next_wt_id_starts_at_001() {
+        let state = WorktreeState::default();
+        assert_eq!(next_wt_id(&state), "wt-001");
+    }
+
+    #[test]
+    fn next_wt_id_increments() {
+        let mut state = WorktreeState::default();
+        state.worktrees.push(WorktreeEntry {
+            id: "wt-003".to_string(),
+            prd: "PRD-0001".to_string(),
+            branch: "repo-prd-1".to_string(),
+            path: "/tmp/wt".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        });
+        assert_eq!(next_wt_id(&state), "wt-004");
+    }
+
+    #[test]
+    fn now_iso_produces_valid_timestamp() {
+        let ts = now_iso();
+        // Should look like "2026-03-04T23:51:56Z".
+        assert!(ts.ends_with('Z'));
+        assert_eq!(ts.len(), 20);
+        assert_eq!(&ts[4..5], "-");
+        assert_eq!(&ts[7..8], "-");
+        assert_eq!(&ts[10..11], "T");
+    }
+
+    #[test]
+    fn days_to_ymd_unix_epoch() {
+        let (y, m, d) = days_to_ymd(0);
+        assert_eq!((y, m, d), (1970, 1, 1));
+    }
+
+    #[test]
+    fn days_to_ymd_known_date() {
+        // 2026-03-04 is day 20_516 since epoch.
+        let (y, m, d) = days_to_ymd(20_516);
+        assert_eq!((y, m, d), (2026, 3, 4));
+    }
+
+    #[test]
+    fn validate_prd_exists_fails_for_nonexistent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let prds_dir = tmp.path().join(".mr").join("prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+
+        let result = validate_prd_exists(tmp.path(), "PRD-9999");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("PRD not found"));
+    }
+
+    #[test]
+    fn cmd_wt_run_fails_without_git_repo() {
+        // Running cmd_wt_run outside a git repo should fail gracefully.
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
         let result = cmd_wt_run("PRD-0039", "copilot", None, false);
         assert!(result.is_err());
-        let err = result
-            .expect_err("should be not-implemented error")
-            .to_string();
-        assert!(err.contains("not yet implemented"));
+
+        std::env::set_current_dir(orig).unwrap();
     }
 
     #[test]

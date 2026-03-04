@@ -110,7 +110,7 @@ tasks:
   - id: T-006
     title: "Implement mr wt run subcommand"
     priority: 2
-    status: todo
+    status: done
     notes: "Create src/commands/worktree.rs, add wt subcommand to main.rs. mr wt run <prd-id> creates branch <repo>-prd-<id>, creates sibling worktree, auto-starts daemon if not running, registers worktree in state, spawns detached mr run <prd-id> in worktree context."
   - id: T-007
     title: "Implement daemon auto-start logic"
@@ -501,4 +501,24 @@ src/
     - Implemented `cmd_wt_daemon_status()` — shows daemon running state, PID, worktree count
   - 21 new tests (total 662): PID file lifecycle, process liveness, overlap computation (5 cases), IPC message processing (5 cases), daemon lifecycle (4 integration tests including IPC heartbeat roundtrip)
   - UAT: `cargo make uat` — 662 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-006 Completed
+- **Task**: Implement mr wt run subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced stub `cmd_wt_run` in `src/commands/worktree.rs` with full implementation:
+    - Resolves main worktree root via `git::resolve_main_worktree()`
+    - Validates PRD exists by scanning `.mr/prds/`
+    - Derives branch name (`<repo>-prd-<id>`) and sibling worktree path
+    - Guards against duplicate active worktrees for the same PRD
+    - Creates branch (idempotent) and git worktree
+    - Registers worktree in `state.yaml` with `StateManager::modify()` (flock-protected)
+    - Auto-starts daemon as a detached background process if not already running, waits for socket readiness
+    - Spawns `mr run <prd-id>` as a detached process in the worktree directory
+    - Records `run_pid` and lifecycle events (`created`, `run_started`) in state
+    - Displays colored status messages (branch, path, ID, final success)
+  - Added helper functions: `next_wt_id()`, `now_iso()`, `days_to_ymd()`, `validate_prd_exists()`, `ensure_daemon()`, `register_worktree()`, `spawn_mr_run()`
+  - 6 new unit tests: `next_wt_id` (empty + increments), `now_iso` format, `days_to_ymd` (epoch + known date), `validate_prd_exists` error, `cmd_wt_run` fails without git repo
+  - UAT: `cargo make uat` — 668 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
