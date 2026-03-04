@@ -170,7 +170,7 @@ tasks:
   - id: T-018
     title: "Add worktree module to commands/mod.rs and wire CLI"
     priority: 1
-    status: todo
+    status: done
     notes: "Register wt subcommand in main.rs Command enum. Subcommands: run, list, status, merge, graph, remove, daemon (start/stop/status). Follow existing CLI patterns from GraphCommand/DevcontainerCommand."
   - id: T-019
     title: "Update AGENTS.md with worktree orchestration workflow"
@@ -442,4 +442,21 @@ src/
   - Updated `src/worktree/mod.rs` to export `pub mod git`
   - 17 unit tests covering: path resolution from main and linked worktrees, branch/worktree create/remove, modified file detection, linked worktree detection, edge cases
   - UAT: `cargo make uat` — 621 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-018 Completed
+- **Task**: Add worktree module to commands/mod.rs and wire CLI
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/commands/worktree.rs` — stub command handlers for all `wt` subcommands:
+    - `cmd_wt_run`, `cmd_wt_list`, `cmd_wt_status`, `cmd_wt_merge`, `cmd_wt_graph`, `cmd_wt_remove`
+    - `cmd_wt_daemon_start`, `cmd_wt_daemon_stop`, `cmd_wt_daemon_status`
+    - 10 unit tests verifying all stubs return not-implemented errors
+  - Registered `pub mod worktree` in `src/commands/mod.rs`
+  - Added `WtCommand` enum (7 variants: Run, List, Status, Merge, Graph, Remove, Daemon) in `src/main.rs`
+  - Added `DaemonCommand` enum (3 variants: Start, Stop, Status) in `src/main.rs`
+  - Added `Wt` variant to `Command` enum with `display_order = 16`
+  - Wired full dispatch in `match args.command` with `normalize_prd_id` for all PRD ID arguments
+  - Used `commands::worktree::` qualified paths to avoid name collision with `mod worktree` (src/worktree/)
+  - UAT: `cargo make uat` — 631 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.

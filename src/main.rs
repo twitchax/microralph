@@ -296,6 +296,13 @@ enum Command {
         #[command(subcommand)]
         command: ConstitutionCommand,
     },
+
+    /// [H] Worktree orchestration for parallel PRD execution.
+    #[command(display_order = 16)]
+    Wt {
+        #[command(subcommand)]
+        command: WtCommand,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -371,6 +378,89 @@ enum GraphCommand {
         #[arg(long)]
         lr: bool,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum WtCommand {
+    /// Start parallel PRD execution in a new worktree.
+    Run {
+        /// PRD ID to execute (e.g., PRD-0039 or 39).
+        prd_id: String,
+
+        /// The runner to use [copilot, claude, codex].
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner.
+        #[arg(long)]
+        model: Option<String>,
+
+        /// Stream runner output to stdout in real-time.
+        #[arg(long)]
+        stream: bool,
+    },
+
+    /// List all registered worktrees with status.
+    List,
+
+    /// Show detailed status of a specific worktree or overall daemon.
+    Status {
+        /// Optional PRD ID to show status for (e.g., PRD-0039 or 39).
+        prd_id: Option<String>,
+    },
+
+    /// Manually trigger merge of a worktree into a target branch.
+    Merge {
+        /// PRD ID of the worktree to merge (e.g., PRD-0039 or 39).
+        prd_id: String,
+
+        /// Target branch to merge into (default: main).
+        #[arg(long)]
+        into: Option<String>,
+
+        /// The runner to use for conflict resolution [copilot, claude, codex].
+        #[arg(long, default_value = "copilot")]
+        runner: String,
+
+        /// Model to use with the runner.
+        #[arg(long)]
+        model: Option<String>,
+    },
+
+    /// Visualize worktree overlap risk.
+    Graph {
+        /// Output format: ascii, mermaid, or dot.
+        #[arg(default_value = "ascii")]
+        format: String,
+    },
+
+    /// Remove a worktree and clean up state.
+    Remove {
+        /// PRD ID of the worktree to remove (e.g., PRD-0039 or 39).
+        prd_id: String,
+
+        /// Also delete the associated branch.
+        #[arg(long)]
+        delete_branch: bool,
+    },
+
+    /// Manage the worktree orchestration daemon.
+    Daemon {
+        #[command(subcommand)]
+        command: DaemonCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum DaemonCommand {
+    /// Start the worktree orchestration daemon.
+    Start,
+
+    /// Stop the running daemon.
+    Stop,
+
+    /// Show daemon status (running, PID, uptime, active worktrees).
+    Status,
 }
 
 /// Arguments for the refactor command.
@@ -564,6 +654,68 @@ fn main() -> Result<()> {
                 tracing::info!(no_titles = %no_titles, max_title_len = %max_title_len, lr = %lr, "Rendering DOT graph...");
                 cmd_graph_dot(!no_titles, max_title_len, lr)?;
             }
+        },
+        Some(Command::Wt { command }) => match command {
+            WtCommand::Run {
+                prd_id,
+                runner,
+                model,
+                stream,
+            } => {
+                let prd_id = normalize_prd_id(&prd_id);
+                tracing::info!(prd_id = %prd_id, runner = %runner, stream = %stream, "Starting worktree run...");
+                commands::worktree::cmd_wt_run(&prd_id, &runner, model.as_deref(), stream)?;
+            }
+            WtCommand::List => {
+                tracing::info!("Listing worktrees...");
+                commands::worktree::cmd_wt_list()?;
+            }
+            WtCommand::Status { prd_id } => {
+                let prd_id = prd_id.map(|id| normalize_prd_id(&id));
+                tracing::info!(prd_id = ?prd_id, "Showing worktree status...");
+                commands::worktree::cmd_wt_status(prd_id.as_deref())?;
+            }
+            WtCommand::Merge {
+                prd_id,
+                into,
+                runner,
+                model,
+            } => {
+                let prd_id = normalize_prd_id(&prd_id);
+                tracing::info!(prd_id = %prd_id, into = ?into, runner = %runner, "Merging worktree...");
+                commands::worktree::cmd_wt_merge(
+                    &prd_id,
+                    into.as_deref(),
+                    &runner,
+                    model.as_deref(),
+                )?;
+            }
+            WtCommand::Graph { format } => {
+                tracing::info!(format = %format, "Rendering worktree graph...");
+                commands::worktree::cmd_wt_graph(&format)?;
+            }
+            WtCommand::Remove {
+                prd_id,
+                delete_branch,
+            } => {
+                let prd_id = normalize_prd_id(&prd_id);
+                tracing::info!(prd_id = %prd_id, delete_branch = %delete_branch, "Removing worktree...");
+                commands::worktree::cmd_wt_remove(&prd_id, delete_branch)?;
+            }
+            WtCommand::Daemon { command } => match command {
+                DaemonCommand::Start => {
+                    tracing::info!("Starting daemon...");
+                    commands::worktree::cmd_wt_daemon_start()?;
+                }
+                DaemonCommand::Stop => {
+                    tracing::info!("Stopping daemon...");
+                    commands::worktree::cmd_wt_daemon_stop()?;
+                }
+                DaemonCommand::Status => {
+                    tracing::info!("Showing daemon status...");
+                    commands::worktree::cmd_wt_daemon_status()?;
+                }
+            },
         },
         None => {
             println!(

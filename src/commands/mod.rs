@@ -12,3 +12,4 @@ pub mod run;
 pub mod status;
 pub mod suggest;
 pub mod validate;
+pub mod worktree;
