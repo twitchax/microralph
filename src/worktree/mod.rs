@@ -4,5 +4,6 @@
 //! for parallel PRD execution via git worktrees.
 
 pub mod git;
+pub mod ipc;
 pub mod state;
 pub mod types;

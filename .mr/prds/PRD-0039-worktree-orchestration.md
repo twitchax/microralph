@@ -100,7 +100,7 @@ tasks:
   - id: T-004
     title: "Implement IPC protocol over Unix domain socket"
     priority: 2
-    status: todo
+    status: done
     notes: "Create src/worktree/ipc.rs. JSON-over-Unix-socket protocol. Message types: run_started, run_completed, run_failed, task_started, task_completed, heartbeat_request. Daemon listens on .mr/worktrees/daemon.sock. Async-compatible."
   - id: T-005
     title: "Implement daemon core with heartbeat loop"
@@ -459,4 +459,20 @@ src/
   - Wired full dispatch in `match args.command` with `normalize_prd_id` for all PRD ID arguments
   - Used `commands::worktree::` qualified paths to avoid name collision with `mod worktree` (src/worktree/)
   - UAT: `cargo make uat` — 631 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-004 Completed
+- **Task**: Implement IPC protocol over Unix domain socket
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `src/worktree/ipc.rs` — full IPC protocol implementation:
+    - `socket_path()` — resolves daemon socket path (`<root>/.mr/worktrees/daemon.sock`)
+    - `is_daemon_reachable()` — checks whether the daemon socket is connectable
+    - `IpcClient` — connects to daemon socket, sends `IpcMessage`, receives `IpcResponse` via newline-delimited JSON
+    - `IpcServer` — listens on Unix domain socket, accepts connections, dispatches messages to `FnMut` handler
+    - Stale socket cleanup on bind, RAII socket cleanup on drop
+    - Non-blocking mode support via `set_nonblocking()`
+  - Updated `src/worktree/mod.rs` to export `pub mod ipc`
+  - 10 unit tests: socket path resolution, bind/drop lifecycle, stale socket handling, client-server roundtrip, error responses, all message types, daemon reachability, non-blocking accept
+  - UAT: `cargo make uat` — 641 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
