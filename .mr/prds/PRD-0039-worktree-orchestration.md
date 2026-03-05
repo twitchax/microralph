@@ -145,7 +145,7 @@ tasks:
   - id: T-013
     title: "Implement mr wt merge subcommand"
     priority: 4
-    status: todo
+    status: done
     notes: "Manual merge trigger: mr wt merge <prd-id> [--into <target>]. Default target is main. Attempts rebase then merge. Runs UATs. If conflicts, spawns agent. Updates state.yaml. Can also merge between worktrees (e.g., merge PRD-39 into PRD-40's branch)."
   - id: T-014
     title: "Implement agent-driven state commits"
@@ -628,3 +628,28 @@ src/
   - 11 new tests (total 715): `build_conflict_prompt_contains_context`, `build_conflict_prompt_truncates_large_diff`, `resolve_conflicts_with_mock_runner_succeeds`, `attempt_merge_without_runner_marks_conflicted`, `attempt_merge_with_runner_attempts_resolution`, `start_conflicting_merge_clean_rebase_returns_true`, `list_conflict_files_empty_when_no_conflicts`, `stage_all_and_list_in_clean_repo`, `list_conflict_files_returns_conflicting_paths`, `is_rebase_in_progress_false_normally`, `stage_all_stages_new_files`
   - UAT: `cargo make uat` — 715 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 1 (DRY): Extracted `create_runner` to runner module. Rule 7 (Prompt Management): Added prompt constant and registered in manifest. Rule 8 (Clippy Pedantic): All methods refactored to satisfy `unused_self` lint.
+
+## 2026-03-05 — T-013 Completed
+- **Task**: Implement mr wt merge subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced stub `cmd_wt_merge` in `src/commands/worktree.rs` with full implementation:
+    - Resolves main worktree root and reads state to find the target worktree
+    - Creates a `Daemon` instance with optional runner for conflict resolution
+    - Delegates to `Daemon::manual_merge()` for the merge workflow
+    - Prints colored progress and success/failure messages
+  - Added `pub fn manual_merge()` to `Daemon` in `src/worktree/daemon.rs`:
+    - Accepts PRD ID and optional `--into <target>` override
+    - Validates worktree status is mergeable (Active, Completed, MergeFailed, Conflicted)
+    - Rejects Merging/Merged/Abandoned states with descriptive errors
+    - Full merge flow: mark merging → integrate target → conflict resolution → UATs → merge into target → mark merged
+  - Added `fn validate_mergeable_status()` — extracted status validation for clarity
+  - Added `fn handle_merge_conflicts()` — extracted conflict resolution with runner invocation
+  - Added `fn smart_merge_into_target()` — cross-worktree aware merge:
+    - Uses `git::list_worktrees()` to find where target branch is checked out
+    - If checked out in another worktree, merges there directly
+    - Otherwise, checks out target in main and merges
+  - Updated module doc comment to reflect `wt merge` is no longer a stub
+  - 5 new tests (total 720): `validate_mergeable_status_accepts_valid_states`, `validate_mergeable_status_rejects_invalid_states`, `manual_merge_fails_for_unknown_prd`, `manual_merge_rejects_merged_worktree`, `smart_merge_into_target_uses_main_for_checkout`
+  - UAT: `cargo make uat` — 720 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 1 (DRY): Reuses existing daemon merge infrastructure (`integrate_target_into_branch`, `resolve_conflicts`, `update_wt_status`, `run_uat`). Rule 8 (Clippy Pedantic): All new code passes `clippy::pedantic` (by-value for Copy types, `map_or_else`, `if let` patterns).

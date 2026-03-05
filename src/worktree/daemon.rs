@@ -889,6 +889,149 @@ impl Daemon {
         Ok(())
     }
 
+    // ── Manual merge (mr wt merge) ─────────────────────────────────
+
+    /// Manually merge a worktree branch into a target.
+    ///
+    /// Unlike `attempt_merge_worktree` (auto-merge from daemon heartbeat),
+    /// this accepts a PRD ID, allows an optional target override, permits
+    /// merging from broader states, and supports cross-worktree merges.
+    pub fn manual_merge(&self, prd_id: &str, target_override: Option<&str>) -> Result<()> {
+        let state = self.state_manager().read()?;
+        let wt = state
+            .worktrees
+            .iter()
+            .find(|w| w.prd.eq_ignore_ascii_case(prd_id))
+            .with_context(|| format!("no worktree registered for {prd_id}"))?;
+
+        Self::validate_mergeable_status(prd_id, wt.status)?;
+
+        let wt_id = wt.id.clone();
+        let wt_path = PathBuf::from(&wt.path);
+        let branch = wt.branch.clone();
+        let merge_target = target_override
+            .map_or_else(|| wt.merge_target.clone(), std::string::ToString::to_string);
+
+        tracing::info!("manual merge: {prd_id} ({branch}) into {merge_target}");
+
+        self.update_wt_status(
+            &wt_id,
+            WorktreeStatus::Merging,
+            EventType::MergeStarted,
+            None,
+        )?;
+
+        // Step 1: Integrate target into branch (rebase-first, merge fallback).
+        if Self::integrate_target_into_branch(&wt_path, &merge_target).is_err() {
+            self.handle_merge_conflicts(&wt_id, &wt_path, &merge_target)?;
+        }
+
+        // Step 2: Run UATs in the worktree.
+        if !Self::run_uat(&wt_path) {
+            self.update_wt_status(
+                &wt_id,
+                WorktreeStatus::MergeFailed,
+                EventType::MergeFailed,
+                Some("UATs failed after integration"),
+            )?;
+            bail!("UATs failed after merge integration");
+        }
+
+        // Step 3: Merge branch into target (cross-worktree aware).
+        if let Err(e) = self.smart_merge_into_target(&branch, &merge_target) {
+            self.update_wt_status(
+                &wt_id,
+                WorktreeStatus::MergeFailed,
+                EventType::MergeFailed,
+                Some(&format!("Failed to merge into {merge_target}: {e:#}")),
+            )?;
+            bail!("failed to merge into {merge_target}: {e:#}");
+        }
+
+        self.update_wt_status(
+            &wt_id,
+            WorktreeStatus::Merged,
+            EventType::MergeCompleted,
+            Some(&format!("Manually merged into {merge_target}")),
+        )?;
+
+        Ok(())
+    }
+
+    /// Validate that a worktree's status allows merging.
+    fn validate_mergeable_status(prd_id: &str, status: WorktreeStatus) -> Result<()> {
+        match status {
+            WorktreeStatus::Active
+            | WorktreeStatus::Completed
+            | WorktreeStatus::MergeFailed
+            | WorktreeStatus::Conflicted => Ok(()),
+            WorktreeStatus::Merging => bail!("{prd_id} is already being merged"),
+            WorktreeStatus::Merged => bail!("{prd_id} has already been merged"),
+            WorktreeStatus::Abandoned => bail!("{prd_id} has been abandoned"),
+        }
+    }
+
+    /// Handle conflicts during integration by invoking the runner.
+    fn handle_merge_conflicts(
+        &self,
+        wt_id: &str,
+        wt_path: &Path,
+        merge_target: &str,
+    ) -> Result<()> {
+        if let Some(runner) = &self.runner {
+            self.update_wt_status(
+                wt_id,
+                WorktreeStatus::Conflicted,
+                EventType::ConflictResolutionStarted,
+                Some("Agent resolving merge conflicts"),
+            )?;
+
+            self.resolve_conflicts(wt_id, wt_path, merge_target, runner.as_ref())
+                .map_err(|e| {
+                    let _ = self.update_wt_status(
+                        wt_id,
+                        WorktreeStatus::Conflicted,
+                        EventType::Conflicted,
+                        Some(&format!("Conflict resolution failed: {e:#}")),
+                    );
+                    anyhow::anyhow!("conflict resolution failed: {e:#}")
+                })
+        } else {
+            self.update_wt_status(
+                wt_id,
+                WorktreeStatus::Conflicted,
+                EventType::Conflicted,
+                Some("Merge produced conflicts (no runner for resolution)"),
+            )?;
+            bail!("merge produced conflicts and no runner is available for resolution")
+        }
+    }
+
+    /// Merge a branch into a target, handling cross-worktree scenarios.
+    ///
+    /// If the target branch is checked out in a worktree, merges there.
+    /// Otherwise, checks out the target in the main worktree and merges.
+    fn smart_merge_into_target(&self, branch: &str, target: &str) -> Result<()> {
+        let worktrees = git::list_worktrees(&self.root)?;
+        let target_dir = worktrees
+            .iter()
+            .find(|(_, b)| b.as_deref() == Some(target))
+            .map(|(p, _)| p.clone());
+
+        let merge_dir = if let Some(dir) = target_dir {
+            dir
+        } else {
+            git::checkout(target, &self.root)?;
+            self.root.clone()
+        };
+
+        if git::merge_ff_only(branch, &merge_dir).is_ok() {
+            return Ok(());
+        }
+
+        git::merge_branch(branch, &merge_dir)
+    }
+
     /// Integrate target changes into the worktree branch.
     ///
     /// Attempts rebase first (cleaner history), then falls back to merge.
@@ -2407,5 +2550,109 @@ mod tests {
         // The file should be staged (not in conflict list).
         let conflicts = git::list_conflict_files(&dir).unwrap();
         assert!(conflicts.is_empty());
+    }
+
+    // ── manual_merge tests ──────────────────────────────────────────
+
+    #[test]
+    fn validate_mergeable_status_accepts_valid_states() {
+        for status in [
+            WorktreeStatus::Active,
+            WorktreeStatus::Completed,
+            WorktreeStatus::MergeFailed,
+            WorktreeStatus::Conflicted,
+        ] {
+            assert!(
+                Daemon::validate_mergeable_status("PRD-0001", status).is_ok(),
+                "should accept {status:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_mergeable_status_rejects_invalid_states() {
+        for status in [
+            WorktreeStatus::Merging,
+            WorktreeStatus::Merged,
+            WorktreeStatus::Abandoned,
+        ] {
+            assert!(
+                Daemon::validate_mergeable_status("PRD-0001", status).is_err(),
+                "should reject {status:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn manual_merge_fails_for_unknown_prd() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        fs::create_dir_all(root.join(".mr/worktrees")).unwrap();
+
+        let daemon = Daemon::new(root);
+        let result = daemon.manual_merge("PRD-9999", None);
+        assert!(result.is_err());
+        assert!(
+            format!("{result:?}").contains("no worktree registered"),
+            "error should mention missing worktree"
+        );
+    }
+
+    #[test]
+    fn manual_merge_rejects_merged_worktree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let wt_dir = root.join(".mr/worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Write state with a merged worktree.
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![make_entry("wt-001", WorktreeStatus::Merged, &[])],
+            overlap_warnings: vec![],
+        };
+        let state_yaml = serde_yaml::to_string(&state).unwrap();
+        fs::write(wt_dir.join("state.yaml"), state_yaml).unwrap();
+
+        let daemon = Daemon::new(root);
+        let result = daemon.manual_merge("PRD-wt-001", None);
+        assert!(result.is_err());
+        assert!(
+            format!("{result:?}").contains("already been merged"),
+            "error should mention already merged"
+        );
+    }
+
+    #[test]
+    fn smart_merge_into_target_uses_main_for_checkout() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("smart-merge-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a branch with a commit ahead of main.
+        git::create_branch("ahead-branch", "HEAD", &main_dir).unwrap();
+        git::checkout("ahead-branch", &main_dir).unwrap();
+        std::fs::write(main_dir.join("ahead.txt"), "ahead content").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .expect("git add");
+        std::process::Command::new("git")
+            .args(["commit", "-m", "ahead commit"])
+            .current_dir(&main_dir)
+            .output()
+            .expect("git commit");
+
+        // Go back to main.
+        git::checkout(&default_branch, &main_dir).unwrap();
+
+        let daemon = Daemon::new(main_dir);
+        let result = daemon.smart_merge_into_target("ahead-branch", &default_branch);
+        assert!(result.is_ok(), "smart merge should succeed: {result:?}");
     }
 }

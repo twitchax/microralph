@@ -1,8 +1,8 @@
 //! CLI subcommand handlers for worktree orchestration (`mr wt`).
 //!
 //! Provides working implementations for `wt run`, `wt list`, `wt status`,
-//! and daemon start/stop/status, with stub implementations for the
-//! remaining `wt` subcommands.
+//! `wt merge`, and daemon start/stop/status, with stub implementations
+//! for the remaining `wt` subcommands.
 
 use std::process::Command as ProcessCommand;
 
@@ -647,19 +647,67 @@ fn overlap_risk_colored(risk: OverlapRisk) -> String {
 /// Handles `mr wt merge <prd-id>`.
 ///
 /// Manually triggers merge of a specific worktree into a target branch.
+/// Supports `--into <target>` to override the default merge target,
+/// including cross-worktree merges (e.g., merge into another PRD's branch).
 pub fn cmd_wt_merge(
     prd_id: &str,
-    _into: Option<&str>,
-    _runner_name: &str,
-    _cli_model: Option<&str>,
+    into: Option<&str>,
+    runner_name: &str,
+    cli_model: Option<&str>,
 ) -> Result<()> {
+    let root = git::resolve_main_worktree(&std::env::current_dir()?)?;
+
+    // Read state to get display info before creating the daemon (which moves root).
+    let merge_target = {
+        let state = StateManager::new(&root).read()?;
+        let wt = state
+            .worktrees
+            .iter()
+            .find(|w| w.prd.eq_ignore_ascii_case(prd_id))
+            .with_context(|| {
+                format!(
+                    "no worktree registered for {prd_id}. Run `mr wt list` to see registered worktrees."
+                )
+            })?;
+
+        let target = into.unwrap_or(&wt.merge_target).to_string();
+        println!(
+            "{}",
+            colors::info(&format!(
+                "Merging {prd_id} ({}) into {target}...",
+                wt.branch
+            ))
+        );
+        target
+    };
+
+    // Create a Daemon instance with optional runner for conflict resolution.
+    let daemon = match crate::runner::create_runner(runner_name, cli_model.map(String::from)) {
+        Ok(r) => {
+            tracing::info!("using runner '{}' for conflict resolution", r.name());
+            Daemon::new_with_runner(root, DaemonConfig::default(), r)
+        }
+        Err(e) => {
+            println!(
+                "{}",
+                colors::warning(&format!(
+                    "No runner available for conflict resolution: {e:#}"
+                ))
+            );
+            Daemon::new(root)
+        }
+    };
+
+    daemon.manual_merge(prd_id, into)?;
+
     println!(
         "{}",
-        colors::info(&format!(
-            "Worktree merge for {prd_id} — not yet implemented."
+        colors::success(&format!(
+            "✅ {prd_id} merged into {merge_target} successfully."
         ))
     );
-    bail!("mr wt merge is not yet implemented (see T-013)")
+
+    Ok(())
 }
 
 /// Handles `mr wt graph`.
@@ -1040,8 +1088,10 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_wt_merge_returns_not_implemented() {
-        let result = cmd_wt_merge("PRD-0039", None, "copilot", None);
+    fn test_cmd_wt_merge_fails_without_worktree() {
+        // cmd_wt_merge resolves main worktree root — should fail outside a git repo
+        // or when no worktree is registered for the PRD.
+        let result = cmd_wt_merge("PRD-9999", None, "copilot", None);
         assert!(result.is_err());
     }
 
