@@ -1,7 +1,8 @@
 //! CLI subcommand handlers for worktree orchestration (`mr wt`).
 //!
-//! Provides working implementations for `wt run` and daemon start/stop/status,
-//! with stub implementations for the remaining `wt` subcommands.
+//! Provides working implementations for `wt run`, `wt list`, `wt status`,
+//! and daemon start/stop/status, with stub implementations for the
+//! remaining `wt` subcommands.
 
 use std::process::Command as ProcessCommand;
 
@@ -12,7 +13,9 @@ use crate::util::colors;
 use crate::worktree::daemon::Daemon;
 use crate::worktree::git;
 use crate::worktree::state::StateManager;
-use crate::worktree::types::{EventType, WorktreeEntry, WorktreeEvent, WorktreeStatus};
+use crate::worktree::types::{
+    EventType, OverlapRisk, WorktreeEntry, WorktreeEvent, WorktreeState, WorktreeStatus,
+};
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -377,16 +380,267 @@ pub fn cmd_wt_list() -> Result<()> {
 
 /// Handles `mr wt status [prd-id]`.
 ///
-/// Shows detailed state of a specific worktree or overall daemon status.
+/// When a PRD ID is given, shows detailed state of that worktree (event
+/// history, modified files, overlap warnings, merge readiness).
+/// When omitted, shows overall daemon status with a summary of all worktrees.
 pub fn cmd_wt_status(prd_id: Option<&str>) -> Result<()> {
-    let target = prd_id.unwrap_or("all worktrees");
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let main_root = git::resolve_main_worktree(&cwd).context("failed to resolve main worktree")?;
+    let state_mgr = StateManager::new(&main_root);
+    let state = state_mgr.read()?;
+
+    match prd_id {
+        Some(id) => print_worktree_detail(&state, id),
+        None => print_overall_status(&main_root, &state),
+    }
+}
+
+/// Print overall daemon status and a summary of all worktrees.
+fn print_overall_status(root: &std::path::Path, state: &WorktreeState) -> Result<()> {
+    // Daemon section.
+    println!("{}", colors::header("Daemon"));
+
+    if Daemon::is_healthy(root) {
+        let pid = Daemon::read_pid(root)?.unwrap_or(0);
+        println!("  Status:  {}", colors::success("running"));
+        println!("  PID:     {pid}");
+
+        if let Some(daemon) = &state.daemon {
+            println!("  Started: {}", daemon.started_at);
+            println!("  Last HB: {}", daemon.last_heartbeat);
+            println!("  Timeout: {}h idle", daemon.idle_timeout_hours);
+        }
+    } else if Daemon::is_running(root) {
+        let pid = Daemon::read_pid(root)?.unwrap_or(0);
+        println!(
+            "  Status:  {} (PID {pid}, socket unreachable)",
+            colors::warning("unhealthy")
+        );
+    } else {
+        println!("  Status:  {}", colors::dim("not running"));
+    }
+
+    println!();
+
+    // Worktree summary section.
+    let total = state.worktrees.len();
+    let active = state
+        .worktrees
+        .iter()
+        .filter(|w| w.status == WorktreeStatus::Active)
+        .count();
+    let completed = state
+        .worktrees
+        .iter()
+        .filter(|w| w.status == WorktreeStatus::Completed)
+        .count();
+    let merged = state
+        .worktrees
+        .iter()
+        .filter(|w| w.status == WorktreeStatus::Merged)
+        .count();
+    let failed = state
+        .worktrees
+        .iter()
+        .filter(|w| {
+            w.status == WorktreeStatus::MergeFailed || w.status == WorktreeStatus::Conflicted
+        })
+        .count();
+
+    println!("{}", colors::header("Worktrees"));
+
+    if total == 0 {
+        println!(
+            "  {}",
+            colors::dim("No worktrees registered. Run `mr wt run <prd-id>` to create one.")
+        );
+    } else {
+        println!("  Total:     {total}");
+        println!("  Active:    {active}");
+        println!("  Completed: {completed}");
+        println!("  Merged:    {merged}");
+
+        if failed > 0 {
+            println!("  Failed:    {}", colors::error(&failed.to_string()));
+        }
+
+        // Brief per-worktree list.
+        println!();
+        for wt in &state.worktrees {
+            println!(
+                "  {} {} ({})",
+                colors::dim(&wt.id),
+                wt.prd,
+                status_colored(wt.status),
+            );
+        }
+    }
+
+    // Overlap warnings.
+    if !state.overlap_warnings.is_empty() {
+        println!();
+        println!("{}", colors::header("Overlap Warnings"));
+
+        for w in &state.overlap_warnings {
+            let risk_str = overlap_risk_colored(w.risk);
+            let wts = w.worktrees.join(", ");
+            println!("  [{risk_str}] {wts} — {} shared file(s)", w.files.len());
+        }
+    }
+
+    Ok(())
+}
+
+/// Print detailed status for a single worktree identified by PRD ID.
+fn print_worktree_detail(state: &WorktreeState, prd_id: &str) -> Result<()> {
+    let entry = state
+        .worktrees
+        .iter()
+        .find(|w| w.prd.eq_ignore_ascii_case(prd_id))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "No worktree found for {prd_id}. Run `mr wt list` to see registered worktrees."
+            )
+        })?;
+
+    // Header + identity.
+    println!(
+        "{} — {}",
+        colors::header(&entry.prd),
+        status_colored(entry.status),
+    );
+    println!();
+    println!("  ID:           {}", entry.id);
+    println!("  Branch:       {}", entry.branch);
+    println!("  Path:         {}", entry.path);
+    println!("  Merge target: {}", entry.merge_target);
+    println!("  Created:      {}", entry.created_at);
+    println!("  Updated:      {}", entry.updated_at);
+
+    if let Some(pid) = entry.run_pid {
+        let alive = Daemon::is_process_alive(pid);
+        let label = if alive {
+            colors::success("alive")
+        } else {
+            colors::dim("exited")
+        };
+        println!("  Run PID:      {pid} ({label})");
+    }
+
+    print_merge_readiness(entry);
+    print_modified_files(entry);
+    print_entry_overlaps(state, entry);
+    print_event_history(entry);
+
+    Ok(())
+}
+
+/// Print merge readiness section.
+fn print_merge_readiness(entry: &WorktreeEntry) {
+    println!();
+    println!("{}", colors::header("Merge Readiness"));
+
+    if entry.status == WorktreeStatus::Completed {
+        println!(
+            "  {}",
+            colors::success("✓ Ready to merge (status: completed)")
+        );
+    } else {
+        let reason = match entry.status {
+            WorktreeStatus::Active => "still active (tasks in progress)",
+            WorktreeStatus::Merging => "merge in progress",
+            WorktreeStatus::Merged => "already merged",
+            WorktreeStatus::MergeFailed => "previous merge failed",
+            WorktreeStatus::Conflicted => "has unresolved conflicts",
+            WorktreeStatus::Abandoned => "abandoned",
+            WorktreeStatus::Completed => unreachable!(),
+        };
+        println!("  {} Not ready — {reason}", colors::warning("⚠"));
+    }
+}
+
+/// Print modified files section.
+fn print_modified_files(entry: &WorktreeEntry) {
+    println!();
     println!(
         "{}",
-        colors::info(&format!(
-            "Worktree status for {target} — not yet implemented."
-        ))
+        colors::header(&format!("Modified Files ({})", entry.modified_files.len()))
     );
-    bail!("mr wt status is not yet implemented (see T-010)")
+
+    if entry.modified_files.is_empty() {
+        println!("  {}", colors::dim("(none)"));
+    } else {
+        for f in &entry.modified_files {
+            println!("  {f}");
+        }
+    }
+}
+
+/// Print overlap warnings involving a specific worktree entry.
+fn print_entry_overlaps(state: &WorktreeState, entry: &WorktreeEntry) {
+    let overlaps: Vec<_> = state
+        .overlap_warnings
+        .iter()
+        .filter(|w| w.worktrees.contains(&entry.id))
+        .collect();
+
+    if overlaps.is_empty() {
+        return;
+    }
+
+    println!();
+    println!("{}", colors::header("Overlap Warnings"));
+
+    for w in overlaps {
+        let others: Vec<_> = w.worktrees.iter().filter(|id| *id != &entry.id).collect();
+        let risk_str = overlap_risk_colored(w.risk);
+        println!(
+            "  [{risk_str}] shared with {} — {} file(s): {}",
+            others
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+            w.files.len(),
+            w.files.join(", "),
+        );
+    }
+}
+
+/// Print event history section.
+fn print_event_history(entry: &WorktreeEntry) {
+    println!();
+    println!(
+        "{}",
+        colors::header(&format!("Event History ({})", entry.events.len()))
+    );
+
+    if entry.events.is_empty() {
+        println!("  {}", colors::dim("(no events)"));
+    } else {
+        for ev in &entry.events {
+            let detail = ev.detail.as_deref().unwrap_or("");
+            let detail_suffix = if detail.is_empty() {
+                String::new()
+            } else {
+                format!(" — {detail}")
+            };
+            println!(
+                "  {} {}{detail_suffix}",
+                colors::dim(&ev.timestamp),
+                ev.event_type,
+            );
+        }
+    }
+}
+
+/// Color-code overlap risk level.
+fn overlap_risk_colored(risk: OverlapRisk) -> String {
+    match risk {
+        OverlapRisk::Low => colors::success(&risk.to_string()),
+        OverlapRisk::Medium => colors::warning(&risk.to_string()),
+        OverlapRisk::High => colors::error(&risk.to_string()),
+    }
 }
 
 /// Handles `mr wt merge <prd-id>`.
@@ -663,15 +917,96 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_wt_status_returns_not_implemented() {
+    fn test_cmd_wt_status_fails_without_git_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
         let result = cmd_wt_status(None);
+        assert!(result.is_err());
+
+        std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_cmd_wt_status_with_unknown_prd_fails() {
+        // Set up a minimal git repo so resolve_main_worktree works.
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(tmp.path())
+            .output()
+            .unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
+        // Create .mr/worktrees/ with an empty state (no worktrees).
+        let wt_dir = tmp.path().join(".mr").join("worktrees");
+        std::fs::create_dir_all(&wt_dir).unwrap();
+
+        let result = cmd_wt_status(Some("PRD-9999"));
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("No worktree found"), "got: {err_msg}");
+
+        std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_print_worktree_detail_shows_entry() {
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![WorktreeEntry {
+                id: "wt-001".to_string(),
+                prd: "PRD-0001".to_string(),
+                branch: "repo-prd-1".to_string(),
+                path: "/tmp/wt".to_string(),
+                status: WorktreeStatus::Completed,
+                run_pid: None,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-02T00:00:00Z".to_string(),
+                merge_target: "main".to_string(),
+                modified_files: vec!["src/main.rs".to_string()],
+                events: vec![
+                    WorktreeEvent {
+                        timestamp: "2026-01-01T00:00:00Z".to_string(),
+                        event_type: EventType::Created,
+                        detail: None,
+                    },
+                    WorktreeEvent {
+                        timestamp: "2026-01-02T00:00:00Z".to_string(),
+                        event_type: EventType::RunCompleted,
+                        detail: None,
+                    },
+                ],
+            }],
+            overlap_warnings: vec![],
+        };
+
+        // Should succeed and not panic.
+        let result = print_worktree_detail(&state, "PRD-0001");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_print_worktree_detail_not_found() {
+        let state = WorktreeState::default();
+        let result = print_worktree_detail(&state, "PRD-9999");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_cmd_wt_status_with_prd_returns_not_implemented() {
-        let result = cmd_wt_status(Some("PRD-0039"));
-        assert!(result.is_err());
+    fn test_overlap_risk_colored_returns_string_for_all_variants() {
+        use crate::worktree::types::OverlapRisk;
+        let variants = [OverlapRisk::Low, OverlapRisk::Medium, OverlapRisk::High];
+        for risk in variants {
+            let result = overlap_risk_colored(risk);
+            assert!(
+                !result.is_empty(),
+                "overlap_risk_colored({risk}) should not be empty"
+            );
+        }
     }
 
     #[test]

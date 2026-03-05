@@ -130,7 +130,7 @@ tasks:
   - id: T-010
     title: "Implement mr wt status subcommand"
     priority: 3
-    status: todo
+    status: done
     notes: "Detailed view of a single worktree or overall daemon status. Show full event history, modified files, overlap warnings, merge readiness. Include daemon uptime, heartbeat count, active worktree count."
   - id: T-011
     title: "Implement auto-merge in daemon heartbeat"
@@ -570,4 +570,18 @@ src/
   - Added helper functions: `status_colored()` (maps `WorktreeStatus` to colored output), `last_event_timestamp()` (extracts latest event timestamp from entry)
   - 3 new unit tests: `test_cmd_wt_list_fails_without_git_repo`, `test_status_colored_returns_string_for_all_variants`, `test_last_event_timestamp_with_events`, `test_last_event_timestamp_empty_events`
   - UAT: `cargo make uat` — 683 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-05 — T-010 Completed
+- **Task**: Implement mr wt status subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced stub `cmd_wt_status` in `src/commands/worktree.rs` with full implementation:
+    - When no PRD ID given: shows overall daemon status (running/unhealthy/not running, PID, started_at, last heartbeat, idle timeout) + worktree summary (total/active/completed/merged/failed counts) + brief per-worktree list + overlap warnings
+    - When PRD ID given: shows detailed single-worktree view with identity fields, run PID liveness, merge readiness assessment, modified files list, overlap warnings involving this worktree, and full event history
+  - Extracted helper functions for clippy::too_many_lines compliance: `print_merge_readiness()`, `print_modified_files()`, `print_entry_overlaps()`, `print_event_history()`, `overlap_risk_colored()`
+  - Added `OverlapRisk` and `WorktreeState` to the type imports
+  - Updated module doc comment to reflect `wt status` is no longer a stub
+  - 5 new unit tests: `test_cmd_wt_status_fails_without_git_repo`, `test_cmd_wt_status_with_unknown_prd_fails`, `test_print_worktree_detail_shows_entry`, `test_print_worktree_detail_not_found`, `test_overlap_risk_colored_returns_string_for_all_variants`
+  - UAT: `cargo make uat` — 686 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
