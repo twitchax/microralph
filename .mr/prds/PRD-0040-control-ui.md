@@ -124,7 +124,7 @@ tasks:
   - id: T-012
     title: "Worktree kickoff: trigger mr wt run from UI"
     priority: 5
-    status: todo
+    status: done
     notes: "Action button on PRD detail or PRD list to start a worktree. Invokes mr wt run <prd-id> --runner <runner> --model <model> server-side. Show confirmation dialog with runner/model selection. On success, navigate to worktree list. Auto-refreshes via WebSocket when state.yaml updates."
   - id: T-013
     title: "Log streaming view: real-time log tail via WebSocket"
@@ -514,3 +514,17 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Tracing integration: The server function logs PRD creation attempts with slug and runner, and logs success/failure outcomes (completing deferred work from T-017).
   - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns (rule 4), separation of concerns with dedicated prd_create module (rule 2), DRY via reuse of Thaw `Select` and existing CSS patterns (rule 1).
+
+## 2026-03-05 — T-012 Completed
+- **Task**: Worktree kickoff: trigger mr wt run from UI
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/wt_kickoff.rs`: New module with three components — `run_worktree` server function (invokes `mr wt run <prd-id> --runner --model` via `tokio::process::Command`), `WtKickoffDialog` (modal overlay with runner dropdown, optional model input, submit/cancel buttons, spinner, success/error result display with link to worktrees page), and `WtKickoffButton` (compact action button that opens the dialog for a given PRD ID).
+  - Updated `crates/mr-ui/src/components/prd_list.rs`: Added "Actions" column to PRD table with `WtKickoffButton` per row. Added shared `kickoff_prd_id` and `kickoff_visible` signals to manage dialog state across rows. Added `WtKickoffDialog` at page level.
+  - Updated `crates/mr-ui/src/components/worktree_detail.rs`: Added `WtKickoffButton` to the status header alongside the status badge. Added shared kickoff signals and `WtKickoffDialog` at page level for re-running a PRD from its worktree detail view.
+  - Updated `crates/mr-ui/src/components/mod.rs`: Registered `wt_kickoff` module.
+  - Updated `crates/mr-ui/style/main.css`: Added comprehensive CSS for kickoff button (compact branded border button with hover fill), dialog overlay (fixed backdrop with centered card), dialog form (fields, labels, input, actions), and result messages (success/error with links). Reuses existing spinner keyframes from prd_create.
+  - Tracing integration: The `run_worktree` server function logs worktree run attempts with prd_id and runner, and logs success/failure outcomes (completing deferred work from T-017).
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns from prd_create.rs (rule 4), separation of concerns with dedicated wt_kickoff module (rule 2), DRY via reuse of server function pattern, Thaw `Select`, and existing spinner CSS (rule 1).

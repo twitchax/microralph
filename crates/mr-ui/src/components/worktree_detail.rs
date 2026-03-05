@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 use thaw::{Badge, BadgeColor, Card, CardHeader, Tag, TagSize};
 
+use crate::components::wt_kickoff::{WtKickoffButton, WtKickoffDialog};
 use crate::types::{
     AppState, EventType, TaskSummary, WorktreeEntry, WorktreeEvent, WorktreeStatus,
 };
@@ -54,13 +55,24 @@ pub fn WorktreeDetail() -> impl IntoView {
         })
     };
 
+    // Kickoff dialog state for re-running the PRD.
+    let kickoff_prd_id = RwSignal::new(String::new());
+    let kickoff_visible = RwSignal::new(false);
+
     view! {
         {move || {
             if let Some(wt) = entry() {
                 let prd = prd_for_entry();
+                let prd_id_for_btn = wt.prd.clone();
                 view! {
                     <div class="mr-wt-detail">
-                        <StatusHeader entry=wt.clone() prd_title=prd.as_ref().map(|p| p.title.clone()) />
+                        <StatusHeader
+                            entry=wt.clone()
+                            prd_title=prd.as_ref().map(|p| p.title.clone())
+                            prd_id=prd_id_for_btn
+                            kickoff_prd_id
+                            kickoff_visible
+                        />
                         <div class="mr-wt-detail__grid">
                             <EventTimeline events=wt.events.clone() />
                             <TaskProgress tasks=prd.map(|p| p.tasks).unwrap_or_default() />
@@ -79,14 +91,22 @@ pub fn WorktreeDetail() -> impl IntoView {
                 }.into_any()
             }
         }}
+
+        <WtKickoffDialog prd_id=kickoff_prd_id visible=kickoff_visible />
     }
 }
 
 // ── Status header ───────────────────────────────────────────────────
 
-/// Header showing PRD title, branch, status badge, and PID.
+/// Header showing PRD title, branch, status badge, PID, and kickoff button.
 #[component]
-fn StatusHeader(entry: WorktreeEntry, prd_title: Option<String>) -> impl IntoView {
+fn StatusHeader(
+    entry: WorktreeEntry,
+    prd_title: Option<String>,
+    prd_id: String,
+    kickoff_prd_id: RwSignal<String>,
+    kickoff_visible: RwSignal<bool>,
+) -> impl IntoView {
     let title = prd_title.unwrap_or_else(|| entry.prd.clone());
     let (badge_color, badge_label) = status_color_label(entry.status);
     let pid_text = entry
@@ -100,6 +120,11 @@ fn StatusHeader(entry: WorktreeEntry, prd_title: Option<String>) -> impl IntoVie
                 <Badge color=Signal::derive(move || badge_color.clone())>
                     {badge_label}
                 </Badge>
+                <WtKickoffButton
+                    prd_id=prd_id
+                    target_prd_id=kickoff_prd_id
+                    dialog_visible=kickoff_visible
+                />
             </div>
             <div class="mr-wt-detail__meta">
                 <MetaItem label="PRD" value=entry.prd.clone() />

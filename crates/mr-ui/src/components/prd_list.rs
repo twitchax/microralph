@@ -14,6 +14,7 @@ use thaw::{
     Tag, TagSize,
 };
 
+use crate::components::wt_kickoff::{WtKickoffButton, WtKickoffDialog};
 use crate::types::{AppState, PrdSummary};
 
 // ── Sort column ─────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ pub fn PrdList() -> impl IntoView {
     let sort_col = RwSignal::new(SortColumn::Id);
     let sort_dir = RwSignal::new(SortDir::Asc);
 
+    // Kickoff dialog state (shared across all rows).
+    let kickoff_prd_id = RwSignal::new(String::new());
+    let kickoff_visible = RwSignal::new(false);
+
     let filtered_sorted = move || {
         app_state.with(|s| {
             let Some(state) = s.as_ref() else {
@@ -94,9 +99,11 @@ pub fn PrdList() -> impl IntoView {
                     <p class="mr-prd-list__empty">"No PRDs match the current filter."</p>
                 }
             >
-                <PrdTable filtered_sorted sort_col sort_dir />
+                <PrdTable filtered_sorted sort_col sort_dir kickoff_prd_id kickoff_visible />
             </Show>
         </div>
+
+        <WtKickoffDialog prd_id=kickoff_prd_id visible=kickoff_visible />
     }
 }
 
@@ -176,6 +183,8 @@ fn PrdTable<F>(
     filtered_sorted: F,
     sort_col: RwSignal<SortColumn>,
     sort_dir: RwSignal<SortDir>,
+    kickoff_prd_id: RwSignal<String>,
+    kickoff_visible: RwSignal<bool>,
 ) -> impl IntoView
 where
     F: Fn() -> Vec<PrdSummary> + Send + Sync + 'static,
@@ -190,6 +199,7 @@ where
                     <TableHeaderCell>"Dependencies"</TableHeaderCell>
                     <SortableHeader label="Tasks" column=SortColumn::Tasks sort_col sort_dir />
                     <SortableHeader label="Completion" column=SortColumn::Completion sort_col sort_dir />
+                    <TableHeaderCell>"Actions"</TableHeaderCell>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -198,7 +208,7 @@ where
                     key=|p| p.id.clone()
                     let:prd
                 >
-                    <PrdRow entry=prd />
+                    <PrdRow entry=prd kickoff_prd_id kickoff_visible />
                 </For>
             </TableBody>
         </Table>
@@ -258,8 +268,13 @@ fn SortableHeader(
 
 /// A single PRD row with all columns.
 #[component]
-fn PrdRow(entry: PrdSummary) -> impl IntoView {
+fn PrdRow(
+    entry: PrdSummary,
+    kickoff_prd_id: RwSignal<String>,
+    kickoff_visible: RwSignal<bool>,
+) -> impl IntoView {
     let prd_id = entry.id.clone();
+    let prd_id_for_btn = prd_id.clone();
     let title = entry.title.clone();
     let status = entry.status.clone();
     let depends_on = entry.depends_on.clone();
@@ -271,7 +286,7 @@ fn PrdRow(entry: PrdSummary) -> impl IntoView {
     view! {
         <TableRow class="mr-prd-table__row">
             <TableCell>
-                <span class="mr-prd-table__id">{prd_id}</span>
+                <span class="mr-prd-table__id">{prd_id.clone()}</span>
             </TableCell>
             <TableCell>
                 <span class="mr-prd-table__title">{title}</span>
@@ -297,6 +312,13 @@ fn PrdRow(entry: PrdSummary) -> impl IntoView {
                     </div>
                     <span class="mr-prd-table__completion-text">{pct_display}</span>
                 </div>
+            </TableCell>
+            <TableCell>
+                <WtKickoffButton
+                    prd_id=prd_id_for_btn
+                    target_prd_id=kickoff_prd_id
+                    dialog_visible=kickoff_visible
+                />
             </TableCell>
         </TableRow>
     }
