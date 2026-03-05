@@ -175,7 +175,7 @@ tasks:
   - id: T-019
     title: "Update AGENTS.md with worktree orchestration workflow"
     priority: 6
-    status: todo
+    status: done
     notes: "Document the full wt workflow, daemon lifecycle, IPC protocol, state file schema, and troubleshooting in AGENTS.md for future agent reference."
 ---
 
@@ -723,3 +723,23 @@ src/
   - 7 new tests (total 749): `recover_stale_state_noop_when_clean`, `recover_stale_state_marks_orphaned_worktree`, `recover_stale_state_resets_partial_merge_no_operation`, `recover_stale_state_completes_dead_process`, `recover_stale_state_skips_already_merged_and_abandoned`, `recover_stale_state_multiple_issues`, `is_merge_in_progress_false_normally`
   - UAT: `cargo make uat` — 749 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 2 (SOC): Recovery detection separated from application. Rule 3 (Minimal Changes): Only modified relevant files. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.
+
+## 2026-03-05 — T-019 Completed
+- **Task**: Update AGENTS.md with worktree orchestration workflow
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `AGENTS.md` Workspace Overview to include `worktree/` module and `.mr/worktrees/` directory
+  - Added comprehensive "Worktree Orchestration (`mr wt`)" section covering:
+    - Architecture overview (worktrees, daemon, state file, IPC, locking)
+    - Source layout table mapping files to responsibilities
+    - Full usage examples for all subcommands
+    - Subcommands reference table and flags reference table
+    - Daemon lifecycle (auto-start, two-tier heartbeat, auto-merge, auto-exit, crash recovery)
+    - IPC protocol documentation (message types and response format)
+    - State file schema with annotated YAML example
+    - Worktree naming conventions
+    - Merge strategy (5-step pipeline: integrate, resolve, UAT, merge, commit)
+    - Troubleshooting guide (6 common scenarios)
+    - Important notes (backward compatibility, LLM cost, advisory locking)
+  - UAT: `cargo make uat` — 749 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 3 (Minimal Changes): Only modified `AGENTS.md` and PRD file. Documentation-only task.

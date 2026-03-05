@@ -5,12 +5,13 @@ This document provides detailed workflows and troubleshooting for AI coding agen
 ## Workspace Overview
 
 - `src/`: Main Rust source code
-  - `commands/`: CLI command implementations (bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate)
+  - `commands/`: CLI command implementations (bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate, worktree)
   - `config/`: Configuration loading and constitution editing
   - `prd/`: PRD types, parsing, indexing, and operations (edit, new, finalize)
   - `prompt/`: Prompt loading and expansion
   - `runner/`: Runner implementations (copilot, claude, codex, mock)
   - `util/`: Shared utilities (colors, spinner, qa_workflow)
+  - `worktree/`: Worktree orchestration (types, state, git helpers, IPC, daemon)
   - `main.rs`: CLI entry point
   - `changelog.rs`: Changelog generation
 - `.mr/`: microralph state directory
@@ -19,6 +20,7 @@ This document provides detailed workflows and troubleshooting for AI coding agen
   - `prompts/`: Static prompt files for each stage
   - `skills/`: Agent-managed persistent skills (learned techniques reused across runs)
   - `PRDS.md`: Auto-generated PRD index
+  - `worktrees/`: Worktree orchestration state (state.yaml, daemon.sock, daemon.pid)
 
 ## Quick Start
 
@@ -344,6 +346,171 @@ The `mr restore` command overwrites `.mr/prompts/`, `.mr/templates/`, `constitut
 ### Implementation Pattern
 
 The restore command follows the DRY principle by reusing `init::init_prompts_and_templates()`, which is also used by `mr init`. This ensures consistent file-writing logic and reduces code duplication.
+
+## Worktree Orchestration (`mr wt`)
+
+The `mr wt` command group enables parallel PRD execution via git worktrees. Each worktree is tied to a specific PRD and managed by a lightweight daemon on the main branch. The daemon coordinates state, detects completions, auto-merges results, and uses agents for conflict resolution.
+
+### Architecture Overview
+
+- **Worktrees**: Isolated git working directories (sibling to main checkout) for parallel PRD execution
+- **Daemon**: Single-threaded event loop on main that manages worktree lifecycle via heartbeat and IPC
+- **State file**: `.mr/worktrees/state.yaml` — YAML file on main tracking all worktree state
+- **IPC**: JSON-over-Unix-domain-socket protocol (`daemon.sock`) for worktree-to-daemon communication
+- **Advisory locking**: `flock`-based locking via `state.lock` for concurrent state access
+
+### Source Layout
+
+| File | Purpose |
+| ---- | ------- |
+| `src/worktree/types.rs` | State schema: `WorktreeState`, `WorktreeEntry`, `WorktreeEvent`, `IpcMessage`, `OverlapWarning` |
+| `src/worktree/state.rs` | `StateManager` — read/write/modify `state.yaml` with advisory locking |
+| `src/worktree/git.rs` | Git helpers: resolve main worktree, create/remove worktrees, branches, modified files, merge/rebase ops |
+| `src/worktree/ipc.rs` | `IpcClient` / `IpcServer` — newline-delimited JSON over Unix domain socket |
+| `src/worktree/daemon.rs` | `Daemon` — heartbeat loop, auto-merge, conflict resolution, crash recovery, state commits |
+| `src/commands/worktree.rs` | CLI command handlers for all `mr wt` subcommands |
+
+### Usage
+
+```bash
+# Start parallel execution of a PRD in a new worktree
+mr wt run PRD-0039
+mr wt run PRD-0039 --runner claude --model claude-sonnet-4.5 --stream
+
+# List all registered worktrees with status
+mr wt list
+
+# Show detailed status (daemon overview or specific worktree)
+mr wt status
+mr wt status PRD-0039
+
+# Manually merge a worktree into target branch
+mr wt merge PRD-0039
+mr wt merge PRD-0039 --into develop --runner claude
+
+# Visualize worktree overlap risk
+mr wt graph ascii
+mr wt graph mermaid
+mr wt graph dot
+
+# Remove a worktree and clean up
+mr wt remove PRD-0039
+mr wt remove PRD-0039 --delete-branch
+
+# Daemon management
+mr wt daemon start
+mr wt daemon stop
+mr wt daemon status
+```
+
+### Subcommands Reference
+
+| Subcommand | Description |
+| ---------- | ----------- |
+| `wt run <prd-id>` | Creates branch, worktree, auto-starts daemon, spawns detached `mr run` in worktree |
+| `wt list` | Displays table of all worktrees: PRD ID, branch, status, modified files count, last event |
+| `wt status [prd-id]` | Daemon overview (no arg) or detailed worktree status with event history |
+| `wt merge <prd-id>` | Manual merge trigger with rebase-first strategy, UAT gating, agent conflict resolution |
+| `wt graph <format>` | Overlap risk visualization (ASCII/Mermaid/DOT) with risk-colored nodes |
+| `wt remove <prd-id>` | Removes worktree, optionally deletes branch, updates state (refuses if `Merging`) |
+| `wt daemon start` | Manually start the daemon |
+| `wt daemon stop` | Send SIGTERM to the running daemon |
+| `wt daemon status` | Show daemon PID, uptime, active worktree count |
+
+### Flags Reference
+
+| Flag | Subcommands | Default | Description |
+| ---- | ----------- | ------- | ----------- |
+| `--runner` | run, merge | copilot | Runner to use (copilot, claude, codex) |
+| `--model` | run, merge | None | Model override for the runner |
+| `--stream` | run | false | Stream runner output in real-time |
+| `--into` | merge | main | Target branch for merge |
+| `--delete-branch` | remove | false | Also delete the associated git branch |
+
+### Daemon Lifecycle
+
+1. **Auto-start**: On `mr wt run`, the daemon is started automatically if not already running
+2. **Heartbeat**: Two-tier heartbeat system:
+   - **Tier 1** (every 30s, mechanical): polls worktree liveness via `kill -0`, updates `modified_files`, recomputes file-overlap warnings
+   - **Tier 2** (event-driven): agent-based merge decisions, conflict resolution, and state summary commits
+3. **Auto-merge**: When a worktree completes, daemon auto-merges using rebase-first strategy with UAT gating
+4. **Auto-exit**: Daemon exits after 3 hours with no active worktrees
+5. **Crash recovery**: On restart, detects and recovers from partial merges, orphaned worktrees, stale PIDs
+
+### IPC Protocol
+
+Communication between `mr run` (in worktree) and the daemon uses newline-delimited JSON over a Unix domain socket at `.mr/worktrees/daemon.sock`.
+
+**Message types** (worktree → daemon):
+- `run_started` — `mr run` has started (includes PID)
+- `task_started` / `task_completed` — task lifecycle events
+- `run_completed` / `run_failed` — run lifecycle events
+- `heartbeat_request` — liveness probe
+
+**Response**: `{"status": "ok"}` or `{"status": "error", "message": "..."}`
+
+### State File Schema (`state.yaml`)
+
+```yaml
+version: 1
+daemon:
+  pid: 12345
+  started_at: "2026-03-04T22:00:00Z"
+  idle_timeout_hours: 3
+  last_heartbeat: "2026-03-04T22:30:00Z"
+worktrees:
+  - id: wt-001
+    prd: PRD-0039
+    branch: microralph-prd-39
+    path: /home/user/microralph-prd-39
+    status: active           # active | completed | merging | merged | merge_failed | conflicted | abandoned
+    run_pid: 54321
+    created_at: "2026-03-04T22:00:00Z"
+    updated_at: "2026-03-04T22:30:00Z"
+    merge_target: main
+    modified_files:
+      - src/main.rs
+    events:
+      - timestamp: "2026-03-04T22:00:00Z"
+        type: created
+      - timestamp: "2026-03-04T22:01:00Z"
+        type: run_started
+        detail: "T-001"
+overlap_warnings:
+  - worktrees: [wt-001, wt-002]
+    files: [src/main.rs]
+    risk: high               # low | medium | high
+```
+
+### Worktree Naming Convention
+
+- **Branch**: `<repo>-prd-<id>` (e.g., `microralph-prd-39`)
+- **Directory**: `../<repo>-prd-<id>/` (sibling to main checkout)
+
+### Merge Strategy
+
+1. **Integrate target**: Rebase worktree branch onto target (main), fallback to merge if rebase fails
+2. **Conflict resolution**: If conflicts arise and a runner is available, spawn agent to resolve
+3. **UAT verification**: Run `cargo make uat` after merge — only proceed if tests pass
+4. **Merge into target**: Fast-forward merge of resolved branch into target
+5. **State commit**: Agent generates summary commit message and commits `state.yaml`
+
+### Troubleshooting
+
+- **Stale daemon**: If `daemon.pid` exists but process is dead, `mr wt daemon start` or any `mr wt run` will clean up and restart
+- **Stuck merging state**: Daemon crash recovery auto-detects `Merging` status with no active merge operation and resets to `Completed`
+- **Orphaned worktrees**: Recovery detects worktree paths that no longer exist on disk and marks them `Abandoned`
+- **Dead run processes**: Recovery detects Active worktrees with dead PIDs and marks them `Completed`
+- **Socket not reachable**: Check `daemon.pid` with `mr wt daemon status`; restart with `mr wt daemon start`
+- **Refusing to remove merging worktree**: Wait for merge to complete or manually resolve, then remove
+
+### Important Notes
+
+- **Backward compatible**: `mr run` without a daemon works identically to before — IPC is optional
+- **No LLM cost for non-agent ops**: `wt run`, `wt list`, `wt status`, `wt remove` are pure git operations
+- **Agent involvement**: Only for conflict resolution, strategic merge ordering, and state summary commits
+- **State on main**: All orchestration state lives in `.mr/worktrees/state.yaml` on the main branch, designed for future Web UI consumption
+- **Advisory locking**: All state mutations go through `StateManager::modify()` which holds a flock for safe concurrent access
 
 ## Build & Test
 
