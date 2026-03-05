@@ -120,7 +120,7 @@ tasks:
   - id: T-008
     title: "Integrate mr run with daemon IPC (worktree detection)"
     priority: 3
-    status: todo
+    status: done
     notes: "Modify src/commands/run.rs. On startup, check git rev-parse --git-common-dir vs --git-dir. If in worktree and daemon socket exists, connect and send lifecycle events (run_started, task_started, task_completed, run_completed, run_failed). Backward compatible — no daemon means no IPC, run works normally."
   - id: T-009
     title: "Implement mr wt list subcommand"
@@ -535,4 +535,24 @@ src/
   - Enhanced `is_running()` doc comment to clarify it only checks PID liveness
   - 7 new tests: `is_healthy_false_when_no_daemon`, `is_healthy_false_when_pid_only`, `is_healthy_true_when_running_and_reachable`, `cleanup_stale_removes_dead_pid_file`, `cleanup_stale_removes_stale_socket`, `cleanup_stale_preserves_live_pid`, `cleanup_stale_noop_when_nothing_exists`
   - UAT: `cargo make uat` — 675 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-05 — T-008 Completed
+- **Task**: Integrate mr run with daemon IPC (worktree detection)
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `DaemonNotifier` struct to `src/commands/run.rs` — best-effort IPC client that sends lifecycle events to the daemon when `mr run` executes inside a linked worktree:
+    - `try_connect(cwd, prd_id)` — detects linked worktree via `git::is_linked_worktree()`, resolves main worktree, checks daemon socket reachability, looks up `wt_id` from `state.yaml`, connects IPC client. Returns `None` (no-op) when any condition isn't met.
+    - `run_started()`, `task_started()`, `task_completed()`, `run_completed()`, `run_failed()` — fire-and-forget notification methods; failures logged via `tracing` but never propagate.
+  - Modified `run_task()` signature to accept `&mut Option<DaemonNotifier>` — sends `task_started` after picking the next task.
+  - Modified `cmd_run()` in `src/main.rs` to:
+    - Create `DaemonNotifier` via `try_connect()` after PRD ID is determined
+    - Send `run_started` before the task loop
+    - Send `task_completed` after each successful `run_task()`
+    - Send `run_completed`/`run_failed` when the loop ends
+    - Send `run_failed` on UAT verification loop errors
+  - Added import for `crate::worktree::{git, ipc, state, types::IpcMessage}` in `run.rs`
+  - 5 new unit tests: `daemon_notifier_returns_none_outside_git_repo`, `daemon_notifier_returns_none_in_main_worktree`, `daemon_notifier_returns_none_when_no_daemon`, `daemon_notifier_returns_none_when_prd_not_in_state`, `daemon_notifier_connects_and_sends_events` (full IPC roundtrip)
+  - Updated all existing `run_task()` call sites in tests to pass `&mut None` for backward compatibility
+  - UAT: `cargo make uat` — 680 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.

@@ -19,6 +19,7 @@ use crate::prompt::{
 };
 use crate::runner::{Runner, RunnerOutput, TokenUsageInfo};
 use crate::util::spinner::start_spinner;
+use crate::worktree::{git, ipc, state, types::IpcMessage};
 
 /// Configuration for `mr run`.
 #[derive(Debug)]
@@ -379,7 +380,11 @@ fn build_prompt(
 /// # Returns
 ///
 /// A [`RunResult`] describing what happened, or an error.
-pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
+pub fn run_task(
+    config: &RunConfig,
+    runner: &dyn Runner,
+    notifier: &mut Option<DaemonNotifier>,
+) -> Result<RunResult> {
     // PRD ID must be provided.
     let prd_id = config.prd_id.ok_or_else(|| {
         anyhow::anyhow!("PRD ID must be provided to run_task. Use pick_prd_via_runner first.")
@@ -424,6 +429,11 @@ pub fn run_task(config: &RunConfig, runner: &dyn Runner) -> Result<RunResult> {
     let task_id = task.id.clone();
     let task_title = task.title.clone();
     let prd_id = prd.id().to_string();
+
+    // Notify daemon that a task is starting.
+    if let Some(n) = notifier.as_mut() {
+        n.task_started(&task_id);
+    }
 
     // Calculate task progress.
     let tasks = prd.tasks().unwrap_or(&[]);
@@ -871,6 +881,168 @@ pub fn run_uat_verification_loop(
     })
 }
 
+// ── Daemon IPC notifier ─────────────────────────────────────────────
+
+/// Best-effort IPC notifier for daemon communication.
+///
+/// When `mr run` executes inside a linked git worktree with a running
+/// daemon, this notifier sends lifecycle events over the IPC socket.
+/// All notifications are fire-and-forget: failures are logged via
+/// `tracing` but never propagate to the caller.
+///
+/// When no daemon is available (not in a worktree, no socket, etc.),
+/// [`Self::try_connect`] returns `None` and the run proceeds normally.
+pub struct DaemonNotifier {
+    client: ipc::IpcClient,
+    prd_id: String,
+    wt_id: String,
+}
+
+impl DaemonNotifier {
+    /// Attempt to connect to the daemon IPC socket.
+    ///
+    /// Returns `Some(notifier)` only when all of the following hold:
+    /// 1. The current directory is inside a linked git worktree
+    /// 2. The daemon socket is reachable on the main worktree
+    /// 3. The state file contains a worktree entry for the given PRD
+    ///
+    /// Returns `None` (and logs at debug level) otherwise.
+    pub fn try_connect(cwd: &Path, prd_id: &str) -> Option<Self> {
+        // 1. Check if we're in a linked worktree.
+        let is_linked = match git::is_linked_worktree(cwd) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::debug!("DaemonNotifier: cannot check worktree status: {e}");
+                return None;
+            }
+        };
+
+        if !is_linked {
+            tracing::debug!("DaemonNotifier: not in a linked worktree, skipping IPC");
+            return None;
+        }
+
+        // 2. Resolve main worktree to locate daemon socket.
+        let main_root = match git::resolve_main_worktree(cwd) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::debug!("DaemonNotifier: cannot resolve main worktree: {e}");
+                return None;
+            }
+        };
+
+        let sock = ipc::socket_path(&main_root);
+
+        if !ipc::is_daemon_reachable(&sock) {
+            tracing::debug!(
+                "DaemonNotifier: daemon socket not reachable at {}",
+                sock.display()
+            );
+            return None;
+        }
+
+        // 3. Look up wt_id from state.yaml.
+        let state_mgr = state::StateManager::new(&main_root);
+
+        let wt_state = match state_mgr.read() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::debug!("DaemonNotifier: cannot read state file: {e}");
+                return None;
+            }
+        };
+
+        let Some(entry) = wt_state.worktrees.iter().find(|w| w.prd == prd_id) else {
+            tracing::debug!("DaemonNotifier: no worktree entry found for {prd_id}");
+            return None;
+        };
+        let wt_id = entry.id.clone();
+
+        // 4. Connect IPC client.
+        let client = match ipc::IpcClient::connect(&sock) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::debug!("DaemonNotifier: cannot connect to daemon: {e}");
+                return None;
+            }
+        };
+
+        tracing::info!(
+            prd_id = %prd_id,
+            wt_id = %wt_id,
+            "DaemonNotifier: connected to daemon IPC"
+        );
+
+        Some(Self {
+            client,
+            prd_id: prd_id.to_string(),
+            wt_id,
+        })
+    }
+
+    /// Send an IPC message, logging any errors without propagating.
+    fn notify(&mut self, msg: &IpcMessage) {
+        match self.client.send(msg) {
+            Ok(resp) if resp.status == "ok" => {
+                tracing::debug!("DaemonNotifier: sent {msg:?}, got ok");
+            }
+            Ok(resp) => {
+                tracing::warn!(
+                    "DaemonNotifier: sent {msg:?}, got error: {}",
+                    resp.message.as_deref().unwrap_or("unknown")
+                );
+            }
+            Err(e) => {
+                tracing::warn!("DaemonNotifier: failed to send {msg:?}: {e}");
+            }
+        }
+    }
+
+    /// Notify the daemon that `mr run` has started.
+    pub fn run_started(&mut self, pid: u32) {
+        self.notify(&IpcMessage::RunStarted {
+            prd: self.prd_id.clone(),
+            wt_id: self.wt_id.clone(),
+            pid,
+        });
+    }
+
+    /// Notify the daemon that a task has started.
+    pub fn task_started(&mut self, task: &str) {
+        self.notify(&IpcMessage::TaskStarted {
+            prd: self.prd_id.clone(),
+            wt_id: self.wt_id.clone(),
+            task: task.to_string(),
+        });
+    }
+
+    /// Notify the daemon that a task has completed.
+    pub fn task_completed(&mut self, task: &str) {
+        self.notify(&IpcMessage::TaskCompleted {
+            prd: self.prd_id.clone(),
+            wt_id: self.wt_id.clone(),
+            task: task.to_string(),
+        });
+    }
+
+    /// Notify the daemon that `mr run` completed successfully.
+    pub fn run_completed(&mut self) {
+        self.notify(&IpcMessage::RunCompleted {
+            prd: self.prd_id.clone(),
+            wt_id: self.wt_id.clone(),
+        });
+    }
+
+    /// Notify the daemon that `mr run` failed.
+    pub fn run_failed(&mut self, error: &str) {
+        self.notify(&IpcMessage::RunFailed {
+            prd: self.prd_id.clone(),
+            wt_id: self.wt_id.clone(),
+            error: error.to_string(),
+        });
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::similar_names)]
@@ -1039,7 +1211,7 @@ mod tests {
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         match result {
             RunResult::TaskExecuted {
@@ -1086,7 +1258,7 @@ mod tests {
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         match result {
             RunResult::TaskExecuted { prd_id, .. } => {
@@ -1167,7 +1339,7 @@ mod tests {
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner);
+        let result = run_task(&config, &runner, &mut None);
 
         assert!(result.is_err());
         assert!(
@@ -1448,7 +1620,7 @@ You may add new tasks.
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         // Verify task was executed.
         match result {
@@ -1517,7 +1689,7 @@ You may add new tasks.
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         // Verify task was executed.
         match result {
@@ -1587,7 +1759,7 @@ You may add new tasks.
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         match result {
             RunResult::NeedsUatVerification {
@@ -1645,7 +1817,7 @@ You may add new tasks.
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         match result {
             RunResult::PrdComplete { prd_id, .. } => {
@@ -1690,7 +1862,7 @@ You may add new tasks.
             allow_add_task: true,
         };
 
-        let result = run_task(&config, &runner).unwrap();
+        let result = run_task(&config, &runner, &mut None).unwrap();
 
         match result {
             RunResult::PrdComplete { prd_id, .. } => {
@@ -2172,7 +2344,7 @@ You may add a task.
             allow_add_task: true,
         };
 
-        let run_result = run_task(&run_config, &run_runner).unwrap();
+        let run_result = run_task(&run_config, &run_runner, &mut None).unwrap();
 
         let (prd_id, _prd_path) = match run_result {
             RunResult::NeedsUatVerification {
@@ -2913,5 +3085,201 @@ Project governance and best practices.
             !prompt.contains("Available Skills"),
             "Prompt should NOT include skills section when SKILLS.md is missing"
         );
+    }
+
+    // ── DaemonNotifier tests ────────────────────────────────────────
+
+    #[test]
+    fn daemon_notifier_returns_none_outside_git_repo() {
+        let tmp = TempDir::new().unwrap();
+        let result = DaemonNotifier::try_connect(tmp.path(), "PRD-0001");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn daemon_notifier_returns_none_in_main_worktree() {
+        let tmp = TempDir::new().unwrap();
+        init_test_git_repo(tmp.path());
+        let result = DaemonNotifier::try_connect(tmp.path(), "PRD-0001");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn daemon_notifier_returns_none_when_no_daemon() {
+        let tmp = TempDir::new().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        std::fs::create_dir(&main_dir).unwrap();
+        init_test_git_repo(&main_dir);
+
+        // Create a linked worktree.
+        let wt_path = tmp.path().join("main-repo-prd-1");
+        crate::worktree::git::create_branch("main-repo-prd-1", "HEAD", &main_dir).unwrap();
+        crate::worktree::git::create_worktree(&wt_path, "main-repo-prd-1", &main_dir).unwrap();
+
+        // No daemon running → should return None.
+        let result = DaemonNotifier::try_connect(&wt_path, "PRD-0001");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn daemon_notifier_returns_none_when_prd_not_in_state() {
+        use crate::worktree::{ipc::IpcServer, state::StateManager, types::WorktreeState};
+
+        let tmp = TempDir::new().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        std::fs::create_dir(&main_dir).unwrap();
+        init_test_git_repo(&main_dir);
+
+        // Create a linked worktree.
+        let wt_path = tmp.path().join("main-repo-prd-1");
+        crate::worktree::git::create_branch("main-repo-prd-1", "HEAD", &main_dir).unwrap();
+        crate::worktree::git::create_worktree(&wt_path, "main-repo-prd-1", &main_dir).unwrap();
+
+        // Create state directory and empty state file.
+        let wt_dir = main_dir.join(".mr").join("worktrees");
+        std::fs::create_dir_all(&wt_dir).unwrap();
+        let state_mgr = StateManager::new(&main_dir);
+        state_mgr.write(&WorktreeState::default()).unwrap();
+
+        // Start a daemon-like listener on the socket.
+        let sock = crate::worktree::ipc::socket_path(&main_dir);
+        let _server = IpcServer::bind(&sock).unwrap();
+
+        // PRD-0099 is not in state → should return None.
+        let result = DaemonNotifier::try_connect(&wt_path, "PRD-0099");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn daemon_notifier_connects_and_sends_events() {
+        use crate::worktree::{
+            ipc::IpcServer,
+            state::StateManager,
+            types::{IpcMessage, IpcResponse, WorktreeEntry, WorktreeState, WorktreeStatus},
+        };
+
+        let tmp = TempDir::new().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        std::fs::create_dir(&main_dir).unwrap();
+        init_test_git_repo(&main_dir);
+
+        // Create a linked worktree.
+        let wt_path = tmp.path().join("main-repo-prd-42");
+        crate::worktree::git::create_branch("main-repo-prd-42", "HEAD", &main_dir).unwrap();
+        crate::worktree::git::create_worktree(&wt_path, "main-repo-prd-42", &main_dir).unwrap();
+
+        // Write state with a worktree entry for PRD-0042.
+        let wt_dir = main_dir.join(".mr").join("worktrees");
+        std::fs::create_dir_all(&wt_dir).unwrap();
+        let state_mgr = StateManager::new(&main_dir);
+
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![WorktreeEntry {
+                id: "wt-007".to_string(),
+                prd: "PRD-0042".to_string(),
+                branch: "main-repo-prd-42".to_string(),
+                path: wt_path.to_string_lossy().to_string(),
+                status: WorktreeStatus::Active,
+                run_pid: None,
+                created_at: "2026-01-01T00:00:00Z".to_string(),
+                updated_at: "2026-01-01T00:00:00Z".to_string(),
+                merge_target: "main".to_string(),
+                modified_files: vec![],
+                events: vec![],
+            }],
+            overlap_warnings: vec![],
+        };
+        state_mgr.write(&state).unwrap();
+
+        // Start a server on the socket.
+        let sock = crate::worktree::ipc::socket_path(&main_dir);
+        let server = IpcServer::bind(&sock).unwrap();
+
+        // Server receives and acks all messages.
+        let received = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let received_clone = received.clone();
+
+        // Run server in a thread: accept the probe from is_daemon_reachable,
+        // then accept the real client connection.
+        let server_thread = std::thread::spawn(move || {
+            // First accept: the probe from is_daemon_reachable (disconnects immediately).
+            let _ = server.accept_one(|_| IpcResponse::ok());
+
+            // Second accept: the actual IPC client connection.
+            server
+                .accept_one(|msg| {
+                    received_clone.lock().unwrap().push(msg);
+                    IpcResponse::ok()
+                })
+                .unwrap();
+        });
+
+        // Connect notifier from the worktree.
+        let mut notifier =
+            DaemonNotifier::try_connect(&wt_path, "PRD-0042").expect("should connect to daemon");
+
+        assert_eq!(notifier.prd_id, "PRD-0042");
+        assert_eq!(notifier.wt_id, "wt-007");
+
+        // Send all lifecycle events.
+        notifier.run_started(12345);
+        notifier.task_started("T-001");
+        notifier.task_completed("T-001");
+        notifier.run_completed();
+
+        // Drop the notifier to close the connection, letting the server finish.
+        drop(notifier);
+
+        server_thread.join().unwrap();
+
+        let msgs = received.lock().unwrap();
+        assert_eq!(msgs.len(), 4);
+
+        // Verify message types.
+        assert!(
+            matches!(&msgs[0], IpcMessage::RunStarted { prd, wt_id, pid } if prd == "PRD-0042" && wt_id == "wt-007" && *pid == 12345)
+        );
+        assert!(
+            matches!(&msgs[1], IpcMessage::TaskStarted { prd, wt_id, task } if prd == "PRD-0042" && wt_id == "wt-007" && task == "T-001")
+        );
+        assert!(
+            matches!(&msgs[2], IpcMessage::TaskCompleted { prd, wt_id, task } if prd == "PRD-0042" && wt_id == "wt-007" && task == "T-001")
+        );
+        assert!(
+            matches!(&msgs[3], IpcMessage::RunCompleted { prd, wt_id } if prd == "PRD-0042" && wt_id == "wt-007")
+        );
+    }
+
+    /// Helper to initialize a git repo for notifier tests.
+    fn init_test_git_repo(dir: &Path) {
+        use std::process::Command as Cmd;
+        Cmd::new("git")
+            .args(["init"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        Cmd::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        Cmd::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        std::fs::write(dir.join("README.md"), "# Test").unwrap();
+        Cmd::new("git")
+            .args(["add", "."])
+            .current_dir(dir)
+            .output()
+            .unwrap();
+        Cmd::new("git")
+            .args(["commit", "-m", "init"])
+            .current_dir(dir)
+            .output()
+            .unwrap();
     }
 }

@@ -1678,9 +1678,19 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
         Ok,
     )?;
 
+    // Attempt to connect to the worktree daemon for IPC lifecycle events.
+    // This is a no-op when not running inside a linked worktree or when
+    // no daemon is active — backward compatible with standalone mr run.
+    let mut notifier = run::DaemonNotifier::try_connect(&cwd, &active_prd_id);
+
+    if let Some(ref mut n) = notifier {
+        n.run_started(std::process::id());
+    }
+
     let max_uat_cycles = 10;
     let mut tasks_completed = 0;
     let mut uat_cycles = 0;
+    let mut run_failed = false;
 
     loop {
         let config = run::RunConfig {
@@ -1691,7 +1701,7 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
             allow_add_task: !opts.disallow_add_task,
         };
 
-        let result = match run::run_task(&config, runner.as_ref()) {
+        let result = match run::run_task(&config, runner.as_ref(), &mut notifier) {
             Ok(result) => result,
             Err(e) => match handle_run_task_error(e, tasks_completed)? {
                 Some(result) => result,
@@ -1702,27 +1712,35 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
         match result {
             run::RunResult::TaskExecuted {
                 prd_id,
-                task_id,
-                task_title,
-                prd_path,
+                ref task_id,
+                ref task_title,
+                ref prd_path,
                 runner_success,
-                output_summary,
-                usage,
+                ref output_summary,
+                ref usage,
             } => {
                 tasks_completed += 1;
 
+                // Notify daemon of task completion.
+                if let Some(ref mut n) = notifier {
+                    n.task_completed(task_id);
+                }
+
                 print_task_result(
-                    &task_id,
-                    &task_title,
+                    task_id,
+                    task_title,
                     &prd_id,
-                    &prd_path,
+                    prd_path,
                     runner_success,
-                    &output_summary,
+                    output_summary,
                     usage.as_ref(),
                 );
 
                 // Exit if --one flag is set or if the task failed.
                 if opts.one || !runner_success {
+                    if !runner_success {
+                        run_failed = true;
+                    }
                     break;
                 }
 
@@ -1772,6 +1790,9 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
                         }
                     }
                     Err(e) => {
+                        if let Some(ref mut n) = notifier {
+                            n.run_failed(&format!("UAT verification failed: {e}"));
+                        }
                         eprintln!(
                             "{}",
                             colors::error(&format!("UAT verification loop failed: {e}"))
@@ -1796,6 +1817,15 @@ fn cmd_run(opts: &CmdRunOpts) -> Result<()> {
             "{}",
             colors::info(&format!("Completed {tasks_completed} tasks total."))
         );
+    }
+
+    // Notify daemon of run outcome.
+    if let Some(ref mut n) = notifier {
+        if run_failed {
+            n.run_failed("Task execution failed");
+        } else {
+            n.run_completed();
+        }
     }
 
     Ok(())
