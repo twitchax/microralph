@@ -421,6 +421,9 @@ impl Daemon {
                     }
                 }
                 last_heartbeat = Instant::now();
+
+                // Tier 2: auto-merge completed worktrees.
+                self.tier2_auto_merge();
             }
 
             // Idle timeout.
@@ -673,6 +676,256 @@ impl Daemon {
         }
 
         warnings
+    }
+
+    // ── Tier 2 auto-merge ───────────────────────────────────────────
+
+    /// Tier 2: attempt auto-merge for all completed worktrees.
+    ///
+    /// Reads state, finds completed worktrees, sorts them by merge
+    /// priority, and attempts to merge each one into its target branch.
+    fn tier2_auto_merge(&self) {
+        let state = match self.state_manager().read() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!("tier2: failed to read state: {e:#}");
+                return;
+            }
+        };
+
+        let completed: Vec<&WorktreeEntry> = state
+            .worktrees
+            .iter()
+            .filter(|w| w.status == WorktreeStatus::Completed)
+            .collect();
+
+        if completed.is_empty() {
+            return;
+        }
+
+        let merge_order = Self::compute_merge_order(&completed, &state.overlap_warnings);
+
+        tracing::info!(
+            "tier2: {} completed worktree(s) ready to merge",
+            merge_order.len()
+        );
+
+        for wt_id in merge_order {
+            if self.should_shutdown() {
+                break;
+            }
+
+            if let Err(e) = self.attempt_merge_worktree(&wt_id) {
+                tracing::warn!("tier2: merge failed for {wt_id}: {e:#}");
+            }
+        }
+    }
+
+    /// Compute deterministic merge order for completed worktrees.
+    ///
+    /// Ordering criteria (lower = merge first):
+    /// 1. Fewer overlapping files with other completed worktrees
+    /// 2. Earlier completion time (`updated_at`)
+    #[must_use]
+    pub fn compute_merge_order(
+        completed: &[&WorktreeEntry],
+        overlap_warnings: &[OverlapWarning],
+    ) -> Vec<String> {
+        let mut scored: Vec<(&WorktreeEntry, usize)> = completed
+            .iter()
+            .map(|wt| {
+                let overlap_count: usize = overlap_warnings
+                    .iter()
+                    .filter(|ow| ow.worktrees.contains(&wt.id))
+                    .map(|ow| ow.files.len())
+                    .sum();
+                (*wt, overlap_count)
+            })
+            .collect();
+
+        scored.sort_by(|(a, a_overlap), (b, b_overlap)| {
+            a_overlap
+                .cmp(b_overlap)
+                .then_with(|| a.updated_at.cmp(&b.updated_at))
+        });
+
+        scored.into_iter().map(|(wt, _)| wt.id.clone()).collect()
+    }
+
+    /// Attempt to merge a single completed worktree into its target.
+    ///
+    /// Flow:
+    /// 1. Mark status as `merging`
+    /// 2. Rebase branch onto target (or merge target into branch on failure)
+    /// 3. Run `cargo make uat` in the worktree
+    /// 4. If UATs pass, merge branch into target via fast-forward (or merge)
+    /// 5. Update state accordingly
+    fn attempt_merge_worktree(&self, wt_id: &str) -> Result<()> {
+        let state = self.state_manager().read()?;
+        let wt = state
+            .worktrees
+            .iter()
+            .find(|w| w.id == wt_id)
+            .context("worktree not found in state")?;
+
+        if wt.status != WorktreeStatus::Completed {
+            return Ok(());
+        }
+
+        let wt_path = PathBuf::from(&wt.path);
+        let branch = wt.branch.clone();
+        let merge_target = wt.merge_target.clone();
+
+        tracing::info!("tier2: merging {wt_id} ({branch}) into {merge_target}");
+
+        // Mark as merging.
+        self.update_wt_status(
+            wt_id,
+            WorktreeStatus::Merging,
+            EventType::MergeStarted,
+            None,
+        )?;
+
+        // Step 1: Update branch with latest target changes.
+        let integrate_result = Self::integrate_target_into_branch(&wt_path, &merge_target);
+
+        if integrate_result.is_err() {
+            // Conflicts — mark as conflicted for agent resolution (T-012).
+            tracing::warn!("tier2: {wt_id} has conflicts during integration");
+            self.update_wt_status(
+                wt_id,
+                WorktreeStatus::Conflicted,
+                EventType::Conflicted,
+                Some("Rebase and merge both produced conflicts"),
+            )?;
+            return Ok(());
+        }
+
+        // Step 2: Run UATs in the worktree.
+        tracing::info!("tier2: running UATs for {wt_id} in {}", wt_path.display());
+        let uat_passed = Self::run_uat(&wt_path);
+
+        if !uat_passed {
+            tracing::warn!("tier2: UATs failed for {wt_id}");
+            self.update_wt_status(
+                wt_id,
+                WorktreeStatus::MergeFailed,
+                EventType::MergeFailed,
+                Some("UATs failed after integration"),
+            )?;
+            return Ok(());
+        }
+
+        // Step 3: Merge branch into target on main worktree.
+        tracing::info!("tier2: merging {branch} into {merge_target} on main worktree");
+        if let Err(e) = self.merge_into_target(&branch, &merge_target) {
+            tracing::warn!("tier2: failed to merge {wt_id} into {merge_target}: {e:#}");
+            self.update_wt_status(
+                wt_id,
+                WorktreeStatus::MergeFailed,
+                EventType::MergeFailed,
+                Some(&format!("Failed to merge into {merge_target}: {e:#}")),
+            )?;
+            return Ok(());
+        }
+
+        // Success!
+        tracing::info!("tier2: {wt_id} merged successfully");
+        self.update_wt_status(
+            wt_id,
+            WorktreeStatus::Merged,
+            EventType::MergeCompleted,
+            None,
+        )?;
+
+        Ok(())
+    }
+
+    /// Integrate target changes into the worktree branch.
+    ///
+    /// Attempts rebase first (cleaner history), then falls back to merge.
+    fn integrate_target_into_branch(wt_path: &Path, target: &str) -> Result<()> {
+        // Try rebase first.
+        if git::rebase_onto(target, wt_path).is_ok() {
+            tracing::info!("tier2: rebase succeeded");
+            return Ok(());
+        }
+
+        // Rebase failed — abort and try merge.
+        tracing::info!("tier2: rebase failed, aborting and trying merge");
+        let _ = git::rebase_abort(wt_path);
+
+        // Try merging target into branch.
+        if git::merge_branch(target, wt_path).is_ok() {
+            tracing::info!("tier2: merge succeeded");
+            return Ok(());
+        }
+
+        // Both failed — abort merge and report conflict.
+        let _ = git::merge_abort(wt_path);
+        bail!("both rebase and merge produced conflicts")
+    }
+
+    /// Merge a branch into the target on the main worktree.
+    ///
+    /// Tries fast-forward first, falls back to regular merge.
+    fn merge_into_target(&self, branch: &str, target: &str) -> Result<()> {
+        // Ensure we're on the target branch in the main worktree.
+        git::checkout(target, &self.root)?;
+
+        // Try fast-forward (works after successful rebase).
+        if git::merge_ff_only(branch, &self.root).is_ok() {
+            return Ok(());
+        }
+
+        // Fall back to regular merge (works after merge-based integration).
+        git::merge_branch(branch, &self.root)
+    }
+
+    /// Run `cargo make uat` in the given directory and return whether it passed.
+    #[must_use]
+    fn run_uat(cwd: &Path) -> bool {
+        let result = std::process::Command::new("cargo")
+            .args(["make", "uat"])
+            .current_dir(cwd)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .status();
+
+        match result {
+            Ok(status) => status.success(),
+            Err(e) => {
+                tracing::warn!("failed to run cargo make uat: {e:#}");
+                false
+            }
+        }
+    }
+
+    /// Update a worktree's status and record an event.
+    fn update_wt_status(
+        &self,
+        wt_id: &str,
+        status: WorktreeStatus,
+        event_type: EventType,
+        detail: Option<&str>,
+    ) -> Result<()> {
+        let detail_owned = detail.map(String::from);
+
+        self.state_manager().modify(|state| {
+            if let Some(wt) = state.worktrees.iter_mut().find(|w| w.id == wt_id) {
+                let now = chrono::Utc::now().to_rfc3339();
+                wt.status = status;
+                wt.updated_at.clone_from(&now);
+                wt.events.push(WorktreeEvent {
+                    timestamp: now,
+                    event_type,
+                    detail: detail_owned.clone(),
+                });
+            }
+            Ok(())
+        })?;
+
+        Ok(())
     }
 }
 
@@ -1214,5 +1467,355 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         // No PID file, no socket — should not error.
         Daemon::cleanup_stale(tmp.path());
+    }
+
+    // ── Merge order computation ─────────────────────────────────────
+
+    #[test]
+    fn compute_merge_order_single_worktree() {
+        let entries = [make_entry("wt-001", WorktreeStatus::Completed, &[])];
+        let refs: Vec<&WorktreeEntry> = entries.iter().collect();
+
+        let order = Daemon::compute_merge_order(&refs, &[]);
+        assert_eq!(order, vec!["wt-001"]);
+    }
+
+    #[test]
+    fn compute_merge_order_prefers_less_overlap() {
+        let wt_a = {
+            let mut e = make_entry("wt-a", WorktreeStatus::Completed, &["shared.rs"]);
+            e.updated_at = "2026-01-01T00:00:00Z".to_string();
+            e
+        };
+        let wt_b = {
+            let mut e = make_entry("wt-b", WorktreeStatus::Completed, &[]);
+            e.updated_at = "2026-01-02T00:00:00Z".to_string();
+            e
+        };
+
+        let entries = [wt_a, wt_b];
+        let refs: Vec<&WorktreeEntry> = entries.iter().collect();
+
+        let warnings = vec![OverlapWarning {
+            worktrees: vec!["wt-a".to_string(), "wt-c".to_string()],
+            files: vec!["shared.rs".to_string()],
+            risk: OverlapRisk::Low,
+        }];
+
+        let order = Daemon::compute_merge_order(&refs, &warnings);
+        // wt-b has 0 overlap files, wt-a has 1 → wt-b first.
+        assert_eq!(order, vec!["wt-b", "wt-a"]);
+    }
+
+    #[test]
+    fn compute_merge_order_breaks_tie_by_completion_time() {
+        let wt_a = {
+            let mut e = make_entry("wt-a", WorktreeStatus::Completed, &[]);
+            e.updated_at = "2026-01-02T00:00:00Z".to_string();
+            e
+        };
+        let wt_b = {
+            let mut e = make_entry("wt-b", WorktreeStatus::Completed, &[]);
+            e.updated_at = "2026-01-01T00:00:00Z".to_string();
+            e
+        };
+
+        let entries = [wt_a, wt_b];
+        let refs: Vec<&WorktreeEntry> = entries.iter().collect();
+
+        let order = Daemon::compute_merge_order(&refs, &[]);
+        // Both have 0 overlap, wt-b completed earlier.
+        assert_eq!(order, vec!["wt-b", "wt-a"]);
+    }
+
+    #[test]
+    fn compute_merge_order_empty() {
+        let entries: Vec<WorktreeEntry> = vec![];
+        let refs: Vec<&WorktreeEntry> = entries.iter().collect();
+
+        let order = Daemon::compute_merge_order(&refs, &[]);
+        assert!(order.is_empty());
+    }
+
+    // ── Update worktree status ──────────────────────────────────────
+
+    #[test]
+    fn update_wt_status_records_event() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+
+        state_mgr
+            .modify(|state| {
+                state
+                    .worktrees
+                    .push(make_entry("wt-010", WorktreeStatus::Completed, &[]));
+                Ok(())
+            })
+            .unwrap();
+
+        let daemon = Daemon::new(tmp.path().to_path_buf());
+        daemon
+            .update_wt_status(
+                "wt-010",
+                WorktreeStatus::Merging,
+                EventType::MergeStarted,
+                None,
+            )
+            .unwrap();
+
+        let state = state_mgr.read().unwrap();
+        let wt = &state.worktrees[0];
+        assert_eq!(wt.status, WorktreeStatus::Merging);
+        assert_eq!(wt.events.len(), 1);
+        assert_eq!(wt.events[0].event_type, EventType::MergeStarted);
+    }
+
+    #[test]
+    fn update_wt_status_with_detail() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+
+        state_mgr
+            .modify(|state| {
+                state
+                    .worktrees
+                    .push(make_entry("wt-011", WorktreeStatus::Merging, &[]));
+                Ok(())
+            })
+            .unwrap();
+
+        let daemon = Daemon::new(tmp.path().to_path_buf());
+        daemon
+            .update_wt_status(
+                "wt-011",
+                WorktreeStatus::MergeFailed,
+                EventType::MergeFailed,
+                Some("UATs failed"),
+            )
+            .unwrap();
+
+        let state = state_mgr.read().unwrap();
+        let wt = &state.worktrees[0];
+        assert_eq!(wt.status, WorktreeStatus::MergeFailed);
+        assert_eq!(wt.events[0].detail.as_deref(), Some("UATs failed"));
+    }
+
+    // ── Integration: auto-merge with real git repos ─────────────────
+
+    /// Helper: create a git repo in a directory.
+    fn init_git_repo(dir: &Path) {
+        std::process::Command::new("git")
+            .args(["init"])
+            .current_dir(dir)
+            .output()
+            .expect("git init");
+        std::process::Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(dir)
+            .output()
+            .expect("git config email");
+        std::process::Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(dir)
+            .output()
+            .expect("git config name");
+        std::fs::write(dir.join("README.md"), "# Test").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(dir)
+            .output()
+            .expect("git add");
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Initial commit"])
+            .current_dir(dir)
+            .output()
+            .expect("git commit");
+    }
+
+    #[test]
+    fn integrate_target_into_branch_rebase_succeeds() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a worktree with a feature branch.
+        let wt_path = tmp.path().join("main-repo-prd-99");
+        git::create_branch("main-repo-prd-99", "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_path, "main-repo-prd-99", &main_dir).unwrap();
+
+        // Make a commit in the worktree (no conflict).
+        std::fs::write(wt_path.join("feature.rs"), "fn feature() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Feature commit"])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+
+        let result = Daemon::integrate_target_into_branch(&wt_path, &default_branch);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn integrate_target_into_branch_falls_back_to_merge() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a worktree.
+        let wt_path = tmp.path().join("main-repo-prd-98");
+        git::create_branch("main-repo-prd-98", "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_path, "main-repo-prd-98", &main_dir).unwrap();
+
+        // Make a commit in the worktree.
+        std::fs::write(wt_path.join("feature.rs"), "fn feature() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Worktree commit"])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+
+        // Also make a (non-conflicting) commit on main.
+        std::fs::write(main_dir.join("main_new.rs"), "fn main_new() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Main commit"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+
+        // Rebase may succeed or merge may succeed — either way integration should pass.
+        let result = Daemon::integrate_target_into_branch(&wt_path, &default_branch);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn integrate_target_into_branch_conflicts_both_fail() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a worktree.
+        let wt_path = tmp.path().join("main-repo-prd-97");
+        git::create_branch("main-repo-prd-97", "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_path, "main-repo-prd-97", &main_dir).unwrap();
+
+        // Modify the same file in both worktree and main (conflict).
+        std::fs::write(wt_path.join("README.md"), "worktree changes").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Worktree conflict"])
+            .current_dir(&wt_path)
+            .output()
+            .unwrap();
+
+        std::fs::write(main_dir.join("README.md"), "main changes").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Main conflict"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+
+        let result = Daemon::integrate_target_into_branch(&wt_path, &default_branch);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn merge_into_target_succeeds_with_ff() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a branch ahead of main.
+        git::create_branch("ahead-branch", "HEAD", &main_dir).unwrap();
+        git::checkout("ahead-branch", &main_dir).unwrap();
+        std::fs::write(main_dir.join("ahead.rs"), "fn ahead() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Ahead commit"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+
+        // Go back to default branch.
+        git::checkout(&default_branch, &main_dir).unwrap();
+
+        let daemon = Daemon::new(main_dir.clone());
+        daemon
+            .merge_into_target("ahead-branch", &default_branch)
+            .unwrap();
+
+        // File should now exist.
+        assert!(main_dir.join("ahead.rs").exists());
+    }
+
+    #[test]
+    fn tier2_auto_merge_skips_when_no_completed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+
+        state_mgr
+            .modify(|state| {
+                state
+                    .worktrees
+                    .push(make_entry("wt-020", WorktreeStatus::Active, &[]));
+                Ok(())
+            })
+            .unwrap();
+
+        let daemon = Daemon::new(tmp.path().to_path_buf());
+        daemon.tier2_auto_merge();
+
+        // No status changes should have occurred.
+        let state = state_mgr.read().unwrap();
+        assert_eq!(state.worktrees[0].status, WorktreeStatus::Active);
+    }
+
+    #[test]
+    fn run_uat_returns_false_for_nonexistent_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let nonexistent = tmp.path().join("nonexistent");
+        assert!(!Daemon::run_uat(&nonexistent));
     }
 }

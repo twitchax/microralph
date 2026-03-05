@@ -260,6 +260,48 @@ pub fn current_branch(cwd: &Path) -> Result<String> {
         .context("failed to get current branch name")
 }
 
+// ── Merge / rebase helpers ──────────────────────────────────────────
+
+/// Rebase the current branch onto the given target.
+///
+/// Runs `git rebase <target>` in the given directory.
+/// Returns an error if the rebase fails (e.g., due to conflicts).
+pub fn rebase_onto(target: &str, cwd: &Path) -> Result<()> {
+    git_run(&["rebase", target], cwd).with_context(|| format!("failed to rebase onto {target}"))
+}
+
+/// Abort an in-progress rebase.
+pub fn rebase_abort(cwd: &Path) -> Result<()> {
+    git_run(&["rebase", "--abort"], cwd).context("failed to abort rebase")
+}
+
+/// Merge a branch into the current HEAD.
+///
+/// Uses `--no-edit` to accept the default merge commit message.
+pub fn merge_branch(branch: &str, cwd: &Path) -> Result<()> {
+    git_run(&["merge", branch, "--no-edit"], cwd)
+        .with_context(|| format!("failed to merge branch {branch}"))
+}
+
+/// Abort an in-progress merge.
+pub fn merge_abort(cwd: &Path) -> Result<()> {
+    git_run(&["merge", "--abort"], cwd).context("failed to abort merge")
+}
+
+/// Checkout a branch.
+pub fn checkout(branch: &str, cwd: &Path) -> Result<()> {
+    git_run(&["checkout", branch], cwd)
+        .with_context(|| format!("failed to checkout branch {branch}"))
+}
+
+/// Attempt to fast-forward merge a branch into the current branch.
+///
+/// Returns an error if a fast-forward is not possible.
+pub fn merge_ff_only(branch: &str, cwd: &Path) -> Result<()> {
+    git_run(&["merge", "--ff-only", branch], cwd)
+        .with_context(|| format!("failed to fast-forward merge {branch}"))
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -499,6 +541,127 @@ mod tests {
         init_git_repo(tmp.path());
 
         let result = git_output(&["log", "--nonexistent-flag-xyz"], tmp.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn checkout_switches_branch() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        create_branch("test-checkout", "HEAD", tmp.path()).unwrap();
+        checkout("test-checkout", tmp.path()).unwrap();
+
+        let branch = current_branch(tmp.path()).unwrap();
+        assert_eq!(branch, "test-checkout");
+    }
+
+    #[test]
+    fn rebase_onto_succeeds_with_no_conflicts() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create a feature branch with a new file.
+        git_run(&["checkout", "-b", "feature-rebase"], tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("feature.rs"), "fn feature() {}").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Feature commit"], tmp.path()).unwrap();
+
+        // Rebase onto default branch (no-op since no divergence).
+        rebase_onto(&default_branch, tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn rebase_onto_fails_with_conflicts_and_abort_recovers() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create conflicting changes on default branch.
+        std::fs::write(tmp.path().join("README.md"), "main changes").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Main change"], tmp.path()).unwrap();
+
+        // Create a feature branch from the original commit with conflicting changes.
+        git_run(
+            &["checkout", "-b", "feature-conflict", "HEAD~1"],
+            tmp.path(),
+        )
+        .unwrap();
+        std::fs::write(tmp.path().join("README.md"), "feature changes").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Feature change"], tmp.path()).unwrap();
+
+        // Rebase should fail due to conflict.
+        let result = rebase_onto(&default_branch, tmp.path());
+        assert!(result.is_err());
+
+        // Abort should recover.
+        rebase_abort(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn merge_branch_succeeds() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create a feature branch with changes.
+        git_run(&["checkout", "-b", "feature-merge"], tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("merge.rs"), "fn merge() {}").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Merge commit"], tmp.path()).unwrap();
+
+        // Go back to default branch and merge feature.
+        checkout(&default_branch, tmp.path()).unwrap();
+        merge_branch("feature-merge", tmp.path()).unwrap();
+
+        // File should now exist on the default branch.
+        assert!(tmp.path().join("merge.rs").exists());
+    }
+
+    #[test]
+    fn merge_ff_only_succeeds_when_fast_forward() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create a branch ahead of default.
+        git_run(&["checkout", "-b", "ahead"], tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("ahead.rs"), "fn ahead() {}").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Ahead commit"], tmp.path()).unwrap();
+
+        // Go back and fast-forward.
+        checkout(&default_branch, tmp.path()).unwrap();
+        merge_ff_only("ahead", tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn merge_ff_only_fails_when_diverged() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create diverging changes.
+        git_run(&["checkout", "-b", "diverged"], tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("diverged.rs"), "fn diverged() {}").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Diverged commit"], tmp.path()).unwrap();
+
+        checkout(&default_branch, tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("main_change.rs"), "fn main_change() {}").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Main diverge"], tmp.path()).unwrap();
+
+        // Fast-forward should fail.
+        let result = merge_ff_only("diverged", tmp.path());
         assert!(result.is_err());
     }
 }

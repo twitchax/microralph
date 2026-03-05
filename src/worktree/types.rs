@@ -227,6 +227,18 @@ pub enum EventType {
 
     /// A specific task completed.
     TaskCompleted,
+
+    /// Merge of the worktree branch into the target started.
+    MergeStarted,
+
+    /// Merge completed successfully.
+    MergeCompleted,
+
+    /// Merge or UAT verification failed.
+    MergeFailed,
+
+    /// Merge produced conflicts requiring resolution.
+    Conflicted,
 }
 
 impl std::fmt::Display for EventType {
@@ -238,6 +250,10 @@ impl std::fmt::Display for EventType {
             Self::RunFailed => write!(f, "run_failed"),
             Self::TaskStarted => write!(f, "task_started"),
             Self::TaskCompleted => write!(f, "task_completed"),
+            Self::MergeStarted => write!(f, "merge_started"),
+            Self::MergeCompleted => write!(f, "merge_completed"),
+            Self::MergeFailed => write!(f, "merge_failed"),
+            Self::Conflicted => write!(f, "conflicted"),
         }
     }
 }
@@ -461,6 +477,10 @@ mod tests {
         assert_eq!(EventType::Created.to_string(), "created");
         assert_eq!(EventType::RunStarted.to_string(), "run_started");
         assert_eq!(EventType::TaskCompleted.to_string(), "task_completed");
+        assert_eq!(EventType::MergeStarted.to_string(), "merge_started");
+        assert_eq!(EventType::MergeCompleted.to_string(), "merge_completed");
+        assert_eq!(EventType::MergeFailed.to_string(), "merge_failed");
+        assert_eq!(EventType::Conflicted.to_string(), "conflicted");
     }
 
     #[test]
