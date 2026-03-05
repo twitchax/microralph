@@ -160,7 +160,7 @@ tasks:
   - id: T-016
     title: "Implement mr wt remove subcommand"
     priority: 5
-    status: todo
+    status: done
     notes: "mr wt remove <prd-id> removes the git worktree, optionally deletes the branch (--delete-branch), updates state.yaml to mark as abandoned/removed. Refuse to remove if status is merging (safety check)."
   - id: T-017
     title: "Implement daemon crash recovery"
@@ -685,3 +685,20 @@ src/
   - 10 new tests: `test_cmd_wt_graph_fails_without_git_repo`, `test_cmd_wt_graph_rejects_unknown_format`, `test_render_wt_graph_ascii_empty`, `test_render_wt_graph_ascii_with_worktrees`, `test_render_wt_graph_ascii_excludes_merged_and_abandoned`, `test_render_wt_graph_mermaid_empty`, `test_render_wt_graph_mermaid_with_overlaps`, `test_render_wt_graph_dot_empty`, `test_render_wt_graph_dot_with_overlaps`, `test_wt_risk_level_returns_worst`, `test_wt_risk_level_no_warnings`
   - UAT: `cargo make uat` — 739 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 3 (Minimal Changes): Only modified `src/commands/worktree.rs`. Rule 4 (Consistency): Follows rendering patterns from existing `graph.rs`. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.
+
+## 2026-03-05 — T-016 Completed
+- **Task**: Implement mr wt remove subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `EventType::Removed` variant in `src/worktree/types.rs` with `Display` impl and test
+  - Replaced stub `cmd_wt_remove` in `src/commands/worktree.rs` with full implementation:
+    - Resolves main worktree root, reads state to find worktree entry by PRD ID
+    - Safety check: refuses to remove worktrees in `Merging` status with descriptive error
+    - Removes git worktree via `git::remove_worktree` (best-effort, gracefully handles missing directories)
+    - Optionally deletes branch via `git::delete_branch` with `--delete-branch` flag
+    - Updates state: marks worktree as `Abandoned`, clears `run_pid`, records `Removed` event with detail
+    - Cleans up overlap warnings that reference the removed worktree
+    - Prints colored progress messages matching existing command patterns
+  - 4 new tests (total 742): `test_cmd_wt_remove_fails_without_git_repo`, `test_cmd_wt_remove_rejects_merging_worktree`, `test_cmd_wt_remove_succeeds_for_active_worktree`, `test_cmd_wt_remove_unknown_prd_returns_error`
+  - UAT: `cargo make uat` — 742 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 3 (Minimal Changes): Only modified `src/commands/worktree.rs` and `src/worktree/types.rs`. Rule 4 (Consistency): Follows patterns from existing commands (error handling, colored output, state management). Rule 8 (Clippy Pedantic): All new code passes pedantic lints.

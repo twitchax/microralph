@@ -945,14 +945,113 @@ fn wt_risk_level(entry: &WorktreeEntry, warnings: &[OverlapWarning]) -> OverlapR
 /// Handles `mr wt remove <prd-id>`.
 ///
 /// Removes a worktree, optionally deletes the branch, and updates state.
-pub fn cmd_wt_remove(prd_id: &str, _delete_branch: bool) -> Result<()> {
+/// Refuses to remove if the worktree is currently in a `Merging` state.
+pub fn cmd_wt_remove(prd_id: &str, delete_branch: bool) -> Result<()> {
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let main_root = git::resolve_main_worktree(&cwd).context("failed to resolve main worktree")?;
+
+    let state_mgr = StateManager::new(&main_root);
+    let state = state_mgr.read()?;
+
+    // Find the worktree entry for this PRD.
+    let entry = state
+        .worktrees
+        .iter()
+        .find(|w| w.prd.eq_ignore_ascii_case(prd_id))
+        .ok_or_else(|| anyhow::anyhow!("no worktree found for {prd_id}"))?;
+
+    // Safety: refuse to remove a worktree that is actively merging.
+    if entry.status == WorktreeStatus::Merging {
+        bail!(
+            "Cannot remove worktree for {prd_id} — it is currently merging.\n  \
+             Wait for the merge to complete or resolve conflicts first."
+        );
+    }
+
+    let branch = entry.branch.clone();
+    let wt_path = std::path::PathBuf::from(&entry.path);
+    let wt_id = entry.id.clone();
+
     println!(
         "{}",
-        colors::info(&format!(
-            "Worktree remove for {prd_id} — not yet implemented."
-        ))
+        colors::header(&format!("Removing worktree for {prd_id}"))
     );
-    bail!("mr wt remove is not yet implemented (see T-016)")
+
+    // Remove the git worktree (best-effort — directory may already be gone).
+    if wt_path.exists() {
+        println!(
+            "{}",
+            colors::dim(&format!("  Removing worktree at {}", wt_path.display()))
+        );
+        if let Err(e) = git::remove_worktree(&wt_path, &main_root) {
+            println!(
+                "{}",
+                colors::warning(&format!(
+                    "  Warning: git worktree remove failed: {e:#} — cleaning up state anyway"
+                ))
+            );
+        }
+    } else {
+        println!(
+            "{}",
+            colors::dim(&format!(
+                "  Worktree directory already removed: {}",
+                wt_path.display()
+            ))
+        );
+    }
+
+    // Optionally delete the branch.
+    if delete_branch {
+        println!("{}", colors::dim(&format!("  Deleting branch {branch}")));
+        if let Err(e) = git::delete_branch(&branch, &main_root) {
+            println!(
+                "{}",
+                colors::warning(&format!(
+                    "  Warning: branch deletion failed: {e:#} — continuing"
+                ))
+            );
+        }
+    }
+
+    // Update state: mark as Abandoned, record event, clean up overlap warnings.
+    state_mgr.modify(|s| {
+        if let Some(wt) = s.worktrees.iter_mut().find(|w| w.id == wt_id) {
+            wt.status = WorktreeStatus::Abandoned;
+            wt.run_pid = None;
+            wt.updated_at = now_iso();
+            wt.events.push(WorktreeEvent {
+                timestamp: now_iso(),
+                event_type: EventType::Removed,
+                detail: Some(if delete_branch {
+                    format!("worktree removed, branch {branch} deleted")
+                } else {
+                    "worktree removed, branch preserved".to_string()
+                }),
+            });
+        }
+
+        // Remove overlap warnings that reference this worktree.
+        s.overlap_warnings.retain(|w| !w.worktrees.contains(&wt_id));
+
+        Ok(())
+    })?;
+
+    println!();
+    println!(
+        "{}",
+        colors::success(&format!("Worktree for {prd_id} removed successfully"))
+    );
+    if !delete_branch {
+        println!(
+            "{}",
+            colors::dim(&format!(
+                "  Branch {branch} preserved — use --delete-branch to also remove it"
+            ))
+        );
+    }
+
+    Ok(())
 }
 
 /// Handles `mr wt daemon start`.
@@ -1506,9 +1605,167 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_wt_remove_returns_not_implemented() {
+    fn test_cmd_wt_remove_fails_without_git_repo() {
+        // Without a valid git repo, resolve_main_worktree will fail.
         let result = cmd_wt_remove("PRD-0039", false);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_cmd_wt_remove_rejects_merging_worktree() {
+        // Simulate a worktree in merging state via state file in a temp git repo.
+        let tmp = tempfile::tempdir().unwrap();
+        let tmp_path = tmp.path();
+
+        // Set up a bare git repo so resolve_main_worktree works.
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "--allow-empty", "-m", "init"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+
+        // Create state with a Merging worktree.
+        let state_mgr = StateManager::new(tmp_path);
+        state_mgr.ensure_dir().unwrap();
+        let mut state = WorktreeState::default();
+        state.worktrees.push(WorktreeEntry {
+            id: "wt-001".to_string(),
+            prd: "PRD-0039".to_string(),
+            branch: "repo-prd-39".to_string(),
+            path: "/tmp/nonexistent".to_string(),
+            status: WorktreeStatus::Merging,
+            run_pid: None,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        });
+        state_mgr.write(&state).unwrap();
+
+        // Override cwd to temp dir.
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp_path).unwrap();
+
+        let result = cmd_wt_remove("PRD-0039", false);
+
+        std::env::set_current_dir(&original).unwrap();
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("merging"),
+            "Expected merging rejection, got: {err_msg}"
+        );
+    }
+
+    #[test]
+    fn test_cmd_wt_remove_succeeds_for_active_worktree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tmp_path = tmp.path();
+
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "--allow-empty", "-m", "init"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+
+        // Create state with an active worktree pointing to a nonexistent path
+        // (the remove function handles this gracefully).
+        let state_mgr = StateManager::new(tmp_path);
+        state_mgr.ensure_dir().unwrap();
+        let mut state = WorktreeState::default();
+        state.worktrees.push(WorktreeEntry {
+            id: "wt-001".to_string(),
+            prd: "PRD-0039".to_string(),
+            branch: "repo-prd-39".to_string(),
+            path: "/tmp/nonexistent-wt-path".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: Some(99999),
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        });
+        state.overlap_warnings.push(OverlapWarning {
+            worktrees: vec!["wt-001".to_string(), "wt-002".to_string()],
+            files: vec!["src/main.rs".to_string()],
+            risk: OverlapRisk::High,
+        });
+        state_mgr.write(&state).unwrap();
+
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp_path).unwrap();
+
+        let result = cmd_wt_remove("PRD-0039", false);
+
+        std::env::set_current_dir(&original).unwrap();
+
+        assert!(result.is_ok(), "Expected success, got: {result:?}");
+
+        // Verify state was updated.
+        let updated = state_mgr.read().unwrap();
+        let wt = updated
+            .worktrees
+            .iter()
+            .find(|w| w.prd == "PRD-0039")
+            .unwrap();
+        assert_eq!(wt.status, WorktreeStatus::Abandoned);
+        assert!(wt.run_pid.is_none());
+        assert!(wt.events.iter().any(|e| e.event_type == EventType::Removed));
+        assert!(
+            wt.events
+                .iter()
+                .any(|e| e.detail.as_deref() == Some("worktree removed, branch preserved"))
+        );
+        // Overlap warnings referencing wt-001 should be removed.
+        assert!(updated.overlap_warnings.is_empty());
+    }
+
+    #[test]
+    fn test_cmd_wt_remove_unknown_prd_returns_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tmp_path = tmp.path();
+
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "--allow-empty", "-m", "init"])
+            .current_dir(tmp_path)
+            .output()
+            .unwrap();
+
+        let state_mgr = StateManager::new(tmp_path);
+        state_mgr.ensure_dir().unwrap();
+        state_mgr.write(&WorktreeState::default()).unwrap();
+
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp_path).unwrap();
+
+        let result = cmd_wt_remove("PRD-9999", false);
+
+        std::env::set_current_dir(&original).unwrap();
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("no worktree found"),
+            "Expected 'no worktree found', got: {err_msg}"
+        );
     }
 
     #[test]

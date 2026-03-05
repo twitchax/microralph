@@ -248,6 +248,9 @@ pub enum EventType {
 
     /// State was committed to the repository.
     StateCommitted,
+
+    /// Worktree was removed.
+    Removed,
 }
 
 impl std::fmt::Display for EventType {
@@ -266,6 +269,7 @@ impl std::fmt::Display for EventType {
             Self::ConflictResolutionStarted => write!(f, "conflict_resolution_started"),
             Self::ConflictResolved => write!(f, "conflict_resolved"),
             Self::StateCommitted => write!(f, "state_committed"),
+            Self::Removed => write!(f, "removed"),
         }
     }
 }
@@ -499,6 +503,7 @@ mod tests {
         );
         assert_eq!(EventType::ConflictResolved.to_string(), "conflict_resolved");
         assert_eq!(EventType::StateCommitted.to_string(), "state_committed");
+        assert_eq!(EventType::Removed.to_string(), "removed");
     }
 
     #[test]
