@@ -64,7 +64,7 @@ acceptance_tests:
   - id: uat-011
     name: "Daemon recovers gracefully from crash, detecting partial merge state"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-012
     name: "Daemon auto-exits after 3 hours with no active worktrees"
     command: cargo make uat
@@ -858,3 +858,18 @@ src/
     - `MergeFailed` event detail cites UAT failure
   - Existing tests `manual_merge_fails_for_unknown_prd` and `manual_merge_rejects_merged_worktree` cover error paths
   - All 3 `manual_merge` tests pass
+
+## 2026-03-05 — uat-011 Verification
+- **UAT**: Daemon recovers gracefully from crash, detecting partial merge state
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - Six crash recovery tests in `src/worktree/daemon.rs` (lines 3352–3553) comprehensively cover this UAT:
+    - `recover_stale_state_noop_when_clean` — clean state left untouched
+    - `recover_stale_state_marks_orphaned_worktree` — orphaned path → Abandoned with RecoveryPerformed event
+    - `recover_stale_state_resets_partial_merge_no_operation` — **directly tests partial merge detection**: Merging status with no active merge/rebase resets to Completed
+    - `recover_stale_state_completes_dead_process` — dead PID → Completed, PID cleared
+    - `recover_stale_state_skips_already_merged_and_abandoned` — terminal states untouched
+    - `recover_stale_state_multiple_issues` — mixed orphan + dead PID + clean handled simultaneously
+  - Production code: `Daemon::recover_stale_state()` (line 379) runs on daemon startup, calls `detect_recovery_actions()` and `apply_recovery_actions()`
+  - All 756 tests pass via `cargo make uat`

@@ -43,8 +43,14 @@ impl std::fmt::Debug for MockRunner {
             .field("responses", &self.responses)
             .field("recorded_prompts", &self.recorded_prompts)
             .field("interactive_error", &self.interactive_error)
-            .field("recorded_interactive_prompts", &self.recorded_interactive_prompts)
-            .field("execute_side_effect", &self.execute_side_effect.lock().unwrap().is_some())
+            .field(
+                "recorded_interactive_prompts",
+                &self.recorded_interactive_prompts,
+            )
+            .field(
+                "execute_side_effect",
+                &self.execute_side_effect.lock().unwrap().is_some(),
+            )
             .finish()
     }
 }
@@ -132,7 +138,7 @@ impl Runner for MockRunner {
         Some("mock-runner (no actual command)".to_string())
     }
 
-    fn execute(&self, prompt: &str, _working_dir: &Path) -> RunnerResult<RunnerOutput> {
+    fn execute(&self, prompt: &str, working_dir: &Path) -> RunnerResult<RunnerOutput> {
         // Record the prompt.
         self.recorded_prompts
             .lock()
@@ -141,7 +147,7 @@ impl Runner for MockRunner {
 
         // Run side-effect if configured.
         if let Some(f) = self.execute_side_effect.lock().unwrap().as_ref() {
-            f(_working_dir);
+            f(working_dir);
         }
 
         // Return the next response, or a default.
