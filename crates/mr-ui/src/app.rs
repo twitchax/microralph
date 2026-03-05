@@ -102,10 +102,10 @@ fn connect_state_ws(state: RwSignal<Option<AppState>>) {
         };
 
         let onmessage = Closure::<dyn Fn(MessageEvent)>::new(move |event: MessageEvent| {
-            if let Some(text) = event.data().as_string() {
-                if let Ok(app_state) = serde_json::from_str::<AppState>(&text) {
-                    state.set(Some(app_state));
-                }
+            if let Some(text) = event.data().as_string()
+                && let Ok(app_state) = serde_json::from_str::<AppState>(&text)
+            {
+                state.set(Some(app_state));
             }
         });
         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));

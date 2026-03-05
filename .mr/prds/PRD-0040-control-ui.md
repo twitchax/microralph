@@ -144,7 +144,7 @@ tasks:
   - id: T-016
     title: "cargo-make tasks for UI dev and build"
     priority: 3
-    status: todo
+    status: done
     notes: "Add to Makefile.toml: (1) cargo make ui-dev — runs cargo-leptos watch for hot reload. (2) cargo make ui-build — production build. (3) cargo make ui-test — runs UI-specific tests. Update cargo make ci to include UI lint/test when feature is enabled."
   - id: T-017
     title: "Tracing integration for UI server"
@@ -446,3 +446,19 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate` for component fns, `clippy::wildcard_imports` for `leptos::prelude::*`).
   - UAT passes: 757 tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated worktrees module (rule 2), DRY via extracted `filter_and_sort` helper (rule 1).
+
+## 2026-03-05 — T-016 Completed
+- **Task**: cargo-make tasks for UI dev and build
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `ui-dev` task to `Makefile.toml`: depends on `install-cargo-leptos`, runs `cargo leptos watch` in `crates/mr-ui` for hot-reload development.
+  - Added `ui-build` task: depends on `install-cargo-leptos`, runs `cargo leptos build --release` in `crates/mr-ui` for production SSR binary + hydrated WASM bundle.
+  - Added `ui-test` task: depends on `install-nextest`, runs `cargo nextest run -p mr-ui --all-features` to execute UI-specific tests (requires SSR feature for server-side modules).
+  - Added `ui-clippy` task: runs `cargo clippy -p mr-ui --all-features --all-targets -- -D warnings` for pedantic linting of the UI crate.
+  - Added `ui-ci` task: convenience task combining `ui-clippy` + `ui-test`.
+  - Updated `ci` task to depend on `ui-clippy` and `ui-test`, ensuring the UI crate is always linted and tested as part of the full CI pipeline.
+  - Fixed pre-existing clippy `collapsible_if` warning in `crates/mr-ui/src/app.rs` (collapsed nested `if let` into combined `if let && let` form).
+  - Fixed pre-existing clippy `needless_raw_string_hashes` warning in `crates/mr-ui/src/state.rs` test (changed `r#"..."#` to `r"..."`).
+  - Added `#![recursion_limit = "256"]` to `crates/mr-ui/src/lib.rs` to handle deep type recursion when compiling with `--all-features` (both `ssr` and `hydrate` combined).
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy (including ui-clippy) all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns for cargo-make tasks (rule 4).

@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 #![deny(unused)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::correctness)]

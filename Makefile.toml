@@ -185,13 +185,53 @@ command = "cargo"
 args = ["nextest", "run", "test_constitution_violation_logging"]
 
 # =============================================================================
+# UI (mr-ui crate) — feature-gated behind `ui`
+# =============================================================================
+
+[tasks.ui-dev]
+# Hot-reload development server via cargo-leptos watch.
+cwd = "crates/mr-ui"
+workspace = false
+dependencies = ["install-cargo-leptos"]
+command = "cargo"
+args = ["leptos", "watch"]
+
+[tasks.ui-build]
+# Production build via cargo-leptos (SSR binary + hydrated WASM bundle).
+cwd = "crates/mr-ui"
+workspace = false
+dependencies = ["install-cargo-leptos"]
+command = "cargo"
+args = ["leptos", "build", "--release"]
+
+[tasks.ui-test]
+# Run UI-specific tests (requires SSR feature for server-side modules).
+cwd = "."
+workspace = false
+dependencies = ["install-nextest"]
+command = "cargo"
+args = ["nextest", "run", "-p", "mr-ui", "--all-features"]
+
+[tasks.ui-clippy]
+# Lint the UI crate with pedantic clippy.
+cwd = "."
+workspace = false
+command = "cargo"
+args = ["clippy", "-p", "mr-ui", "--all-features", "--all-targets", "--", "-D", "warnings"]
+
+[tasks.ui-ci]
+# UI-specific CI: lint + test.
+workspace = false
+dependencies = ["ui-clippy", "ui-test"]
+
+# =============================================================================
 # CI Pipeline
 # =============================================================================
 
 [tasks.ci]
-# The full CI pipeline: fmt, clippy, test.
+# The full CI pipeline: fmt, clippy, test, plus UI lint and test.
 workspace = false
-dependencies = ["fmt-check", "clippy", "test"]
+dependencies = ["fmt-check", "clippy", "test", "ui-clippy", "ui-test"]
 
 [tasks.check-all]
 workspace = false

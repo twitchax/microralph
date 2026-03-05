@@ -322,7 +322,7 @@ worktrees:
         let tmp = TempDir::new().unwrap();
         let root = setup_temp_root(&tmp);
 
-        let prd_content = r#"---
+        let prd_content = r"---
 id: PRD-0001
 title: Test PRD
 status: active
@@ -342,7 +342,7 @@ tasks:
 # Summary
 
 Test body.
-"#;
+";
 
         std::fs::write(root.join(".mr/prds/PRD-0001-test.md"), prd_content).unwrap();
 
