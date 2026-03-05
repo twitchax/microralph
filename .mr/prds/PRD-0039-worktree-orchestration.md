@@ -72,7 +72,7 @@ acceptance_tests:
   - id: uat-013
     name: "mr wt remove cleans up worktree, branch, and state entry"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-014
     name: "State commits to main only on significant events with agent-generated summaries"
     command: cargo make uat
@@ -883,3 +883,17 @@ src/
   - Creates a `Daemon` with `idle_timeout_hours: 0` (immediate exit), calls `daemon.run()`, and verifies it exits cleanly
   - After exit, asserts PID file is removed and daemon state is cleaned up (`state.daemon.is_none()`)
   - Production code: `Daemon::run()` (line 602–612) checks `last_activity.elapsed() >= idle_timeout` each loop iteration and breaks to shut down
+
+## 2026-03-05 — uat-013 Verification
+- **UAT**: mr wt remove cleans up worktree, branch, and state entry
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - Four `cmd_wt_remove` tests in `src/commands/worktree.rs` (lines 1811–1972) cover this UAT:
+    - `test_cmd_wt_remove_succeeds_for_active_worktree` — primary happy path: verifies state updated to Abandoned, run_pid cleared, Removed event recorded with correct detail, overlap warnings removed
+    - `test_cmd_wt_remove_rejects_merging_worktree` — safety guard: merging state refuses removal
+    - `test_cmd_wt_remove_unknown_prd_returns_error` — error path for nonexistent PRD
+    - `test_cmd_wt_remove_fails_without_git_repo` — error path without git context
+  - Branch deletion codepath (`delete_branch: true`) calls `git::delete_branch`, tested by `remove_worktree_cleans_up` in `src/worktree/git.rs`
+  - Worktree directory removal handled gracefully for both existing and already-removed paths
+  - All 756 tests pass via `cargo make test`
