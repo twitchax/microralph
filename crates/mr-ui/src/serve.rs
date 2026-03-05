@@ -14,6 +14,7 @@ use axum::routing::get;
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
 use tokio::sync::RwLock;
+use tower_http::trace::TraceLayer;
 
 use crate::app::{App, shell};
 use crate::state::StateService;
@@ -70,6 +71,7 @@ async fn serve_async(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error +
         .fallback(leptos_axum::file_and_error_handler(shell))
         .layer(Extension(app_state))
         .layer(Extension(state_tx))
+        .layer(TraceLayer::new_for_http())
         .with_state(leptos_options);
 
     tracing::info!("listening on http://{addr}");

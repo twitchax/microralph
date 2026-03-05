@@ -25,6 +25,7 @@ async fn main() {
     use mr_ui::types::AppState;
     use mr_ui::ws::state_ws_handler;
     use tokio::sync::RwLock;
+    use tower_http::trace::TraceLayer;
 
     let conf = get_configuration(None).expect("failed to load leptos configuration");
     let addr = conf.leptos_options.site_addr;
@@ -48,6 +49,7 @@ async fn main() {
         .fallback(leptos_axum::file_and_error_handler(shell))
         .layer(Extension(app_state))
         .layer(Extension(state_tx))
+        .layer(TraceLayer::new_for_http())
         .with_state(leptos_options);
 
     tracing::info!("listening on http://{addr}");

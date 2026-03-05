@@ -101,9 +101,13 @@ impl StateService {
         let initial = load_app_state(&self.root).await;
         {
             let mut guard = self.shared.write().await;
-            *guard = initial;
+            *guard = initial.clone();
         }
-        tracing::info!("state service: initial load complete");
+        tracing::info!(
+            worktrees = initial.worktree_state.worktrees.len(),
+            prds = initial.prds.len(),
+            "state service: initial load complete"
+        );
 
         let mut last_state_mtime: Option<SystemTime> = None;
         let mut last_prds_scan_mtime: Option<SystemTime> = None;
@@ -132,9 +136,15 @@ impl StateService {
                 }
 
                 // Broadcast to WebSocket subscribers (OK if nobody is listening).
-                let _ = self.tx.send(new_state);
+                let _ = self.tx.send(new_state.clone());
 
-                tracing::debug!("state service: detected changes, state updated");
+                tracing::debug!(
+                    state_changed,
+                    prds_changed,
+                    worktrees = new_state.worktree_state.worktrees.len(),
+                    prds = new_state.prds.len(),
+                    "state service: detected changes, state reloaded"
+                );
             }
         }
     }

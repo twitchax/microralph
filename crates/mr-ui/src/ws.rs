@@ -30,6 +30,8 @@ async fn handle_state_ws(
     shared: Arc<RwLock<AppState>>,
     tx: broadcast::Sender<AppState>,
 ) {
+    tracing::info!("WebSocket client connected");
+
     // Send the current state snapshot so the client has data immediately.
     {
         let state = shared.read().await;

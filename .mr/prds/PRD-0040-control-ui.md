@@ -149,7 +149,7 @@ tasks:
   - id: T-017
     title: "Tracing integration for UI server"
     priority: 4
-    status: todo
+    status: done
     notes: "Use tracing throughout the UI server: request/response logging via tower-http TraceLayer, WebSocket connection events, state.yaml reload events, action invocations (mr new, mr wt run). Use existing tracing-subscriber setup from main binary."
   - id: T-018
     title: "Documentation and AGENTS.md update"
@@ -489,3 +489,15 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
   - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing worktree list patterns (rule 4), separation of concerns with dedicated prd_list module (rule 2), DRY via reuse of sort/filter pattern from worktrees.rs (rule 1).
+
+## 2026-03-05 — T-017 Completed
+- **Task**: Tracing integration for UI server
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `crates/mr-ui/src/serve.rs`: added `tower_http::trace::TraceLayer` import and `.layer(TraceLayer::new_for_http())` to the Axum router middleware stack for automatic request/response logging (method, URI, status, latency).
+  - Updated `crates/mr-ui/src/main.rs` (dev server): added matching `TraceLayer` import and layer to the dev server router for parity with production.
+  - Updated `crates/mr-ui/src/ws.rs`: added `tracing::info!("WebSocket client connected")` at the start of `handle_state_ws` to log new WebSocket connections. Existing disconnect and lag tracing preserved.
+  - Updated `crates/mr-ui/src/state.rs`: enhanced initial load tracing to include `worktrees` and `prds` counts as structured fields. Enhanced reload tracing to include `state_changed`, `prds_changed` flags and updated counts.
+  - Action invocation tracing (mr new, mr wt run) deferred to T-011/T-012 when those server functions are implemented — tracing calls will be added at that point.
+  - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes — only added tracing middleware and log statements (rule 3), follows existing tracing patterns already in the codebase (rule 4).
