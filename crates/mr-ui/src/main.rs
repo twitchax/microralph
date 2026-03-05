@@ -16,12 +16,14 @@ async fn main() {
 
     use axum::Extension;
     use axum::Router;
+    use axum::routing::get;
     #[allow(clippy::wildcard_imports)]
     use leptos::prelude::*;
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use mr_ui::app::{App, shell};
     use mr_ui::state::StateService;
     use mr_ui::types::AppState;
+    use mr_ui::ws::state_ws_handler;
     use tokio::sync::RwLock;
 
     let conf = get_configuration(None).expect("failed to load leptos configuration");
@@ -38,6 +40,7 @@ async fn main() {
     let routes = generate_route_list(App);
 
     let app = Router::new()
+        .route("/ws/state", get(state_ws_handler))
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

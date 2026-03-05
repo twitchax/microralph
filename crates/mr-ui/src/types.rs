@@ -282,7 +282,7 @@ pub struct PrdSummary {
 // ── Combined application state ──────────────────────────────────────
 
 /// Combined UI state shared across Axum handlers via `Arc<RwLock<...>>`.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppState {
     /// Current worktree orchestration state.
     pub worktree_state: WorktreeState,

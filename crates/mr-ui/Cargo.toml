@@ -14,15 +14,17 @@ leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8" }
 thaw = { version = "0.5.0-beta" }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 tracing = "0.1"
 
 # Client-side dependencies (behind hydrate feature).
 console_error_panic_hook = { version = "0.1", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", features = ["WebSocket", "MessageEvent", "ErrorEvent", "Window", "Location"], optional = true }
 
 # Server-side dependencies (behind ssr feature).
 leptos_axum = { version = "0.8", optional = true }
-axum = { version = "0.8", optional = true }
+axum = { version = "0.8", features = ["ws"], optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "fs", "sync", "macros"], optional = true }
 tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"], optional = true }
 serde_yaml = { version = "0.9", optional = true }
@@ -46,6 +48,7 @@ hydrate = [
     "leptos/hydrate",
     "dep:console_error_panic_hook",
     "dep:wasm-bindgen",
+    "dep:web-sys",
 ]
 
 [package.metadata.leptos]
