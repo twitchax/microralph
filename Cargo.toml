@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "crates/mr-ui"]
+default-members = ["."]
+
 [package]
 name = "microralph"
 authors = ["Aaron Roney <twitchax@gmail.com>"]
@@ -30,6 +34,10 @@ toml = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "8"
+mr-ui = { path = "crates/mr-ui", optional = true, features = ["ssr"] }
+
+[features]
+ui = ["dep:mr-ui"]
 
 [dev-dependencies]
 tempfile = "3"

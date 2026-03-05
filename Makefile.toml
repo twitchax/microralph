@@ -35,6 +35,11 @@ dependencies = ["install-cargo-binstall"]
 command = "cargo"
 args = ["binstall", "wkg", "--no-confirm"]
 
+[tasks.install-cargo-leptos]
+dependencies = ["install-cargo-binstall"]
+command = "cargo"
+args = ["binstall", "cargo-leptos", "--no-confirm"]
+
 [tasks.tools]
 dependencies = ["install-nextest", "install-llvm-cov"]
 

@@ -4,7 +4,9 @@ This document provides detailed workflows and troubleshooting for AI coding agen
 
 ## Workspace Overview
 
-- `src/`: Main Rust source code
+This project is a Cargo workspace with the root binary crate and optional sub-crates:
+
+- `src/`: Main Rust source code (root `microralph` crate — the `mr` binary)
   - `commands/`: CLI command implementations (bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest, validate, worktree)
   - `config/`: Configuration loading and constitution editing
   - `prd/`: PRD types, parsing, indexing, and operations (edit, new, finalize)
@@ -14,6 +16,10 @@ This document provides detailed workflows and troubleshooting for AI coding agen
   - `worktree/`: Worktree orchestration (types, state, git helpers, IPC, daemon)
   - `main.rs`: CLI entry point
   - `changelog.rs`: Changelog generation
+- `crates/mr-ui/`: UI dashboard crate (feature-gated behind `ui` feature in root)
+  - Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5
+  - Feature-gated: only compiled when `--features ui` is passed
+  - Has `ssr` and `hydrate` features for server and client compilation
 - `.mr/`: microralph state directory
   - `prds/`: PRD files
   - `templates/`: PRD templates
