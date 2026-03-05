@@ -92,21 +92,222 @@ body {
     color: var(--colorNeutralForeground1, #c0c0ff);
 }
 
-/* ── Dashboard summary cards (temporary, replaced by T-007) ───────── */
+/* ── Dashboard cards (T-007) ───────────────────────────────────────── */
 
-.dashboard-summary {
+.mr-dashboard {
     display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.mr-dashboard__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1rem;
+}
+
+.mr-card {
+    border: 1px solid var(--colorNeutralStroke1, #333);
+    border-radius: 8px;
+    background: var(--colorNeutralBackground3, #16162a);
+}
+
+.mr-card__body {
+    padding: 0.75rem 1rem 1rem;
+}
+
+/* ── Status card grid ─────────────────────────────────────────────── */
+
+.mr-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.75rem;
+}
+
+.mr-status-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.mr-status-item__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+/* ── Daemon health card ───────────────────────────────────────────── */
+
+.mr-daemon-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mr-daemon-detail--offline {
+    align-items: center;
+    text-align: center;
+}
+
+.mr-daemon-detail__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mr-daemon-detail__label {
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-daemon-detail__value {
+    font-size: 0.85rem;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+.mr-daemon-detail__hint {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+/* ── Overlap warnings card ────────────────────────────────────────── */
+
+.mr-overlap-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mr-overlap-summary__total {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.mr-overlap-summary__badges {
+    display: flex;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.dashboard-summary p {
-    background: var(--colorNeutralBackground3, #16162a);
-    border: 1px solid var(--colorNeutralStroke1, #333);
-    border-radius: 8px;
-    padding: 1rem 1.5rem;
-    margin: 0;
-    min-width: 120px;
+.mr-tag--danger {
+    --thaw-tag-bg: rgba(220, 53, 69, 0.15);
+    --thaw-tag-color: #ff6b6b;
+}
+
+.mr-tag--warning {
+    --thaw-tag-bg: rgba(255, 193, 7, 0.15);
+    --thaw-tag-color: #ffc107;
+}
+
+.mr-tag--info {
+    --thaw-tag-bg: rgba(13, 110, 253, 0.15);
+    --thaw-tag-color: #6ea8fe;
+}
+
+/* ── Recent events timeline ───────────────────────────────────────── */
+
+.mr-timeline-section h2 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    color: var(--colorNeutralForeground1, #c0c0ff);
+}
+
+.mr-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.mr-timeline::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--colorNeutralStroke1, #333);
+}
+
+.mr-timeline__empty {
+    color: var(--colorNeutralForeground3, #999);
+    font-style: italic;
+    padding-left: 0;
+}
+
+.mr-timeline__item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.mr-timeline__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.mr-timeline__dot--success {
+    background: #40c057;
+}
+
+.mr-timeline__dot--danger {
+    background: #ff6b6b;
+}
+
+.mr-timeline__dot--active {
+    background: #7b7bff;
+}
+
+.mr-timeline__dot--neutral {
+    background: #666;
+}
+
+.mr-timeline__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.mr-timeline__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mr-timeline__type {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+.mr-timeline__meta {
+    font-size: 0.75rem;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-timeline__detail {
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground2, #bbb);
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+}
+
+.mr-timeline__time {
+    font-size: 0.7rem;
+    color: var(--colorNeutralForeground3, #888);
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
 }
 
 /* ── Responsive: collapse sidebar text on narrow screens ──────────── */

@@ -12,6 +12,7 @@ use leptos_router::{
     components::{Route, Router, Routes},
 };
 
+use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
 use crate::components::theme::ThemeProvider;
 use crate::types::AppState;
@@ -117,27 +118,11 @@ fn connect_state_ws(state: RwSignal<Option<AppState>>) {
     });
 }
 
-/// Renders the dashboard home page with real-time state from the WebSocket.
+/// Renders the dashboard home page with overview cards and recent events.
 #[component]
 fn HomePage() -> impl IntoView {
-    let app_state =
-        use_context::<RwSignal<Option<AppState>>>().expect("AppState context not provided");
-
-    let worktree_count = move || {
-        app_state.with(|s| {
-            s.as_ref()
-                .map_or(0, |state| state.worktree_state.worktrees.len())
-        })
-    };
-
-    let prd_count = move || app_state.with(|s| s.as_ref().map_or(0, |state| state.prds.len()));
-
     view! {
-        <h1>"Dashboard"</h1>
-        <div class="dashboard-summary">
-            <p>"Worktrees: " {worktree_count}</p>
-            <p>"PRDs: " {prd_count}</p>
-        </div>
+        <DashboardHome />
     }
 }
 

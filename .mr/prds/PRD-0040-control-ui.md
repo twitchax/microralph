@@ -99,7 +99,7 @@ tasks:
   - id: T-007
     title: "Dashboard home page: overview cards and daemon health"
     priority: 3
-    status: todo
+    status: done
     notes: "Cards showing: total worktrees by status (active/completed/merged/failed), daemon uptime and health (green/red indicator from last_heartbeat), overlap warnings count with risk badges, recent events timeline (last 10 events across all worktrees). Use Thaw Card, Badge, Tag, and Timeline components."
   - id: T-008
     title: "Worktree list view: table with real-time status"
@@ -421,3 +421,16 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate` for component fns, `clippy::wildcard_imports` for `leptos::prelude::*`).
   - UAT passes: 757 tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated component modules (rule 2), DRY via shared layout wrapping all routes (rule 1).
+
+## 2026-03-05 — T-007 Completed
+- **Task**: Dashboard home page: overview cards and daemon health
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/dashboard.rs`: Full dashboard home page with five components — `DashboardHome` (orchestrator), `StatusCards` (worktree count breakdown by status: total, active, completed, merged, failed using Thaw Card/Badge), `DaemonHealthCard` (online/offline badge, PID, started_at, last_heartbeat display), `OverlapWarningsCard` (warning count with risk-colored Thaw Tags for high/medium/low), `RecentEventsTimeline` (last 10 events across all worktrees sorted by timestamp, with color-coded dots for success/danger/active/neutral event types).
+  - Updated `crates/mr-ui/src/components/mod.rs`: exported `dashboard` module.
+  - Updated `crates/mr-ui/src/app.rs`: replaced placeholder `HomePage` (simple worktree/PRD count) with `DashboardHome` component. Added import for `DashboardHome`.
+  - Updated `crates/mr-ui/style/main.css`: replaced temporary `dashboard-summary` styles with full dashboard CSS — card grid layout (`grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))`), status item grid, daemon health detail rows, overlap summary with risk-colored tag overrides, and custom timeline CSS (vertical line with colored dots, event headers with type/meta/detail/timestamp).
+  - Since Thaw 0.5.0-beta does not include a Timeline component, built a custom CSS timeline with vertical connector line and colored dot indicators per event type.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns.
+  - UAT passes: 757 tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated dashboard module (rule 2).
