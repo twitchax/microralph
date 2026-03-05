@@ -44,7 +44,7 @@ acceptance_tests:
   - id: uat-006
     name: "mr run in a worktree detects daemon and sends lifecycle events via IPC"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-007
     name: "Daemon auto-merges completed worktree into main with UAT gating"
     command: cargo make uat
@@ -793,4 +793,17 @@ src/
   - Created `tier1_heartbeat_updates_liveness_and_overlaps` in `src/worktree/daemon.rs`: starts a daemon with 1-second heartbeat interval, pre-populates state with an active worktree holding a dead PID (4,000,000) and two active worktrees sharing `src/shared.rs`, then verifies the daemon detects the dead PID (RecoveryPerformed event) and computes overlap warnings for the shared file
   - Existing `compute_overlaps_*` tests (6 variants) cover overlap risk calculation at all levels (none, low, medium, high, multiple pairs, non-active filtering)
   - Existing `is_process_alive_*` tests (2 variants) cover process liveness detection
+  - `cargo make uat` — 753 tests passed, 0 skipped
+
+## 2026-03-05 — uat-006 Verification
+- **UAT**: mr run in a worktree detects daemon and sends lifecycle events via IPC
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `daemon_notifier_connects_and_sends_events` in `src/commands/run.rs`: core integration test that starts an IPC server, creates a fake linked worktree, populates state with a matching worktree entry, constructs a `DaemonNotifier`, and sends all four lifecycle events (RunStarted with PID, TaskStarted, TaskCompleted, RunCompleted) — verifying the full worktree-to-daemon IPC flow
+  - `daemon_notifier_returns_none_outside_git_repo`: verifies graceful fallback when not in a git repo
+  - `daemon_notifier_returns_none_in_main_worktree`: verifies IPC is only attempted from linked worktrees (not main)
+  - `daemon_notifier_returns_none_when_no_daemon`: verifies graceful fallback when daemon socket is absent
+  - `daemon_notifier_returns_none_when_prd_not_in_state`: verifies graceful fallback when PRD is not registered in state
+  - `client_server_all_message_types` in `src/worktree/ipc.rs`: verifies all IPC message variants (RunStarted, TaskStarted, TaskCompleted, RunCompleted, RunFailed, HeartbeatRequest) serialize/deserialize correctly over Unix socket
   - `cargo make uat` — 753 tests passed, 0 skipped
