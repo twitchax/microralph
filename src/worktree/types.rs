@@ -137,6 +137,10 @@ pub struct WorktreeEntry {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modified_files: Vec<String>,
 
+    /// Path to the run log file (populated when `mr wt run` redirects output).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_file: Option<String>,
+
     /// Ordered lifecycle events.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<WorktreeEvent>,
@@ -423,6 +427,7 @@ mod tests {
                 path: "/tmp/microralph-prd-39".to_string(),
                 status: WorktreeStatus::Active,
                 run_pid: Some(54321),
+                log_file: None,
                 created_at: "2026-03-04T22:00:00Z".to_string(),
                 updated_at: "2026-03-04T22:30:00Z".to_string(),
                 merge_target: "main".to_string(),

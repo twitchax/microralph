@@ -89,7 +89,7 @@ tasks:
   - id: T-005
     title: "Log capture: redirect mr run output to log files"
     priority: 2
-    status: todo
+    status: done
     notes: "Modify worktree run flow to redirect stdout/stderr of the detached mr run process to .mr/worktrees/<wt-id>/run.log. This enables the UI to tail and stream logs. Ensure log rotation or truncation for long-running agents."
   - id: T-006
     title: "App shell layout: Sentry-style sidebar, dark theme"
@@ -379,3 +379,19 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` — one targeted `#[allow(clippy::unused_async)]` on the WebSocket handler (required by Axum's Handler trait).
   - UAT passes: 756 tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns maintained with ws.rs as a dedicated module (rule 2).
+
+## 2026-03-05 — T-005 Completed
+- **Task**: Log capture: redirect mr run output to log files
+- **Status**: ✅ Done
+- **Changes**:
+  - Modified `src/commands/worktree.rs` — `spawn_mr_run()` now accepts a `log_path` parameter. Creates the parent directory (`.mr/worktrees/<wt-id>/`), opens the log file, and redirects both stdout and stderr to it (replacing `Stdio::null()`). Log file is truncated on each new run for simplicity (old logs overwritten).
+  - Added `log_file_path()` helper in `src/commands/worktree.rs` that computes `.mr/worktrees/<wt-id>/run.log` from the project root and worktree ID.
+  - Updated `cmd_wt_run()` to compute the log path after worktree registration (when wt-id is known), pass it to `spawn_mr_run()`, and store it in state.yaml via the `log_file` field.
+  - Added `log_file: Option<String>` field to `WorktreeEntry` in `src/worktree/types.rs` (with `skip_serializing_if = "Option::is_none"` for backward compatibility).
+  - Mirrored `log_file` field in `crates/mr-ui/src/types.rs` to keep UI types in sync.
+  - Updated `wt status` detail view (`print_worktree_detail`) to display the log file path.
+  - Updated CLI output in `cmd_wt_run` to show the actual log file path instead of generic worktree directory.
+  - Added `log_file: None` to all existing `WorktreeEntry` struct literal constructions across the codebase (state.rs, daemon.rs, types.rs, worktree.rs, run.rs).
+  - Added `log_file_path_builds_correct_path` unit test.
+  - UAT passes: 757 tests (756 existing + 1 new), fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes focused on log capture (rule 3), follows existing patterns for optional fields (rule 4), DRY via shared `log_file_path()` helper (rule 1).

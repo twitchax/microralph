@@ -3183,6 +3183,7 @@ Project governance and best practices.
                 path: wt_path.to_string_lossy().to_string(),
                 status: WorktreeStatus::Active,
                 run_pid: None,
+                log_file: None,
                 created_at: "2026-01-01T00:00:00Z".to_string(),
                 updated_at: "2026-01-01T00:00:00Z".to_string(),
                 merge_target: "main".to_string(),

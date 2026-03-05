@@ -96,6 +96,10 @@ pub struct WorktreeEntry {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub modified_files: Vec<String>,
 
+    /// Path to the run log file (populated when `mr wt run` redirects output).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_file: Option<String>,
+
     /// Ordered lifecycle events.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<WorktreeEvent>,

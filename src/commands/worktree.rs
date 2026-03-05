@@ -128,6 +128,7 @@ fn register_worktree(
             path: path_clone,
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: now.clone(),
             updated_at: now,
             merge_target: "main".to_string(),
@@ -147,15 +148,40 @@ fn register_worktree(
         .map_or_else(|| String::from("wt-001"), |w| w.id.clone()))
 }
 
+/// Compute the path to a worktree's run log file.
+///
+/// Layout: `.mr/worktrees/<wt-id>/run.log`.
+fn log_file_path(root: &std::path::Path, wt_id: &str) -> std::path::PathBuf {
+    root.join(".mr")
+        .join("worktrees")
+        .join(wt_id)
+        .join("run.log")
+}
+
 /// Spawn `mr run <prd-id>` as a detached process in the given worktree directory.
+///
+/// Stdout and stderr are redirected to `log_path` so the UI can tail the file.
 fn spawn_mr_run(
     prd_id: &str,
     runner_name: &str,
     cli_model: Option<&str>,
     stream: bool,
     wt_path: &std::path::Path,
+    log_path: &std::path::Path,
 ) -> Result<u32> {
     let exe = std::env::current_exe().context("failed to resolve current executable")?;
+
+    // Ensure the log directory exists.
+    if let Some(parent) = log_path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create log directory: {}", parent.display()))?;
+    }
+
+    let log_file = std::fs::File::create(log_path)
+        .with_context(|| format!("failed to create log file: {}", log_path.display()))?;
+    let log_stderr = log_file
+        .try_clone()
+        .context("failed to clone log file handle for stderr")?;
 
     let mut cmd = ProcessCommand::new(&exe);
     cmd.arg("run").arg(prd_id);
@@ -170,8 +196,8 @@ fn spawn_mr_run(
 
     cmd.current_dir(wt_path);
     cmd.stdin(std::process::Stdio::null());
-    cmd.stdout(std::process::Stdio::null());
-    cmd.stderr(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::from(log_file));
+    cmd.stderr(std::process::Stdio::from(log_stderr));
 
     let child = cmd
         .spawn()
@@ -239,12 +265,16 @@ pub fn cmd_wt_run(
 
     ensure_daemon(&main_root)?;
 
-    let run_pid = spawn_mr_run(prd_id, runner_name, cli_model, stream, &wt_path)?;
+    let log_path = log_file_path(&main_root, &wt_id);
+    let run_pid = spawn_mr_run(prd_id, runner_name, cli_model, stream, &wt_path, &log_path)?;
 
-    // Record the run PID and a run_started event.
+    let log_path_str = log_path.to_str().unwrap_or("<non-utf8>").to_string();
+
+    // Record the run PID, log file path, and a run_started event.
     state_mgr.modify(|s| {
         if let Some(wt) = s.worktrees.iter_mut().find(|w| w.id == wt_id) {
             wt.run_pid = Some(run_pid);
+            wt.log_file = Some(log_path_str.clone());
             wt.updated_at = now_iso();
             wt.events.push(WorktreeEvent {
                 timestamp: now_iso(),
@@ -266,9 +296,8 @@ pub fn cmd_wt_run(
         "{}",
         colors::dim(&format!(
             "  Monitor: mr wt status {prd_id}\n  \
-             Logs:    check the worktree directory at {}\n  \
+             Logs:    {log_path_str}\n  \
              Stop:    mr wt remove {prd_id}",
-            wt_path.display()
         ))
     );
 
@@ -527,6 +556,10 @@ fn print_worktree_detail(state: &WorktreeState, prd_id: &str) -> Result<()> {
             colors::dim("exited")
         };
         println!("  Run PID:      {pid} ({label})");
+    }
+
+    if let Some(log) = &entry.log_file {
+        println!("  Log file:     {log}");
     }
 
     print_merge_readiness(entry);
@@ -1206,6 +1239,7 @@ mod tests {
             path: "/tmp/wt".to_string(),
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: String::new(),
             updated_at: String::new(),
             merge_target: "main".to_string(),
@@ -1380,6 +1414,7 @@ mod tests {
                     path: "/tmp/wt1".to_string(),
                     status: WorktreeStatus::Active,
                     run_pid: None,
+                    log_file: None,
                     created_at: "2026-01-01T00:00:00Z".to_string(),
                     updated_at: "2026-01-01T00:00:00Z".to_string(),
                     merge_target: "main".to_string(),
@@ -1397,6 +1432,7 @@ mod tests {
                     path: "/tmp/wt2".to_string(),
                     status: WorktreeStatus::Completed,
                     run_pid: None,
+                    log_file: None,
                     created_at: "2026-01-02T00:00:00Z".to_string(),
                     updated_at: "2026-01-03T00:00:00Z".to_string(),
                     merge_target: "main".to_string(),
@@ -1410,6 +1446,7 @@ mod tests {
                     path: "/tmp/wt3".to_string(),
                     status: WorktreeStatus::Merged,
                     run_pid: None,
+                    log_file: None,
                     created_at: "2026-01-04T00:00:00Z".to_string(),
                     updated_at: "2026-01-05T00:00:00Z".to_string(),
                     merge_target: "main".to_string(),
@@ -1479,6 +1516,7 @@ mod tests {
             path: "/tmp/wt".to_string(),
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: String::new(),
             updated_at: String::new(),
             merge_target: "main".to_string(),
@@ -1508,6 +1546,7 @@ mod tests {
             path: "/tmp/wt".to_string(),
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: String::new(),
             updated_at: String::new(),
             merge_target: "main".to_string(),
@@ -1565,6 +1604,7 @@ mod tests {
                 path: "/tmp/wt".to_string(),
                 status: WorktreeStatus::Completed,
                 run_pid: None,
+                log_file: None,
                 created_at: "2026-01-01T00:00:00Z".to_string(),
                 updated_at: "2026-01-02T00:00:00Z".to_string(),
                 merge_target: "main".to_string(),
@@ -1727,6 +1767,7 @@ mod tests {
             path: "/tmp".to_string(),
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: String::new(),
             updated_at: String::new(),
             merge_target: "main".to_string(),
@@ -1757,6 +1798,7 @@ mod tests {
             path: "/tmp".to_string(),
             status: WorktreeStatus::Active,
             run_pid: None,
+            log_file: None,
             created_at: String::new(),
             updated_at: String::new(),
             merge_target: "main".to_string(),
@@ -1779,6 +1821,7 @@ mod tests {
                     path: "/tmp/wt1".to_string(),
                     status: WorktreeStatus::Active,
                     run_pid: Some(1234),
+                    log_file: None,
                     created_at: "2026-01-01T00:00:00Z".to_string(),
                     updated_at: "2026-01-02T00:00:00Z".to_string(),
                     merge_target: "main".to_string(),
@@ -1792,6 +1835,7 @@ mod tests {
                     path: "/tmp/wt2".to_string(),
                     status: WorktreeStatus::Active,
                     run_pid: Some(5678),
+                    log_file: None,
                     created_at: "2026-01-01T00:00:00Z".to_string(),
                     updated_at: "2026-01-02T00:00:00Z".to_string(),
                     merge_target: "main".to_string(),
@@ -1843,6 +1887,7 @@ mod tests {
             path: "/tmp/nonexistent".to_string(),
             status: WorktreeStatus::Merging,
             run_pid: None,
+            log_file: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
             merge_target: "main".to_string(),
@@ -1895,6 +1940,7 @@ mod tests {
             path: "/tmp/nonexistent-wt-path".to_string(),
             status: WorktreeStatus::Active,
             run_pid: Some(99999),
+            log_file: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
             merge_target: "main".to_string(),
@@ -1992,5 +2038,15 @@ mod tests {
         // Status when no daemon is running should succeed (prints "not running").
         let result = cmd_wt_daemon_status();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn log_file_path_builds_correct_path() {
+        let root = std::path::Path::new("/home/user/myrepo");
+        let path = log_file_path(root, "wt-007");
+        assert_eq!(
+            path,
+            std::path::PathBuf::from("/home/user/myrepo/.mr/worktrees/wt-007/run.log")
+        );
     }
 }
