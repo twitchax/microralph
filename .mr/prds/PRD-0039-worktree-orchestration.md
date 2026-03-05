@@ -68,7 +68,7 @@ acceptance_tests:
   - id: uat-012
     name: "Daemon auto-exits after 3 hours with no active worktrees"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-013
     name: "mr wt remove cleans up worktree, branch, and state entry"
     command: cargo make uat
@@ -873,3 +873,13 @@ src/
     - `recover_stale_state_multiple_issues` — mixed orphan + dead PID + clean handled simultaneously
   - Production code: `Daemon::recover_stale_state()` (line 379) runs on daemon startup, calls `detect_recovery_actions()` and `apply_recovery_actions()`
   - All 756 tests pass via `cargo make uat`
+
+## 2026-03-05 — uat-012 Verification
+- **UAT**: Daemon auto-exits after 3 hours with no active worktrees
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test `daemon_exits_on_idle_timeout` in `src/worktree/daemon.rs` (line 1864) directly covers this UAT
+  - Creates a `Daemon` with `idle_timeout_hours: 0` (immediate exit), calls `daemon.run()`, and verifies it exits cleanly
+  - After exit, asserts PID file is removed and daemon state is cleaned up (`state.daemon.is_none()`)
+  - Production code: `Daemon::run()` (line 602–612) checks `last_activity.elapsed() >= idle_timeout` each loop iteration and breaks to shut down
