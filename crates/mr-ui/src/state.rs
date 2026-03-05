@@ -466,6 +466,117 @@ Test body.
         handle.abort();
     }
 
+    /// Writes a realistic state.yaml and PRD, then returns the loaded `AppState`.
+    async fn setup_dashboard_state() -> (TempDir, AppState) {
+        use crate::types::WorktreeStatus;
+        let tmp = TempDir::new().unwrap();
+        let root = setup_temp_root(&tmp);
+
+        let yaml = r#"version: 1
+daemon:
+  pid: 99999
+  started_at: "2026-03-04T20:00:00Z"
+  idle_timeout_hours: 3
+  last_heartbeat: "2026-03-04T22:30:00Z"
+worktrees:
+  - id: wt-001
+    prd: PRD-0001
+    branch: microralph-prd-1
+    path: /tmp/wt1
+    status: active
+    created_at: "2026-03-04T20:00:00Z"
+    updated_at: "2026-03-04T22:00:00Z"
+    modified_files: [src/main.rs]
+    events:
+      - { timestamp: "2026-03-04T20:00:00Z", type: created }
+      - { timestamp: "2026-03-04T20:01:00Z", type: run_started, detail: "T-001" }
+  - id: wt-002
+    prd: PRD-0002
+    branch: microralph-prd-2
+    path: /tmp/wt2
+    status: merged
+    created_at: "2026-03-04T18:00:00Z"
+    updated_at: "2026-03-04T21:00:00Z"
+    modified_files: [src/main.rs, src/lib.rs]
+    events:
+      - { timestamp: "2026-03-04T18:00:00Z", type: created }
+      - { timestamp: "2026-03-04T21:00:00Z", type: merge_completed }
+  - id: wt-003
+    prd: PRD-0003
+    branch: microralph-prd-3
+    path: /tmp/wt3
+    status: merge_failed
+    created_at: "2026-03-04T19:00:00Z"
+    updated_at: "2026-03-04T22:30:00Z"
+overlap_warnings:
+  - worktrees: [wt-001, wt-002]
+    files: [src/main.rs]
+    risk: high
+"#;
+        std::fs::write(root.join(".mr/worktrees/state.yaml"), yaml).unwrap();
+
+        let prd = "---\nid: PRD-0001\ntitle: Initial Setup\nstatus: active\ntasks:\n  \
+                   - { id: T-001, title: Do thing, priority: 1, status: done }\n  \
+                   - { id: T-002, title: Do other, priority: 2, status: todo }\n---\n\n# Body\n";
+        std::fs::write(root.join(".mr/prds/PRD-0001-setup.md"), prd).unwrap();
+
+        let state = load_app_state(&root).await;
+
+        // Quick sanity: statuses parse as expected.
+        let counts: Vec<usize> = [
+            WorktreeStatus::Active,
+            WorktreeStatus::Merged,
+            WorktreeStatus::MergeFailed,
+        ]
+        .iter()
+        .map(|s| {
+            state
+                .worktree_state
+                .worktrees
+                .iter()
+                .filter(|wt| &wt.status == s)
+                .count()
+        })
+        .collect();
+        assert_eq!(counts, vec![1, 1, 1]);
+
+        (tmp, state)
+    }
+
+    #[tokio::test]
+    async fn load_app_state_combines_worktrees_and_prds_for_dashboard() {
+        let (_tmp, state) = setup_dashboard_state().await;
+
+        // Daemon health (rendered by DaemonHealthCard).
+        let daemon = state.worktree_state.daemon.as_ref().unwrap();
+        assert_eq!(daemon.pid, 99999);
+
+        // Worktree counts (rendered by StatusCards).
+        assert_eq!(state.worktree_state.worktrees.len(), 3);
+
+        // Events across worktrees (rendered by RecentEventsTimeline).
+        let total_events: usize = state
+            .worktree_state
+            .worktrees
+            .iter()
+            .map(|wt| wt.events.len())
+            .sum();
+        assert_eq!(total_events, 4);
+
+        // Overlap warnings (rendered by OverlapWarningsCard).
+        assert_eq!(state.worktree_state.overlap_warnings.len(), 1);
+        assert_eq!(
+            state.worktree_state.overlap_warnings[0].risk,
+            crate::types::OverlapRisk::High
+        );
+
+        // PRD summaries (rendered by PrdList).
+        assert_eq!(state.prds.len(), 1);
+        assert_eq!(state.prds[0].id, "PRD-0001");
+        assert_eq!(state.prds[0].completed_tasks, 1);
+        assert_eq!(state.prds[0].total_tasks, 2);
+    }
+
     #[tokio::test]
     async fn file_mtime_returns_none_for_missing() {
         let result = file_mtime(Path::new("/nonexistent/path")).await;
