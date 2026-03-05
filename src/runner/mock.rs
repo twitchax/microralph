@@ -9,11 +9,13 @@ use std::sync::Mutex;
 
 use super::types::{Runner, RunnerError, RunnerOutput, RunnerResult};
 
+/// Type alias for the side-effect callback invoked during `execute()`.
+type SideEffectFn = Box<dyn Fn(&Path) + Send + Sync>;
+
 /// A mock runner for deterministic testing.
 ///
 /// The mock runner returns pre-configured responses in sequence.
 /// This allows testing the interactive flow without invoking a real runner.
-#[derive(Debug)]
 pub struct MockRunner {
     /// The name of this runner.
     name: String,
@@ -29,6 +31,22 @@ pub struct MockRunner {
 
     /// Recorded interactive prompts.
     recorded_interactive_prompts: Mutex<Vec<String>>,
+
+    /// Optional side-effect closure invoked during `execute()` with the working dir.
+    execute_side_effect: Mutex<Option<SideEffectFn>>,
+}
+
+impl std::fmt::Debug for MockRunner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MockRunner")
+            .field("name", &self.name)
+            .field("responses", &self.responses)
+            .field("recorded_prompts", &self.recorded_prompts)
+            .field("interactive_error", &self.interactive_error)
+            .field("recorded_interactive_prompts", &self.recorded_interactive_prompts)
+            .field("execute_side_effect", &self.execute_side_effect.lock().unwrap().is_some())
+            .finish()
+    }
 }
 
 impl MockRunner {
@@ -42,6 +60,7 @@ impl MockRunner {
             recorded_prompts: Mutex::new(Vec::new()),
             interactive_error: Mutex::new(None),
             recorded_interactive_prompts: Mutex::new(Vec::new()),
+            execute_side_effect: Mutex::new(None),
         }
     }
 
@@ -85,6 +104,17 @@ impl MockRunner {
     pub fn recorded_interactive_prompts(&self) -> Vec<String> {
         self.recorded_interactive_prompts.lock().unwrap().clone()
     }
+
+    /// Sets a side-effect closure invoked during `execute()` with the working dir.
+    ///
+    /// Useful for simulating agent actions (e.g., resolving merge conflicts).
+    #[cfg(test)]
+    pub fn set_execute_side_effect<F>(&self, f: F)
+    where
+        F: Fn(&Path) + Send + Sync + 'static,
+    {
+        *self.execute_side_effect.lock().unwrap() = Some(Box::new(f));
+    }
 }
 
 impl Default for MockRunner {
@@ -108,6 +138,11 @@ impl Runner for MockRunner {
             .lock()
             .unwrap()
             .push(prompt.to_string());
+
+        // Run side-effect if configured.
+        if let Some(f) = self.execute_side_effect.lock().unwrap().as_ref() {
+            f(_working_dir);
+        }
 
         // Return the next response, or a default.
         let response = self

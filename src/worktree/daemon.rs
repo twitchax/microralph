@@ -2847,6 +2847,111 @@ mod tests {
     }
 
     #[test]
+    fn attempt_merge_with_runner_resolves_conflicts_successfully() {
+        // End-to-end: daemon detects conflict, invokes runner with side-effect
+        // that resolves the conflict files, then verifies ConflictResolved event.
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create worktree with conflicting changes.
+        git::create_branch("resolve-ok-branch", "HEAD", &main_dir).unwrap();
+        let wt_dir = tmp.path().join("wt-resolve-ok");
+        git::create_worktree(&wt_dir, "resolve-ok-branch", &main_dir).unwrap();
+
+        std::fs::write(wt_dir.join("README.md"), "# Worktree resolved").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Wt resolve ok"])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+
+        std::fs::write(main_dir.join("README.md"), "# Main resolved").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Main resolve ok"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+
+        // Set up state with completed worktree.
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+        state_mgr
+            .modify(|state| {
+                state.worktrees.push(WorktreeEntry {
+                    id: "wt-resolve-ok".to_string(),
+                    prd: "PRD-0200".to_string(),
+                    branch: "resolve-ok-branch".to_string(),
+                    path: wt_dir.to_string_lossy().to_string(),
+                    status: WorktreeStatus::Completed,
+                    run_pid: None,
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    merge_target: default_branch,
+                    modified_files: vec!["README.md".to_string()],
+                    events: vec![],
+                });
+                Ok(())
+            })
+            .unwrap();
+
+        // Create a mock runner with a side-effect that resolves conflicts.
+        let runner = crate::runner::MockRunner::new(vec![
+            crate::runner::RunnerOutput::success("Resolved all conflicts"),
+        ]);
+        let wt_dir_for_effect = wt_dir.clone();
+        runner.set_execute_side_effect(move |_working_dir| {
+            // Simulate agent resolving the conflict by writing the merged file.
+            std::fs::write(wt_dir_for_effect.join("README.md"), "# Merged by agent").unwrap();
+            git::stage_all(&wt_dir_for_effect).unwrap();
+        });
+
+        let daemon = Daemon::new_with_runner(
+            tmp.path().to_path_buf(),
+            DaemonConfig::default(),
+            Box::new(runner),
+        );
+
+        // attempt_merge_worktree will fail at UAT step (no Cargo.toml),
+        // but conflict resolution should have succeeded before that.
+        let _ = daemon.attempt_merge_worktree("wt-resolve-ok");
+
+        let state = state_mgr.read().unwrap();
+        let wt = state
+            .worktrees
+            .iter()
+            .find(|w| w.id == "wt-resolve-ok")
+            .unwrap();
+
+        // Verify conflict resolution events occurred.
+        assert!(
+            wt.events
+                .iter()
+                .any(|e| e.event_type == EventType::ConflictResolutionStarted),
+            "should have ConflictResolutionStarted event"
+        );
+        assert!(
+            wt.events
+                .iter()
+                .any(|e| e.event_type == EventType::ConflictResolved),
+            "should have ConflictResolved event after successful agent resolution"
+        );
+    }
+
+    #[test]
     fn start_conflicting_merge_clean_rebase_returns_true() {
         let tmp = tempfile::tempdir().unwrap();
         let main_dir = tmp.path().join("main-repo");
