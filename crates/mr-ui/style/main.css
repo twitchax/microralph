@@ -1238,3 +1238,102 @@ body {
     background: var(--colorBrandForeground1, #7b7bff);
     color: var(--colorNeutralBackground1, #1e1e2e);
 }
+
+/* ── Overlap risk page (T-014) ───────────────────────────────────── */
+
+.mr-overlap {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.mr-overlap__summary {
+    display: flex;
+    gap: 1rem;
+}
+
+.mr-overlap__summary-card {
+    flex: 1;
+}
+
+.mr-overlap__summary-grid {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.mr-overlap__summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mr-overlap__summary-label {
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground2, #aaa);
+}
+
+.mr-overlap__empty-card {
+    text-align: center;
+}
+
+.mr-overlap__empty {
+    color: var(--colorNeutralForeground2, #888);
+    font-size: 0.95rem;
+    padding: 1.5rem 0;
+}
+
+.mr-overlap__table-card {
+    overflow-x: auto;
+}
+
+/* Overlap table */
+
+.mr-overlap-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mr-overlap-table__row {
+    border-left: 3px solid transparent;
+}
+
+.mr-overlap-table__row--high {
+    border-left-color: #f87171;
+}
+
+.mr-overlap-table__row--medium {
+    border-left-color: #fbbf24;
+}
+
+.mr-overlap-table__row--low {
+    border-left-color: #60a5fa;
+}
+
+.mr-overlap-table__wt-links {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.mr-overlap-table__wt-link {
+    text-decoration: none;
+    color: var(--colorBrandForeground1, #7b7bff);
+}
+
+.mr-overlap-table__wt-link:hover {
+    opacity: 0.8;
+}
+
+.mr-overlap-table__files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mr-overlap-table__file {
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground2, #ccc);
+    padding: 0.1rem 0;
+}

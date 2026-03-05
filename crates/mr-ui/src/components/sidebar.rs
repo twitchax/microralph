@@ -40,6 +40,13 @@ pub fn Sidebar(
             >
                 "PRDs"
             </NavItem>
+            <NavItem
+                icon=icondata_ai::AiWarningOutlined
+                value=Signal::derive(|| String::from("/overlap"))
+                href=Signal::derive(|| String::from("/overlap"))
+            >
+                "Overlap Risk"
+            </NavItem>
         </NavDrawer>
     }
 }

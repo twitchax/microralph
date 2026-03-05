@@ -134,7 +134,7 @@ tasks:
   - id: T-014
     title: "Overlap risk visualization"
     priority: 6
-    status: todo
+    status: done
     notes: "Visualize file overlap warnings from state.yaml. Show as a matrix/heatmap: worktrees on axes, risk level as color intensity. Or as a list of overlap warnings with affected worktrees and files. Use Thaw Table with color-coded cells. Link to affected worktree details."
   - id: T-015
     title: "mr ui CLI command with flags"
@@ -545,3 +545,16 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
   - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing WebSocket and component patterns (rule 4), separation of concerns with dedicated log_viewer module and ws.rs extension (rule 2), DRY via reuse of WebSocket connection pattern from app.rs (rule 1).
+
+## 2026-03-05 — T-014 Completed
+- **Task**: Overlap risk visualization
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/overlap_matrix.rs`: full overlap risk visualization page with `OverlapMatrix` (orchestrator), `SummaryCards` (total/high/medium/low warning counts with color-coded Thaw Badges), `WarningsTable` (Thaw Table sorted by risk: High first, with columns for Risk, Worktrees, Shared Files), `WarningRow` (per-row rendering with left border color-coded by risk level), `RiskBadge` (maps `OverlapRisk` to danger/warning/informative Badge colors), `WorktreeLinks` (worktree IDs rendered as clickable Tag links to `/worktrees/{id}`), `FileList` (monospaced file path list). Empty state shows friendly message when no warnings exist.
+  - Updated `crates/mr-ui/src/components/mod.rs`: registered `overlap_matrix` module.
+  - Updated `crates/mr-ui/src/app.rs`: added `OverlapMatrix` import, `/overlap` route pointing to `OverlapPage`, and `OverlapPage` component.
+  - Updated `crates/mr-ui/src/components/sidebar.rs`: added "Overlap Risk" nav item with `AiWarningOutlined` icon linking to `/overlap`.
+  - Updated `crates/mr-ui/style/main.css`: added comprehensive CSS for overlap page — summary card layout, summary grid with flex gap, empty state card, table with risk-colored left borders (red for high, yellow for medium, blue for low), worktree link tags, monospaced file paths.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns from dashboard.rs and worktrees.rs (rule 4), separation of concerns with dedicated overlap_matrix module (rule 2), DRY via reuse of Thaw Table/Badge/Tag patterns and OverlapRisk/OverlapWarning types from types.rs (rule 1).

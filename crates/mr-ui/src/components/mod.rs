@@ -3,6 +3,7 @@
 pub mod dashboard;
 pub mod layout;
 pub mod log_viewer;
+pub mod overlap_matrix;
 pub mod prd_create;
 pub mod prd_list;
 pub mod sidebar;

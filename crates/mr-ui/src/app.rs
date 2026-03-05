@@ -15,6 +15,7 @@ use leptos_router::{
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
 use crate::components::log_viewer::LogViewer;
+use crate::components::overlap_matrix::OverlapMatrix;
 use crate::components::prd_create::PrdCreate;
 use crate::components::prd_list::PrdList;
 use crate::components::theme::ThemeProvider;
@@ -67,6 +68,7 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("worktrees") view=WorktreesPage/>
                         <Route path=(StaticSegment("worktrees"), ParamSegment("id")) view=WorktreeDetailPage/>
                         <Route path=(StaticSegment("worktrees"), ParamSegment("id"), StaticSegment("logs")) view=LogViewerPage/>
+                        <Route path=StaticSegment("overlap") view=OverlapPage/>
                         <Route path=(StaticSegment("prds"), StaticSegment("new")) view=PrdCreatePage/>
                         <Route path=StaticSegment("prds") view=PrdsPage/>
                     </Routes>
@@ -163,6 +165,14 @@ fn PrdCreatePage() -> impl IntoView {
 fn WorktreeDetailPage() -> impl IntoView {
     view! {
         <WorktreeDetail />
+    }
+}
+
+/// Overlap risk visualization page (T-014).
+#[component]
+fn OverlapPage() -> impl IntoView {
+    view! {
+        <OverlapMatrix />
     }
 }
 
