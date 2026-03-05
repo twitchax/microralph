@@ -119,7 +119,7 @@ tasks:
   - id: T-011
     title: "PRD creation form: gather context and invoke mr new"
     priority: 5
-    status: todo
+    status: done
     notes: "Form with fields: slug, upfront context (textarea), runner selection (dropdown), model override (optional). On submit, invoke mr new --context '<context>' server-side via tokio::process::Command. Show spinner during creation. On success, refresh PRD list and offer to kick off a worktree."
   - id: T-012
     title: "Worktree kickoff: trigger mr wt run from UI"
@@ -501,3 +501,16 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Action invocation tracing (mr new, mr wt run) deferred to T-011/T-012 when those server functions are implemented — tracing calls will be added at that point.
   - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes — only added tracing middleware and log statements (rule 3), follows existing tracing patterns already in the codebase (rule 4).
+
+## 2026-03-05 — T-011 Completed
+- **Task**: PRD creation form: gather context and invoke mr new
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/prd_create.rs`: Full PRD creation form with slug, context (textarea), runner (dropdown), and model (optional) fields. Uses a `#[server]` function to invoke `mr new` via `tokio::process::Command` on the server. Shows spinner during submission and displays success/error messages. Links back to PRD list on success.
+  - Updated `crates/mr-ui/src/components/mod.rs`: Registered `prd_create` module.
+  - Updated `crates/mr-ui/src/app.rs`: Added `/prds/new` route, imported `PrdCreate` component, and added `PrdCreatePage` view.
+  - Updated `crates/mr-ui/style/main.css`: Added form styles for inputs, textarea, buttons, spinner animation, and result message display following existing BEM naming conventions.
+  - Updated `crates/mr-ui/Cargo.toml`: Added `process` feature to tokio dependency for `tokio::process::Command`.
+  - Tracing integration: The server function logs PRD creation attempts with slug and runner, and logs success/failure outcomes (completing deferred work from T-017).
+  - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns (rule 4), separation of concerns with dedicated prd_create module (rule 2), DRY via reuse of Thaw `Select` and existing CSS patterns (rule 1).

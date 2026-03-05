@@ -14,6 +14,7 @@ use leptos_router::{
 
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
+use crate::components::prd_create::PrdCreate;
 use crate::components::prd_list::PrdList;
 use crate::components::theme::ThemeProvider;
 use crate::components::worktree_detail::WorktreeDetail;
@@ -64,6 +65,7 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("") view=HomePage/>
                         <Route path=StaticSegment("worktrees") view=WorktreesPage/>
                         <Route path=(StaticSegment("worktrees"), ParamSegment("id")) view=WorktreeDetailPage/>
+                        <Route path=(StaticSegment("prds"), StaticSegment("new")) view=PrdCreatePage/>
                         <Route path=StaticSegment("prds") view=PrdsPage/>
                     </Routes>
                 </AppShell>
@@ -143,6 +145,14 @@ fn WorktreesPage() -> impl IntoView {
 fn PrdsPage() -> impl IntoView {
     view! {
         <PrdList />
+    }
+}
+
+/// PRD creation form page (T-011).
+#[component]
+fn PrdCreatePage() -> impl IntoView {
+    view! {
+        <PrdCreate />
     }
 }
 
