@@ -114,7 +114,7 @@ tasks:
   - id: T-010
     title: "PRD list page: all PRDs with status and dependencies"
     priority: 4
-    status: todo
+    status: done
     notes: "Table of all PRDs parsed from .mr/prds/. Columns: ID, title, status (badge), depends_on, task count, task completion percentage. Filterable by status. Link to create new PRD. Use existing PRD parsing logic from src/prd/."
   - id: T-011
     title: "PRD creation form: gather context and invoke mr new"
@@ -477,3 +477,15 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
   - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated worktree_detail module (rule 2), DRY via reuse of event dot color mapping pattern from dashboard (rule 1).
+
+## 2026-03-05 — T-010 Completed
+- **Task**: PRD list page: all PRDs with status and dependencies
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/prd_list.rs`: full PRD list page component with sortable table (ID, Title, Status, Dependencies, Tasks, Completion columns), status filter dropdown (All/Draft/Active/Done/Parked), color-coded status badges, dependency tags, task count tags, and completion progress bars. Includes a "+ New PRD" link placeholder for T-011.
+  - Updated `crates/mr-ui/src/components/mod.rs`: registered new `prd_list` module.
+  - Updated `crates/mr-ui/src/app.rs`: replaced placeholder `PrdsPage` with `PrdList` component, added import.
+  - Updated `crates/mr-ui/style/main.css`: added comprehensive CSS for PRD list — toolbar layout, filter styling, new-link button with hover effect, table with sortable headers, PRD ID/title/status styling, dependency tag layout, task count tag, completion bar with fill animation, and text alignment.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
+  - UAT passes: 11 mr-ui tests + root crate tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing worktree list patterns (rule 4), separation of concerns with dedicated prd_list module (rule 2), DRY via reuse of sort/filter pattern from worktrees.rs (rule 1).

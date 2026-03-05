@@ -14,6 +14,7 @@ use leptos_router::{
 
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
+use crate::components::prd_list::PrdList;
 use crate::components::theme::ThemeProvider;
 use crate::components::worktree_detail::WorktreeDetail;
 use crate::components::worktrees::WorktreeList;
@@ -137,12 +138,11 @@ fn WorktreesPage() -> impl IntoView {
     }
 }
 
-/// Placeholder page for the PRD list view (T-010).
+/// PRD list page with status, dependencies, and task progress (T-010).
 #[component]
 fn PrdsPage() -> impl IntoView {
     view! {
-        <h1>"PRDs"</h1>
-        <p>"PRD list coming soon."</p>
+        <PrdList />
     }
 }
 

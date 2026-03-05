@@ -417,6 +417,148 @@ body {
     text-align: center;
 }
 
+/* ── PRD list (T-010) ─────────────────────────────────────────────── */
+
+.mr-prd-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mr-prd-list__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.mr-prd-list__filter {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mr-prd-list__filter-label {
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground3, #999);
+    white-space: nowrap;
+}
+
+.mr-prd-list__new-link {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--colorBrandForeground1, #7b7bff);
+    text-decoration: none;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--colorBrandForeground1, #7b7bff);
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.mr-prd-list__new-link:hover {
+    background: var(--colorBrandForeground1, #7b7bff);
+    color: var(--colorNeutralBackground1, #1a1a2e);
+}
+
+.mr-prd-list__empty {
+    color: var(--colorNeutralForeground3, #999);
+    font-style: italic;
+}
+
+/* ── PRD table ───────────────────────────────────────────────────── */
+
+.mr-prd-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mr-prd-table__header--sortable .thaw-table-header-cell__button,
+.mr-prd-table__header--active .thaw-table-header-cell__button {
+    cursor: default;
+}
+
+.mr-prd-table__sort-trigger {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.mr-prd-table__header--active .mr-prd-table__sort-trigger {
+    color: var(--colorBrandForeground1, #7b7bff);
+    font-weight: 600;
+}
+
+.mr-prd-table__row {
+    transition: background 0.15s ease;
+}
+
+.mr-prd-table__row:hover {
+    background: var(--colorNeutralBackground1Hover, rgba(255, 255, 255, 0.04));
+}
+
+.mr-prd-table__id {
+    font-weight: 600;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 0.85rem;
+    color: var(--colorBrandForeground1, #7b7bff);
+}
+
+.mr-prd-table__title {
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+.mr-prd-table__no-deps {
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-prd-table__deps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.mr-prd-table__dep-tag {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 0.75rem;
+}
+
+.mr-prd-table__tasks-tag {
+    min-width: 2.5rem;
+    text-align: center;
+}
+
+.mr-prd-table__completion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 100px;
+}
+
+.mr-prd-table__completion-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--colorNeutralStroke1, #333);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mr-prd-table__completion-fill {
+    height: 100%;
+    background: var(--colorBrandForeground1, #7b7bff);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.mr-prd-table__completion-text {
+    font-size: 0.8rem;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--colorNeutralForeground2, #bbb);
+    min-width: 2.5rem;
+    text-align: right;
+}
+
 /* ── Worktree detail (T-009) ──────────────────────────────────────── */
 
 .mr-wt-detail {
