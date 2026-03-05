@@ -74,7 +74,7 @@ tasks:
   - id: T-002
     title: "Leptos + Axum app scaffold with cargo-leptos"
     priority: 1
-    status: todo
+    status: done
     notes: "Set up the Leptos app entrypoint with Axum router, SSR + hydration, and basic cargo-leptos config (Cargo.toml metadata for leptos). Create src/app.rs, src/main.rs (server), src/lib.rs (client hydration). Verify the app compiles and serves a hello-world page."
   - id: T-003
     title: "State service: read and watch state.yaml"
@@ -338,3 +338,17 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Added `ui` feature and `mr-ui` optional dependency (with `ssr` feature) to root `Cargo.toml`
   - Added `install-cargo-leptos` task to `Makefile.toml` for build tooling
   - UAT passes: 756 tests, fmt-check, clippy all green
+
+## 2026-03-05 — T-002 Completed
+- **Task**: Leptos + Axum app scaffold with cargo-leptos
+- **Status**: ✅ Done
+- **Changes**:
+  - Updated `crates/mr-ui/Cargo.toml`: added `[lib]` section with `crate-type = ["cdylib", "rlib"]`, added `leptos_meta`, `console_error_panic_hook`, `wasm-bindgen` dependencies, added `leptos_meta/ssr` and `leptos_router/ssr` to `ssr` feature, added hydrate feature deps, added `[package.metadata.leptos]` section with port 3939, output-name, style-file, and cargo-leptos build config
+  - Created `crates/mr-ui/src/app.rs`: root `App` component with `leptos_router` (`Router`/`Routes`/`Route`), `shell()` function for SSR HTML rendering with `AutoReload`/`HydrationScripts`/`MetaTags`, `HomePage` component with hello-world content, Thaw-compatible dark theme CSS reference
+  - Created `crates/mr-ui/src/main.rs`: server-side Axum entrypoint behind `ssr` feature, sets up `LeptosRoutes` with SSR shell, includes `file_and_error_handler` fallback, empty `main()` for non-ssr (hydration handled in lib.rs)
+  - Updated `crates/mr-ui/src/lib.rs`: added `pub mod app` export and `hydrate()` function behind `hydrate` feature using `wasm_bindgen` + `console_error_panic_hook` + `leptos::mount::hydrate_body`
+  - Created `crates/mr-ui/style/main.css`: minimal dark-theme base styles (background, text color, typography)
+  - Added `[profile.wasm-release]` to root `Cargo.toml` for optimized WASM bundle (opt-level z, LTO, single codegen unit)
+  - All code passes `clippy::pedantic` with targeted `#![allow(clippy::must_use_candidate)]` in app.rs (Leptos component functions don't benefit from `#[must_use]`) and `#[allow(clippy::wildcard_imports)]` for `leptos::prelude::*` (canonical Leptos import pattern)
+  - UAT passes: 756 tests, fmt-check, clippy all green
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4).

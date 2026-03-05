@@ -5,16 +5,24 @@ edition = "2024"
 description = "Local web dashboard for microralph worktree orchestration"
 license = "MIT"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 leptos = { version = "0.8" }
+leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8" }
 thaw = { version = "0.5.0-beta" }
 tracing = "0.1"
 
+# Client-side dependencies (behind hydrate feature).
+console_error_panic_hook = { version = "0.1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
 # Server-side dependencies (behind ssr feature).
 leptos_axum = { version = "0.8", optional = true }
 axum = { version = "0.8", optional = true }
-tokio = { version = "1", features = ["full"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"], optional = true }
 
 [features]
@@ -25,5 +33,25 @@ ssr = [
     "dep:tokio",
     "dep:tower-http",
     "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
 ]
-hydrate = ["leptos/hydrate"]
+hydrate = [
+    "leptos/hydrate",
+    "dep:console_error_panic_hook",
+    "dep:wasm-bindgen",
+]
+
+[package.metadata.leptos]
+output-name = "mr-ui"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+style-file = "style/main.css"
+site-addr = "127.0.0.1:3939"
+reload-port = 3940
+env = "DEV"
+bin-features = ["ssr"]
+bin-default-features = false
+lib-features = ["hydrate"]
+lib-default-features = false
+lib-profile-release = "wasm-release"

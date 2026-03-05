@@ -41,3 +41,11 @@ ui = ["dep:mr-ui"]
 
 [dev-dependencies]
 tempfile = "3"
+
+# Optimized WASM profile for the mr-ui hydration bundle (used by cargo-leptos).
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"

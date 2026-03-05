@@ -7,4 +7,12 @@
 //! mr-ui: Local web dashboard for microralph worktree orchestration.
 //!
 //! Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5.
-//! Full app scaffold and implementation in subsequent tasks (T-002+).
+
+pub mod app;
+
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(app::App);
+}
