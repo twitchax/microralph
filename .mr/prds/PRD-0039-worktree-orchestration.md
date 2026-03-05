@@ -76,7 +76,7 @@ acceptance_tests:
   - id: uat-014
     name: "State commits to main only on significant events with agent-generated summaries"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-015
     name: "Agent strategically decides merge order when multiple worktrees complete"
     command: cargo make uat
@@ -897,3 +897,19 @@ src/
   - Branch deletion codepath (`delete_branch: true`) calls `git::delete_branch`, tested by `remove_worktree_cleans_up` in `src/worktree/git.rs`
   - Worktree directory removal handled gracefully for both existing and already-removed paths
   - All 756 tests pass via `cargo make test`
+
+## 2026-03-05 — uat-014 Verification
+- **UAT**: State commits to main only on significant events with agent-generated summaries
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `commit_state()` is only called after significant events: merged, merge failed, conflicted — never during Tier 1 mechanical heartbeat
+  - `build_state_summary()` generates descriptive commit messages with trigger event and active worktree counts
+  - 6 existing tests cover this behavior:
+    - `build_state_summary_single_merged` — summary format for single merged worktree
+    - `build_state_summary_mixed_states` — summary with multiple worktrees in different states
+    - `build_state_summary_merge_failed` — summary for merge failure events
+    - `build_state_summary_no_duplicates` — no duplicate entries in summary
+    - `commit_state_stages_and_commits_in_git_repo` — verifies git commit is created with proper message
+    - `commit_state_skips_when_no_changes` — verifies no commit when state unchanged
+  - All 6 tests pass
