@@ -32,7 +32,7 @@ acceptance_tests:
   - id: uat-003
     name: "mr wt status shows detailed state of a specific worktree"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "Daemon auto-starts on first mr wt run and listens on unix socket"
     command: cargo make uat
@@ -763,4 +763,14 @@ src/
   - Test sets up a temp git repo with state containing 3 worktrees (Active, Completed, Merged), calls `cmd_wt_list()`, and verifies it succeeds
   - Created companion test `test_cmd_wt_list_empty_state_shows_hint` verifying the empty-state hint path
   - Extracted `make_test_repo` helper to reduce duplication across worktree tests
+  - `cargo make uat` — 752 tests passed, 0 skipped
+
+## 2026-03-05 — uat-003 Verification
+- **UAT**: mr wt status shows detailed state of a specific worktree
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Test `test_print_worktree_detail_shows_entry` in `src/commands/worktree.rs` (line 1557) covers the happy path: creates a `WorktreeState` with a `WorktreeEntry` containing status, branch, path, events, and modified files, then calls `print_worktree_detail` and asserts success
+  - Test `test_cmd_wt_status_with_unknown_prd_fails` (line 1533) covers the error path through `cmd_wt_status(Some(...))` integration
+  - Test `test_print_worktree_detail_not_found` (line 1594) covers the not-found error path
   - `cargo make uat` — 752 tests passed, 0 skipped
