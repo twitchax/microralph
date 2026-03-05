@@ -11,7 +11,6 @@ use crate::prd::scan_prds;
 use crate::util::colors;
 use crate::worktree::daemon::Daemon;
 use crate::worktree::git;
-use crate::worktree::ipc;
 use crate::worktree::state::StateManager;
 use crate::worktree::types::{EventType, WorktreeEntry, WorktreeEvent, WorktreeStatus};
 
@@ -80,7 +79,7 @@ fn validate_prd_exists(root: &std::path::Path, prd_id: &str) -> Result<()> {
 /// Returns `Ok(())` once the daemon socket is reachable, or an error if
 /// the daemon could not be started within a reasonable timeout.
 fn ensure_daemon(root: &std::path::Path) -> Result<()> {
-    if Daemon::is_running(root) {
+    if Daemon::is_healthy(root) {
         return Ok(());
     }
 
@@ -89,37 +88,17 @@ fn ensure_daemon(root: &std::path::Path) -> Result<()> {
         colors::info("Daemon is not running — starting in background...")
     );
 
-    let exe = std::env::current_exe().context("failed to resolve current executable")?;
+    Daemon::ensure_running(root)?;
 
-    // Spawn `mr wt daemon start` as a detached background process.
-    let child = ProcessCommand::new(&exe)
-        .args(["wt", "daemon", "start"])
-        .current_dir(root)
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .context("failed to spawn daemon process")?;
-
-    tracing::info!(pid = child.id(), "Spawned daemon process");
-
-    // Wait for the socket to become reachable (up to 10 seconds).
-    let sock = ipc::socket_path(root);
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-
-    while std::time::Instant::now() < deadline {
-        if ipc::is_daemon_reachable(&sock) {
-            println!("{}", colors::success("Daemon started."));
-            return Ok(());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(200));
+    if Daemon::is_healthy(root) {
+        println!("{}", colors::success("Daemon started."));
+    } else {
+        println!(
+            "{}",
+            colors::warning("Daemon socket not yet reachable — proceeding anyway.")
+        );
     }
 
-    // Daemon may still be starting — warn but don't fail.
-    println!(
-        "{}",
-        colors::warning("Daemon socket not yet reachable — proceeding anyway.")
-    );
     Ok(())
 }
 

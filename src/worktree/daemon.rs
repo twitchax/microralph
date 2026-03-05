@@ -188,12 +188,94 @@ impl Daemon {
     }
 
     /// Check whether a daemon is currently running for the given root.
+    ///
+    /// Only checks PID liveness via `kill -0`.  For a stronger check that
+    /// also verifies socket availability, use [`Self::is_healthy`].
     #[must_use]
     pub fn is_running(root: &Path) -> bool {
         match Self::read_pid(root) {
             Ok(Some(pid)) => Self::is_process_alive(pid),
             _ => false,
         }
+    }
+
+    /// Check whether a daemon is both running **and** reachable via IPC.
+    ///
+    /// Returns `true` only when the PID file points to a live process
+    /// *and* the daemon socket is connectable.
+    #[must_use]
+    pub fn is_healthy(root: &Path) -> bool {
+        Self::is_running(root) && ipc::is_daemon_reachable(&ipc::socket_path(root))
+    }
+
+    /// Remove stale PID and socket files left behind by a dead daemon.
+    ///
+    /// Called before spawning a new daemon to ensure a clean start.
+    pub fn cleanup_stale(root: &Path) {
+        let pid_path = Self::pid_path(root);
+        if pid_path.exists() {
+            let is_alive = Self::read_pid(root)
+                .map(|opt| opt.is_some_and(Self::is_process_alive))
+                .unwrap_or(false);
+
+            if !is_alive {
+                let _ = fs::remove_file(&pid_path);
+                tracing::debug!("removed stale PID file: {}", pid_path.display());
+            }
+        }
+
+        let sock_path = ipc::socket_path(root);
+        if sock_path.exists() && !ipc::is_daemon_reachable(&sock_path) {
+            let _ = fs::remove_file(&sock_path);
+            tracing::debug!("removed stale socket file: {}", sock_path.display());
+        }
+    }
+
+    /// Ensure a daemon is running and healthy, spawning one if necessary.
+    ///
+    /// 1. If the daemon is already healthy (PID alive + socket reachable),
+    ///    returns immediately.
+    /// 2. Otherwise, cleans up stale PID/socket files and spawns a new
+    ///    daemon process (`mr wt daemon start`) as a detached background
+    ///    process.
+    /// 3. Waits up to 10 seconds for the socket to become reachable.
+    ///
+    /// This is the primary entry point for daemon auto-start logic,
+    /// called by `mr wt run` before dispatching work to a worktree.
+    pub fn ensure_running(root: &Path) -> Result<()> {
+        if Self::is_healthy(root) {
+            return Ok(());
+        }
+
+        Self::cleanup_stale(root);
+
+        let exe = std::env::current_exe().context("failed to resolve current executable")?;
+
+        let child = std::process::Command::new(&exe)
+            .args(["wt", "daemon", "start"])
+            .current_dir(root)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .context("failed to spawn daemon process")?;
+
+        tracing::info!(pid = child.id(), "spawned daemon process");
+
+        // Wait for the socket to become reachable.
+        let sock = ipc::socket_path(root);
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+
+        while std::time::Instant::now() < deadline {
+            if ipc::is_daemon_reachable(&sock) {
+                return Ok(());
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+
+        // Daemon may still be starting up — warn but don't fail.
+        tracing::warn!("daemon socket not reachable after 10 s — proceeding anyway");
+        Ok(())
     }
 
     /// Send `SIGTERM` to a running daemon and wait for it to exit.
@@ -1030,5 +1112,107 @@ mod tests {
         // After exit, daemon should be unregistered.
         let state = state_mgr.read().unwrap();
         assert!(state.daemon.is_none());
+    }
+
+    // ── Health check & stale cleanup ────────────────────────────────
+
+    #[test]
+    fn is_healthy_false_when_no_daemon() {
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!Daemon::is_healthy(tmp.path()));
+    }
+
+    #[test]
+    fn is_healthy_false_when_pid_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let daemon = Daemon::new(tmp.path().to_path_buf());
+
+        // Write a PID file pointing to ourselves — but no socket.
+        daemon.write_pid_file().unwrap();
+        assert!(Daemon::is_running(tmp.path()));
+        assert!(!Daemon::is_healthy(tmp.path()));
+    }
+
+    #[test]
+    fn is_healthy_true_when_running_and_reachable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+
+        let daemon = Daemon::new_with_config(
+            tmp.path().to_path_buf(),
+            DaemonConfig {
+                heartbeat_interval_secs: 60,
+                idle_timeout_hours: 24,
+                socket_name: "daemon.sock".to_string(),
+            },
+        );
+
+        let shutdown = daemon.shutdown_handle();
+        let root = tmp.path().to_path_buf();
+
+        let handle = thread::spawn(move || daemon.run());
+
+        // Wait for socket.
+        let sock = ipc::socket_path(&root);
+        for _ in 0..50 {
+            if ipc::is_daemon_reachable(&sock) {
+                break;
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        assert!(Daemon::is_healthy(&root));
+
+        shutdown.store(true, Ordering::SeqCst);
+        handle.join().unwrap().unwrap();
+    }
+
+    #[test]
+    fn cleanup_stale_removes_dead_pid_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let pid_path = Daemon::pid_path(tmp.path());
+
+        // Create the directory and write a PID file pointing to a dead process.
+        fs::create_dir_all(pid_path.parent().unwrap()).unwrap();
+        fs::write(&pid_path, "4000000").unwrap();
+        assert!(pid_path.exists());
+
+        Daemon::cleanup_stale(tmp.path());
+        assert!(!pid_path.exists());
+    }
+
+    #[test]
+    fn cleanup_stale_removes_stale_socket() {
+        let tmp = tempfile::tempdir().unwrap();
+        let sock_path = ipc::socket_path(tmp.path());
+
+        // Create a regular file pretending to be a socket (not connectable).
+        fs::create_dir_all(sock_path.parent().unwrap()).unwrap();
+        fs::write(&sock_path, "stale").unwrap();
+        assert!(sock_path.exists());
+
+        Daemon::cleanup_stale(tmp.path());
+        assert!(!sock_path.exists());
+    }
+
+    #[test]
+    fn cleanup_stale_preserves_live_pid() {
+        let tmp = tempfile::tempdir().unwrap();
+        let pid_path = Daemon::pid_path(tmp.path());
+
+        // Write our own PID — should not be removed.
+        fs::create_dir_all(pid_path.parent().unwrap()).unwrap();
+        fs::write(&pid_path, std::process::id().to_string()).unwrap();
+
+        Daemon::cleanup_stale(tmp.path());
+        assert!(pid_path.exists());
+    }
+
+    #[test]
+    fn cleanup_stale_noop_when_nothing_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No PID file, no socket — should not error.
+        Daemon::cleanup_stale(tmp.path());
     }
 }

@@ -115,7 +115,7 @@ tasks:
   - id: T-007
     title: "Implement daemon auto-start logic"
     priority: 2
-    status: todo
+    status: done
     notes: "On mr wt run, check for daemon.pid and socket liveness. If not running, fork/spawn daemon process (detached). Wait for socket to become available before proceeding. Implement in src/worktree/daemon.rs."
   - id: T-008
     title: "Integrate mr run with daemon IPC (worktree detection)"
@@ -521,4 +521,18 @@ src/
   - Added helper functions: `next_wt_id()`, `now_iso()`, `days_to_ymd()`, `validate_prd_exists()`, `ensure_daemon()`, `register_worktree()`, `spawn_mr_run()`
   - 6 new unit tests: `next_wt_id` (empty + increments), `now_iso` format, `days_to_ymd` (epoch + known date), `validate_prd_exists` error, `cmd_wt_run` fails without git repo
   - UAT: `cargo make uat` — 668 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-04 — T-007 Completed
+- **Task**: Implement daemon auto-start logic
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `Daemon::is_healthy(root)` in `src/worktree/daemon.rs` — checks both PID liveness AND socket reachability for stronger daemon health verification
+  - Added `Daemon::cleanup_stale(root)` in `src/worktree/daemon.rs` — removes stale PID files (dead process) and stale socket files (not connectable) before spawning a new daemon
+  - Added `Daemon::ensure_running(root)` in `src/worktree/daemon.rs` — primary auto-start entry point: health check → cleanup stale → spawn detached `mr wt daemon start` → wait up to 10s for socket readiness
+  - Simplified `ensure_daemon()` in `src/commands/worktree.rs` to delegate to `Daemon::ensure_running()`, using `Daemon::is_healthy()` for pre/post checks
+  - Removed unused `ipc` import from `src/commands/worktree.rs`
+  - Enhanced `is_running()` doc comment to clarify it only checks PID liveness
+  - 7 new tests: `is_healthy_false_when_no_daemon`, `is_healthy_false_when_pid_only`, `is_healthy_true_when_running_and_reachable`, `cleanup_stale_removes_dead_pid_file`, `cleanup_stale_removes_stale_socket`, `cleanup_stale_preserves_live_pid`, `cleanup_stale_noop_when_nothing_exists`
+  - UAT: `cargo make uat` — 675 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.
