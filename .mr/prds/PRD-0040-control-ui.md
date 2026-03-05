@@ -44,7 +44,7 @@ acceptance_tests:
   - id: uat-003
     name: "WebSocket pushes real-time state updates to connected clients"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-004
     name: "PRD creation form invokes mr new and creates a valid PRD"
     command: cargo make uat
@@ -589,3 +589,13 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Test writes a realistic `state.yaml` with 3 worktrees (active/merged/merge_failed), daemon info, overlap warnings, and events, plus a PRD file
   - Verifies `load_app_state()` returns `AppState` with correct daemon health, worktree status counts, events, overlap warnings, and PRD summaries — the exact data consumed by dashboard components (`StatusCards`, `DaemonHealthCard`, `OverlapWarningsCard`, `RecentEventsTimeline`, `PrdList`)
   - All 12 mr-ui tests pass; full UAT suite passes
+
+## 2026-03-05 — uat-003 Verification
+- **UAT**: WebSocket pushes real-time state updates to connected clients
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Added 3 integration tests in `crates/mr-ui/src/ws.rs`: `ws_sends_initial_state_snapshot`, `ws_pushes_state_updates_to_clients`, `ws_pushes_multiple_updates_in_order`
+  - Tests spin up an Axum server with the `/ws/state` WebSocket route, connect a real WebSocket client via `tokio-tungstenite`, and verify: initial state snapshot delivery, broadcast-triggered update push, and ordered delivery of multiple updates
+  - Added `tokio-tungstenite` and `futures-util` as dev-dependencies to `crates/mr-ui/Cargo.toml`
+  - All 15 mr-ui tests pass; full UAT suite passes

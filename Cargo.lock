@@ -1680,6 +1680,7 @@ version = "0.9.0"
 dependencies = [
  "axum",
  "console_error_panic_hook",
+ "futures-util",
  "icondata_ai",
  "leptos",
  "leptos_axum",
@@ -1691,6 +1692,7 @@ dependencies = [
  "tempfile",
  "thaw",
  "tokio",
+ "tokio-tungstenite",
  "tower-http",
  "tracing",
  "wasm-bindgen",

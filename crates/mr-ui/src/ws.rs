@@ -200,3 +200,156 @@ async fn handle_log_ws(mut socket: WebSocket, wt_id: String, shared: Arc<RwLock<
 
     tracing::debug!(wt_id = %wt_id, "log WebSocket client disconnected");
 }
+
+// ── Tests ───────────────────────────────────────────────────────────
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    use std::time::Duration;
+
+    use axum::Router;
+    use axum::routing::get;
+    use futures_util::StreamExt;
+    use tokio::net::TcpListener;
+
+    /// Spins up an Axum server with the `/ws/state` route and returns its address.
+    async fn start_test_server() -> (
+        std::net::SocketAddr,
+        Arc<RwLock<AppState>>,
+        broadcast::Sender<AppState>,
+    ) {
+        let shared: Arc<RwLock<AppState>> = Arc::new(RwLock::new(AppState::default()));
+        let (tx, _) = broadcast::channel::<AppState>(16);
+
+        let app = Router::new()
+            .route("/ws/state", get(state_ws_handler))
+            .layer(Extension(Arc::clone(&shared)))
+            .layer(Extension(tx.clone()));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
+        });
+
+        (addr, shared, tx)
+    }
+
+    #[tokio::test]
+    async fn ws_sends_initial_state_snapshot() {
+        let (addr, _shared, _tx) = start_test_server().await;
+
+        let url = format!("ws://{addr}/ws/state");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        // The first message should be the initial state snapshot.
+        let msg = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let text = msg.into_text().unwrap();
+        let state: AppState = serde_json::from_str(&text).unwrap();
+        assert_eq!(state.worktree_state, crate::types::WorktreeState::default());
+        assert!(state.prds.is_empty());
+
+        ws.close(None).await.ok();
+    }
+
+    #[tokio::test]
+    async fn ws_pushes_state_updates_to_clients() {
+        let (addr, _shared, tx) = start_test_server().await;
+
+        let url = format!("ws://{addr}/ws/state");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        // Consume the initial snapshot.
+        let _ = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        // Broadcast an updated state.
+        let updated = AppState {
+            worktree_state: crate::types::WorktreeState {
+                version: 42,
+                ..Default::default()
+            },
+            prds: vec![crate::types::PrdSummary {
+                id: "PRD-0099".into(),
+                title: "Test PRD".into(),
+                ..Default::default()
+            }],
+        };
+        tx.send(updated.clone()).unwrap();
+
+        // The WebSocket should push the update.
+        let msg = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let text = msg.into_text().unwrap();
+        let received: AppState = serde_json::from_str(&text).unwrap();
+        assert_eq!(received.worktree_state.version, 42);
+        assert_eq!(received.prds.len(), 1);
+        assert_eq!(received.prds[0].id, "PRD-0099");
+
+        ws.close(None).await.ok();
+    }
+
+    #[tokio::test]
+    async fn ws_pushes_multiple_updates_in_order() {
+        let (addr, _shared, tx) = start_test_server().await;
+
+        let url = format!("ws://{addr}/ws/state");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        // Consume initial snapshot.
+        let _ = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        // Send two updates in sequence.
+        for version in [10, 20] {
+            let state = AppState {
+                worktree_state: crate::types::WorktreeState {
+                    version,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            tx.send(state).unwrap();
+        }
+
+        // Receive both updates and verify ordering.
+        let msg1 = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let state1: AppState = serde_json::from_str(&msg1.into_text().unwrap()).unwrap();
+        assert_eq!(state1.worktree_state.version, 10);
+
+        let msg2 = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let state2: AppState = serde_json::from_str(&msg2.into_text().unwrap()).unwrap();
+        assert_eq!(state2.worktree_state.version, 20);
+
+        ws.close(None).await.ok();
+    }
+}
