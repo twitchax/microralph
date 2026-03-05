@@ -94,7 +94,7 @@ tasks:
   - id: T-006
     title: "App shell layout: Sentry-style sidebar, dark theme"
     priority: 3
-    status: todo
+    status: done
     notes: "Build the main layout component with Thaw UI: left sidebar nav (collapsible), top bar with daemon status indicator, main content area. Dark theme by default using Thaw's theming system (CSS custom properties). Light theme toggle. Responsive for different screen sizes. Design cues: Sentry's sidebar structure, langfuse's clean data presentation."
   - id: T-007
     title: "Dashboard home page: overview cards and daemon health"
@@ -405,3 +405,19 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Updated `src/main.rs`: added `Ui` command variant to the `Command` enum behind `#[cfg(feature = "ui")]` with `--host` (default `127.0.0.1`), `--port` (default `3939`), and `--open` (auto-open browser) flags. Added `cmd_ui()` handler that prints the server URL with color, optionally opens the browser, then calls `mr_ui::serve::serve_blocking`. Added cross-platform `open_browser()` helper using `xdg-open` (Linux), `open` (macOS), `cmd /c start` (Windows).
   - All code behind `#[cfg(feature = "ui")]` — no impact on default binary size or compilation.
   - UAT passes: 757 tests, fmt-check, clippy all green (both with and without `ui` feature).
+
+## 2026-03-05 — T-006 Completed
+- **Task**: App shell layout: Sentry-style sidebar, dark theme
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/mod.rs`: module index exporting `layout`, `sidebar`, and `theme` submodules.
+  - Created `crates/mr-ui/src/components/layout.rs`: `AppShell` component using Thaw's `Layout`, `LayoutHeader`, `LayoutSider`. Renders a persistent left sidebar with brand header, a top bar with `DaemonStatusIndicator` (colored `Badge` showing online/offline from `AppState` context) and `ThemeToggle`, and a scrollable main content area. Sentry-inspired structure.
+  - Created `crates/mr-ui/src/components/sidebar.rs`: `Sidebar` component using Thaw's `NavDrawer` with `NavItem` entries for Dashboard (`/`), Worktrees (`/worktrees`), and PRDs (`/prds`). Uses `icondata_ai` icons (`AiDashboardOutlined`, `AiForkOutlined`, `AiFileOutlined`). Navigation values and hrefs wired for client-side routing.
+  - Created `crates/mr-ui/src/components/theme.rs`: `ThemeProvider` wrapping Thaw's `ConfigProvider` with `Theme::dark()` by default, and `ThemeToggle` component using Thaw's `Switch` to flip between dark and light themes with emoji indicators (🌙/☀️).
+  - Updated `crates/mr-ui/src/app.rs`: wrapped `Router` in `ThemeProvider` and routes in `AppShell`. Added placeholder routes for `/worktrees` (`WorktreesPage`) and `/prds` (`PrdsPage`). Moved daemon status from `HomePage` to the top bar. Simplified `HomePage` to show just worktree and PRD counts.
+  - Updated `crates/mr-ui/src/lib.rs`: exported `components` module (shared, not feature-gated).
+  - Updated `crates/mr-ui/Cargo.toml`: added `icondata_ai = "0.0.10"` dependency for sidebar nav icons.
+  - Updated `crates/mr-ui/style/main.css`: replaced minimal placeholder styles with Sentry-inspired layout CSS. Full-height sidebar (220px), top bar with flex layout, scrollable content area. Uses Thaw CSS custom properties (`--colorNeutralBackground1`, etc.) for theme-aware colors with dark fallbacks. Responsive breakpoint at 768px collapses sidebar to 56px icon-only mode.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate` for component fns, `clippy::wildcard_imports` for `leptos::prelude::*`).
+  - UAT passes: 757 tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated component modules (rule 2), DRY via shared layout wrapping all routes (rule 1).

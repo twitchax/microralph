@@ -9,6 +9,7 @@
 //! Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5.
 
 pub mod app;
+pub mod components;
 pub mod types;
 
 #[cfg(feature = "ssr")]

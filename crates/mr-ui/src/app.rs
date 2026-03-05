@@ -12,6 +12,8 @@ use leptos_router::{
     components::{Route, Router, Routes},
 };
 
+use crate::components::layout::AppShell;
+use crate::components::theme::ThemeProvider;
 use crate::types::AppState;
 
 /// The HTML shell rendered on the server for SSR with hydration scripts.
@@ -51,13 +53,17 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/mr-ui.css"/>
         <Title text="microralph — Dashboard"/>
 
-        <Router>
-            <main>
-                <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view=HomePage/>
-                </Routes>
-            </main>
-        </Router>
+        <ThemeProvider>
+            <Router>
+                <AppShell>
+                    <Routes fallback=|| "Page not found.".into_view()>
+                        <Route path=StaticSegment("") view=HomePage/>
+                        <Route path=StaticSegment("worktrees") view=WorktreesPage/>
+                        <Route path=StaticSegment("prds") view=PrdsPage/>
+                    </Routes>
+                </AppShell>
+            </Router>
+        </ThemeProvider>
     }
 }
 
@@ -126,27 +132,29 @@ fn HomePage() -> impl IntoView {
 
     let prd_count = move || app_state.with(|s| s.as_ref().map_or(0, |state| state.prds.len()));
 
-    let daemon_status = move || {
-        app_state.with(|s| {
-            s.as_ref().map_or_else(
-                || String::from("unknown"),
-                |state| {
-                    state
-                        .worktree_state
-                        .daemon
-                        .as_ref()
-                        .map_or_else(|| String::from("offline"), |_| String::from("online"))
-                },
-            )
-        })
-    };
-
     view! {
-        <h1>"microralph Dashboard"</h1>
+        <h1>"Dashboard"</h1>
         <div class="dashboard-summary">
-            <p>"Daemon: " {daemon_status}</p>
             <p>"Worktrees: " {worktree_count}</p>
             <p>"PRDs: " {prd_count}</p>
         </div>
+    }
+}
+
+/// Placeholder page for the worktree list view (T-008).
+#[component]
+fn WorktreesPage() -> impl IntoView {
+    view! {
+        <h1>"Worktrees"</h1>
+        <p>"Worktree list coming soon."</p>
+    }
+}
+
+/// Placeholder page for the PRD list view (T-010).
+#[component]
+fn PrdsPage() -> impl IntoView {
+    view! {
+        <h1>"PRDs"</h1>
+        <p>"PRD list coming soon."</p>
     }
 }
