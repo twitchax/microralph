@@ -64,7 +64,7 @@ acceptance_tests:
   - id: uat-008
     name: "UI compiles and passes clippy with pedantic lints"
     command: cargo make ci
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Workspace setup: create mr-ui crate with feature gate"
@@ -640,3 +640,13 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Testing this requires a browser/WASM environment with DOM interaction (clicking the Switch component and verifying CSS theme changes), which is not available in the current CI pipeline.
   - No E2E testing framework (e.g., Playwright, wasm-pack test with headless browser) is set up in this project.
   - The component logic is trivial (boolean → theme variant), so the risk of regression is minimal.
+
+## 2026-03-05 — uat-008 Verification
+- **UAT**: UI compiles and passes clippy with pedantic lints
+- **Status**: ✅ Verified
+- **Method**: Existing test
+- **Details**:
+  - Ran `cargo make ci` which includes `ui-clippy` (clippy with `-D warnings` on `mr-ui` crate with `--all-features --all-targets`) and `ui-test` (18 mr-ui tests via nextest).
+  - UI clippy passed with zero warnings under pedantic lints.
+  - All 18 mr-ui tests passed (state, ws, and integration tests).
+  - Full CI pipeline (757 root tests + 18 UI tests) completed successfully.
