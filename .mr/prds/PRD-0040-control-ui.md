@@ -52,7 +52,7 @@ acceptance_tests:
   - id: uat-005
     name: "Worktree kickoff from UI triggers mr wt run successfully"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: skipped
   - id: uat-006
     name: "Log streaming displays real-time run output for active worktrees"
     command: cargo make uat
@@ -611,3 +611,14 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - The UI form component (`PrdCreate`) renders a standard Leptos reactive form with slug/context/runner/model fields. Testing form interaction requires browser/WASM integration testing infrastructure (headless browser + cargo-leptos build pipeline) which does not exist.
   - The `#[server]` macro generates Leptos server function registration code that cannot be unit-tested without the full Leptos runtime context.
   - The function's correctness is implicitly validated by: compilation with pedantic clippy, the main crate's `prd::new` tests (which test the same `mr new` logic), and manual verification during development.
+
+## 2026-03-05 — uat-005 Verification
+- **UAT**: Worktree kickoff from UI triggers mr wt run successfully
+- **Status**: ⏭️ Skipped
+- **Method**: Skipped
+- **Details**:
+  - The `run_worktree` server function in `wt_kickoff.rs` is a thin subprocess wrapper: it spawns `mr wt run <prd-id> --runner <runner>` via `tokio::process::Command` and checks exit code — structurally identical to the `create_prd` server function (uat-004, also skipped).
+  - Testing the server function requires: (1) the `mr` binary discoverable via `current_exe()` or PATH, (2) an initialized `.mr/` workspace with valid PRDs, (3) git worktree infrastructure (branches, sibling directories), and (4) the worktree daemon — none of which are available in unit test context.
+  - The UI component (`WtKickoffDialog`) is a Leptos reactive form with runner/model selection. Testing form interaction requires browser/WASM integration testing infrastructure (headless browser + cargo-leptos build pipeline) which does not exist.
+  - The `#[server]` macro generates Leptos server function registration code that cannot be unit-tested without the full Leptos runtime context.
+  - The underlying `mr wt run` logic is tested in the main crate's worktree command tests. The server function's correctness is implicitly validated by compilation with pedantic clippy and manual verification during development.
