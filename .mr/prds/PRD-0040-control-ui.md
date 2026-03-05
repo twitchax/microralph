@@ -60,7 +60,7 @@ acceptance_tests:
   - id: uat-007
     name: "Dark and light theme toggle works correctly"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: skipped
   - id: uat-008
     name: "UI compiles and passes clippy with pedantic lints"
     command: cargo make ci
@@ -630,3 +630,13 @@ mr-ui = { path = "crates/mr-ui", optional = true }
 - **Details**:
   - Added three tests in `crates/mr-ui/src/ws.rs`: `log_ws_streams_existing_content_on_connect` (verifies existing log content is sent on WebSocket connect), `log_ws_streams_new_content_in_realtime` (verifies new log lines appended to the file are streamed to the client within the poll interval), and `log_ws_reports_missing_worktree` (verifies error message for unknown worktree IDs).
   - Tests use a temp log file and a test Axum server with the `/ws/logs/{id}` route, validating the full server-side log tailing pipeline.
+
+## 2026-03-05 — uat-007 Verification
+- **UAT**: Dark and light theme toggle works correctly
+- **Status**: ⏭️ Skipped
+- **Method**: Skipped
+- **Details**:
+  - The theme toggle (`ThemeToggle` in `crates/mr-ui/src/components/theme.rs`) is a pure visual/interactive UI component that toggles a Leptos `RwSignal<bool>` to switch Thaw UI's `ConfigProvider` between `Theme::dark()` and `Theme::light()`.
+  - Testing this requires a browser/WASM environment with DOM interaction (clicking the Switch component and verifying CSS theme changes), which is not available in the current CI pipeline.
+  - No E2E testing framework (e.g., Playwright, wasm-pack test with headless browser) is set up in this project.
+  - The component logic is trivial (boolean → theme variant), so the risk of regression is minimal.
