@@ -139,7 +139,7 @@ tasks:
   - id: T-015
     title: "mr ui CLI command with flags"
     priority: 2
-    status: todo
+    status: done
     notes: "Add UiCommand to clap CLI in src/main.rs with flags: --port (default 3939), --host (default 127.0.0.1), --open (auto-open browser). Feature-gated behind #[cfg(feature = \"ui\")]. Starts the Axum server with Leptos SSR. Prints URL to stdout with color."
   - id: T-016
     title: "cargo-make tasks for UI dev and build"
@@ -395,3 +395,13 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Added `log_file_path_builds_correct_path` unit test.
   - UAT passes: 757 tests (756 existing + 1 new), fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes focused on log capture (rule 3), follows existing patterns for optional fields (rule 4), DRY via shared `log_file_path()` helper (rule 1).
+
+## 2026-03-05 — T-015 Completed
+- **Task**: mr ui CLI command with flags
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/serve.rs`: production server entrypoint with `serve_blocking(host, port)` function. Creates a tokio runtime, constructs `LeptosOptions` via the typed builder with configurable `site_addr`, starts `StateService` for filesystem polling, builds the Axum router with WebSocket and Leptos SSR routes, binds TCP listener, and serves. Includes `find_project_root()` helper that walks up directories looking for `.mr/`.
+  - Updated `crates/mr-ui/src/lib.rs`: exported `serve` module behind `ssr` feature gate.
+  - Updated `src/main.rs`: added `Ui` command variant to the `Command` enum behind `#[cfg(feature = "ui")]` with `--host` (default `127.0.0.1`), `--port` (default `3939`), and `--open` (auto-open browser) flags. Added `cmd_ui()` handler that prints the server URL with color, optionally opens the browser, then calls `mr_ui::serve::serve_blocking`. Added cross-platform `open_browser()` helper using `xdg-open` (Linux), `open` (macOS), `cmd /c start` (Windows).
+  - All code behind `#[cfg(feature = "ui")]` — no impact on default binary size or compilation.
+  - UAT passes: 757 tests, fmt-check, clippy all green (both with and without `ui` feature).

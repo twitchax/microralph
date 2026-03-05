@@ -12,6 +12,9 @@ pub mod app;
 pub mod types;
 
 #[cfg(feature = "ssr")]
+pub mod serve;
+
+#[cfg(feature = "ssr")]
 pub mod state;
 
 #[cfg(feature = "ssr")]

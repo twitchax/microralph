@@ -302,6 +302,23 @@ enum Command {
         #[command(subcommand)]
         command: WtCommand,
     },
+
+    /// [H] Start the local web dashboard for worktree orchestration.
+    #[cfg(feature = "ui")]
+    #[command(display_order = 17)]
+    Ui {
+        /// Host address to bind the server to.
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+
+        /// Port number for the dashboard server.
+        #[arg(long, default_value_t = 3939)]
+        port: u16,
+
+        /// Automatically open the dashboard in the default browser.
+        #[arg(long)]
+        open: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -716,6 +733,11 @@ fn main() -> Result<()> {
                 }
             },
         },
+        #[cfg(feature = "ui")]
+        Some(Command::Ui { host, port, open }) => {
+            tracing::info!(host = %host, port = %port, open = %open, "Starting UI dashboard...");
+            cmd_ui(&host, port, open)?;
+        }
         None => {
             println!(
                 "{}",
@@ -2259,6 +2281,60 @@ fn cmd_graph_dot(show_titles: bool, max_title_len: usize, lr: bool) -> Result<()
     }
 
     Ok(())
+}
+
+// ── UI command ──────────────────────────────────────────────────────
+
+/// Starts the local web dashboard server.
+#[cfg(feature = "ui")]
+fn cmd_ui(host: &str, port: u16, open: bool) -> Result<()> {
+    let url = format!("http://{host}:{port}");
+
+    println!(
+        "{}",
+        colors::success(&format!("Starting microralph dashboard at {url}"))
+    );
+    println!("{}", colors::dim("Press Ctrl+C to stop the server."));
+
+    if open {
+        open_browser(&url);
+    }
+
+    mr_ui::serve::serve_blocking(host, port)
+        .map_err(|e| anyhow::anyhow!("UI server error: {e}"))?;
+
+    Ok(())
+}
+
+/// Opens a URL in the default system browser.
+#[cfg(feature = "ui")]
+fn open_browser(url: &str) {
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg(url)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open")
+            .arg(url)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", url])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
 }
 
 #[cfg(test)]
