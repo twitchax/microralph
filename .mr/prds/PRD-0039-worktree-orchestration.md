@@ -165,7 +165,7 @@ tasks:
   - id: T-017
     title: "Implement daemon crash recovery"
     priority: 6
-    status: todo
+    status: done
     notes: "On daemon startup, check for stale state: partial merges (status=merging but no merge in progress), orphaned worktrees, stale PID file. Use agent to assess situation and recover — e.g., rollback partial merge, re-register orphaned worktrees."
   - id: T-018
     title: "Add worktree module to commands/mod.rs and wire CLI"
@@ -702,3 +702,24 @@ src/
   - 4 new tests (total 742): `test_cmd_wt_remove_fails_without_git_repo`, `test_cmd_wt_remove_rejects_merging_worktree`, `test_cmd_wt_remove_succeeds_for_active_worktree`, `test_cmd_wt_remove_unknown_prd_returns_error`
   - UAT: `cargo make uat` — 742 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 3 (Minimal Changes): Only modified `src/commands/worktree.rs` and `src/worktree/types.rs`. Rule 4 (Consistency): Follows patterns from existing commands (error handling, colored output, state management). Rule 8 (Clippy Pedantic): All new code passes pedantic lints.
+
+## 2026-03-05 — T-017 Completed
+- **Task**: Implement daemon crash recovery
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `EventType::RecoveryPerformed` variant in `src/worktree/types.rs` with `Display` impl and test
+  - Added `git::is_merge_in_progress()` helper in `src/worktree/git.rs` — detects `MERGE_HEAD` file presence
+  - Implemented crash recovery in `src/worktree/daemon.rs`:
+    - `recover_stale_state()` — entry point called in `run()` before event loop; reads state and delegates to detection + application
+    - `detect_recovery_actions()` — scans worktrees for stale conditions: orphaned paths, stuck merging status, dead run PIDs
+    - `apply_recovery_actions()` — atomically applies all recovery actions: aborts stale rebases/merges, resets statuses, records `RecoveryPerformed` events
+  - Recovery handles 5 scenarios:
+    - **Orphaned worktrees** (path missing on disk): marked `Abandoned`
+    - **Stale rebase** (Merging + rebase in progress): aborted and reset to `Completed`
+    - **Stale merge** (Merging + merge in progress): aborted and reset to `Completed`
+    - **Stuck merging** (Merging + no operation in progress): reset to `Completed`
+    - **Dead run process** (Active + dead PID): marked `Completed` with PID cleared
+  - Already-Merged and Abandoned worktrees are skipped (no false positives)
+  - 7 new tests (total 749): `recover_stale_state_noop_when_clean`, `recover_stale_state_marks_orphaned_worktree`, `recover_stale_state_resets_partial_merge_no_operation`, `recover_stale_state_completes_dead_process`, `recover_stale_state_skips_already_merged_and_abandoned`, `recover_stale_state_multiple_issues`, `is_merge_in_progress_false_normally`
+  - UAT: `cargo make uat` — 749 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 2 (SOC): Recovery detection separated from application. Rule 3 (Minimal Changes): Only modified relevant files. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.

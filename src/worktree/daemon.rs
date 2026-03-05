@@ -362,6 +362,157 @@ impl Daemon {
         Ok(())
     }
 
+    // ── Crash recovery ────────────────────────────────────────────
+
+    /// Recover from stale state left behind by a previous daemon crash.
+    ///
+    /// Called on daemon startup before entering the event loop. Detects
+    /// and corrects:
+    /// - **Partial merges**: worktrees stuck in `Merging` status with no
+    ///   actual merge/rebase in progress — reset to `Completed`.
+    /// - **Orphaned worktrees**: state entries whose filesystem path no
+    ///   longer exists — marked `Abandoned`.
+    /// - **Dead run processes**: `Active` worktrees whose `run_pid` is
+    ///   no longer alive — marked `Completed`.
+    /// - **Stale in-progress operations**: rebases or merges left paused
+    ///   in worktree directories — aborted cleanly.
+    fn recover_stale_state(&self) {
+        let state = match self.state_manager().read() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!("recovery: failed to read state: {e:#}");
+                return;
+            }
+        };
+
+        let actions = Self::detect_recovery_actions(&state);
+
+        if actions.is_empty() {
+            tracing::info!("recovery: state is clean, no recovery needed");
+            return;
+        }
+
+        self.apply_recovery_actions(&actions);
+    }
+
+    /// Scan worktrees for stale conditions that need recovery.
+    ///
+    /// Returns a list of `"kind:wt_id:detail"` action strings.
+    fn detect_recovery_actions(state: &super::types::WorktreeState) -> Vec<String> {
+        let mut actions: Vec<String> = Vec::new();
+
+        for wt in &state.worktrees {
+            let wt_path = PathBuf::from(&wt.path);
+
+            // Orphaned worktrees: path doesn't exist on disk.
+            if !wt_path.exists()
+                && !matches!(
+                    wt.status,
+                    WorktreeStatus::Merged | WorktreeStatus::Abandoned
+                )
+            {
+                actions.push(format!(
+                    "orphan:{}:{}",
+                    wt.id, "path missing, marking abandoned"
+                ));
+                continue;
+            }
+
+            // Partial merges: stuck in Merging but no operation in progress.
+            if wt.status == WorktreeStatus::Merging && wt_path.exists() {
+                let rebase = git::is_rebase_in_progress(&wt_path).unwrap_or(false);
+                let merge = git::is_merge_in_progress(&wt_path).unwrap_or(false);
+
+                if rebase {
+                    actions.push(format!("abort_rebase:{}:{}", wt.id, "stale rebase aborted"));
+                } else if merge {
+                    actions.push(format!("abort_merge:{}:{}", wt.id, "stale merge aborted"));
+                } else {
+                    actions.push(format!(
+                        "reset_merging:{}:{}",
+                        wt.id, "no operation in progress, resetting to completed"
+                    ));
+                }
+                continue;
+            }
+
+            // Dead run processes: Active with dead PID.
+            if wt.status == WorktreeStatus::Active
+                && wt.run_pid.is_some_and(|pid| !Self::is_process_alive(pid))
+            {
+                actions.push(format!(
+                    "dead_pid:{}:{}",
+                    wt.id, "run process dead, marking completed"
+                ));
+            }
+        }
+
+        actions
+    }
+
+    /// Apply previously detected recovery actions to the state file.
+    fn apply_recovery_actions(&self, actions: &[String]) {
+        let now = chrono::Utc::now().to_rfc3339();
+        let actions_owned: Vec<String> = actions.to_vec();
+        let now_clone = now.clone();
+
+        let result = self.state_manager().modify(|state| {
+            for action in &actions_owned {
+                let parts: Vec<&str> = action.splitn(3, ':').collect();
+                let (kind, wt_id, detail) = (parts[0], parts[1], parts[2]);
+
+                let Some(wt) = state.worktrees.iter_mut().find(|w| w.id == wt_id) else {
+                    continue;
+                };
+
+                match kind {
+                    "orphan" => {
+                        wt.status = WorktreeStatus::Abandoned;
+                        wt.run_pid = None;
+                    }
+                    "abort_rebase" => {
+                        let wt_path = PathBuf::from(&wt.path);
+                        let _ = git::rebase_abort(&wt_path);
+                        wt.status = WorktreeStatus::Completed;
+                    }
+                    "abort_merge" => {
+                        let wt_path = PathBuf::from(&wt.path);
+                        let _ = git::merge_abort(&wt_path);
+                        wt.status = WorktreeStatus::Completed;
+                    }
+                    "reset_merging" => {
+                        wt.status = WorktreeStatus::Completed;
+                    }
+                    "dead_pid" => {
+                        wt.status = WorktreeStatus::Completed;
+                        wt.run_pid = None;
+                    }
+                    _ => continue,
+                }
+
+                wt.updated_at.clone_from(&now_clone);
+                wt.events.push(WorktreeEvent {
+                    timestamp: now_clone.clone(),
+                    event_type: EventType::RecoveryPerformed,
+                    detail: Some(detail.to_string()),
+                });
+
+                tracing::info!("recovery: {kind} {wt_id} — {detail}");
+            }
+
+            Ok(())
+        });
+
+        match result {
+            Ok(_) => {
+                tracing::info!("recovery: {} action(s) applied successfully", actions.len());
+            }
+            Err(e) => {
+                tracing::warn!("recovery: failed to apply actions: {e:#}");
+            }
+        }
+    }
+
     // ── Main event loop ─────────────────────────────────────────────
 
     /// Run the daemon (production entry point).
@@ -376,6 +527,9 @@ impl Daemon {
 
         self.write_pid_file()?;
         self.register_daemon()?;
+
+        // Recover from any stale state left by a previous crash.
+        self.recover_stale_state();
 
         let sock = ipc::socket_path(&self.root);
         let server = ipc::IpcServer::bind(&sock)?;
@@ -2918,5 +3072,210 @@ mod tests {
 
         // No new commit should have been created.
         assert_eq!(commit_count_before, commit_count_after);
+    }
+
+    // ── Crash recovery ──────────────────────────────────────────────
+
+    #[test]
+    fn recover_stale_state_noop_when_clean() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Write a clean state with an active worktree that has a live PID.
+        let mut entry = make_entry("wt-001", WorktreeStatus::Active, &[]);
+        entry.path = root.to_string_lossy().to_string();
+        entry.run_pid = Some(std::process::id()); // our own PID = alive
+
+        let state = WorktreeState {
+            worktrees: vec![entry],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        // State should be unchanged.
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Active);
+        assert!(after.worktrees[0].events.is_empty());
+    }
+
+    #[test]
+    fn recover_stale_state_marks_orphaned_worktree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Worktree points to a non-existent path.
+        let entry = make_entry("wt-orphan", WorktreeStatus::Active, &["src/main.rs"]);
+        // Default path from make_entry is /tmp/wt-orphan which doesn't exist.
+
+        let state = WorktreeState {
+            worktrees: vec![entry],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Abandoned);
+        assert_eq!(after.worktrees[0].events.len(), 1);
+        assert_eq!(
+            after.worktrees[0].events[0].event_type,
+            EventType::RecoveryPerformed
+        );
+        assert!(
+            after.worktrees[0].events[0]
+                .detail
+                .as_ref()
+                .unwrap()
+                .contains("path missing")
+        );
+    }
+
+    #[test]
+    fn recover_stale_state_resets_partial_merge_no_operation() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Worktree is Merging but no actual merge/rebase in progress.
+        let mut entry = make_entry("wt-merge", WorktreeStatus::Merging, &[]);
+        entry.path = root.to_string_lossy().to_string(); // valid path, no merge in progress
+
+        let state = WorktreeState {
+            worktrees: vec![entry],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Completed);
+        assert_eq!(after.worktrees[0].events.len(), 1);
+        assert_eq!(
+            after.worktrees[0].events[0].event_type,
+            EventType::RecoveryPerformed
+        );
+    }
+
+    #[test]
+    fn recover_stale_state_completes_dead_process() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Active worktree with a dead PID.
+        let mut entry = make_entry("wt-dead", WorktreeStatus::Active, &[]);
+        entry.path = root.to_string_lossy().to_string();
+        entry.run_pid = Some(999_999_999); // almost certainly not a live PID
+
+        let state = WorktreeState {
+            worktrees: vec![entry],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Completed);
+        assert!(after.worktrees[0].run_pid.is_none());
+        assert_eq!(after.worktrees[0].events.len(), 1);
+        assert_eq!(
+            after.worktrees[0].events[0].event_type,
+            EventType::RecoveryPerformed
+        );
+    }
+
+    #[test]
+    fn recover_stale_state_skips_already_merged_and_abandoned() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Merged and Abandoned worktrees with non-existent paths should NOT be touched.
+        let merged = make_entry("wt-merged", WorktreeStatus::Merged, &[]);
+        let abandoned = make_entry("wt-abandoned", WorktreeStatus::Abandoned, &[]);
+
+        let state = WorktreeState {
+            worktrees: vec![merged, abandoned],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Merged);
+        assert_eq!(after.worktrees[1].status, WorktreeStatus::Abandoned);
+        assert!(after.worktrees[0].events.is_empty());
+        assert!(after.worktrees[1].events.is_empty());
+    }
+
+    #[test]
+    fn recover_stale_state_multiple_issues() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Mix of issues: orphan + dead PID + clean.
+        let orphan = make_entry("wt-orphan", WorktreeStatus::Active, &[]);
+
+        let mut dead = make_entry("wt-dead", WorktreeStatus::Active, &[]);
+        dead.path = root.to_string_lossy().to_string();
+        dead.run_pid = Some(999_999_999);
+
+        let mut clean = make_entry("wt-clean", WorktreeStatus::Completed, &[]);
+        clean.path = root.to_string_lossy().to_string();
+
+        let state = WorktreeState {
+            worktrees: vec![orphan, dead, clean],
+            ..WorktreeState::default()
+        };
+        let sm = StateManager::new(root);
+        sm.write(&state).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.recover_stale_state();
+
+        let after = sm.read().unwrap();
+        assert_eq!(after.worktrees[0].status, WorktreeStatus::Abandoned); // orphan
+        assert_eq!(after.worktrees[1].status, WorktreeStatus::Completed); // dead PID
+        assert_eq!(after.worktrees[2].status, WorktreeStatus::Completed); // clean, unchanged
+        assert_eq!(after.worktrees[0].events.len(), 1); // recovered
+        assert_eq!(after.worktrees[1].events.len(), 1); // recovered
+        assert!(after.worktrees[2].events.is_empty()); // no recovery needed
     }
 }

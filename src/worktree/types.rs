@@ -251,6 +251,9 @@ pub enum EventType {
 
     /// Worktree was removed.
     Removed,
+
+    /// Daemon crash recovery took corrective action.
+    RecoveryPerformed,
 }
 
 impl std::fmt::Display for EventType {
@@ -270,6 +273,7 @@ impl std::fmt::Display for EventType {
             Self::ConflictResolved => write!(f, "conflict_resolved"),
             Self::StateCommitted => write!(f, "state_committed"),
             Self::Removed => write!(f, "removed"),
+            Self::RecoveryPerformed => write!(f, "recovery_performed"),
         }
     }
 }
@@ -504,6 +508,10 @@ mod tests {
         assert_eq!(EventType::ConflictResolved.to_string(), "conflict_resolved");
         assert_eq!(EventType::StateCommitted.to_string(), "state_committed");
         assert_eq!(EventType::Removed.to_string(), "removed");
+        assert_eq!(
+            EventType::RecoveryPerformed.to_string(),
+            "recovery_performed"
+        );
     }
 
     #[test]

@@ -348,6 +348,18 @@ pub fn is_rebase_in_progress(cwd: &Path) -> Result<bool> {
     Ok(git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists())
 }
 
+/// Check whether a merge is currently in progress (e.g., paused for
+/// conflict resolution).
+///
+/// Detects the presence of `MERGE_HEAD` in the git directory.
+pub fn is_merge_in_progress(cwd: &Path) -> Result<bool> {
+    let git_dir =
+        git_output(&["rev-parse", "--git-dir"], cwd).context("failed to resolve git dir")?;
+    let git_dir = Path::new(git_dir.trim());
+
+    Ok(git_dir.join("MERGE_HEAD").exists())
+}
+
 /// Finalize a merge commit after conflicts have been resolved.
 ///
 /// Stages all changes and commits with `--no-edit` to accept the
@@ -780,6 +792,14 @@ mod tests {
         init_git_repo(tmp.path());
 
         assert!(!is_rebase_in_progress(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn is_merge_in_progress_false_normally() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        assert!(!is_merge_in_progress(tmp.path()).unwrap());
     }
 
     #[test]
