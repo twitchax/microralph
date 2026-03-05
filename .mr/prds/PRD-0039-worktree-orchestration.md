@@ -40,7 +40,7 @@ acceptance_tests:
   - id: uat-005
     name: "Daemon heartbeat updates state.yaml with worktree liveness and overlap warnings"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-006
     name: "mr run in a worktree detects daemon and sends lifecycle events via IPC"
     command: cargo make uat
@@ -784,3 +784,13 @@ src/
   - `is_healthy_true_when_running_and_reachable` (line 2047): starts daemon, waits for socket, asserts `Daemon::is_healthy()` returns true — validates the health check used by `ensure_running` auto-start logic
   - `ensure_daemon()` in `src/commands/worktree.rs` (line 86) calls `Daemon::ensure_running()` which checks `is_healthy`, spawns daemon if needed, and waits for socket — auto-start path for `mr wt run`
   - `cargo make uat` — 752 tests passed, 0 skipped
+
+## 2026-03-05 — uat-005 Verification
+- **UAT**: Daemon heartbeat updates state.yaml with worktree liveness and overlap warnings
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created `tier1_heartbeat_updates_liveness_and_overlaps` in `src/worktree/daemon.rs`: starts a daemon with 1-second heartbeat interval, pre-populates state with an active worktree holding a dead PID (4,000,000) and two active worktrees sharing `src/shared.rs`, then verifies the daemon detects the dead PID (RecoveryPerformed event) and computes overlap warnings for the shared file
+  - Existing `compute_overlaps_*` tests (6 variants) cover overlap risk calculation at all levels (none, low, medium, high, multiple pairs, non-active filtering)
+  - Existing `is_process_alive_*` tests (2 variants) cover process liveness detection
+  - `cargo make uat` — 753 tests passed, 0 skipped

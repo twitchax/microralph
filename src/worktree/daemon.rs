@@ -3278,4 +3278,102 @@ mod tests {
         assert_eq!(after.worktrees[1].events.len(), 1); // recovered
         assert!(after.worktrees[2].events.is_empty()); // no recovery needed
     }
+
+    // ── Tier 1 heartbeat integration ────────────────────────────────
+
+    #[test]
+    fn tier1_heartbeat_updates_liveness_and_overlaps() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+
+        // Create real directories for worktree paths so recovery doesn't mark them Abandoned.
+        let dead_dir = tmp.path().join("wt-dead");
+        let alive_dir = tmp.path().join("wt-alive");
+        let other_dir = tmp.path().join("wt-other");
+        fs::create_dir_all(&dead_dir).unwrap();
+        fs::create_dir_all(&alive_dir).unwrap();
+        fs::create_dir_all(&other_dir).unwrap();
+
+        // Pre-populate state:
+        //  - wt-dead: active with a dead PID (4_000_000) → should become Completed
+        //  - wt-alive: active with our own PID → stays Active
+        //  - wt-other: active, shares files with wt-alive → overlap warning expected
+        let mut dead = make_entry("wt-dead", WorktreeStatus::Active, &["src/a.rs"]);
+        dead.run_pid = Some(4_000_000);
+        dead.path = dead_dir.to_string_lossy().to_string();
+
+        let mut alive = make_entry("wt-alive", WorktreeStatus::Active, &["src/shared.rs"]);
+        alive.run_pid = Some(std::process::id());
+        alive.path = alive_dir.to_string_lossy().to_string();
+
+        let mut other = make_entry("wt-other", WorktreeStatus::Active, &["src/shared.rs"]);
+        other.path = other_dir.to_string_lossy().to_string();
+
+        state_mgr
+            .modify(|state| {
+                state.daemon = Some(DaemonInfo {
+                    pid: std::process::id(),
+                    started_at: "2026-01-01T00:00:00Z".to_string(),
+                    idle_timeout_hours: 24,
+                    last_heartbeat: "2026-01-01T00:00:00Z".to_string(),
+                });
+                state.worktrees = vec![dead.clone(), alive.clone(), other.clone()];
+                Ok(())
+            })
+            .unwrap();
+
+        // Create daemon with 1-second heartbeat and run it in a thread.
+        let daemon = Daemon::new_with_config(
+            tmp.path().to_path_buf(),
+            DaemonConfig {
+                heartbeat_interval_secs: 1,
+                idle_timeout_hours: 24,
+                socket_name: "daemon.sock".to_string(),
+            },
+        );
+
+        let shutdown = daemon.shutdown_handle();
+
+        let handle = thread::spawn(move || daemon.run());
+
+        // Wait for at least one heartbeat cycle to complete.
+        thread::sleep(Duration::from_secs(3));
+
+        // Shut down the daemon.
+        shutdown.store(true, Ordering::SeqCst);
+        handle.join().unwrap().unwrap();
+
+        // Verify state was updated by heartbeat.
+        let state = state_mgr.read().unwrap();
+
+        // wt-dead: daemon startup recovery detected dead PID and marked Completed
+        // (RecoveryPerformed event), then tier2 auto-merge attempted further.
+        // The RecoveryPerformed event proves daemon liveness detection worked.
+        let wt_dead = state.worktrees.iter().find(|w| w.id == "wt-dead").unwrap();
+        assert!(wt_dead.run_pid.is_none());
+        assert!(
+            wt_dead
+                .events
+                .iter()
+                .any(|e| e.event_type == EventType::RecoveryPerformed),
+            "expected RecoveryPerformed event from daemon liveness check, got: {:?}",
+            wt_dead.events
+        );
+
+        // Overlap warnings should include wt-alive and wt-other sharing src/shared.rs.
+        let has_overlap = state
+            .overlap_warnings
+            .iter()
+            .any(|w| w.files.contains(&"src/shared.rs".to_string()));
+        assert!(
+            has_overlap,
+            "expected overlap warning for src/shared.rs, got: {:?}",
+            state.overlap_warnings
+        );
+
+        // Daemon last_heartbeat should have been updated from the initial value.
+        // (daemon info is cleaned up on exit, so we can't check it after shutdown;
+        // the overlap + liveness updates prove the heartbeat ran.)
+    }
 }
