@@ -327,3 +327,92 @@ body {
         padding: 1rem 0.5rem;
     }
 }
+
+/* ── Worktree list (T-008) ─────────────────────────────────────────── */
+
+.mr-worktree-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mr-worktree-list__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mr-worktree-list__filter-label {
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground3, #999);
+    white-space: nowrap;
+}
+
+.mr-worktree-list__empty {
+    color: var(--colorNeutralForeground3, #999);
+    font-style: italic;
+}
+
+/* ── Worktree table ──────────────────────────────────────────────── */
+
+.mr-wt-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mr-wt-table__header--sortable .thaw-table-header-cell__button,
+.mr-wt-table__header--active .thaw-table-header-cell__button {
+    cursor: default;
+}
+
+.mr-wt-table__sort-trigger {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.mr-wt-table__header--active .mr-wt-table__sort-trigger {
+    color: var(--colorBrandForeground1, #7b7bff);
+    font-weight: 600;
+}
+
+.mr-wt-table__row {
+    transition: background 0.15s ease;
+}
+
+.mr-wt-table__row:hover {
+    background: var(--colorNeutralBackground1Hover, rgba(255, 255, 255, 0.04));
+}
+
+.mr-wt-table__prd {
+    font-weight: 600;
+    color: var(--colorBrandForeground1, #7b7bff);
+}
+
+.mr-wt-table__branch {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground2, #bbb);
+}
+
+.mr-wt-table__task {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+.mr-wt-table__event {
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground2, #bbb);
+}
+
+.mr-wt-table__age {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-wt-table__files-tag {
+    min-width: 2rem;
+    text-align: center;
+}

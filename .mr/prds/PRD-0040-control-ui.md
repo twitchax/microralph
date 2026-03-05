@@ -104,7 +104,7 @@ tasks:
   - id: T-008
     title: "Worktree list view: table with real-time status"
     priority: 3
-    status: todo
+    status: done
     notes: "Table of all worktrees with columns: PRD ID, branch, status (color-coded badge), current task, modified files count, last event, age. Sortable and filterable. Click row to navigate to detail. Use Thaw Table, Badge, and Tag components. Real-time updates via WebSocket signal."
   - id: T-009
     title: "Worktree detail view: event timeline, task progress, files"
@@ -434,3 +434,15 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns.
   - UAT passes: 757 tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated dashboard module (rule 2).
+
+## 2026-03-05 — T-008 Completed
+- **Task**: Worktree list view: table with real-time status
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/worktrees.rs`: Full worktree list page with `WorktreeList` (orchestrator), `StatusFilter` (Thaw `Select` dropdown for filtering by worktree status), `WorktreeTable` (Thaw `Table`/`TableHeader`/`TableBody`/`TableRow`/`TableCell` with columns: PRD ID, Branch, Status, Current Task, Modified Files, Last Event, Age), `SortableHeader` (click-to-sort headers with arrow indicators), `WorktreeRow` (per-row rendering with color-coded `StatusBadge`), `StatusBadge` (maps `WorktreeStatus` to Thaw `Badge` with color), `derive_current_task()` (extracts active task from event history), `compute_age()` (formats creation date). Extracted `filter_and_sort()` helper to keep component under pedantic line limit.
+  - Updated `crates/mr-ui/src/components/mod.rs`: exported `worktrees` module.
+  - Updated `crates/mr-ui/src/app.rs`: replaced placeholder `WorktreesPage` with `WorktreeList` component import and usage.
+  - Updated `crates/mr-ui/style/main.css`: added worktree list CSS — toolbar with filter label, table styles with sortable header highlighting, hover rows, monospaced branch/task/age columns, color-coded PRD ID, and file count tag.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate` for component fns, `clippy::wildcard_imports` for `leptos::prelude::*`).
+  - UAT passes: 757 tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated worktrees module (rule 2), DRY via extracted `filter_and_sort` helper (rule 1).

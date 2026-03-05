@@ -15,6 +15,7 @@ use leptos_router::{
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
 use crate::components::theme::ThemeProvider;
+use crate::components::worktrees::WorktreeList;
 use crate::types::AppState;
 
 /// The HTML shell rendered on the server for SSR with hydration scripts.
@@ -126,12 +127,11 @@ fn HomePage() -> impl IntoView {
     }
 }
 
-/// Placeholder page for the worktree list view (T-008).
+/// Worktree list page with real-time status table (T-008).
 #[component]
 fn WorktreesPage() -> impl IntoView {
     view! {
-        <h1>"Worktrees"</h1>
-        <p>"Worktree list coming soon."</p>
+        <WorktreeList />
     }
 }
 
