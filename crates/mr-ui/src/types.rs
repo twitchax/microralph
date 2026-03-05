@@ -261,6 +261,19 @@ impl std::fmt::Display for OverlapRisk {
 
 // ── PRD summary ─────────────────────────────────────────────────────
 
+/// Summary of a single task within a PRD.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TaskSummary {
+    /// Task ID (e.g., `"T-001"`).
+    pub id: String,
+
+    /// Human-readable title.
+    pub title: String,
+
+    /// Status string (e.g., `"done"`, `"todo"`, `"in-progress"`).
+    pub status: String,
+}
+
 /// Summary of a PRD for display in the UI.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct PrdSummary {
@@ -281,6 +294,10 @@ pub struct PrdSummary {
 
     /// PRD IDs this PRD depends on.
     pub depends_on: Vec<String>,
+
+    /// Individual task summaries for detail views.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tasks: Vec<TaskSummary>,
 }
 
 // ── Combined application state ──────────────────────────────────────

@@ -416,3 +416,231 @@ body {
     min-width: 2rem;
     text-align: center;
 }
+
+/* ── Worktree detail (T-009) ──────────────────────────────────────── */
+
+.mr-wt-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.mr-wt-detail--not-found {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.mr-wt-detail__back {
+    color: var(--colorBrandForeground1, #7b7bff);
+    text-decoration: none;
+}
+
+.mr-wt-detail__back:hover {
+    text-decoration: underline;
+}
+
+/* ── Status header ───────────────────────────────────────────────── */
+
+.mr-wt-detail__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--colorNeutralStroke1, #333);
+}
+
+.mr-wt-detail__title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.mr-wt-detail__title {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--colorNeutralForeground1, #c0c0ff);
+}
+
+.mr-wt-detail__meta {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.mr-wt-detail__meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.mr-wt-detail__meta-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-wt-detail__meta-value {
+    font-size: 0.85rem;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+/* ── Detail grid (timeline + tasks side by side) ─────────────────── */
+
+.mr-wt-detail__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 900px) {
+    .mr-wt-detail__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mr-wt-detail__card {
+    border: 1px solid var(--colorNeutralStroke1, #333);
+    border-radius: 8px;
+    background: var(--colorNeutralBackground3, #16162a);
+}
+
+.mr-wt-detail__empty {
+    color: var(--colorNeutralForeground3, #999);
+    font-style: italic;
+    margin: 0;
+}
+
+/* ── Task progress ───────────────────────────────────────────────── */
+
+.mr-task-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mr-task-progress__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mr-task-progress__text {
+    font-size: 0.85rem;
+    color: var(--colorNeutralForeground2, #bbb);
+}
+
+.mr-task-progress__bar {
+    height: 6px;
+    background: var(--colorNeutralStroke1, #333);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mr-task-progress__fill {
+    height: 100%;
+    background: var(--colorBrandForeground1, #7b7bff);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.mr-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mr-task-list__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.mr-task-list__item--done {
+    opacity: 0.7;
+}
+
+.mr-task-list__item--active {
+    background: rgba(123, 123, 255, 0.08);
+}
+
+.mr-task-list__icon {
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.mr-task-list__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}
+
+/* ── Modified files list ─────────────────────────────────────────── */
+
+.mr-file-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.mr-file-list__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.mr-file-list__item:hover {
+    background: var(--colorNeutralBackground1Hover, rgba(255, 255, 255, 0.04));
+}
+
+.mr-file-list__icon {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+.mr-file-list__path {
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--colorNeutralForeground2, #bbb);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Merge info ──────────────────────────────────────────────────── */
+
+.mr-merge-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.mr-merge-info__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mr-merge-info__label {
+    font-size: 0.8rem;
+    color: var(--colorNeutralForeground3, #999);
+}
+
+.mr-merge-info__value {
+    font-size: 0.85rem;
+    font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+    color: var(--colorNeutralForeground1, #e0e0e0);
+}

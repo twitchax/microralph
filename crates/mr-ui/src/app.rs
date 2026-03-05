@@ -8,13 +8,14 @@
 use leptos::prelude::*;
 use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    StaticSegment,
+    ParamSegment, StaticSegment,
     components::{Route, Router, Routes},
 };
 
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
 use crate::components::theme::ThemeProvider;
+use crate::components::worktree_detail::WorktreeDetail;
 use crate::components::worktrees::WorktreeList;
 use crate::types::AppState;
 
@@ -61,6 +62,7 @@ pub fn App() -> impl IntoView {
                     <Routes fallback=|| "Page not found.".into_view()>
                         <Route path=StaticSegment("") view=HomePage/>
                         <Route path=StaticSegment("worktrees") view=WorktreesPage/>
+                        <Route path=(StaticSegment("worktrees"), ParamSegment("id")) view=WorktreeDetailPage/>
                         <Route path=StaticSegment("prds") view=PrdsPage/>
                     </Routes>
                 </AppShell>
@@ -141,5 +143,13 @@ fn PrdsPage() -> impl IntoView {
     view! {
         <h1>"PRDs"</h1>
         <p>"PRD list coming soon."</p>
+    }
+}
+
+/// Worktree detail page with event timeline, task progress, and files (T-009).
+#[component]
+fn WorktreeDetailPage() -> impl IntoView {
+    view! {
+        <WorktreeDetail />
     }
 }

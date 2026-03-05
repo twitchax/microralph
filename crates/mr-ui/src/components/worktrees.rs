@@ -249,6 +249,7 @@ fn SortableHeader(
 #[component]
 fn WorktreeRow(entry: WorktreeEntry) -> impl IntoView {
     let status = entry.status;
+    let wt_id = entry.id.clone();
     let prd_id = entry.prd.clone();
     let branch = entry.branch.clone();
     let current_task = derive_current_task(&entry);
@@ -259,11 +260,12 @@ fn WorktreeRow(entry: WorktreeEntry) -> impl IntoView {
         .map(|e| e.event_type.to_string())
         .unwrap_or_default();
     let age = compute_age(&entry.created_at);
+    let detail_href = format!("/worktrees/{wt_id}");
 
     view! {
         <TableRow class="mr-wt-table__row">
             <TableCell>
-                <span class="mr-wt-table__prd">{prd_id}</span>
+                <a href=detail_href class="mr-wt-table__prd">{prd_id}</a>
             </TableCell>
             <TableCell>
                 <span class="mr-wt-table__branch">{branch}</span>

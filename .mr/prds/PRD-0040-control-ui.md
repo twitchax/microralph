@@ -109,7 +109,7 @@ tasks:
   - id: T-009
     title: "Worktree detail view: event timeline, task progress, files"
     priority: 4
-    status: todo
+    status: done
     notes: "Detailed view for a single worktree. Sections: (1) Status header with PRD title, branch, status badge, PID. (2) Event timeline (Temporal-style) with timestamps and event types. (3) Task progress — list of tasks with status indicators. (4) Modified files list with diff preview link. (5) Merge info — whether merge was ff or agent-resolved, merge target branch. Use Thaw Timeline, Collapse, and List components."
   - id: T-010
     title: "PRD list page: all PRDs with status and dependencies"
@@ -462,3 +462,18 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - Added `#![recursion_limit = "256"]` to `crates/mr-ui/src/lib.rs` to handle deep type recursion when compiling with `--all-features` (both `ssr` and `hydrate` combined).
   - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy (including ui-clippy) all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns for cargo-make tasks (rule 4).
+
+## 2026-03-05 — T-009 Completed
+- **Task**: Worktree detail view: event timeline, task progress, files
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/components/worktree_detail.rs`: Full worktree detail page with five sections — `StatusHeader` (PRD title, branch, status badge, PID, created timestamp as metadata row), `EventTimeline` (Temporal-style reverse-chronological event list with color-coded dots reusing dashboard pattern), `TaskProgress` (individual task list with status icons and progress bar derived from matching PRD's task summaries), `ModifiedFilesList` (file paths in monospaced list), `MergeInfo` (merge target branch and derived merge summary — clean/agent-resolved/failed/pending).
+  - Added `TaskSummary` struct to `crates/mr-ui/src/types.rs` with `id`, `title`, `status` fields. Extended `PrdSummary` with `tasks: Vec<TaskSummary>` for individual task detail display.
+  - Updated `crates/mr-ui/src/state.rs`: extended `PrdTask` frontmatter parser to capture `id` and `title`. Updated `parse_prd_summary` to populate `TaskSummary` instances in the `PrdSummary.tasks` field.
+  - Updated `crates/mr-ui/src/components/mod.rs`: exported `worktree_detail` module.
+  - Updated `crates/mr-ui/src/app.rs`: added `ParamSegment` import, `/worktrees/:id` route pointing to `WorktreeDetailPage` component that renders `WorktreeDetail`.
+  - Updated `crates/mr-ui/src/components/worktrees.rs`: made PRD ID column in worktree table a clickable link (`<a>`) navigating to `/worktrees/{wt_id}`.
+  - Updated `crates/mr-ui/style/main.css`: added comprehensive CSS for detail view — status header, metadata row, two-column grid layout (timeline + tasks), task progress bar, task list items with status icons, file list, merge info section. Responsive breakpoint at 900px collapses grid to single column.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4), separation of concerns with dedicated worktree_detail module (rule 2), DRY via reuse of event dot color mapping pattern from dashboard (rule 1).

@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::{RwLock, broadcast};
 use tokio::time;
 
-use crate::types::{AppState, PrdSummary, WorktreeState};
+use crate::types::{AppState, PrdSummary, TaskSummary, WorktreeState};
 
 // ── Constants ───────────────────────────────────────────────────────
 
@@ -41,6 +41,10 @@ struct PrdFrontmatter {
 /// Minimal task entry for counting completion progress.
 #[derive(serde::Deserialize)]
 struct PrdTask {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    title: String,
     #[serde(default)]
     status: String,
 }
@@ -216,6 +220,14 @@ async fn parse_prd_summary(path: &Path) -> Option<PrdSummary> {
     let tasks = fm.tasks.as_deref().unwrap_or_default();
     let total_tasks = tasks.len();
     let completed_tasks = tasks.iter().filter(|t| t.status == "done").count();
+    let task_summaries = tasks
+        .iter()
+        .map(|t| TaskSummary {
+            id: t.id.clone(),
+            title: t.title.clone(),
+            status: t.status.clone(),
+        })
+        .collect();
 
     Some(PrdSummary {
         id: fm.id,
@@ -224,6 +236,7 @@ async fn parse_prd_summary(path: &Path) -> Option<PrdSummary> {
         completed_tasks,
         total_tasks,
         depends_on: fm.depends_on.unwrap_or_default(),
+        tasks: task_summaries,
     })
 }
 
