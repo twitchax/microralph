@@ -1234,6 +1234,93 @@ mod tests {
     }
 
     #[test]
+    fn wt_run_creates_branch_worktree_and_registers_state() {
+        use crate::worktree::git;
+
+        // Set up a temp git repo with a valid PRD.
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("myrepo");
+        std::fs::create_dir(&main_dir).unwrap();
+
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::fs::write(main_dir.join("README.md"), "# Test").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "init"])
+            .current_dir(&main_dir)
+            .output()
+            .unwrap();
+
+        // Create a minimal valid PRD file.
+        let prds_dir = main_dir.join(".mr").join("prds");
+        std::fs::create_dir_all(&prds_dir).unwrap();
+        std::fs::write(
+            prds_dir.join("PRD-0042-test.md"),
+            "---\nid: PRD-0042\ntitle: \"Test PRD\"\nstatus: active\ntasks: []\n---\n\n# Summary\n",
+        )
+        .unwrap();
+
+        // 1. Validate PRD exists.
+        validate_prd_exists(&main_dir, "PRD-0042").unwrap();
+
+        // 2. Compute branch name and worktree path.
+        let repo = git::repo_name(&main_dir).unwrap();
+        assert_eq!(repo, "myrepo");
+        let branch = git::worktree_branch_name(&repo, "PRD-0042");
+        assert_eq!(branch, "myrepo-prd-42");
+        let wt_path = git::worktree_path(&main_dir, &repo, "PRD-0042");
+
+        // 3. Create branch and worktree.
+        git::create_branch(&branch, "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_path, &branch, &main_dir).unwrap();
+        assert!(wt_path.exists(), "worktree directory should exist on disk");
+
+        // 4. Register worktree in state.
+        let state_mgr = StateManager::new(&main_dir);
+        state_mgr.ensure_dir().unwrap();
+        let wt_id =
+            register_worktree(&state_mgr, "PRD-0042", &branch, wt_path.to_str().unwrap()).unwrap();
+        assert_eq!(wt_id, "wt-001");
+
+        // 5. Verify state entry has correct fields.
+        let state = state_mgr.read().unwrap();
+        assert_eq!(state.worktrees.len(), 1);
+        let wt = &state.worktrees[0];
+        assert_eq!(wt.id, "wt-001");
+        assert_eq!(wt.prd, "PRD-0042");
+        assert_eq!(wt.branch, "myrepo-prd-42");
+        assert_eq!(wt.status, WorktreeStatus::Active);
+        assert!(wt.run_pid.is_none());
+        assert_eq!(wt.events.len(), 1);
+        assert_eq!(wt.events[0].event_type, EventType::Created);
+
+        // 6. Verify the git worktree is listed.
+        let worktrees = git::list_worktrees(&main_dir).unwrap();
+        let found = worktrees
+            .iter()
+            .any(|(_, b)| b.as_deref() == Some("myrepo-prd-42"));
+        assert!(found, "worktree branch should appear in git worktree list");
+    }
+
+    #[test]
     fn test_cmd_wt_list_fails_without_git_repo() {
         // Running cmd_wt_list outside a git repo should fail gracefully.
         let tmp = tempfile::tempdir().unwrap();
