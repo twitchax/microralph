@@ -12,15 +12,28 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use std::sync::Arc;
+
+    use axum::Extension;
     use axum::Router;
     #[allow(clippy::wildcard_imports)]
     use leptos::prelude::*;
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use mr_ui::app::{App, shell};
+    use mr_ui::state::StateService;
+    use mr_ui::types::AppState;
+    use tokio::sync::RwLock;
 
     let conf = get_configuration(None).expect("failed to load leptos configuration");
     let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;
+
+    // Start the state service for filesystem polling.
+    let root = std::env::current_dir().expect("failed to get current directory");
+    let service = StateService::new(root);
+    let app_state: Arc<RwLock<AppState>> = service.shared();
+    let state_tx = service.sender();
+    tokio::spawn(service.run());
 
     let routes = generate_route_list(App);
 
@@ -30,6 +43,8 @@ async fn main() {
             move || shell(leptos_options.clone())
         })
         .fallback(leptos_axum::file_and_error_handler(shell))
+        .layer(Extension(app_state))
+        .layer(Extension(state_tx))
         .with_state(leptos_options);
 
     tracing::info!("listening on http://{addr}");

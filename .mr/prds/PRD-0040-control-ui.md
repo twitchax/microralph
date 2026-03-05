@@ -79,7 +79,7 @@ tasks:
   - id: T-003
     title: "State service: read and watch state.yaml"
     priority: 2
-    status: todo
+    status: done
     notes: "Create a server-side StateService that reads .mr/worktrees/state.yaml using the existing StateManager. Use notify or polling (every 2s) to detect changes. Expose state via an Arc<RwLock<WorktreeState>> shared across Axum handlers. Also read .mr/prds/ for PRD metadata."
   - id: T-004
     title: "WebSocket server function for real-time state push"
@@ -352,3 +352,16 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted `#![allow(clippy::must_use_candidate)]` in app.rs (Leptos component functions don't benefit from `#[must_use]`) and `#[allow(clippy::wildcard_imports)]` for `leptos::prelude::*` (canonical Leptos import pattern)
   - UAT passes: 756 tests, fmt-check, clippy all green
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing patterns (rule 4).
+
+## 2026-03-05 — T-003 Completed
+- **Task**: State service: read and watch state.yaml
+- **Status**: ✅ Done
+- **Changes**:
+  - Created `crates/mr-ui/src/types.rs`: UI-specific data types mirroring the worktree state YAML schema (`WorktreeState`, `DaemonInfo`, `WorktreeEntry`, `WorktreeStatus`, `WorktreeEvent`, `EventType`, `OverlapWarning`, `OverlapRisk`) and PRD summary types (`PrdSummary`, `AppState`). These are duplicated from the root crate because the UI crate cannot depend on the root binary crate (circular dependency). Clearly documented to stay in sync.
+  - Created `crates/mr-ui/src/state.rs`: server-side `StateService` that polls `.mr/worktrees/state.yaml` and `.mr/prds/` every 2 seconds. Detects changes via file modification timestamps. Exposes combined state via `Arc<RwLock<AppState>>`. Includes `tokio::sync::broadcast` channel for future WebSocket push (T-004). Graceful degradation on missing/malformed files. 9 comprehensive async tests covering YAML parsing, PRD scanning, sort order, malformed input handling, initial load, and broadcast notification.
+  - Updated `crates/mr-ui/Cargo.toml`: added `serde` (with `derive` feature), `serde_yaml` (SSR-only), `tempfile` (dev-dependency). Updated `tokio` features to include `time`, `fs`, `sync`, `macros`. Added `dep:serde_yaml` to `ssr` feature list.
+  - Updated `crates/mr-ui/src/lib.rs`: added `pub mod types` (shared) and `#[cfg(feature = "ssr")] pub mod state` (server-only).
+  - Updated `crates/mr-ui/src/main.rs`: integrated `StateService` — starts polling on server boot, shared state and broadcast sender injected as Axum `Extension` layers alongside existing `LeptosOptions` state.
+  - All code passes `clippy::pedantic` with no suppressions in new modules.
+  - UAT passes: 756 tests (root crate), 11 tests (mr-ui with ssr), fmt-check, clippy all green.
+- **Constitution Compliance**: Rule 1 (DRY) — worktree/PRD types are duplicated in the UI crate due to the circular dependency constraint (root binary depends on mr-ui, so mr-ui cannot depend on root). This is documented in the types module header with a clear note to keep in sync. A shared types crate would resolve this but was deemed too large a refactor for this task (rule 3, minimal changes). All other rules fully compliant.

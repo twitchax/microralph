@@ -13,6 +13,7 @@ leptos = { version = "0.8" }
 leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8" }
 thaw = { version = "0.5.0-beta" }
+serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 
 # Client-side dependencies (behind hydrate feature).
@@ -22,8 +23,12 @@ wasm-bindgen = { version = "0.2", optional = true }
 # Server-side dependencies (behind ssr feature).
 leptos_axum = { version = "0.8", optional = true }
 axum = { version = "0.8", optional = true }
-tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "fs", "sync", "macros"], optional = true }
 tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"], optional = true }
+serde_yaml = { version = "0.9", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
 
 [features]
 default = []
@@ -32,6 +37,7 @@ ssr = [
     "dep:axum",
     "dep:tokio",
     "dep:tower-http",
+    "dep:serde_yaml",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",

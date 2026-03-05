@@ -9,6 +9,10 @@
 //! Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5.
 
 pub mod app;
+pub mod types;
+
+#[cfg(feature = "ssr")]
+pub mod state;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
