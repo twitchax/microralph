@@ -2909,9 +2909,9 @@ mod tests {
             .unwrap();
 
         // Create a mock runner with a side-effect that resolves conflicts.
-        let runner = crate::runner::MockRunner::new(vec![
-            crate::runner::RunnerOutput::success("Resolved all conflicts"),
-        ]);
+        let runner = crate::runner::MockRunner::new(vec![crate::runner::RunnerOutput::success(
+            "Resolved all conflicts",
+        )]);
         let wt_dir_for_effect = wt_dir.clone();
         runner.set_execute_side_effect(move |_working_dir| {
             // Simulate agent resolving the conflict by writing the merged file.
@@ -3080,6 +3080,90 @@ mod tests {
         assert!(
             format!("{result:?}").contains("already been merged"),
             "error should mention already merged"
+        );
+    }
+
+    /// Verifies that `manual_merge` triggers the full merge pipeline for a
+    /// specific worktree identified by PRD ID.
+    ///
+    /// Sets up a completed worktree with a non-conflicting branch, calls
+    /// `manual_merge("PRD-0300", None)`, and confirms the merge pipeline
+    /// ran (`MergeStarted` event) and was gated by UATs (`MergeFailed` status).
+    #[test]
+    fn manual_merge_triggers_merge_pipeline_for_prd() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("manual-merge-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a worktree with a non-conflicting commit.
+        let wt_dir = tmp.path().join("manual-merge-repo-prd-300");
+        git::create_branch("manual-merge-repo-prd-300", "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_dir, "manual-merge-repo-prd-300", &main_dir).unwrap();
+
+        std::fs::write(wt_dir.join("feature_300.rs"), "fn feature() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Feature 300"])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+
+        // Register the worktree as Completed in state.
+        let state_mgr = StateManager::new(&main_dir);
+        state_mgr.ensure_dir().unwrap();
+        state_mgr
+            .modify(|state| {
+                state.worktrees.push(WorktreeEntry {
+                    id: "wt-300".to_string(),
+                    prd: "PRD-0300".to_string(),
+                    branch: "manual-merge-repo-prd-300".to_string(),
+                    path: wt_dir.to_string_lossy().to_string(),
+                    status: WorktreeStatus::Completed,
+                    run_pid: None,
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    merge_target: default_branch,
+                    modified_files: vec!["feature_300.rs".to_string()],
+                    events: vec![],
+                });
+                Ok(())
+            })
+            .unwrap();
+
+        let daemon = Daemon::new(main_dir.clone());
+        let _ = daemon.manual_merge("PRD-0300", None);
+
+        let state = state_mgr.read().unwrap();
+        let wt = state.worktrees.iter().find(|w| w.id == "wt-300").unwrap();
+
+        // Integration succeeded but UATs failed → MergeFailed.
+        assert_eq!(wt.status, WorktreeStatus::MergeFailed);
+
+        // MergeStarted event proves manual merge was triggered.
+        assert!(
+            wt.events
+                .iter()
+                .any(|e| e.event_type == EventType::MergeStarted),
+            "should have MergeStarted event"
+        );
+
+        // MergeFailed event with UAT detail proves UAT gating.
+        let fail_event = wt
+            .events
+            .iter()
+            .find(|e| e.event_type == EventType::MergeFailed)
+            .expect("should have MergeFailed event");
+        assert_eq!(
+            fail_event.detail.as_deref(),
+            Some("UATs failed after integration"),
+            "MergeFailed should cite UAT failure"
         );
     }
 

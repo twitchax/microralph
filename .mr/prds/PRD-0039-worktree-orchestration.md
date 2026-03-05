@@ -60,7 +60,7 @@ acceptance_tests:
   - id: uat-010
     name: "mr wt merge manually triggers merge of a specific worktree into target"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-011
     name: "Daemon recovers gracefully from crash, detecting partial merge state"
     command: cargo make uat
@@ -845,3 +845,16 @@ src/
   - `test_render_wt_graph_ascii_excludes_merged_and_abandoned` — verify filtering
   - `test_cmd_wt_graph_fails_without_git_repo` / `test_cmd_wt_graph_rejects_unknown_format` — error paths
   - `cargo nextest run -E 'test(wt_graph) | test(wt_risk)'` — 11 tests passed, 0 skipped
+
+## 2026-03-05 — uat-010 Verification
+- **UAT**: mr wt merge manually triggers merge of a specific worktree into target
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Added `manual_merge_triggers_merge_pipeline_for_prd` in `src/worktree/daemon.rs`
+  - Test creates a real git repo with a worktree, registers it as Completed, calls `manual_merge("PRD-0300", None)`, and verifies:
+    - `MergeStarted` event is recorded (proves merge pipeline was triggered)
+    - Status transitions to `MergeFailed` (UAT gating works — no `Cargo.toml` in temp dir)
+    - `MergeFailed` event detail cites UAT failure
+  - Existing tests `manual_merge_fails_for_unknown_prd` and `manual_merge_rejects_merged_worktree` cover error paths
+  - All 3 `manual_merge` tests pass
