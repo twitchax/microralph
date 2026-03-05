@@ -357,6 +357,28 @@ pub fn merge_commit(cwd: &Path) -> Result<()> {
         .context("failed to commit merge")
 }
 
+/// Stage a specific file path via `git add <path>`.
+pub fn add_file(file_path: &str, cwd: &Path) -> Result<()> {
+    git_run(&["add", file_path], cwd).with_context(|| format!("failed to stage file: {file_path}"))
+}
+
+/// Commit staged changes with the given message.
+pub fn commit(message: &str, cwd: &Path) -> Result<()> {
+    git_run(&["commit", "-m", message], cwd).context("failed to commit")
+}
+
+/// Check whether there are staged changes ready to commit.
+pub fn has_staged_changes(cwd: &Path) -> Result<bool> {
+    let result = Command::new("git")
+        .args(["diff", "--cached", "--quiet"])
+        .current_dir(cwd)
+        .output()
+        .context("failed to run git diff --cached")?;
+
+    // Exit code 0 = no changes, 1 = changes exist.
+    Ok(!result.status.success())
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -771,5 +793,48 @@ mod tests {
         // Verify the file is staged.
         let status = git_output(&["status", "--porcelain"], tmp.path()).unwrap();
         assert!(status.contains("new.txt"));
+    }
+
+    #[test]
+    fn add_file_stages_specific_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        std::fs::write(tmp.path().join("a.txt"), "aaa").unwrap();
+        std::fs::write(tmp.path().join("b.txt"), "bbb").unwrap();
+
+        add_file("a.txt", tmp.path()).unwrap();
+
+        let status = git_output(&["status", "--porcelain"], tmp.path()).unwrap();
+        assert!(status.contains("A  a.txt"));
+        assert!(status.contains("?? b.txt"));
+    }
+
+    #[test]
+    fn commit_creates_commit_with_message() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        std::fs::write(tmp.path().join("file.txt"), "content").unwrap();
+        stage_all(tmp.path()).unwrap();
+        commit("test commit message", tmp.path()).unwrap();
+
+        let log = git_output(&["log", "--oneline", "-1"], tmp.path()).unwrap();
+        assert!(log.contains("test commit message"));
+    }
+
+    #[test]
+    fn has_staged_changes_detects_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        // No staged changes initially.
+        assert!(!has_staged_changes(tmp.path()).unwrap());
+
+        std::fs::write(tmp.path().join("new.txt"), "content").unwrap();
+        stage_all(tmp.path()).unwrap();
+
+        // Now there are staged changes.
+        assert!(has_staged_changes(tmp.path()).unwrap());
     }
 }

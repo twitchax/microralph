@@ -150,7 +150,7 @@ tasks:
   - id: T-014
     title: "Implement agent-driven state commits"
     priority: 5
-    status: todo
+    status: done
     notes: "On significant events (merge completed, merge failed), agent generates a summary commit message and commits state.yaml to main. Format: 'mr-wt: PRD-0039 merged, PRD-0040 in progress (3 active worktrees)'. Only on big events, not every heartbeat."
   - id: T-015
     title: "Implement mr wt graph subcommand"
@@ -653,3 +653,19 @@ src/
   - 5 new tests (total 720): `validate_mergeable_status_accepts_valid_states`, `validate_mergeable_status_rejects_invalid_states`, `manual_merge_fails_for_unknown_prd`, `manual_merge_rejects_merged_worktree`, `smart_merge_into_target_uses_main_for_checkout`
   - UAT: `cargo make uat` — 720 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 1 (DRY): Reuses existing daemon merge infrastructure (`integrate_target_into_branch`, `resolve_conflicts`, `update_wt_status`, `run_uat`). Rule 8 (Clippy Pedantic): All new code passes `clippy::pedantic` (by-value for Copy types, `map_or_else`, `if let` patterns).
+
+## 2026-03-05 — T-014 Completed
+- **Task**: Implement agent-driven state commits
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 3 new git helpers in `src/worktree/git.rs`: `add_file()`, `commit()`, `has_staged_changes()`
+  - Added `EventType::StateCommitted` variant in `src/worktree/types.rs` with `Display` impl
+  - Implemented state commit logic in `src/worktree/daemon.rs`:
+    - `build_state_summary()` — generates human-readable commit message from current state (format: `mr-wt: PRD-0039 merged, PRD-0040 in progress (3 active worktrees)`)
+    - `commit_state()` — stages `.mr/worktrees/state.yaml`, checks for actual changes, commits with summary message, records `StateCommitted` event (best-effort, never fails the main operation)
+  - Wired `commit_state()` into all significant event paths:
+    - `attempt_merge_worktree()`: after merge completed, merge failed (UAT failure), merge failed (target merge failure), conflicted (resolution failure), conflicted (no runner)
+    - `manual_merge()`: after merge completed, merge failed (UAT failure), merge failed (target merge failure), conflicted (conflict resolution failure)
+  - 9 new tests (total 729): `build_state_summary_single_merged`, `build_state_summary_mixed_states`, `build_state_summary_merge_failed`, `build_state_summary_no_duplicates`, `commit_state_stages_and_commits_in_git_repo`, `commit_state_skips_when_no_changes`, `add_file_stages_specific_file`, `commit_creates_commit_with_message`, `has_staged_changes_detects_changes`
+  - UAT: `cargo make uat` — 729 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 1 (DRY): Reuses existing git helpers and state manager. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.

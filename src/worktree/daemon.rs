@@ -794,6 +794,7 @@ impl Daemon {
         let wt_path = PathBuf::from(&wt.path);
         let branch = wt.branch.clone();
         let merge_target = wt.merge_target.clone();
+        let prd_id = wt.prd.clone();
 
         tracing::info!("tier2: merging {wt_id} ({branch}) into {merge_target}");
 
@@ -833,6 +834,7 @@ impl Daemon {
                             EventType::Conflicted,
                             Some(&format!("Agent conflict resolution failed: {e:#}")),
                         )?;
+                        self.commit_state(&format!("{prd_id} conflicted"));
                         return Ok(());
                     }
                 }
@@ -845,6 +847,7 @@ impl Daemon {
                     EventType::Conflicted,
                     Some("Rebase and merge both produced conflicts (no runner for resolution)"),
                 )?;
+                self.commit_state(&format!("{prd_id} conflicted"));
                 return Ok(());
             }
         }
@@ -861,6 +864,7 @@ impl Daemon {
                 EventType::MergeFailed,
                 Some("UATs failed after integration"),
             )?;
+            self.commit_state(&format!("{prd_id} merge failed"));
             return Ok(());
         }
 
@@ -874,6 +878,7 @@ impl Daemon {
                 EventType::MergeFailed,
                 Some(&format!("Failed to merge into {merge_target}: {e:#}")),
             )?;
+            self.commit_state(&format!("{prd_id} merge failed"));
             return Ok(());
         }
 
@@ -885,6 +890,8 @@ impl Daemon {
             EventType::MergeCompleted,
             None,
         )?;
+
+        self.commit_state(&format!("{prd_id} merged"));
 
         Ok(())
     }
@@ -922,8 +929,11 @@ impl Daemon {
         )?;
 
         // Step 1: Integrate target into branch (rebase-first, merge fallback).
-        if Self::integrate_target_into_branch(&wt_path, &merge_target).is_err() {
-            self.handle_merge_conflicts(&wt_id, &wt_path, &merge_target)?;
+        if Self::integrate_target_into_branch(&wt_path, &merge_target).is_err()
+            && let Err(e) = self.handle_merge_conflicts(&wt_id, &wt_path, &merge_target)
+        {
+            self.commit_state(&format!("{prd_id} conflicted"));
+            return Err(e);
         }
 
         // Step 2: Run UATs in the worktree.
@@ -934,6 +944,7 @@ impl Daemon {
                 EventType::MergeFailed,
                 Some("UATs failed after integration"),
             )?;
+            self.commit_state(&format!("{prd_id} merge failed"));
             bail!("UATs failed after merge integration");
         }
 
@@ -945,6 +956,7 @@ impl Daemon {
                 EventType::MergeFailed,
                 Some(&format!("Failed to merge into {merge_target}: {e:#}")),
             )?;
+            self.commit_state(&format!("{prd_id} merge failed"));
             bail!("failed to merge into {merge_target}: {e:#}");
         }
 
@@ -954,6 +966,8 @@ impl Daemon {
             EventType::MergeCompleted,
             Some(&format!("Manually merged into {merge_target}")),
         )?;
+
+        self.commit_state(&format!("{prd_id} merged"));
 
         Ok(())
     }
@@ -1117,6 +1131,108 @@ impl Daemon {
         })?;
 
         Ok(())
+    }
+
+    // ── State commits ───────────────────────────────────────────────
+
+    /// Build a human-readable summary of the current worktree state.
+    ///
+    /// Format: `mr-wt: PRD-0039 merged, PRD-0040 in progress (3 active worktrees)`
+    #[must_use]
+    pub fn build_state_summary(state: &super::types::WorktreeState, trigger: &str) -> String {
+        let mut parts: Vec<String> = Vec::new();
+
+        // Add the trigger event first.
+        parts.push(trigger.to_string());
+
+        // Summarize other active/notable worktrees.
+        for wt in &state.worktrees {
+            let status_desc = match wt.status {
+                WorktreeStatus::Active => "in progress",
+                WorktreeStatus::Completed => "completed",
+                WorktreeStatus::Merging => "merging",
+                WorktreeStatus::Merged => "merged",
+                WorktreeStatus::MergeFailed => "merge failed",
+                WorktreeStatus::Conflicted => "conflicted",
+                WorktreeStatus::Abandoned => "abandoned",
+            };
+            let item = format!("{} {status_desc}", wt.prd);
+            if !parts.contains(&item) {
+                parts.push(item);
+            }
+        }
+
+        let active_count = state
+            .worktrees
+            .iter()
+            .filter(|w| w.status == WorktreeStatus::Active)
+            .count();
+
+        format!("mr-wt: {} ({active_count} active)", parts.join(", "))
+    }
+
+    /// Commit state.yaml to the repository on the main worktree.
+    ///
+    /// Called after significant events (merge completed, merge failed,
+    /// conflicted). Stages `.mr/worktrees/state.yaml`, generates a
+    /// summary commit message, and commits.
+    fn commit_state(&self, trigger: &str) {
+        let state = match self.state_manager().read() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!("state-commit: failed to read state: {e:#}");
+                return;
+            }
+        };
+
+        let message = Self::build_state_summary(&state, trigger);
+
+        let state_rel_path = ".mr/worktrees/state.yaml";
+
+        if let Err(e) = git::add_file(state_rel_path, &self.root) {
+            tracing::warn!("state-commit: failed to stage state.yaml: {e:#}");
+            return;
+        }
+
+        match git::has_staged_changes(&self.root) {
+            Ok(true) => {}
+            Ok(false) => {
+                tracing::debug!("state-commit: no staged changes, skipping commit");
+                return;
+            }
+            Err(e) => {
+                tracing::warn!("state-commit: failed to check staged changes: {e:#}");
+                return;
+            }
+        }
+
+        if let Err(e) = git::commit(&message, &self.root) {
+            tracing::warn!("state-commit: failed to commit: {e:#}");
+            return;
+        }
+
+        tracing::info!("state-commit: committed: {message}");
+
+        // Record the state-commit event for the triggering worktree (best-effort).
+        // We don't fail the whole operation if this event recording fails.
+        if let Err(e) = self.state_manager().modify(|st| {
+            // Find any worktree that was the subject of the trigger.
+            // The trigger string starts with the PRD ID.
+            for wt in &mut st.worktrees {
+                if trigger.starts_with(&wt.prd) {
+                    let now = chrono::Utc::now().to_rfc3339();
+                    wt.events.push(WorktreeEvent {
+                        timestamp: now,
+                        event_type: EventType::StateCommitted,
+                        detail: Some(message.clone()),
+                    });
+                    break;
+                }
+            }
+            Ok(())
+        }) {
+            tracing::warn!("state-commit: failed to record event: {e:#}");
+        }
     }
 
     // ── Conflict resolution ─────────────────────────────────────────
@@ -2654,5 +2770,153 @@ mod tests {
         let daemon = Daemon::new(main_dir);
         let result = daemon.smart_merge_into_target("ahead-branch", &default_branch);
         assert!(result.is_ok(), "smart merge should succeed: {result:?}");
+    }
+
+    // ── State commit tests ──────────────────────────────────────────
+
+    #[test]
+    fn build_state_summary_single_merged() {
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![make_entry("wt-001", WorktreeStatus::Merged, &[])],
+            overlap_warnings: vec![],
+        };
+
+        let summary = Daemon::build_state_summary(&state, "PRD-wt-001 merged");
+        assert!(summary.starts_with("mr-wt: "));
+        assert!(summary.contains("PRD-wt-001 merged"));
+        assert!(summary.contains("(0 active)"));
+    }
+
+    #[test]
+    fn build_state_summary_mixed_states() {
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![
+                make_entry("wt-001", WorktreeStatus::Merged, &[]),
+                make_entry("wt-002", WorktreeStatus::Active, &["src/a.rs"]),
+                make_entry("wt-003", WorktreeStatus::Active, &["src/b.rs"]),
+            ],
+            overlap_warnings: vec![],
+        };
+
+        let summary = Daemon::build_state_summary(&state, "PRD-wt-001 merged");
+        assert!(summary.contains("PRD-wt-001 merged"));
+        assert!(summary.contains("PRD-wt-002 in progress"));
+        assert!(summary.contains("PRD-wt-003 in progress"));
+        assert!(summary.contains("(2 active)"));
+    }
+
+    #[test]
+    fn build_state_summary_merge_failed() {
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![
+                make_entry("wt-001", WorktreeStatus::MergeFailed, &[]),
+                make_entry("wt-002", WorktreeStatus::Active, &[]),
+            ],
+            overlap_warnings: vec![],
+        };
+
+        let summary = Daemon::build_state_summary(&state, "PRD-wt-001 merge failed");
+        assert!(summary.contains("PRD-wt-001 merge failed"));
+        assert!(summary.contains("(1 active)"));
+    }
+
+    #[test]
+    fn build_state_summary_no_duplicates() {
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![make_entry("wt-001", WorktreeStatus::Merged, &[])],
+            overlap_warnings: vec![],
+        };
+
+        // The trigger mentions the same worktree — should not duplicate.
+        let summary = Daemon::build_state_summary(&state, "PRD-wt-001 merged");
+        let count = summary.matches("PRD-wt-001 merged").count();
+        assert_eq!(count, 1, "PRD-wt-001 merged should appear exactly once");
+    }
+
+    #[test]
+    fn commit_state_stages_and_commits_in_git_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+
+        // Create .mr/worktrees/ and state.yaml.
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![make_entry("wt-001", WorktreeStatus::Merged, &[])],
+            overlap_warnings: vec![],
+        };
+        let yaml = serde_yaml::to_string(&state).unwrap();
+        fs::write(wt_dir.join("state.yaml"), &yaml).unwrap();
+
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.commit_state("PRD-wt-001 merged");
+
+        // Verify a commit was created with the expected message.
+        let output = std::process::Command::new("git")
+            .args(["log", "--oneline", "-1"])
+            .current_dir(root)
+            .output()
+            .expect("git log");
+        let log = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            log.contains("mr-wt:"),
+            "commit message should contain 'mr-wt:': {log}"
+        );
+        assert!(
+            log.contains("PRD-wt-001 merged"),
+            "commit message should mention the trigger: {log}"
+        );
+    }
+
+    #[test]
+    fn commit_state_skips_when_no_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+
+        init_git_repo(root);
+
+        // Create and commit state.yaml initially.
+        let wt_dir = root.join(".mr").join("worktrees");
+        fs::create_dir_all(&wt_dir).unwrap();
+        let state = WorktreeState::default();
+        let yaml = serde_yaml::to_string(&state).unwrap();
+        fs::write(wt_dir.join("state.yaml"), &yaml).unwrap();
+        git::stage_all(root).unwrap();
+        git::commit("initial state", root).unwrap();
+
+        let output_before = std::process::Command::new("git")
+            .args(["log", "--oneline"])
+            .current_dir(root)
+            .output()
+            .expect("git log");
+        let log_before = String::from_utf8_lossy(&output_before.stdout);
+        let commit_count_before = log_before.trim().lines().count();
+
+        // Commit state again with no changes to state.yaml.
+        let daemon = Daemon::new(root.to_path_buf());
+        daemon.commit_state("PRD-0001 merged");
+
+        let output_after = std::process::Command::new("git")
+            .args(["log", "--oneline"])
+            .current_dir(root)
+            .output()
+            .expect("git log");
+        let log_after = String::from_utf8_lossy(&output_after.stdout);
+        let commit_count_after = log_after.trim().lines().count();
+
+        // No new commit should have been created.
+        assert_eq!(commit_count_before, commit_count_after);
     }
 }

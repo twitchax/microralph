@@ -245,6 +245,9 @@ pub enum EventType {
 
     /// Agent successfully resolved conflicts.
     ConflictResolved,
+
+    /// State was committed to the repository.
+    StateCommitted,
 }
 
 impl std::fmt::Display for EventType {
@@ -262,6 +265,7 @@ impl std::fmt::Display for EventType {
             Self::Conflicted => write!(f, "conflicted"),
             Self::ConflictResolutionStarted => write!(f, "conflict_resolution_started"),
             Self::ConflictResolved => write!(f, "conflict_resolved"),
+            Self::StateCommitted => write!(f, "state_committed"),
         }
     }
 }
@@ -494,6 +498,7 @@ mod tests {
             "conflict_resolution_started"
         );
         assert_eq!(EventType::ConflictResolved.to_string(), "conflict_resolved");
+        assert_eq!(EventType::StateCommitted.to_string(), "state_committed");
     }
 
     #[test]
