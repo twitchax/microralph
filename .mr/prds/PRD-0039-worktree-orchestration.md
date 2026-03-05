@@ -56,7 +56,7 @@ acceptance_tests:
   - id: uat-009
     name: "mr wt graph shows worktree overlap risk visualization"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-010
     name: "mr wt merge manually triggers merge of a specific worktree into target"
     command: cargo make uat
@@ -830,3 +830,18 @@ src/
   - Verifies: `ConflictResolutionStarted` event is recorded (daemon detected conflict and invoked agent), and `ConflictResolved` event is recorded (agent successfully resolved conflicts)
   - Existing tests `attempt_merge_with_runner_attempts_resolution` and `resolve_conflicts_with_mock_runner_succeeds` provide additional coverage
   - `cargo make test` — 755 tests passed, 0 skipped
+
+## 2026-03-05 — uat-009 Verification
+- **UAT**: mr wt graph shows worktree overlap risk visualization
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - 11 existing tests in `src/commands/worktree.rs` cover all three graph formats (ASCII, Mermaid, DOT) with overlap risk visualization
+  - `test_render_wt_graph_ascii_with_worktrees` — verifies HIGH risk label, overlap files, worktree count
+  - `test_render_wt_graph_mermaid_with_overlaps` — verifies flowchart with overlap edges and `classDef high`
+  - `test_render_wt_graph_dot_with_overlaps` — verifies DOT graph with `penwidth=3` and file counts
+  - `test_wt_risk_level_returns_worst` / `test_wt_risk_level_no_warnings` — verify risk computation
+  - `test_render_wt_graph_*_empty` — verify empty state handling
+  - `test_render_wt_graph_ascii_excludes_merged_and_abandoned` — verify filtering
+  - `test_cmd_wt_graph_fails_without_git_repo` / `test_cmd_wt_graph_rejects_unknown_format` — error paths
+  - `cargo nextest run -E 'test(wt_graph) | test(wt_risk)'` — 11 tests passed, 0 skipped
