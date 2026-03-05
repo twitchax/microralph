@@ -125,7 +125,7 @@ tasks:
   - id: T-009
     title: "Implement mr wt list subcommand"
     priority: 3
-    status: todo
+    status: done
     notes: "Read state.yaml, display all registered worktrees in a table: PRD ID, branch, status, modified files count, last event timestamp. Color-code by status."
   - id: T-010
     title: "Implement mr wt status subcommand"
@@ -555,4 +555,19 @@ src/
   - 5 new unit tests: `daemon_notifier_returns_none_outside_git_repo`, `daemon_notifier_returns_none_in_main_worktree`, `daemon_notifier_returns_none_when_no_daemon`, `daemon_notifier_returns_none_when_prd_not_in_state`, `daemon_notifier_connects_and_sends_events` (full IPC roundtrip)
   - Updated all existing `run_task()` call sites in tests to pass `&mut None` for backward compatibility
   - UAT: `cargo make uat` — 680 tests passed, 0 skipped
+- **Constitution Compliance**: No violations.
+
+## 2026-03-05 — T-009 Completed
+- **Task**: Implement mr wt list subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced stub `cmd_wt_list` in `src/commands/worktree.rs` with full implementation:
+    - Resolves main worktree root and reads `state.yaml` via `StateManager`
+    - Displays aligned table with columns: PRD ID, Branch, Status, Files (count), Last Event
+    - Color-codes status by lifecycle: active (cyan), completed/merged (green), merge_failed/conflicted (red), merging (yellow), abandoned (dim)
+    - Shows separator line and summary footer with total and active worktree counts
+    - Handles empty state gracefully with a helpful message
+  - Added helper functions: `status_colored()` (maps `WorktreeStatus` to colored output), `last_event_timestamp()` (extracts latest event timestamp from entry)
+  - 3 new unit tests: `test_cmd_wt_list_fails_without_git_repo`, `test_status_colored_returns_string_for_all_variants`, `test_last_event_timestamp_with_events`, `test_last_event_timestamp_empty_events`
+  - UAT: `cargo make uat` — 683 tests passed, 0 skipped
 - **Constitution Compliance**: No violations.

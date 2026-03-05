@@ -270,12 +270,109 @@ pub fn cmd_wt_run(
     Ok(())
 }
 
+/// Color a status string based on worktree lifecycle status.
+fn status_colored(status: WorktreeStatus) -> String {
+    let label = status.to_string();
+    match status {
+        WorktreeStatus::Active => colors::info(&label),
+        WorktreeStatus::Completed | WorktreeStatus::Merged => colors::success(&label),
+        WorktreeStatus::MergeFailed | WorktreeStatus::Conflicted => colors::error(&label),
+        WorktreeStatus::Merging => colors::warning(&label),
+        WorktreeStatus::Abandoned => colors::dim(&label),
+    }
+}
+
+/// Extract the timestamp of the most recent event for a worktree entry.
+fn last_event_timestamp(entry: &WorktreeEntry) -> &str {
+    entry.events.last().map_or("—", |e| e.timestamp.as_str())
+}
+
 /// Handles `mr wt list`.
 ///
-/// Displays all registered worktrees with status.
+/// Displays all registered worktrees in a table with PRD ID, branch, status,
+/// modified files count, and last event timestamp.  Color-coded by status.
 pub fn cmd_wt_list() -> Result<()> {
-    println!("{}", colors::info("Worktree list — not yet implemented."));
-    bail!("mr wt list is not yet implemented (see T-009)")
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let main_root = git::resolve_main_worktree(&cwd).context("failed to resolve main worktree")?;
+    let state_mgr = StateManager::new(&main_root);
+    let state = state_mgr.read()?;
+
+    if state.worktrees.is_empty() {
+        println!(
+            "{}",
+            colors::dim("No worktrees registered. Run `mr wt run <prd-id>` to create one.")
+        );
+        return Ok(());
+    }
+
+    // Compute column widths for alignment.
+    let prd_w = state
+        .worktrees
+        .iter()
+        .map(|w| w.prd.len())
+        .max()
+        .unwrap_or(6)
+        .max(6); // "PRD ID"
+
+    let branch_w = state
+        .worktrees
+        .iter()
+        .map(|w| w.branch.len())
+        .max()
+        .unwrap_or(6)
+        .max(6); // "Branch"
+
+    let status_w = state
+        .worktrees
+        .iter()
+        .map(|w| w.status.to_string().len())
+        .max()
+        .unwrap_or(6)
+        .max(6); // "Status"
+
+    // Header.
+    println!(
+        "{}",
+        colors::header(&format!(
+            "{:<prd_w$}  {:<branch_w$}  {:<status_w$}  {:>5}  {}",
+            "PRD ID", "Branch", "Status", "Files", "Last Event",
+        ))
+    );
+
+    println!(
+        "{}",
+        colors::dim(&"─".repeat(prd_w + 2 + branch_w + 2 + status_w + 2 + 5 + 2 + 20))
+    );
+
+    // Rows.
+    for wt in &state.worktrees {
+        let files_count = wt.modified_files.len();
+        let last_event = last_event_timestamp(wt);
+
+        println!(
+            "{:<prd_w$}  {:<branch_w$}  {:<status_w$}  {:>5}  {}",
+            wt.prd,
+            wt.branch,
+            status_colored(wt.status),
+            files_count,
+            colors::dim(last_event),
+        );
+    }
+
+    // Summary line.
+    let active = state
+        .worktrees
+        .iter()
+        .filter(|w| w.status == WorktreeStatus::Active)
+        .count();
+    let total = state.worktrees.len();
+    println!();
+    println!(
+        "{}",
+        colors::dim(&format!("{total} worktree(s), {active} active"))
+    );
+
+    Ok(())
 }
 
 /// Handles `mr wt status [prd-id]`.
@@ -485,9 +582,84 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_wt_list_returns_not_implemented() {
+    fn test_cmd_wt_list_fails_without_git_repo() {
+        // Running cmd_wt_list outside a git repo should fail gracefully.
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
         let result = cmd_wt_list();
         assert!(result.is_err());
+
+        std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_status_colored_returns_string_for_all_variants() {
+        // All status variants should produce a non-empty colored string.
+        let variants = [
+            WorktreeStatus::Active,
+            WorktreeStatus::Completed,
+            WorktreeStatus::Merging,
+            WorktreeStatus::Merged,
+            WorktreeStatus::MergeFailed,
+            WorktreeStatus::Conflicted,
+            WorktreeStatus::Abandoned,
+        ];
+        for status in variants {
+            let result = status_colored(status);
+            assert!(
+                !result.is_empty(),
+                "status_colored({status}) should not be empty"
+            );
+        }
+    }
+
+    #[test]
+    fn test_last_event_timestamp_with_events() {
+        let entry = WorktreeEntry {
+            id: "wt-001".to_string(),
+            prd: "PRD-0001".to_string(),
+            branch: "repo-prd-1".to_string(),
+            path: "/tmp/wt".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![
+                WorktreeEvent {
+                    timestamp: "2026-01-01T00:00:00Z".to_string(),
+                    event_type: EventType::Created,
+                    detail: None,
+                },
+                WorktreeEvent {
+                    timestamp: "2026-01-02T00:00:00Z".to_string(),
+                    event_type: EventType::RunStarted,
+                    detail: None,
+                },
+            ],
+        };
+        assert_eq!(last_event_timestamp(&entry), "2026-01-02T00:00:00Z");
+    }
+
+    #[test]
+    fn test_last_event_timestamp_empty_events() {
+        let entry = WorktreeEntry {
+            id: "wt-001".to_string(),
+            prd: "PRD-0001".to_string(),
+            branch: "repo-prd-1".to_string(),
+            path: "/tmp/wt".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        };
+        assert_eq!(last_event_timestamp(&entry), "—");
     }
 
     #[test]
