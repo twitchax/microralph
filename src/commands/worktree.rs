@@ -4,6 +4,7 @@
 //! `wt merge`, and daemon start/stop/status, with stub implementations
 //! for the remaining `wt` subcommands.
 
+use std::fmt::Write;
 use std::process::Command as ProcessCommand;
 
 use anyhow::{Context, Result, bail};
@@ -14,8 +15,8 @@ use crate::worktree::daemon::Daemon;
 use crate::worktree::git;
 use crate::worktree::state::StateManager;
 use crate::worktree::types::{
-    DaemonConfig, EventType, OverlapRisk, WorktreeEntry, WorktreeEvent, WorktreeState,
-    WorktreeStatus,
+    DaemonConfig, EventType, OverlapRisk, OverlapWarning, WorktreeEntry, WorktreeEvent,
+    WorktreeState, WorktreeStatus,
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -712,13 +713,233 @@ pub fn cmd_wt_merge(
 
 /// Handles `mr wt graph`.
 ///
-/// Visualizes worktree overlap risk.
+/// Visualizes worktree overlap risk.  Nodes represent active worktrees and
+/// edges represent shared modified files (from `overlap_warnings`).
+/// Risk is color-coded: green (low/none), yellow (medium), red (high).
 pub fn cmd_wt_graph(format: &str) -> Result<()> {
-    println!(
-        "{}",
-        colors::info(&format!("Worktree graph ({format}) — not yet implemented."))
+    let cwd = std::env::current_dir().context("failed to get current directory")?;
+    let main_root = git::resolve_main_worktree(&cwd).context("failed to resolve main worktree")?;
+    let state_mgr = StateManager::new(&main_root);
+    let state = state_mgr.read()?;
+
+    let output = match format.to_lowercase().as_str() {
+        "ascii" => render_wt_graph_ascii(&state),
+        "mermaid" => render_wt_graph_mermaid(&state),
+        "dot" => render_wt_graph_dot(&state),
+        other => bail!("unknown format: {other}. Use ascii, mermaid, or dot"),
+    };
+
+    print!("{output}");
+
+    Ok(())
+}
+
+// ── Worktree graph renderers ────────────────────────────────────────
+
+/// Renders the worktree overlap graph as ASCII art.
+fn render_wt_graph_ascii(state: &WorktreeState) -> String {
+    let mut out = String::new();
+
+    out.push_str("Worktree Overlap Graph\n");
+    out.push_str("======================\n\n");
+
+    let active: Vec<&WorktreeEntry> = state
+        .worktrees
+        .iter()
+        .filter(|w| !matches!(w.status, WorktreeStatus::Abandoned | WorktreeStatus::Merged))
+        .collect();
+
+    if active.is_empty() {
+        out.push_str("(no active worktrees)\n");
+        return out;
+    }
+
+    // Render each node.
+    for wt in &active {
+        let risk = wt_risk_level(wt, &state.overlap_warnings);
+        let risk_indicator = match risk {
+            OverlapRisk::Low => "●",
+            OverlapRisk::Medium => "◐",
+            OverlapRisk::High => "◉",
+        };
+        let _ = writeln!(
+            out,
+            "{risk_indicator} [{id}] {prd} ({status}) — {files} file(s) modified",
+            id = wt.id,
+            prd = wt.prd,
+            status = wt.status,
+            files = wt.modified_files.len(),
+        );
+    }
+
+    // Render overlap edges.
+    if !state.overlap_warnings.is_empty() {
+        out.push_str("\n--- Overlaps ---\n\n");
+
+        for warning in &state.overlap_warnings {
+            let risk_label = match warning.risk {
+                OverlapRisk::Low => "LOW",
+                OverlapRisk::Medium => "MEDIUM",
+                OverlapRisk::High => "HIGH",
+            };
+            let _ = writeln!(
+                out,
+                "{wts} [{risk_label}] — {count} shared file(s)",
+                wts = warning.worktrees.join(" <-> "),
+                count = warning.files.len(),
+            );
+            for f in &warning.files {
+                let _ = writeln!(out, "    {f}");
+            }
+        }
+    }
+
+    // Summary.
+    let _ = write!(
+        out,
+        "\n---\n{nodes} worktree(s), {edges} overlap(s)\n",
+        nodes = active.len(),
+        edges = state.overlap_warnings.len(),
     );
-    bail!("mr wt graph is not yet implemented (see T-015)")
+
+    out
+}
+
+/// Renders the worktree overlap graph as Mermaid flowchart syntax.
+fn render_wt_graph_mermaid(state: &WorktreeState) -> String {
+    let mut out = String::new();
+
+    out.push_str("flowchart LR\n");
+
+    let active: Vec<&WorktreeEntry> = state
+        .worktrees
+        .iter()
+        .filter(|w| !matches!(w.status, WorktreeStatus::Abandoned | WorktreeStatus::Merged))
+        .collect();
+
+    if active.is_empty() {
+        out.push_str("    empty[\"No active worktrees\"]\n");
+        return out;
+    }
+
+    // Node definitions.
+    for wt in &active {
+        let node_id = wt.id.replace('-', "");
+        let risk = wt_risk_level(wt, &state.overlap_warnings);
+        let class = match risk {
+            OverlapRisk::Low => ":::low",
+            OverlapRisk::Medium => ":::medium",
+            OverlapRisk::High => ":::high",
+        };
+        let _ = writeln!(
+            out,
+            "    {node_id}[\"{id}: {prd} ({status})\"]{class}",
+            id = wt.id,
+            prd = wt.prd,
+            status = wt.status,
+        );
+    }
+
+    // Edges from overlap warnings.
+    if !state.overlap_warnings.is_empty() {
+        out.push('\n');
+        for warning in &state.overlap_warnings {
+            if warning.worktrees.len() == 2 {
+                let a = warning.worktrees[0].replace('-', "");
+                let b = warning.worktrees[1].replace('-', "");
+                let label = format!("{} file(s)", warning.files.len());
+                let edge = match warning.risk {
+                    OverlapRisk::Low => format!("    {a} -.-|{label}| {b}"),
+                    OverlapRisk::Medium => format!("    {a} ---|{label}| {b}"),
+                    OverlapRisk::High => format!("    {a} ===|{label}| {b}"),
+                };
+                let _ = writeln!(out, "{edge}");
+            }
+        }
+    }
+
+    // Style classes.
+    out.push('\n');
+    out.push_str("    classDef low fill:#d4edda,stroke:#28a745\n");
+    out.push_str("    classDef medium fill:#fff3cd,stroke:#ffc107\n");
+    out.push_str("    classDef high fill:#f8d7da,stroke:#dc3545\n");
+
+    out
+}
+
+/// Renders the worktree overlap graph as Graphviz DOT format.
+fn render_wt_graph_dot(state: &WorktreeState) -> String {
+    let mut out = String::new();
+
+    out.push_str("graph Worktree_Overlaps {\n");
+    out.push_str("    rankdir=LR;\n");
+    out.push_str("    node [shape=box];\n\n");
+
+    let active: Vec<&WorktreeEntry> = state
+        .worktrees
+        .iter()
+        .filter(|w| !matches!(w.status, WorktreeStatus::Abandoned | WorktreeStatus::Merged))
+        .collect();
+
+    if active.is_empty() {
+        out.push_str("    empty [label=\"No active worktrees\"];\n");
+        out.push_str("}\n");
+        return out;
+    }
+
+    // Node definitions.
+    for wt in &active {
+        let node_id = wt.id.replace('-', "");
+        let risk = wt_risk_level(wt, &state.overlap_warnings);
+        let (fill, border) = match risk {
+            OverlapRisk::Low => ("#d4edda", "#28a745"),
+            OverlapRisk::Medium => ("#fff3cd", "#ffc107"),
+            OverlapRisk::High => ("#f8d7da", "#dc3545"),
+        };
+        let _ = writeln!(
+            out,
+            "    {node_id} [label=\"{id}: {prd} ({status})\" style=filled fillcolor=\"{fill}\" color=\"{border}\"];",
+            id = wt.id,
+            prd = wt.prd,
+            status = wt.status,
+        );
+    }
+
+    // Edges from overlap warnings.
+    if !state.overlap_warnings.is_empty() {
+        out.push('\n');
+        for warning in &state.overlap_warnings {
+            if warning.worktrees.len() == 2 {
+                let a = warning.worktrees[0].replace('-', "");
+                let b = warning.worktrees[1].replace('-', "");
+                let label = format!("{} file(s)", warning.files.len());
+                let style = match warning.risk {
+                    OverlapRisk::Low => "style=dashed",
+                    OverlapRisk::Medium => "style=solid",
+                    OverlapRisk::High => "style=bold penwidth=3",
+                };
+                let _ = writeln!(out, "    {a} -- {b} [label=\"{label}\" {style}];",);
+            }
+        }
+    }
+
+    out.push_str("}\n");
+
+    out
+}
+
+/// Determine the worst overlap risk for a given worktree entry.
+fn wt_risk_level(entry: &WorktreeEntry, warnings: &[OverlapWarning]) -> OverlapRisk {
+    warnings
+        .iter()
+        .filter(|w| w.worktrees.contains(&entry.id))
+        .map(|w| w.risk)
+        .max_by_key(|r| match r {
+            OverlapRisk::Low => 0,
+            OverlapRisk::Medium => 1,
+            OverlapRisk::High => 2,
+        })
+        .unwrap_or(OverlapRisk::Low)
 }
 
 /// Handles `mr wt remove <prd-id>`.
@@ -1096,9 +1317,192 @@ mod tests {
     }
 
     #[test]
-    fn test_cmd_wt_graph_returns_not_implemented() {
+    fn test_cmd_wt_graph_fails_without_git_repo() {
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
         let result = cmd_wt_graph("ascii");
         assert!(result.is_err());
+
+        std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_cmd_wt_graph_rejects_unknown_format() {
+        let tmp = tempfile::tempdir().unwrap();
+        let orig = std::env::current_dir().unwrap();
+
+        // Set up a minimal git repo.
+        std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(tmp.path())
+            .output()
+            .unwrap();
+        std::env::set_current_dir(tmp.path()).unwrap();
+
+        let result = cmd_wt_graph("csv");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("unknown format"));
+
+        std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_render_wt_graph_ascii_empty() {
+        let state = WorktreeState::default();
+        let out = render_wt_graph_ascii(&state);
+        assert!(out.contains("Worktree Overlap Graph"));
+        assert!(out.contains("(no active worktrees)"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_ascii_with_worktrees() {
+        let state = make_graph_test_state();
+        let out = render_wt_graph_ascii(&state);
+        assert!(out.contains("wt-001"));
+        assert!(out.contains("PRD-0001"));
+        assert!(out.contains("wt-002"));
+        assert!(out.contains("PRD-0002"));
+        assert!(out.contains("HIGH"));
+        assert!(out.contains("src/main.rs"));
+        assert!(out.contains("2 worktree(s)"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_ascii_excludes_merged_and_abandoned() {
+        let mut state = make_graph_test_state();
+        state.worktrees[0].status = WorktreeStatus::Merged;
+        state.worktrees[1].status = WorktreeStatus::Abandoned;
+        let out = render_wt_graph_ascii(&state);
+        assert!(out.contains("(no active worktrees)"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_mermaid_empty() {
+        let state = WorktreeState::default();
+        let out = render_wt_graph_mermaid(&state);
+        assert!(out.contains("flowchart LR"));
+        assert!(out.contains("No active worktrees"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_mermaid_with_overlaps() {
+        let state = make_graph_test_state();
+        let out = render_wt_graph_mermaid(&state);
+        assert!(out.contains("flowchart LR"));
+        assert!(out.contains("wt001"));
+        assert!(out.contains("PRD-0001"));
+        assert!(out.contains("==="));
+        assert!(out.contains("classDef high"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_dot_empty() {
+        let state = WorktreeState::default();
+        let out = render_wt_graph_dot(&state);
+        assert!(out.contains("graph Worktree_Overlaps"));
+        assert!(out.contains("No active worktrees"));
+    }
+
+    #[test]
+    fn test_render_wt_graph_dot_with_overlaps() {
+        let state = make_graph_test_state();
+        let out = render_wt_graph_dot(&state);
+        assert!(out.contains("graph Worktree_Overlaps"));
+        assert!(out.contains("wt001"));
+        assert!(out.contains("PRD-0001"));
+        assert!(out.contains("penwidth=3"));
+        assert!(out.contains("1 file(s)"));
+    }
+
+    #[test]
+    fn test_wt_risk_level_returns_worst() {
+        let entry = WorktreeEntry {
+            id: "wt-001".to_string(),
+            prd: "PRD-0001".to_string(),
+            branch: "b".to_string(),
+            path: "/tmp".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        };
+        let warnings = vec![
+            OverlapWarning {
+                worktrees: vec!["wt-001".to_string(), "wt-002".to_string()],
+                files: vec!["a.rs".to_string()],
+                risk: OverlapRisk::Low,
+            },
+            OverlapWarning {
+                worktrees: vec!["wt-001".to_string(), "wt-003".to_string()],
+                files: vec!["b.rs".to_string()],
+                risk: OverlapRisk::High,
+            },
+        ];
+        assert_eq!(wt_risk_level(&entry, &warnings), OverlapRisk::High);
+    }
+
+    #[test]
+    fn test_wt_risk_level_no_warnings() {
+        let entry = WorktreeEntry {
+            id: "wt-099".to_string(),
+            prd: "PRD-0099".to_string(),
+            branch: "b".to_string(),
+            path: "/tmp".to_string(),
+            status: WorktreeStatus::Active,
+            run_pid: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            merge_target: "main".to_string(),
+            modified_files: vec![],
+            events: vec![],
+        };
+        assert_eq!(wt_risk_level(&entry, &[]), OverlapRisk::Low);
+    }
+
+    /// Helper: build a state with two active worktrees and one high-risk overlap.
+    fn make_graph_test_state() -> WorktreeState {
+        WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![
+                WorktreeEntry {
+                    id: "wt-001".to_string(),
+                    prd: "PRD-0001".to_string(),
+                    branch: "repo-prd-1".to_string(),
+                    path: "/tmp/wt1".to_string(),
+                    status: WorktreeStatus::Active,
+                    run_pid: Some(1234),
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-02T00:00:00Z".to_string(),
+                    merge_target: "main".to_string(),
+                    modified_files: vec!["src/main.rs".to_string()],
+                    events: vec![],
+                },
+                WorktreeEntry {
+                    id: "wt-002".to_string(),
+                    prd: "PRD-0002".to_string(),
+                    branch: "repo-prd-2".to_string(),
+                    path: "/tmp/wt2".to_string(),
+                    status: WorktreeStatus::Active,
+                    run_pid: Some(5678),
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-02T00:00:00Z".to_string(),
+                    merge_target: "main".to_string(),
+                    modified_files: vec!["src/main.rs".to_string()],
+                    events: vec![],
+                },
+            ],
+            overlap_warnings: vec![OverlapWarning {
+                worktrees: vec!["wt-001".to_string(), "wt-002".to_string()],
+                files: vec!["src/main.rs".to_string()],
+                risk: OverlapRisk::High,
+            }],
+        }
     }
 
     #[test]

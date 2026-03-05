@@ -155,7 +155,7 @@ tasks:
   - id: T-015
     title: "Implement mr wt graph subcommand"
     priority: 5
-    status: todo
+    status: done
     notes: "Visualize worktree overlap risk. Nodes = active worktrees, edges = shared modified files. Reuse existing graph infrastructure (ASCII, Mermaid, DOT). Color-code by risk level: green (no overlap), yellow (some), red (heavy). Show file list on edges."
   - id: T-016
     title: "Implement mr wt remove subcommand"
@@ -669,3 +669,19 @@ src/
   - 9 new tests (total 729): `build_state_summary_single_merged`, `build_state_summary_mixed_states`, `build_state_summary_merge_failed`, `build_state_summary_no_duplicates`, `commit_state_stages_and_commits_in_git_repo`, `commit_state_skips_when_no_changes`, `add_file_stages_specific_file`, `commit_creates_commit_with_message`, `has_staged_changes_detects_changes`
   - UAT: `cargo make uat` — 729 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Rule 1 (DRY): Reuses existing git helpers and state manager. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.
+
+## 2026-03-05 — T-015 Completed
+- **Task**: Implement mr wt graph subcommand
+- **Status**: ✅ Done
+- **Changes**:
+  - Replaced stub `cmd_wt_graph()` in `src/commands/worktree.rs` with full implementation
+  - Added three renderers: `render_wt_graph_ascii()`, `render_wt_graph_mermaid()`, `render_wt_graph_dot()`
+  - Added `wt_risk_level()` helper to compute worst overlap risk for a worktree entry
+  - ASCII format: Shows nodes with risk indicators (●/◐/◉), overlap edges with risk labels, shared file lists
+  - Mermaid format: Flowchart LR with risk-colored nodes (classDef low/medium/high), edge styles (dashed/solid/bold) by risk
+  - DOT format: Graph with filled/colored nodes, edge styles (dashed/solid/bold+penwidth) by risk
+  - Filters out merged and abandoned worktrees (only shows active/completing/merging/etc.)
+  - Added import for `std::fmt::Write` and `OverlapWarning` type
+  - 10 new tests: `test_cmd_wt_graph_fails_without_git_repo`, `test_cmd_wt_graph_rejects_unknown_format`, `test_render_wt_graph_ascii_empty`, `test_render_wt_graph_ascii_with_worktrees`, `test_render_wt_graph_ascii_excludes_merged_and_abandoned`, `test_render_wt_graph_mermaid_empty`, `test_render_wt_graph_mermaid_with_overlaps`, `test_render_wt_graph_dot_empty`, `test_render_wt_graph_dot_with_overlaps`, `test_wt_risk_level_returns_worst`, `test_wt_risk_level_no_warnings`
+  - UAT: `cargo make uat` — 739 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 3 (Minimal Changes): Only modified `src/commands/worktree.rs`. Rule 4 (Consistency): Follows rendering patterns from existing `graph.rs`. Rule 8 (Clippy Pedantic): All new code passes pedantic lints.
