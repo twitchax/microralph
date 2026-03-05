@@ -36,7 +36,7 @@ acceptance_tests:
   - id: uat-004
     name: "Daemon auto-starts on first mr wt run and listens on unix socket"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-005
     name: "Daemon heartbeat updates state.yaml with worktree liveness and overlap warnings"
     command: cargo make uat
@@ -773,4 +773,14 @@ src/
   - Test `test_print_worktree_detail_shows_entry` in `src/commands/worktree.rs` (line 1557) covers the happy path: creates a `WorktreeState` with a `WorktreeEntry` containing status, branch, path, events, and modified files, then calls `print_worktree_detail` and asserts success
   - Test `test_cmd_wt_status_with_unknown_prd_fails` (line 1533) covers the error path through `cmd_wt_status(Some(...))` integration
   - Test `test_print_worktree_detail_not_found` (line 1594) covers the not-found error path
+  - `cargo make uat` — 752 tests passed, 0 skipped
+
+## 2026-03-05 — uat-004 Verification
+- **UAT**: Daemon auto-starts on first mr wt run and listens on unix socket
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `daemon_accepts_ipc_heartbeat` in `src/worktree/daemon.rs` (line 1965): starts daemon, waits for socket to become reachable via `is_daemon_reachable`, connects via `IpcClient`, sends `HeartbeatRequest`, and asserts `"ok"` response — proves daemon listens on unix socket
+  - `is_healthy_true_when_running_and_reachable` (line 2047): starts daemon, waits for socket, asserts `Daemon::is_healthy()` returns true — validates the health check used by `ensure_running` auto-start logic
+  - `ensure_daemon()` in `src/commands/worktree.rs` (line 86) calls `Daemon::ensure_running()` which checks `is_healthy`, spawns daemon if needed, and waits for socket — auto-start path for `mr wt run`
   - `cargo make uat` — 752 tests passed, 0 skipped
