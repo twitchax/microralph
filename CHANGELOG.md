@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+
+- Gate worktree module behind #[cfg(unix)] to fix Windows build
+
+## [0.10.0] - 2026-03-05
+
 ### 📋 PRD Tasks
 
 - Prd(PRD-0039)feat(T-001): define worktree state schema and types
