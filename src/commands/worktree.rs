@@ -14,7 +14,8 @@ use crate::worktree::daemon::Daemon;
 use crate::worktree::git;
 use crate::worktree::state::StateManager;
 use crate::worktree::types::{
-    EventType, OverlapRisk, WorktreeEntry, WorktreeEvent, WorktreeState, WorktreeStatus,
+    DaemonConfig, EventType, OverlapRisk, WorktreeEntry, WorktreeEvent, WorktreeState,
+    WorktreeStatus,
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -690,6 +691,9 @@ pub fn cmd_wt_remove(prd_id: &str, _delete_branch: bool) -> Result<()> {
 /// Starts the worktree orchestration daemon in the foreground.
 /// The daemon runs until it receives SIGTERM, SIGINT, or reaches
 /// the idle timeout.
+///
+/// If a runner can be created from config, it is passed to the daemon
+/// for agent-driven conflict resolution.
 pub fn cmd_wt_daemon_start() -> Result<()> {
     let root = std::env::current_dir()?;
 
@@ -707,8 +711,34 @@ pub fn cmd_wt_daemon_start() -> Result<()> {
         colors::info("Starting worktree orchestration daemon (foreground)...")
     );
 
-    let daemon = Daemon::new(root);
+    let daemon = match create_daemon_runner(&root) {
+        Ok(runner) => {
+            tracing::info!(
+                "daemon using runner '{}' for conflict resolution",
+                runner.name()
+            );
+            Daemon::new_with_runner(root, DaemonConfig::default(), runner)
+        }
+        Err(e) => {
+            tracing::info!("no runner available for conflict resolution: {e:#}");
+            Daemon::new(root)
+        }
+    };
+
     daemon.run()
+}
+
+/// Try to create a runner for daemon conflict resolution from project config.
+///
+/// Reads `.mr/config.toml` to determine runner name and model. Falls back
+/// to "copilot" if no config is present. Returns an error if the runner
+/// is not available (e.g., CLI not installed).
+fn create_daemon_runner(root: &std::path::Path) -> Result<Box<dyn crate::runner::Runner>> {
+    let config = crate::config::Config::load_or_default(root)?;
+    let runner_name = config.runner.as_deref().unwrap_or("copilot");
+    let model = config.model.clone();
+
+    crate::runner::create_runner(runner_name, model)
 }
 
 /// Handles `mr wt daemon stop`.

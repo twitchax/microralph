@@ -2020,6 +2020,37 @@ Automatic AGENTS.md updates have been removed to give agents more flexibility. A
 Update any relevant section, not just this one. Keep additions concise and actionable.
 ";
 
+/// Default content for the conflict resolution prompt.
+///
+/// Used by the daemon to instruct an agent to resolve merge conflicts
+/// in a worktree. The daemon builds the actual prompt dynamically with
+/// conflict context; this template is materialized for reference and
+/// customization.
+pub const PROMPT_CONFLICT_RESOLVE: &str = r"# microralph — Conflict Resolution Prompt
+
+## Objective
+
+Resolve merge conflicts in a worktree branch being integrated with its target branch.
+
+## Context
+
+The daemon detected merge conflicts during automatic integration of a completed
+worktree into its target branch. Your job is to resolve these conflicts so the
+merge can proceed.
+
+## Instructions
+
+1. Read each conflicting file listed in the prompt.
+2. Resolve every conflict by editing the files to produce correct, working code.
+   - Remove all conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
+   - Choose the correct combination of both sides, or write new code that
+     integrates both changes.
+   - Preserve the intent of both branches.
+3. Do NOT add, delete, or rename files — only edit the conflicting files.
+4. Do NOT run tests or commit — the daemon handles verification.
+5. Respond with a brief summary of how each conflict was resolved.
+";
+
 /// Mapping of prompt filenames to their content.
 const PROMPT_FILES: &[(&str, &str)] = &[
     ("init.md", PROMPT_INIT),
@@ -2039,6 +2070,7 @@ const PROMPT_FILES: &[(&str, &str)] = &[
     ("refactor.md", PROMPT_REFACTOR),
     ("bootstrap_reconstruct.md", PROMPT_BOOTSTRAP_RECONSTRUCT),
     ("reindex_depends_on.md", PROMPT_REINDEX_DEPENDS_ON),
+    ("conflict_resolve.md", PROMPT_CONFLICT_RESOLVE),
 ];
 
 /// Result of initialization, containing counts and paths of created items.
@@ -2357,7 +2389,7 @@ mod tests {
 
         // Check result counts.
         assert_eq!(result.dirs_created, 4);
-        assert_eq!(result.files_created, 23); // 1 template + 17 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md + 1 SKILLS.md
+        assert_eq!(result.files_created, 24); // 1 template + 18 prompts + 1 index + 1 config + 1 constitution + 1 AGENTS.md + 1 SKILLS.md
         assert_eq!(result.files_skipped, 0);
     }
 
@@ -2368,13 +2400,13 @@ mod tests {
 
         // First init.
         let result1 = init(root).unwrap();
-        assert_eq!(result1.files_created, 23);
+        assert_eq!(result1.files_created, 24);
         assert_eq!(result1.files_skipped, 0);
 
         // Second init should skip all files.
         let result2 = init(root).unwrap();
         assert_eq!(result2.files_created, 0);
-        assert_eq!(result2.files_skipped, 23);
+        assert_eq!(result2.files_skipped, 24);
         assert_eq!(result2.dirs_created, 0);
     }
 

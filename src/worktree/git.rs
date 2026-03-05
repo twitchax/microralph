@@ -302,6 +302,61 @@ pub fn merge_ff_only(branch: &str, cwd: &Path) -> Result<()> {
         .with_context(|| format!("failed to fast-forward merge {branch}"))
 }
 
+// ── Conflict resolution helpers ─────────────────────────────────────
+
+/// List files with unresolved merge conflicts.
+///
+/// Runs `git diff --name-only --diff-filter=U` to find unmerged paths.
+pub fn list_conflict_files(cwd: &Path) -> Result<Vec<String>> {
+    let output = git_output(&["diff", "--name-only", "--diff-filter=U"], cwd)
+        .context("failed to list conflict files")?;
+
+    Ok(output
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(String::from)
+        .collect())
+}
+
+/// Get the full diff showing conflict markers for unresolved files.
+///
+/// Returns raw `git diff` output, which includes `<<<<<<<`/`=======`/`>>>>>>>`
+/// markers for conflicting hunks.
+pub fn conflict_diff(cwd: &Path) -> Result<String> {
+    git_output(&["diff"], cwd).context("failed to get conflict diff")
+}
+
+/// Stage all changes (resolved conflicts and other modifications).
+pub fn stage_all(cwd: &Path) -> Result<()> {
+    git_run(&["add", "-A"], cwd).context("failed to stage all files")
+}
+
+/// Continue a paused rebase after conflicts have been resolved.
+///
+/// Runs `git -c core.editor=true rebase --continue` to skip editor.
+pub fn rebase_continue(cwd: &Path) -> Result<()> {
+    git_run(&["-c", "core.editor=true", "rebase", "--continue"], cwd)
+        .context("failed to continue rebase")
+}
+
+/// Check whether a rebase is currently in progress.
+pub fn is_rebase_in_progress(cwd: &Path) -> Result<bool> {
+    let git_dir =
+        git_output(&["rev-parse", "--git-dir"], cwd).context("failed to resolve git dir")?;
+    let git_dir = Path::new(git_dir.trim());
+
+    Ok(git_dir.join("rebase-merge").exists() || git_dir.join("rebase-apply").exists())
+}
+
+/// Finalize a merge commit after conflicts have been resolved.
+///
+/// Stages all changes and commits with `--no-edit` to accept the
+/// default merge message.
+pub fn merge_commit(cwd: &Path) -> Result<()> {
+    git_run(&["-c", "core.editor=true", "commit", "--no-edit"], cwd)
+        .context("failed to commit merge")
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -663,5 +718,58 @@ mod tests {
         // Fast-forward should fail.
         let result = merge_ff_only("diverged", tmp.path());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn list_conflict_files_returns_conflicting_paths() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        let default_branch = current_branch(tmp.path()).unwrap();
+
+        // Create a branch with conflicting changes.
+        git_run(&["checkout", "-b", "conflict-br"], tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("README.md"), "# Branch version").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Branch change"], tmp.path()).unwrap();
+
+        checkout(&default_branch, tmp.path()).unwrap();
+        std::fs::write(tmp.path().join("README.md"), "# Main version").unwrap();
+        git_run(&["add", "."], tmp.path()).unwrap();
+        git_run(&["commit", "-m", "Main change"], tmp.path()).unwrap();
+
+        // Start a merge (will produce conflicts).
+        let _ = merge_branch("conflict-br", tmp.path());
+
+        let files = list_conflict_files(tmp.path()).unwrap();
+        assert_eq!(files, vec!["README.md"]);
+
+        // Conflict diff should contain markers.
+        let diff = conflict_diff(tmp.path()).unwrap();
+        assert!(diff.contains("README.md") || diff.contains("<<<<<<<") || diff.contains("======="));
+
+        // Abort to clean up.
+        let _ = merge_abort(tmp.path());
+    }
+
+    #[test]
+    fn is_rebase_in_progress_false_normally() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        assert!(!is_rebase_in_progress(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn stage_all_stages_new_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        init_git_repo(tmp.path());
+
+        std::fs::write(tmp.path().join("new.txt"), "hello").unwrap();
+        stage_all(tmp.path()).unwrap();
+
+        // Verify the file is staged.
+        let status = git_output(&["status", "--porcelain"], tmp.path()).unwrap();
+        assert!(status.contains("new.txt"));
     }
 }

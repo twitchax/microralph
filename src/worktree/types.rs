@@ -239,6 +239,12 @@ pub enum EventType {
 
     /// Merge produced conflicts requiring resolution.
     Conflicted,
+
+    /// Agent-driven conflict resolution started.
+    ConflictResolutionStarted,
+
+    /// Agent successfully resolved conflicts.
+    ConflictResolved,
 }
 
 impl std::fmt::Display for EventType {
@@ -254,6 +260,8 @@ impl std::fmt::Display for EventType {
             Self::MergeCompleted => write!(f, "merge_completed"),
             Self::MergeFailed => write!(f, "merge_failed"),
             Self::Conflicted => write!(f, "conflicted"),
+            Self::ConflictResolutionStarted => write!(f, "conflict_resolution_started"),
+            Self::ConflictResolved => write!(f, "conflict_resolved"),
         }
     }
 }
@@ -481,6 +489,11 @@ mod tests {
         assert_eq!(EventType::MergeCompleted.to_string(), "merge_completed");
         assert_eq!(EventType::MergeFailed.to_string(), "merge_failed");
         assert_eq!(EventType::Conflicted.to_string(), "conflicted");
+        assert_eq!(
+            EventType::ConflictResolutionStarted.to_string(),
+            "conflict_resolution_started"
+        );
+        assert_eq!(EventType::ConflictResolved.to_string(), "conflict_resolved");
     }
 
     #[test]

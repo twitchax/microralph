@@ -140,7 +140,7 @@ tasks:
   - id: T-012
     title: "Implement agent-driven conflict resolution"
     priority: 4
-    status: todo
+    status: done
     notes: "When merge/rebase produces conflicts, spawn agent session with conflict context (conflicting files, both sides, PRD context). Agent resolves conflicts, stages changes. Run UATs to verify. Use existing Runner trait for agent invocation."
   - id: T-013
     title: "Implement mr wt merge subcommand"
@@ -604,3 +604,27 @@ src/
   - 18 new tests (total 704): merge order computation (4), status update (2), git helpers (6), integration tests with real git repos (4), tier2 skip logic (1), run_uat failure (1)
   - UAT: `cargo make uat` — 704 tests passed, 0 skipped
 - **Constitution Compliance**: No violations. Uses deterministic merge ordering rather than LLM-based agent for merge decisions — this keeps costs bounded per principle "Agent cost" while still being strategic (overlap-aware, time-ordered).
+
+## 2026-03-05 — T-012 Completed
+- **Task**: Implement agent-driven conflict resolution
+- **Status**: ✅ Done
+- **Changes**:
+  - Added 6 new git helper functions in `src/worktree/git.rs`: `list_conflict_files()`, `conflict_diff()`, `stage_all()`, `rebase_continue()`, `is_rebase_in_progress()`, `merge_commit()`
+  - Added 2 new `EventType` variants in `src/worktree/types.rs`: `ConflictResolutionStarted`, `ConflictResolved` with corresponding `Display` impls
+  - Added optional `runner` field (`Option<Box<dyn Runner>>`) to `Daemon` struct in `src/worktree/daemon.rs`
+  - Added `Daemon::new_with_runner()` constructor accepting a runner for conflict resolution
+  - Implemented full conflict resolution pipeline in `src/worktree/daemon.rs`:
+    - `resolve_conflicts()` — orchestrates conflict resolution: starts conflicting merge, gathers context, invokes runner, stages resolved files, verifies no remaining conflicts, finalizes merge/rebase
+    - `start_conflicting_merge()` — starts merge/rebase leaving conflicts in place for agent resolution
+    - `finalize_conflict_resolution()` — continues rebase or commits merge after resolution
+    - `abort_in_progress()` — best-effort cleanup on failure
+    - `build_conflict_prompt()` — builds structured prompt with conflict files, diff, and instructions (truncates large diffs at 50KB)
+  - Modified `attempt_merge_worktree()` to attempt agent-driven conflict resolution when runner is available, falling back to marking `Conflicted` when no runner is present (backward compatible)
+  - Added `PROMPT_CONFLICT_RESOLVE` constant and registered `conflict_resolve.md` in `src/commands/init.rs` prompt manifest
+  - Refactored `create_runner()` from `src/main.rs` into `src/runner/mod.rs` as public `runner::create_runner()` for reuse; `main.rs` delegates to it (DRY principle)
+  - Modified `cmd_wt_daemon_start()` in `src/commands/worktree.rs` to create a runner from project config and pass to daemon for conflict resolution
+  - Added `create_daemon_runner()` helper that reads `.mr/config.toml` for runner/model settings
+  - Updated init test assertions to account for new prompt file count (23 → 24)
+  - 11 new tests (total 715): `build_conflict_prompt_contains_context`, `build_conflict_prompt_truncates_large_diff`, `resolve_conflicts_with_mock_runner_succeeds`, `attempt_merge_without_runner_marks_conflicted`, `attempt_merge_with_runner_attempts_resolution`, `start_conflicting_merge_clean_rebase_returns_true`, `list_conflict_files_empty_when_no_conflicts`, `stage_all_and_list_in_clean_repo`, `list_conflict_files_returns_conflicting_paths`, `is_rebase_in_progress_false_normally`, `stage_all_stages_new_files`
+  - UAT: `cargo make uat` — 715 tests passed, 0 skipped
+- **Constitution Compliance**: No violations. Rule 1 (DRY): Extracted `create_runner` to runner module. Rule 7 (Prompt Management): Added prompt constant and registered in manifest. Rule 8 (Clippy Pedantic): All methods refactored to satisfy `unused_self` lint.

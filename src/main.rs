@@ -21,7 +21,6 @@ mod worktree;
 
 use commands::{bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest};
 
-use runner::Runner;
 use util::colors;
 
 /// microralph (`mr`) — A tiny CLI for creating and executing PRDs with coding agents.
@@ -749,43 +748,7 @@ fn init_tracing(verbose: bool, quiet: bool) {
 
 /// Creates a runner based on the runner name and model.
 fn create_runner(runner_name: &str, model: Option<String>) -> Result<Box<dyn runner::Runner>> {
-    match runner_name {
-        "mock" => Ok(Box::new(runner::MockRunner::empty())),
-        "copilot" => {
-            let copilot = runner::CopilotRunner::with_model(model);
-
-            if !copilot.is_available() {
-                anyhow::bail!(
-                    "Copilot CLI is not available. Install it or use `--runner copilot` for testing."
-                );
-            }
-
-            Ok(Box::new(copilot))
-        }
-        "claude" => {
-            let claude = runner::ClaudeRunner::with_model(model);
-
-            if !claude.is_available() {
-                anyhow::bail!(
-                    "Claude CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Ok(Box::new(claude))
-        }
-        "codex" => {
-            let codex = runner::CodexRunner::with_model(model);
-
-            if !codex.is_available() {
-                anyhow::bail!(
-                    "Codex CLI is not available. Install it or use `--runner mock` for testing."
-                );
-            }
-
-            Ok(Box::new(codex))
-        }
-        other => anyhow::bail!("Unknown runner: {other}. Supported: copilot, claude, codex, mock"),
-    }
+    runner::create_runner(runner_name, model)
 }
 
 /// Runs the `mr init` command.
