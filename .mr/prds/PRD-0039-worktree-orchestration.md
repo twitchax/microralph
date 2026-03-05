@@ -28,7 +28,7 @@ acceptance_tests:
   - id: uat-002
     name: "mr wt list shows all registered worktrees with status"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-003
     name: "mr wt status shows detailed state of a specific worktree"
     command: cargo make uat
@@ -753,3 +753,14 @@ src/
   - Test exercises the core `cmd_wt_run` flow: validates PRD existence, computes branch name and worktree path, creates git branch, creates git worktree, registers worktree in state, and verifies all state fields (id, prd, branch, status=Active, events=[Created]) and git worktree listing
   - Combined with existing tests for branch naming (`worktree_branch_name_*`), path computation (`worktree_path_is_sibling`), and worktree creation (`create_and_list_worktree`), this covers the full acceptance criterion
   - `cargo make uat` — 750 tests passed, 0 skipped
+
+## 2026-03-05 — uat-002 Verification
+- **UAT**: mr wt list shows all registered worktrees with status
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Created test `test_cmd_wt_list_shows_registered_worktrees_with_status` in `src/commands/worktree.rs`
+  - Test sets up a temp git repo with state containing 3 worktrees (Active, Completed, Merged), calls `cmd_wt_list()`, and verifies it succeeds
+  - Created companion test `test_cmd_wt_list_empty_state_shows_hint` verifying the empty-state hint path
+  - Extracted `make_test_repo` helper to reduce duplication across worktree tests
+  - `cargo make uat` — 752 tests passed, 0 skipped

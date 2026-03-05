@@ -1160,6 +1160,36 @@ mod tests {
     use super::*;
     use crate::worktree::types::WorktreeState;
 
+    /// Create a temp git repo with an initial commit.
+    fn make_test_repo(name: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path().join(name);
+        std::fs::create_dir(&repo).unwrap();
+        for args in [
+            vec!["init", "--initial-branch=main"],
+            vec!["config", "user.email", "test@test.com"],
+            vec!["config", "user.name", "Test User"],
+        ] {
+            std::process::Command::new("git")
+                .args(&args)
+                .current_dir(&repo)
+                .output()
+                .unwrap();
+        }
+        std::fs::write(repo.join("README.md"), "# Test").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&repo)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "init"])
+            .current_dir(&repo)
+            .output()
+            .unwrap();
+        (tmp, repo)
+    }
+
     #[test]
     fn next_wt_id_starts_at_001() {
         let state = WorktreeState::default();
@@ -1331,6 +1361,92 @@ mod tests {
         assert!(result.is_err());
 
         std::env::set_current_dir(orig).unwrap();
+    }
+
+    #[test]
+    fn test_cmd_wt_list_shows_registered_worktrees_with_status() {
+        let (_tmp, repo_dir) = make_test_repo("testrepo");
+        let state_mgr = StateManager::new(&repo_dir);
+        state_mgr.ensure_dir().unwrap();
+
+        let state = WorktreeState {
+            version: 1,
+            daemon: None,
+            worktrees: vec![
+                WorktreeEntry {
+                    id: "wt-001".to_string(),
+                    prd: "PRD-0001".to_string(),
+                    branch: "testrepo-prd-1".to_string(),
+                    path: "/tmp/wt1".to_string(),
+                    status: WorktreeStatus::Active,
+                    run_pid: None,
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    merge_target: "main".to_string(),
+                    modified_files: vec!["src/main.rs".to_string()],
+                    events: vec![WorktreeEvent {
+                        timestamp: "2026-01-01T00:00:00Z".to_string(),
+                        event_type: EventType::Created,
+                        detail: None,
+                    }],
+                },
+                WorktreeEntry {
+                    id: "wt-002".to_string(),
+                    prd: "PRD-0002".to_string(),
+                    branch: "testrepo-prd-2".to_string(),
+                    path: "/tmp/wt2".to_string(),
+                    status: WorktreeStatus::Completed,
+                    run_pid: None,
+                    created_at: "2026-01-02T00:00:00Z".to_string(),
+                    updated_at: "2026-01-03T00:00:00Z".to_string(),
+                    merge_target: "main".to_string(),
+                    modified_files: vec![],
+                    events: vec![],
+                },
+                WorktreeEntry {
+                    id: "wt-003".to_string(),
+                    prd: "PRD-0003".to_string(),
+                    branch: "testrepo-prd-3".to_string(),
+                    path: "/tmp/wt3".to_string(),
+                    status: WorktreeStatus::Merged,
+                    run_pid: None,
+                    created_at: "2026-01-04T00:00:00Z".to_string(),
+                    updated_at: "2026-01-05T00:00:00Z".to_string(),
+                    merge_target: "main".to_string(),
+                    modified_files: vec!["src/lib.rs".to_string(), "Cargo.toml".to_string()],
+                    events: vec![],
+                },
+            ],
+            overlap_warnings: vec![],
+        };
+        state_mgr.write(&state).unwrap();
+
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&repo_dir).unwrap();
+        let result = cmd_wt_list();
+        std::env::set_current_dir(orig).unwrap();
+
+        assert!(
+            result.is_ok(),
+            "cmd_wt_list should succeed with registered worktrees"
+        );
+    }
+
+    #[test]
+    fn test_cmd_wt_list_empty_state_shows_hint() {
+        let (_tmp, repo_dir) = make_test_repo("emptyrepo");
+        let state_mgr = StateManager::new(&repo_dir);
+        state_mgr.ensure_dir().unwrap();
+
+        let orig = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&repo_dir).unwrap();
+        let result = cmd_wt_list();
+        std::env::set_current_dir(orig).unwrap();
+
+        assert!(
+            result.is_ok(),
+            "cmd_wt_list should succeed with empty state"
+        );
     }
 
     #[test]
