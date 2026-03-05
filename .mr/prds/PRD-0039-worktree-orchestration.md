@@ -48,7 +48,7 @@ acceptance_tests:
   - id: uat-007
     name: "Daemon auto-merges completed worktree into main with UAT gating"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-008
     name: "Agent resolves merge conflicts when auto-merge fails"
     command: cargo make uat
@@ -807,3 +807,14 @@ src/
   - `daemon_notifier_returns_none_when_prd_not_in_state`: verifies graceful fallback when PRD is not registered in state
   - `client_server_all_message_types` in `src/worktree/ipc.rs`: verifies all IPC message variants (RunStarted, TaskStarted, TaskCompleted, RunCompleted, RunFailed, HeartbeatRequest) serialize/deserialize correctly over Unix socket
   - `cargo make uat` — 753 tests passed, 0 skipped
+
+## 2026-03-05 — uat-007 Verification
+- **UAT**: Daemon auto-merges completed worktree into main with UAT gating
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Added `attempt_merge_gates_on_uat_failure` test in `src/worktree/daemon.rs`
+  - Test creates a real git repo + worktree with a non-conflicting branch, marks worktree as Completed, then calls `attempt_merge_worktree`
+  - Verifies: MergeStarted event is recorded (auto-merge attempted), integration succeeds, then UATs fail (no Cargo project in temp dir), resulting in MergeFailed status with "UATs failed after integration" detail
+  - This proves the daemon gates merges on UAT results — integration alone is not sufficient for merge to proceed
+  - `cargo make uat` — 754 tests passed, 0 skipped

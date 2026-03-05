@@ -2476,6 +2476,90 @@ mod tests {
         assert!(!Daemon::run_uat(&nonexistent));
     }
 
+    /// Verifies the full auto-merge flow with UAT gating.
+    ///
+    /// A completed worktree with a non-conflicting branch is integrated
+    /// successfully, but `cargo make uat` fails (temp dir has no project),
+    /// so the merge is rejected with `MergeFailed` status.  This proves
+    /// the daemon gates merges on UAT results.
+    #[test]
+    fn attempt_merge_gates_on_uat_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let main_dir = tmp.path().join("main-repo");
+        fs::create_dir(&main_dir).unwrap();
+        init_git_repo(&main_dir);
+
+        let default_branch = git::current_branch(&main_dir).unwrap();
+
+        // Create a worktree with a non-conflicting commit.
+        let wt_dir = tmp.path().join("main-repo-prd-200");
+        git::create_branch("main-repo-prd-200", "HEAD", &main_dir).unwrap();
+        git::create_worktree(&wt_dir, "main-repo-prd-200", &main_dir).unwrap();
+
+        std::fs::write(wt_dir.join("feature_200.rs"), "fn feature() {}").unwrap();
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Feature 200"])
+            .current_dir(&wt_dir)
+            .output()
+            .unwrap();
+
+        // Register a completed worktree in state.
+        let state_mgr = StateManager::new(tmp.path());
+        state_mgr.ensure_dir().unwrap();
+        state_mgr
+            .modify(|state| {
+                state.worktrees.push(WorktreeEntry {
+                    id: "wt-200".to_string(),
+                    prd: "PRD-0200".to_string(),
+                    branch: "main-repo-prd-200".to_string(),
+                    path: wt_dir.to_string_lossy().to_string(),
+                    status: WorktreeStatus::Completed,
+                    run_pid: None,
+                    created_at: "2026-01-01T00:00:00Z".to_string(),
+                    updated_at: "2026-01-01T00:00:00Z".to_string(),
+                    merge_target: default_branch,
+                    modified_files: vec!["feature_200.rs".to_string()],
+                    events: vec![],
+                });
+                Ok(())
+            })
+            .unwrap();
+
+        let daemon = Daemon::new(tmp.path().to_path_buf());
+        let _ = daemon.attempt_merge_worktree("wt-200");
+
+        let state = state_mgr.read().unwrap();
+        let wt = state.worktrees.iter().find(|w| w.id == "wt-200").unwrap();
+
+        // Integration succeeded but UATs failed → MergeFailed.
+        assert_eq!(wt.status, WorktreeStatus::MergeFailed);
+
+        // MergeStarted event proves auto-merge was attempted.
+        assert!(
+            wt.events
+                .iter()
+                .any(|e| e.event_type == EventType::MergeStarted),
+            "should have MergeStarted event"
+        );
+
+        // MergeFailed event with UAT detail proves gating.
+        let fail_event = wt
+            .events
+            .iter()
+            .find(|e| e.event_type == EventType::MergeFailed)
+            .expect("should have MergeFailed event");
+        assert_eq!(
+            fail_event.detail.as_deref(),
+            Some("UATs failed after integration"),
+            "MergeFailed should cite UAT failure"
+        );
+    }
+
     // ── Conflict resolution tests ───────────────────────────────────
 
     #[test]
