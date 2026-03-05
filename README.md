@@ -201,6 +201,9 @@ mr status
 | `mr refactor --dry-run`            | Preview refactor suggestions without applying changes                                  |
 | `mr reindex`                       | Regenerate index and verify/fix PRD interlinks                                         |
 | `mr status`                        | Show status of PRDs and tasks                                                          |
+| `mr ui`                            | Start the local web dashboard (requires `--features ui`)                               |
+| `mr ui --port 8080`               | Start the dashboard on a custom port (default: 3939)                                   |
+| `mr ui --open`                    | Start the dashboard and auto-open in browser                                           |
 
 ### Flags
 
@@ -866,6 +869,26 @@ cargo make build-release
 # UAT (User Acceptance Tests) — the one true gate
 cargo make uat
 ```
+
+### UI Dashboard
+
+The `mr ui` command starts a local web dashboard for monitoring worktree orchestration. Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5 — feature-gated behind `ui`.
+
+```bash
+# Start the dashboard (http://127.0.0.1:3939)
+mr ui
+
+# Development with hot reload
+cargo make ui-dev
+
+# Production build
+cargo make ui-build
+
+# UI-specific CI (clippy + test)
+cargo make ui-ci
+```
+
+The dashboard provides real-time worktree status, agent log streaming, PRD management, and overlap risk visualization. See `AGENTS.md` for full architecture details.
 
 ## Principles
 

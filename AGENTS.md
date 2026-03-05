@@ -518,6 +518,135 @@ overlap_warnings:
 - **State on main**: All orchestration state lives in `.mr/worktrees/state.yaml` on the main branch, designed for future Web UI consumption
 - **Advisory locking**: All state mutations go through `StateManager::modify()` which holds a flock for safe concurrent access
 
+## Control UI Dashboard (`mr ui`)
+
+The `mr ui` command starts a local web dashboard for visualizing and controlling worktree orchestration. Built with Leptos 0.8, Axum 0.8, and Thaw UI 0.5 — full-stack Rust, no JS build tooling.
+
+### Architecture Overview
+
+```
+Browser (WASM hydration)
+  ↕ WebSocket (ws://host:port/ws/state, /ws/logs/{id})
+Axum Server (mr ui)
+  ├── Leptos SSR (initial HTML render)
+  ├── Server Functions (PRD creation, worktree kickoff)
+  ├── WebSocket Handlers (state push, log streaming)
+  └── StateService (polls state.yaml + .mr/prds/ every 2s)
+        ↕ Filesystem
+  state.yaml, .mr/prds/, run.log files
+```
+
+The UI server is a separate process from the daemon. It reads the same `state.yaml` file but does not interfere with daemon operation. Write operations (create PRD, kick off worktree) shell out to existing `mr` CLI commands via `tokio::process::Command`.
+
+### Running the UI
+
+```bash
+# Start the dashboard (default: http://127.0.0.1:3939)
+mr ui
+
+# Custom host and port
+mr ui --port 8080 --host 0.0.0.0
+
+# Auto-open browser
+mr ui --open
+```
+
+**Note**: Requires the `ui` feature to be enabled (`cargo build --features ui`).
+
+### Development Workflow
+
+```bash
+# Hot-reload development server via cargo-leptos watch
+cargo make ui-dev
+
+# Production build (SSR binary + hydrated WASM bundle)
+cargo make ui-build
+
+# Run UI-specific tests
+cargo make ui-test
+
+# Lint UI crate with pedantic clippy
+cargo make ui-clippy
+
+# Full UI CI (clippy + test)
+cargo make ui-ci
+```
+
+### Crate Structure
+
+The UI lives in `crates/mr-ui/` as a separate workspace member, feature-gated behind `ui` in the root `Cargo.toml`.
+
+```
+crates/mr-ui/
+  Cargo.toml          # leptos 0.8, axum 0.8, thaw 0.5, tower-http, tracing
+  src/
+    lib.rs            # Client-side hydration entrypoint
+    main.rs           # Server-side dev entrypoint (cargo-leptos)
+    serve.rs          # Production server (called from root mr binary)
+    app.rs            # Root App component, router, HTML shell
+    state.rs          # StateService: polls state.yaml + PRDs, broadcasts changes
+    types.rs          # Shared types (AppState, WorktreeState, PrdSummary, etc.)
+    ws.rs             # WebSocket handlers (state push + log streaming)
+    components/
+      mod.rs          # Component module registry
+      dashboard.rs    # Home: overview cards, daemon health, recent events
+      layout.rs       # App shell: sidebar, topbar, content area
+      sidebar.rs      # Collapsible sidebar nav
+      theme.rs        # Dark/light theme provider and toggle
+      worktrees.rs    # Worktree list table with real-time status
+      worktree_detail.rs  # Worktree detail: timeline, tasks, files, merge info
+      log_viewer.rs   # Real-time log tail via WebSocket
+      prd_list.rs     # PRD list with status and dependencies
+      prd_create.rs   # PRD creation form (invokes mr new server-side)
+      wt_kickoff.rs   # Worktree kickoff dialog (invokes mr wt run)
+      overlap_matrix.rs   # File overlap risk visualization
+  style/
+    main.css          # Custom CSS overrides for Thaw theme tokens
+```
+
+### State Flow: Daemon → UI
+
+1. The worktree daemon writes to `.mr/worktrees/state.yaml` on state changes.
+2. `StateService` (in `state.rs`) polls `state.yaml` and `.mr/prds/` every 2 seconds.
+3. On change, it updates a shared `Arc<RwLock<AppState>>` and broadcasts via `tokio::sync::broadcast`.
+4. The WebSocket handler (`ws.rs` → `/ws/state`) sends the current snapshot on connect, then streams updates.
+5. The client-side WASM app (`app.rs` → `connect_state_ws`) receives updates and patches a `RwSignal<Option<AppState>>`.
+6. Leptos fine-grained reactivity updates only affected DOM nodes.
+
+### Log Streaming Flow
+
+1. `mr wt run` redirects stdout/stderr to `.mr/worktrees/<wt-id>/run.log`.
+2. The WebSocket handler (`ws.rs` → `/ws/logs/{id}`) tails the log file via async I/O (polling every 200ms).
+3. New lines are pushed to the client and rendered in a terminal-styled container with auto-scroll.
+4. Error lines (containing "error", "panic", "fatal") are highlighted in red.
+
+### Pages and Routes
+
+| Route | Component | Description |
+| ----- | --------- | ----------- |
+| `/` | `DashboardHome` | Overview cards, daemon health, recent events |
+| `/worktrees` | `WorktreeList` | Table of all worktrees with real-time status |
+| `/worktrees/:id` | `WorktreeDetail` | Event timeline, task progress, files, merge info |
+| `/worktrees/:id/logs` | `LogViewer` | Real-time log tail for a worktree |
+| `/prds` | `PrdList` | All PRDs with status, dependencies, kickoff button |
+| `/prds/new` | `PrdCreate` | Form to create a new PRD via `mr new` |
+| `/overlap` | `OverlapMatrix` | File overlap risk visualization |
+
+### Feature Gates
+
+- **`ssr`**: Server-side rendering — enables Axum, tokio, leptos_axum, tower-http, serde_yaml.
+- **`hydrate`**: Client-side WASM — enables wasm-bindgen, web-sys, console_error_panic_hook.
+- **Root `ui`**: Enables the `mr ui` command in the root binary and pulls in `mr-ui` with `ssr`.
+
+### Important Notes
+
+- **No authentication**: Local-only dashboard, binds to 127.0.0.1 by default.
+- **No JS tooling**: Pure Rust — Leptos compiles to WASM. No npm, webpack, or JS build tools.
+- **Read-mostly**: Reads state from daemon's `state.yaml`. Write ops shell out to `mr` CLI.
+- **Daemon independence**: UI server and daemon are separate processes.
+- **Clippy pedantic**: All production code passes `clippy::pedantic`.
+- **Theme**: Dark by default with light mode toggle. Status colors: green (active/merged), yellow (merging), red (failed/conflicted), gray (abandoned).
+
 ## Build & Test
 
 ### Prerequisites

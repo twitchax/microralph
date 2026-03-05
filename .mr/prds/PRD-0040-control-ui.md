@@ -154,7 +154,7 @@ tasks:
   - id: T-018
     title: "Documentation and AGENTS.md update"
     priority: 6
-    status: todo
+    status: done
     notes: "Add UI section to AGENTS.md covering: architecture overview, how to run (mr ui), dev workflow (cargo make ui-dev), component structure, how state flows from daemon to UI. Update README.md with UI screenshot placeholder and usage."
 ---
 
@@ -558,3 +558,13 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
   - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns from dashboard.rs and worktrees.rs (rule 4), separation of concerns with dedicated overlap_matrix module (rule 2), DRY via reuse of Thaw Table/Badge/Tag patterns and OverlapRisk/OverlapWarning types from types.rs (rule 1).
+
+## 2026-03-05 — T-018 Completed
+- **Task**: Documentation and AGENTS.md update
+- **Status**: ✅ Done
+- **Changes**:
+  - Added comprehensive "Control UI Dashboard (`mr ui`)" section to `AGENTS.md` after the Worktree Orchestration section, covering: architecture overview (state flow diagram), running the UI (`mr ui` flags), development workflow (`cargo make ui-dev/ui-build/ui-test/ui-clippy/ui-ci`), full crate structure listing all source files and components, state flow from daemon to UI (6-step pipeline), log streaming flow, routes/pages table, feature gate explanation, and important notes.
+  - Updated `README.md` commands table: added `mr ui`, `mr ui --port`, and `mr ui --open` entries.
+  - Added "UI Dashboard" subsection to `README.md` Development section with quick start commands and cross-reference to AGENTS.md for full details.
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Documentation-only changes — minimal modifications (rule 3), follows existing documentation structure and conventions (rule 4).
