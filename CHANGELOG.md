@@ -9,6 +9,559 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📋 PRD Tasks
 
+- Prd(PRD-0039)feat(T-001): define worktree state schema and types
+
+Add src/worktree/types.rs with WorktreeState, WorktreeEntry,
+WorktreeEvent, OverlapWarning, DaemonConfig, IPC message types.
+All types are YAML/JSON-serializable with serde. Includes version
+field for future schema migration. 9 unit tests covering roundtrip
+serialization, display impls, and defaults.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-002): implement state file read/write with advisory locking
+
+Add src/worktree/state.rs with StateManager providing flock-based
+advisory locking, atomic writes via temp+rename, and read-modify-write
+cycle for .mr/worktrees/state.yaml. 11 unit tests included.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-003): Implement worktree path resolution and git helpers
+
+Add src/worktree/git.rs with functions for main worktree resolution,
+branch/worktree create/remove, modified file detection, linked worktree
+detection, and sibling directory path convention. 17 unit tests.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-018): wire wt subcommand with CLI skeleton
+
+Add 'mr wt' command group with subcommands: run, list, status, merge,
+graph, remove, and daemon (start/stop/status). All handlers are stubs
+returning not-implemented errors, to be filled in by subsequent tasks.
+
+- Create src/commands/worktree.rs with 9 stub handlers and 10 tests
+- Add WtCommand and DaemonCommand enums to main.rs
+- Wire full dispatch with normalize_prd_id for PRD ID arguments
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-004): implement IPC protocol over Unix domain socket
+
+Add src/worktree/ipc.rs with newline-delimited JSON protocol for
+daemon-worktree communication. Includes IpcClient (connect + send),
+IpcServer (bind + accept + dispatch), socket path resolution, daemon
+reachability check, stale socket cleanup, and non-blocking mode support.
+10 unit tests covering full client-server roundtrip, all message types,
+lifecycle, and error paths.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-005): implement daemon core with heartbeat loop
+
+- Create src/worktree/daemon.rs with full daemon implementation:
+  - PID file management, process liveness checks, SIGTERM stop
+  - Single-threaded event loop with non-blocking IPC accept
+  - Tier 1 heartbeat: polls worktree PIDs, updates modified files, computes overlap
+  - Auto-exit on configurable idle timeout (default 3h)
+  - Signal handling (SIGTERM/SIGINT) + per-instance shutdown handle for testing
+  - IPC message processing for all lifecycle events
+- Add try_accept_stream() and handle_stream() to src/worktree/ipc.rs
+- Implement cmd_wt_daemon_start/stop/status in src/commands/worktree.rs
+- 21 new tests (662 total), all passing
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-006): implement mr wt run subcommand
+
+Implement the `mr wt run <prd-id>` command that:
+- Resolves main worktree and validates PRD exists
+- Creates branch and sibling git worktree
+- Registers worktree in state.yaml with advisory locking
+- Auto-starts daemon as detached process if not running
+- Spawns `mr run` as detached process in worktree context
+- Guards against duplicate active worktrees for same PRD
+- Records lifecycle events (created, run_started) in state
+
+Added helpers: next_wt_id, now_iso, days_to_ymd, validate_prd_exists,
+ensure_daemon, register_worktree, spawn_mr_run.
+
+6 new unit tests (668 total, all passing).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-007): implement daemon auto-start logic
+
+Add Daemon::is_healthy(), cleanup_stale(), and ensure_running() to
+src/worktree/daemon.rs for robust daemon auto-start with PID + socket
+liveness checks, stale state cleanup, and readiness wait. Simplify
+ensure_daemon() in commands/worktree.rs to delegate to the new API.
+
+7 new tests (675 total, all passing).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-008): integrate mr run with daemon IPC for worktree detection
+
+Add DaemonNotifier to src/commands/run.rs that sends lifecycle events
+(run_started, task_started, task_completed, run_completed, run_failed)
+to the worktree daemon when mr run executes inside a linked worktree.
+
+Backward compatible: no daemon means no IPC, run works identically.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-009): implement mr wt list subcommand
+
+Add cmd_wt_list implementation that reads state.yaml and displays all
+registered worktrees in an aligned table with PRD ID, branch, status,
+modified files count, and last event timestamp. Status is color-coded
+by lifecycle phase. Includes 3 new unit tests (683 total, all passing).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-010): implement mr wt status subcommand
+
+Add detailed worktree status display with two modes:
+- Overall: daemon health, worktree summary counts, overlap warnings
+- Per-PRD: identity, merge readiness, modified files, event history
+
+5 new unit tests, 686 total passing.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-011): implement auto-merge in daemon heartbeat
+
+Add Tier 2 auto-merge logic to the daemon heartbeat loop. When completed
+worktrees are detected, the daemon:
+- Computes merge order (fewest overlapping files first, then by completion time)
+- Attempts rebase onto target (falls back to merge on failure)
+- Runs UATs in the worktree after integration
+- Merges branch into target on success (fast-forward preferred)
+- Marks conflicted/merge_failed on failure for T-012/agent resolution
+
+New EventType variants: MergeStarted, MergeCompleted, MergeFailed, Conflicted
+New git helpers: rebase_onto, rebase_abort, merge_branch, merge_abort, checkout, merge_ff_only
+18 new tests (704 total, all passing)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-012): implement agent-driven conflict resolution
+
+Add conflict resolution pipeline to worktree daemon. When merge/rebase
+produces conflicts, the daemon now invokes an agent (via Runner trait)
+to resolve them automatically before marking the worktree as conflicted.
+
+Key changes:
+- Add git helpers: list_conflict_files, conflict_diff, stage_all,
+  rebase_continue, is_rebase_in_progress, merge_commit
+- Add ConflictResolutionStarted/ConflictResolved event types
+- Add optional Runner to Daemon for agent-driven resolution
+- Modify attempt_merge_worktree to try resolution before fallback
+- Extract create_runner to runner module for reuse (DRY)
+- Add conflict_resolve.md prompt template
+- Wire runner from config into daemon start
+- 11 new tests (715 total, all passing)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-013): implement mr wt merge subcommand
+
+Manual merge trigger with cross-worktree support:
+- mr wt merge <prd-id> [--into <target>]
+- Rebase-first strategy with merge fallback
+- Agent-driven conflict resolution via runner
+- UAT gating before merge completion
+- Smart target detection for cross-worktree merges
+- 5 new tests (720 total, all passing)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-014): implement agent-driven state commits
+
+Add state commit infrastructure to the daemon that commits state.yaml
+to the main worktree repository on significant events (merge completed,
+merge failed, conflicted). Generates human-readable summary commit
+messages in the format: mr-wt: PRD-0039 merged, PRD-0040 in progress
+(3 active worktrees).
+
+- Add git helpers: add_file(), commit(), has_staged_changes()
+- Add EventType::StateCommitted variant
+- Add build_state_summary() and commit_state() to Daemon
+- Wire commit_state() into attempt_merge_worktree() and manual_merge()
+- 9 new tests (720 → 729)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-015): implement mr wt graph subcommand
+
+Add worktree overlap risk visualization in ASCII, Mermaid, and DOT formats.
+Nodes represent active worktrees, edges represent shared modified files.
+Risk is color-coded: green (low), yellow (medium), red (high).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-016): implement mr wt remove subcommand
+
+Replaces the stub cmd_wt_remove with a full implementation that:
+- Resolves main worktree and finds the target worktree in state
+- Refuses removal of worktrees in Merging status (safety check)
+- Removes git worktree (best-effort, handles missing dirs)
+- Optionally deletes the branch with --delete-branch
+- Updates state.yaml: marks Abandoned, clears run_pid, records event
+- Cleans up overlap warnings referencing the removed worktree
+- Adds EventType::Removed variant to types
+- 4 new tests (742 total, all passing)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-017): implement daemon crash recovery
+
+Add crash recovery logic that runs on daemon startup before the event
+loop. Detects and corrects stale state from previous crashes:
+- Orphaned worktrees (missing paths) → marked Abandoned
+- Partial merges (stuck Merging status) → aborted and reset to Completed
+- Dead run processes (Active with dead PID) → marked Completed
+
+New helpers: detect_recovery_actions(), apply_recovery_actions(),
+git::is_merge_in_progress(). New EventType::RecoveryPerformed variant.
+
+7 new tests (749 total), all passing.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)feat(T-019): document worktree orchestration in AGENTS.md
+
+Add comprehensive worktree orchestration section to AGENTS.md covering
+architecture, CLI usage, daemon lifecycle, IPC protocol, state file schema,
+merge strategy, and troubleshooting. Update workspace overview to include
+worktree module and .mr/worktrees/ directory.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-001): verify wt run creates branch, worktree, and registers state
+
+Add test wt_run_creates_branch_worktree_and_registers_state that exercises
+the core cmd_wt_run flow: PRD validation, branch/worktree creation, and state
+registration with correct fields and events.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-002): verify mr wt list shows worktrees with status
+
+Added test_cmd_wt_list_shows_registered_worktrees_with_status and
+test_cmd_wt_list_empty_state_shows_hint tests. Extracted make_test_repo
+helper for worktree test setup.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-003): verified — wt status shows detailed worktree state
+
+Existing tests cover the acceptance criterion:
+- test_print_worktree_detail_shows_entry (happy path)
+- test_cmd_wt_status_with_unknown_prd_fails (error path)
+- test_print_worktree_detail_not_found (not-found path)
+
+All 752 tests pass.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-004): verified daemon auto-start and unix socket listening
+
+Existing tests cover this UAT:
+- daemon_accepts_ipc_heartbeat: proves daemon binds and responds on unix socket
+- is_healthy_true_when_running_and_reachable: validates health check used by auto-start
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-005): verify daemon heartbeat updates liveness and overlaps
+
+Add tier1_heartbeat_updates_liveness_and_overlaps integration test that
+starts a daemon with a 1-second heartbeat, pre-populates state with a
+dead-PID worktree and overlapping active worktrees, then verifies the
+daemon detects dead processes and computes overlap warnings.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-006): verified lifecycle events via IPC with existing tests
+
+Verified by existing tests:
+- daemon_notifier_connects_and_sends_events (full lifecycle flow)
+- daemon_notifier_returns_none_* (4 graceful fallback tests)
+- client_server_all_message_types (IPC protocol layer)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-007): verify auto-merge UAT gating with new test
+
+Add attempt_merge_gates_on_uat_failure test that exercises the full
+auto-merge flow: completed worktree → integration → UAT gate → MergeFailed.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-008): verify agent resolves merge conflicts
+
+Add end-to-end test that verifies the daemon detects merge conflicts,
+invokes the agent runner with conflict context, and records both
+ConflictResolutionStarted and ConflictResolved events after successful
+resolution.
+
+Added set_execute_side_effect() to MockRunner to enable simulating
+agent file edits during execute().
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-009): verified worktree graph overlap risk visualization
+
+Existing tests in src/commands/worktree.rs cover all three graph formats
+(ASCII, Mermaid, DOT) with overlap risk visualization, risk level
+computation, empty state handling, and error paths (11 tests total).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-010): verify manual merge triggers merge pipeline
+
+Add manual_merge_triggers_merge_pipeline_for_prd test that creates a real
+git repo with a worktree, registers it as Completed, calls manual_merge,
+and verifies MergeStarted event and UAT gating (MergeFailed status).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-011): verify daemon crash recovery with existing tests
+
+Six tests in src/worktree/daemon.rs cover all crash recovery scenarios
+including partial merge state detection (recover_stale_state_resets_partial_merge_no_operation).
+Also fix pre-existing clippy warning in mock.rs (underscore-prefixed used binding).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-012): verify daemon auto-exits on idle timeout
+
+Existing test daemon_exits_on_idle_timeout in src/worktree/daemon.rs
+covers this acceptance criterion by setting idle_timeout_hours=0 and
+verifying the daemon exits cleanly with PID and state cleanup.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-013): verify wt remove cleans up worktree, branch, and state
+
+Existing tests in src/commands/worktree.rs cover the full remove flow:
+- test_cmd_wt_remove_succeeds_for_active_worktree (happy path)
+- test_cmd_wt_remove_rejects_merging_worktree (safety guard)
+- test_cmd_wt_remove_unknown_prd_returns_error
+- test_cmd_wt_remove_fails_without_git_repo
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-014): verify state commits on significant events with summaries
+
+Existing tests cover commit_state() behavior:
+- Only called after significant events (merged, merge failed, conflicted)
+- build_state_summary() generates descriptive commit messages
+- 6 tests pass: summary format, mixed states, no-op when unchanged
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0039)uat(uat-015): verified strategic merge order via existing tests
+
+4 existing compute_merge_order tests cover overlap-aware ordering
+and tie-breaking by completion time.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-001): workspace setup with mr-ui crate and feature gate
+
+- Create crates/mr-ui/ with Cargo.toml (leptos 0.8, axum 0.8, thaw 0.5-beta, tracing)
+- Add workspace config to root Cargo.toml with default-members
+- Feature-gate mr-ui behind 'ui' feature in root crate
+- Add cargo-leptos install task to Makefile.toml
+- Update AGENTS.md with workspace structure docs
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-002): Leptos + Axum app scaffold with cargo-leptos
+
+Set up the Leptos 0.8 app entrypoint with Axum router, SSR + hydration,
+and cargo-leptos config. Created app.rs (root component, router, shell),
+main.rs (server entrypoint), updated lib.rs (hydration), and added
+leptos_meta, wasm-bindgen, console_error_panic_hook dependencies.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-003): add StateService for reading and watching state.yaml
+
+Create server-side StateService in mr-ui crate that polls .mr/worktrees/state.yaml
+and .mr/prds/ every 2 seconds, exposing combined worktree + PRD state via
+Arc<RwLock<AppState>> shared across Axum handlers. Includes broadcast channel for
+future WebSocket push, UI-specific types matching the YAML schemas, and 9 async
+tests covering parsing, polling, and broadcast notification.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-004): WebSocket server function for real-time state push
+
+Add Axum WebSocket handler at /ws/state that sends initial AppState
+snapshot on connection and streams subsequent broadcast updates as JSON.
+Client-side hook connects via web_sys::WebSocket after hydration and
+updates a reactive RwSignal<Option<AppState>> provided as Leptos context.
+HomePage now reactively displays daemon status, worktree count, and PRD count.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-005): redirect mr run output to log files
+
+Modify worktree run flow to redirect stdout/stderr of the detached
+mr run process to .mr/worktrees/<wt-id>/run.log. This enables the UI
+to tail and stream logs for active worktrees.
+
+- Add log_file_path() helper for computing log paths
+- spawn_mr_run() creates log directory, opens log file, redirects output
+- WorktreeEntry gains log_file: Option<String> field in state.yaml
+- wt status detail view shows log file path
+- CLI output updated to show actual log file location
+- 757 tests pass (756 existing + 1 new)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-015): add mr ui CLI command with host, port, open flags
+
+Add the 'mr ui' subcommand to the root CLI, feature-gated behind
+#[cfg(feature = "ui")]. Flags: --host (default 127.0.0.1), --port
+(default 3939), --open (auto-open browser).
+
+Create crates/mr-ui/src/serve.rs with serve_blocking() that constructs
+LeptosOptions via typed builder, starts StateService, and runs the
+Axum/Leptos server. Cross-platform open_browser() helper for --open.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-006): app shell layout with sidebar, dark theme toggle
+
+- Add components module: layout, sidebar, theme
+- AppShell with Thaw Layout/LayoutHeader/LayoutSider
+- NavDrawer sidebar with Dashboard, Worktrees, PRDs nav items
+- Dark theme by default via Thaw ConfigProvider + Theme
+- Light/dark toggle with Switch component
+- Daemon status badge in top bar
+- Responsive CSS with sidebar collapse at 768px
+- Placeholder routes for /worktrees and /prds
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-007): Dashboard home page with overview cards and daemon health
+
+Add DashboardHome component with:
+- Worktree status breakdown cards (total/active/completed/merged/failed)
+- Daemon health card (online/offline badge, PID, started_at, heartbeat)
+- Overlap warnings card with risk-colored tags (high/medium/low)
+- Recent events timeline (last 10 events across all worktrees)
+
+Uses Thaw Card, Badge, Tag components. Custom CSS timeline since
+Thaw 0.5.0-beta does not include a Timeline component.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-008): worktree list view with sortable table and status filter
+
+Add WorktreeList component with real-time status table using Thaw Table,
+Badge, Tag, and Select components. Includes status filter dropdown,
+sortable column headers, color-coded status badges, current task
+derivation from event history, and responsive CSS styling.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-016): add cargo-make tasks for UI dev, build, test, and CI integration
+
+Add ui-dev (cargo-leptos watch), ui-build (production build), ui-test
+(nextest with all features), ui-clippy, and ui-ci tasks to Makefile.toml.
+Update ci task to include UI lint and test. Fix pre-existing clippy
+warnings in mr-ui and add recursion_limit for --all-features compilation.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-009): worktree detail view with event timeline, task progress, files, and merge info
+
+Add the worktree detail page at /worktrees/:id with five sections:
+- Status header with PRD title, branch, status badge, and PID
+- Event timeline (Temporal-style, reverse chronological)
+- Task progress list with status indicators and progress bar
+- Modified files list
+- Merge info with target branch and resolution summary
+
+Extended PrdSummary with TaskSummary for individual task display.
+Made worktree list rows link to their detail page.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-010): add PRD list page with status, deps, and completion
+
+Implement the PRD list page component for the UI dashboard with:
+- Sortable table (ID, Title, Status, Dependencies, Tasks, Completion)
+- Status filter dropdown (All/Draft/Active/Done/Parked)
+- Color-coded status badges and dependency tags
+- Completion progress bars with percentage display
+- New PRD link placeholder for future T-011
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-017): add tracing integration for UI server
+
+Add tower-http TraceLayer for HTTP request/response logging, WebSocket
+connection events, and enhanced state service reload tracing with
+structured fields (worktree/PRD counts, change flags).
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-011): add PRD creation form with server-side mr new invocation
+
+Add a PRD creation form at /prds/new with slug, context, runner, and model
+fields. On submit, invokes mr new server-side via tokio::process::Command
+through a Leptos #[server] function. Shows spinner during creation and
+displays success/error results with navigation links.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-012): worktree kickoff from UI
+
+Add worktree kickoff functionality to the dashboard UI:
+- New wt_kickoff.rs component with server function, dialog, and action button
+- Action button in PRD list table (Actions column) and worktree detail header
+- Modal dialog with runner/model selection, spinner, and success/error display
+- CSS for kickoff button, overlay dialog, form fields, and result messages
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-013): log streaming view with real-time WebSocket tail
+
+Add dedicated log viewer page at /worktrees/:id/logs that streams
+worktree run.log content via WebSocket. Server-side tails the log file
+polling every 200ms, client renders in terminal-styled container with
+auto-scroll, pause/resume, clear, and error line highlighting.
+
+- Add log_ws_handler in ws.rs for /ws/logs/{id} WebSocket endpoint
+- Create log_viewer.rs component with terminal display and controls
+- Add View Logs link on worktree detail when log_file is present
+- Add routes to app.rs, serve.rs, and main.rs (dev)
+- Add terminal-styled CSS with monospace font stack and error colors
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-014): overlap risk visualization page
+
+Add dedicated overlap risk visualization page at /overlap with:
+- Summary cards showing total/high/medium/low warning counts
+- Table of overlap warnings sorted by risk (high first)
+- Risk-colored badges and row borders (red/yellow/blue)
+- Worktree IDs as clickable links to detail pages
+- Monospaced shared file path lists
+- Sidebar nav item with warning icon
+- Empty state when no warnings exist
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)feat(T-018): add UI documentation to AGENTS.md and README.md
+
+Add comprehensive Control UI Dashboard section to AGENTS.md covering
+architecture, state flow, dev workflow, crate structure, routes, and
+feature gates. Update README.md commands table with mr ui entries and
+add UI Dashboard subsection to Development section.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-001): skipped — Leptos SSR rendering requires WASM/browser context
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-002): verify dashboard renders worktree state from state.yaml
+
+Add load_app_state_combines_worktrees_and_prds_for_dashboard test in
+crates/mr-ui/src/state.rs. Validates the full data pipeline from a
+realistic state.yaml (multi-status worktrees, daemon, overlap warnings,
+events) and PRDs through to AppState — the exact data consumed by
+dashboard components.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-003): verify WebSocket pushes real-time state updates
+
+Add 3 integration tests in crates/mr-ui/src/ws.rs that spin up an Axum
+server with the /ws/state WebSocket route, connect a tokio-tungstenite
+client, and verify initial snapshot delivery, broadcast-triggered update
+push, and ordered multi-update delivery.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-004): skipped — thin subprocess wrapper, core logic tested in main crate
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-005): skipped — requires full integration environment
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-006): verify log streaming with WebSocket tests
+
+Added three tests for the log streaming WebSocket handler:
+- log_ws_streams_existing_content_on_connect
+- log_ws_streams_new_content_in_realtime
+- log_ws_reports_missing_worktree
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-007): skipped — requires browser/WASM E2E testing not available in CI
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+- Prd(PRD-0040)uat(uat-008): verified UI compiles and passes clippy with pedantic lints
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## [0.9.0] - 2026-02-23
+
+### 📋 PRD Tasks
+
 - Prd(PRD-0037)finalize: Fix run loop to re-enter task execution after UAT-added tasks
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

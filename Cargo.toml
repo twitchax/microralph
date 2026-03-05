@@ -5,7 +5,7 @@ default-members = ["."]
 [package]
 name = "microralph"
 authors = ["Aaron Roney <twitchax@gmail.com>"]
-version = "0.9.0"
+version = "0.10.0"
 edition = "2024"
 description = "A tiny CLI for creating and executing PRDs with coding agents"
 license = "MIT"
