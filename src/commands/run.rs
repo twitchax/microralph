@@ -19,6 +19,7 @@ use crate::prompt::{
 };
 use crate::runner::{Runner, RunnerOutput, TokenUsageInfo};
 use crate::util::spinner::start_spinner;
+#[cfg(unix)]
 use crate::worktree::{git, ipc, state, types::IpcMessage};
 
 /// Configuration for `mr run`.
@@ -892,12 +893,16 @@ pub fn run_uat_verification_loop(
 ///
 /// When no daemon is available (not in a worktree, no socket, etc.),
 /// [`Self::try_connect`] returns `None` and the run proceeds normally.
+///
+/// On non-Unix platforms, this is a no-op stub that always returns `None`.
+#[cfg(unix)]
 pub struct DaemonNotifier {
     client: ipc::IpcClient,
     prd_id: String,
     wt_id: String,
 }
 
+#[cfg(unix)]
 impl DaemonNotifier {
     /// Attempt to connect to the daemon IPC socket.
     ///
@@ -1041,6 +1046,24 @@ impl DaemonNotifier {
             error: error.to_string(),
         });
     }
+}
+
+/// No-op stub for non-Unix platforms where worktree IPC is unavailable.
+#[cfg(not(unix))]
+pub struct DaemonNotifier;
+
+#[cfg(not(unix))]
+impl DaemonNotifier {
+    /// Always returns `None` on non-Unix platforms.
+    pub fn try_connect(_cwd: &Path, _prd_id: &str) -> Option<Self> {
+        None
+    }
+
+    pub fn run_started(&mut self, _pid: u32) {}
+    pub fn task_started(&mut self, _task: &str) {}
+    pub fn task_completed(&mut self, _task: &str) {}
+    pub fn run_completed(&mut self) {}
+    pub fn run_failed(&mut self, _error: &str) {}
 }
 
 #[cfg(test)]
@@ -3087,8 +3110,9 @@ Project governance and best practices.
         );
     }
 
-    // ── DaemonNotifier tests ────────────────────────────────────────
+    // ── DaemonNotifier tests (unix-only) ──────────────────────────────
 
+    #[cfg(unix)]
     #[test]
     fn daemon_notifier_returns_none_outside_git_repo() {
         let tmp = TempDir::new().unwrap();
@@ -3096,6 +3120,7 @@ Project governance and best practices.
         assert!(result.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_notifier_returns_none_in_main_worktree() {
         let tmp = TempDir::new().unwrap();
@@ -3104,6 +3129,7 @@ Project governance and best practices.
         assert!(result.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_notifier_returns_none_when_no_daemon() {
         let tmp = TempDir::new().unwrap();
@@ -3121,6 +3147,7 @@ Project governance and best practices.
         assert!(result.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_notifier_returns_none_when_prd_not_in_state() {
         use crate::worktree::{ipc::IpcServer, state::StateManager, types::WorktreeState};
@@ -3150,6 +3177,7 @@ Project governance and best practices.
         assert!(result.is_none());
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_notifier_connects_and_sends_events() {
         use crate::worktree::{
@@ -3254,6 +3282,7 @@ Project governance and best practices.
     }
 
     /// Helper to initialize a git repo for notifier tests.
+    #[cfg(unix)]
     fn init_test_git_repo(dir: &Path) {
         use std::process::Command as Cmd;
         Cmd::new("git")

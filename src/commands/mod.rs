@@ -12,4 +12,5 @@ pub mod run;
 pub mod status;
 pub mod suggest;
 pub mod validate;
+#[cfg(unix)]
 pub mod worktree;

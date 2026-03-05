@@ -17,6 +17,7 @@ mod prd;
 mod prompt;
 mod runner;
 mod util;
+#[cfg(unix)]
 mod worktree;
 
 use commands::{bootstrap, devcontainer, graph, init, refactor, reindex, run, status, suggest};
@@ -297,6 +298,7 @@ enum Command {
     },
 
     /// [H] Worktree orchestration for parallel PRD execution.
+    #[cfg(unix)]
     #[command(display_order = 16)]
     Wt {
         #[command(subcommand)]
@@ -396,6 +398,7 @@ enum GraphCommand {
     },
 }
 
+#[cfg(unix)]
 #[derive(Subcommand, Debug)]
 enum WtCommand {
     /// Start parallel PRD execution in a new worktree.
@@ -467,6 +470,7 @@ enum WtCommand {
     },
 }
 
+#[cfg(unix)]
 #[derive(Subcommand, Debug)]
 enum DaemonCommand {
     /// Start the worktree orchestration daemon.
@@ -671,6 +675,7 @@ fn main() -> Result<()> {
                 cmd_graph_dot(!no_titles, max_title_len, lr)?;
             }
         },
+        #[cfg(unix)]
         Some(Command::Wt { command }) => match command {
             WtCommand::Run {
                 prd_id,
