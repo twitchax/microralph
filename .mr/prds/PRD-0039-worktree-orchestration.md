@@ -80,7 +80,7 @@ acceptance_tests:
   - id: uat-015
     name: "Agent strategically decides merge order when multiple worktrees complete"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
 tasks:
   - id: T-001
     title: "Define worktree state schema and types"
@@ -913,3 +913,16 @@ src/
     - `commit_state_stages_and_commits_in_git_repo` — verifies git commit is created with proper message
     - `commit_state_skips_when_no_changes` — verifies no commit when state unchanged
   - All 6 tests pass
+
+## 2026-03-05 — uat-015 Verification
+- **UAT**: Agent strategically decides merge order when multiple worktrees complete
+- **Status**: ✅ Verified
+- **Method**: Existing tests
+- **Details**:
+  - `compute_merge_order()` in `src/worktree/daemon.rs` implements overlap-aware strategic merge ordering
+  - 4 existing tests in `worktree::daemon::tests` cover this behavior:
+    - `compute_merge_order_prefers_less_overlap` — worktree with fewer overlapping files merges first
+    - `compute_merge_order_breaks_tie_by_completion_time` — earlier completion wins when overlap is equal
+    - `compute_merge_order_single_worktree` — single worktree baseline
+    - `compute_merge_order_empty` — empty list baseline
+  - All 4 tests pass
