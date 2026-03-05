@@ -86,3 +86,117 @@ async fn handle_state_ws(
 
     tracing::debug!("WebSocket client disconnected");
 }
+
+// ── Log streaming WebSocket ─────────────────────────────────────────
+
+/// Axum handler that upgrades an HTTP request to a WebSocket connection
+/// for streaming log file lines from a worktree's `run.log`.
+#[allow(clippy::unused_async)] // Axum requires handlers to be async.
+pub async fn log_ws_handler(
+    ws: WebSocketUpgrade,
+    axum::extract::Path(wt_id): axum::extract::Path<String>,
+    Extension(shared): Extension<Arc<RwLock<AppState>>>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_log_ws(socket, wt_id, shared))
+}
+
+/// Manages a single log-streaming WebSocket connection: resolves the log
+/// file path from the worktree state, then tails the file and streams
+/// new lines to the client until disconnection.
+async fn handle_log_ws(mut socket: WebSocket, wt_id: String, shared: Arc<RwLock<AppState>>) {
+    tracing::info!(wt_id = %wt_id, "log WebSocket client connected");
+
+    // Resolve the log file path from the current state.
+    let log_path = {
+        let state = shared.read().await;
+        state
+            .worktree_state
+            .worktrees
+            .iter()
+            .find(|wt| wt.id == wt_id)
+            .and_then(|wt| wt.log_file.clone())
+    };
+
+    let Some(log_path) = log_path else {
+        let _ = socket
+            .send(Message::Text(
+                format!("[mr-ui] No log file found for worktree {wt_id}").into(),
+            ))
+            .await;
+        return;
+    };
+
+    let path = std::path::PathBuf::from(&log_path);
+
+    // Read existing content first, sending it in chunks.
+    let mut pos = 0u64;
+
+    if let Ok(contents) = tokio::fs::read_to_string(&path).await
+        && !contents.is_empty()
+    {
+        // Send existing content as initial batch.
+        if socket
+            .send(Message::Text(contents.clone().into()))
+            .await
+            .is_err()
+        {
+            return;
+        }
+        pos = contents.len() as u64;
+    }
+
+    // Tail loop: poll for new bytes every 200ms.
+    let poll_interval = tokio::time::Duration::from_millis(200);
+    let mut interval = tokio::time::interval(poll_interval);
+
+    loop {
+        tokio::select! {
+            _ = interval.tick() => {
+                let Ok(metadata) = tokio::fs::metadata(&path).await else {
+                    continue;
+                };
+
+                let file_len = metadata.len();
+
+                if file_len > pos {
+                    // Read new bytes from the current position.
+                    if let Ok(file) = tokio::fs::File::open(&path).await {
+                        use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
+                        let mut file = file;
+                        if file.seek(std::io::SeekFrom::Start(pos)).await.is_ok() {
+                            let to_read = usize::try_from(file_len - pos).unwrap_or(usize::MAX);
+                            let mut buf = vec![0u8; to_read];
+                            if let Ok(n) = file.read(&mut buf).await {
+                                buf.truncate(n);
+                                if let Ok(text) = String::from_utf8(buf)
+                                    && !text.is_empty()
+                                    && socket.send(Message::Text(text.into())).await.is_err()
+                                {
+                                    break;
+                                }
+                                pos += n as u64;
+                            }
+                        }
+                    }
+                } else if file_len < pos {
+                    // File was truncated (e.g., new run started). Reset.
+                    pos = 0;
+                }
+            }
+            msg = socket.recv() => {
+                match msg {
+                    Some(Ok(Message::Ping(data))) => {
+                        if socket.send(Message::Pong(data)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Some(Ok(Message::Pong(_))) => {}
+                    _ => break,
+                }
+            }
+        }
+    }
+
+    tracing::debug!(wt_id = %wt_id, "log WebSocket client disconnected");
+}

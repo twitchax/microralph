@@ -23,7 +23,7 @@ async fn main() {
     use mr_ui::app::{App, shell};
     use mr_ui::state::StateService;
     use mr_ui::types::AppState;
-    use mr_ui::ws::state_ws_handler;
+    use mr_ui::ws::{log_ws_handler, state_ws_handler};
     use tokio::sync::RwLock;
     use tower_http::trace::TraceLayer;
 
@@ -42,6 +42,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/ws/state", get(state_ws_handler))
+        .route("/ws/logs/{id}", get(log_ws_handler))
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

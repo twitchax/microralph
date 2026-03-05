@@ -1144,3 +1144,97 @@ body {
     padding: 0.25rem 0.6rem;
     cursor: pointer;
 }
+
+/* ── Log viewer ──────────────────────────────────────────────────── */
+
+.mr-log-viewer {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+    padding: 1rem;
+    gap: 0.75rem;
+}
+
+.mr-log-viewer__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.mr-log-viewer__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mr-log-viewer__back {
+    color: var(--colorBrandForeground1, #7b7bff);
+    text-decoration: none;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.mr-log-viewer__back:hover {
+    text-decoration: underline;
+}
+
+.mr-log-viewer__title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--colorNeutralForeground1, #e5e5e5);
+}
+
+.mr-log-viewer__controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.mr-log-viewer__terminal {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: var(--colorNeutralBackground3, #1a1a2e);
+    border: 1px solid var(--colorNeutralStroke1, #333);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--colorNeutralForeground1, #d4d4d4);
+    white-space: pre;
+    tab-size: 4;
+}
+
+.mr-log-viewer__terminal code {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background: none;
+}
+
+.mr-log-viewer__line--error {
+    color: #f87171;
+    font-weight: 600;
+}
+
+/* ── Worktree detail: log link ───────────────────────────────────── */
+
+.mr-wt-detail__log-link {
+    font-size: 0.82rem;
+    color: var(--colorBrandForeground1, #7b7bff);
+    text-decoration: none;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--colorBrandForeground1, #7b7bff);
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.mr-wt-detail__log-link:hover {
+    background: var(--colorBrandForeground1, #7b7bff);
+    color: var(--colorNeutralBackground1, #1e1e2e);
+}

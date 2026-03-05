@@ -129,7 +129,7 @@ tasks:
   - id: T-013
     title: "Log streaming view: real-time log tail via WebSocket"
     priority: 5
-    status: todo
+    status: done
     notes: "Dedicated log viewer for a worktree. Server-side tails .mr/worktrees/<wt-id>/run.log and streams via WebSocket server function. Client renders in a scrollable, monospaced container with auto-scroll. Support pause/resume scrolling. Highlight errors in red. Use a pre/code block styled like a terminal."
   - id: T-014
     title: "Overlap risk visualization"
@@ -528,3 +528,20 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
   - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
 - **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing component patterns from prd_create.rs (rule 4), separation of concerns with dedicated wt_kickoff module (rule 2), DRY via reuse of server function pattern, Thaw `Select`, and existing spinner CSS (rule 1).
+
+## 2026-03-05 — T-013 Completed
+- **Task**: Log streaming view: real-time log tail via WebSocket
+- **Status**: ✅ Done
+- **Changes**:
+  - Added `log_ws_handler` to `crates/mr-ui/src/ws.rs`: Axum WebSocket handler at `/ws/logs/{id}` that resolves the log file path from `AppState`, sends existing content on connection, then tails the file (polling every 200ms via `tokio::io::AsyncSeekExt`/`AsyncReadExt`) and streams new bytes to the client. Handles file truncation (new run started) by resetting position to 0.
+  - Created `crates/mr-ui/src/components/log_viewer.rs`: Full log viewer page component with `LogViewer` (orchestrator with WebSocket connection), `ConnectionBadge` (connected/disconnected badge), `PauseButton` (toggle auto-scroll), `ClearButton` (clear log content), `LogTerminal` (terminal-styled `<pre><code>` container with auto-scroll via `NodeRef` + `Effect` and `inner_html` rendering). Includes `highlight_errors()` that wraps lines containing "error", "panic", or "fatal" in red `<span>` elements, and `push_html_escaped()` for safe HTML rendering.
+  - Client-side `connect_log_ws()` function opens a WebSocket to `/ws/logs/{wt_id}`, tracks connection state, and appends received text to a reactive signal.
+  - Updated `crates/mr-ui/src/app.rs`: Added `/worktrees/:id/logs` route pointing to `LogViewerPage`, imported `LogViewer` component.
+  - Updated `crates/mr-ui/src/serve.rs`: Added `/ws/logs/{id}` route to production Axum router, imported `log_ws_handler`.
+  - Updated `crates/mr-ui/src/main.rs` (dev server): Added matching `/ws/logs/{id}` route for dev parity.
+  - Updated `crates/mr-ui/src/components/worktree_detail.rs`: Added "📋 View Logs" link in the status header when `log_file` is present, navigating to `/worktrees/{id}/logs`.
+  - Updated `crates/mr-ui/src/components/mod.rs`: Registered `log_viewer` module.
+  - Updated `crates/mr-ui/style/main.css`: Added comprehensive CSS for log viewer — full-height terminal layout, monospaced font stack (Cascadia Code/Fira Code/JetBrains Mono), dark terminal background, auto-scroll container, error line highlighting in red, connection badge, pause/clear controls, and "View Logs" link button style on worktree detail.
+  - All code passes `clippy::pedantic` with targeted allows matching existing patterns (`clippy::must_use_candidate`, `clippy::wildcard_imports`).
+  - UAT passes: 757 root crate tests + 11 mr-ui tests, fmt-check, clippy all green.
+- **Constitution Compliance**: No violations. Pedantic clippy enforced (rule 8), minimal changes (rule 3), follows existing WebSocket and component patterns (rule 4), separation of concerns with dedicated log_viewer module and ws.rs extension (rule 2), DRY via reuse of WebSocket connection pattern from app.rs (rule 1).

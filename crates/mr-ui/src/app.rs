@@ -14,6 +14,7 @@ use leptos_router::{
 
 use crate::components::dashboard::DashboardHome;
 use crate::components::layout::AppShell;
+use crate::components::log_viewer::LogViewer;
 use crate::components::prd_create::PrdCreate;
 use crate::components::prd_list::PrdList;
 use crate::components::theme::ThemeProvider;
@@ -65,6 +66,7 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("") view=HomePage/>
                         <Route path=StaticSegment("worktrees") view=WorktreesPage/>
                         <Route path=(StaticSegment("worktrees"), ParamSegment("id")) view=WorktreeDetailPage/>
+                        <Route path=(StaticSegment("worktrees"), ParamSegment("id"), StaticSegment("logs")) view=LogViewerPage/>
                         <Route path=(StaticSegment("prds"), StaticSegment("new")) view=PrdCreatePage/>
                         <Route path=StaticSegment("prds") view=PrdsPage/>
                     </Routes>
@@ -161,5 +163,13 @@ fn PrdCreatePage() -> impl IntoView {
 fn WorktreeDetailPage() -> impl IntoView {
     view! {
         <WorktreeDetail />
+    }
+}
+
+/// Log streaming viewer page for a worktree (T-013).
+#[component]
+fn LogViewerPage() -> impl IntoView {
+    view! {
+        <LogViewer />
     }
 }

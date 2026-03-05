@@ -112,6 +112,8 @@ fn StatusHeader(
     let pid_text = entry
         .run_pid
         .map_or_else(|| String::from("—"), |pid| pid.to_string());
+    let has_log = entry.log_file.is_some();
+    let log_href = format!("/worktrees/{}/logs", entry.id);
 
     view! {
         <div class="mr-wt-detail__header">
@@ -125,6 +127,13 @@ fn StatusHeader(
                     target_prd_id=kickoff_prd_id
                     dialog_visible=kickoff_visible
                 />
+                {if has_log {
+                    view! {
+                        <a href=log_href class="mr-wt-detail__log-link">"📋 View Logs"</a>
+                    }.into_any()
+                } else {
+                    view! { <span /> }.into_any()
+                }}
             </div>
             <div class="mr-wt-detail__meta">
                 <MetaItem label="PRD" value=entry.prd.clone() />

@@ -19,7 +19,7 @@ use tower_http::trace::TraceLayer;
 use crate::app::{App, shell};
 use crate::state::StateService;
 use crate::types::AppState;
-use crate::ws::state_ws_handler;
+use crate::ws::{log_ws_handler, state_ws_handler};
 
 /// Starts the Axum server with Leptos SSR at the given address.
 ///
@@ -64,6 +64,7 @@ async fn serve_async(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error +
 
     let app = Router::new()
         .route("/ws/state", get(state_ws_handler))
+        .route("/ws/logs/{id}", get(log_ws_handler))
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
