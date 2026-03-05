@@ -56,7 +56,7 @@ acceptance_tests:
   - id: uat-006
     name: "Log streaming displays real-time run output for active worktrees"
     command: cargo make uat
-    uat_status: unverified
+    uat_status: verified
   - id: uat-007
     name: "Dark and light theme toggle works correctly"
     command: cargo make uat
@@ -622,3 +622,11 @@ mr-ui = { path = "crates/mr-ui", optional = true }
   - The UI component (`WtKickoffDialog`) is a Leptos reactive form with runner/model selection. Testing form interaction requires browser/WASM integration testing infrastructure (headless browser + cargo-leptos build pipeline) which does not exist.
   - The `#[server]` macro generates Leptos server function registration code that cannot be unit-tested without the full Leptos runtime context.
   - The underlying `mr wt run` logic is tested in the main crate's worktree command tests. The server function's correctness is implicitly validated by compilation with pedantic clippy and manual verification during development.
+
+## 2026-03-05 — uat-006 Verification
+- **UAT**: Log streaming displays real-time run output for active worktrees
+- **Status**: ✅ Verified
+- **Method**: New test
+- **Details**:
+  - Added three tests in `crates/mr-ui/src/ws.rs`: `log_ws_streams_existing_content_on_connect` (verifies existing log content is sent on WebSocket connect), `log_ws_streams_new_content_in_realtime` (verifies new log lines appended to the file are streamed to the client within the poll interval), and `log_ws_reports_missing_worktree` (verifies error message for unknown worktree IDs).
+  - Tests use a temp log file and a test Axum server with the `/ws/logs/{id}` route, validating the full server-side log tailing pipeline.

@@ -213,6 +213,7 @@ mod tests {
     use axum::Router;
     use axum::routing::get;
     use futures_util::StreamExt;
+    use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 
     /// Spins up an Axum server with the `/ws/state` route and returns its address.
@@ -303,6 +304,162 @@ mod tests {
         assert_eq!(received.worktree_state.version, 42);
         assert_eq!(received.prds.len(), 1);
         assert_eq!(received.prds[0].id, "PRD-0099");
+
+        ws.close(None).await.ok();
+    }
+
+    /// Spins up an Axum server with the `/ws/logs/{id}` route and returns its
+    /// address plus the shared state handle for populating worktree entries.
+    async fn start_log_test_server() -> (std::net::SocketAddr, Arc<RwLock<AppState>>) {
+        let shared: Arc<RwLock<AppState>> = Arc::new(RwLock::new(AppState::default()));
+        let (tx, _) = broadcast::channel::<AppState>(16);
+
+        let app = Router::new()
+            .route("/ws/logs/{id}", get(log_ws_handler))
+            .layer(Extension(Arc::clone(&shared)))
+            .layer(Extension(tx));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
+        });
+
+        (addr, shared)
+    }
+
+    #[tokio::test]
+    async fn log_ws_streams_existing_content_on_connect() {
+        let (addr, shared) = start_log_test_server().await;
+
+        // Create a temp log file with initial content.
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("run.log");
+        tokio::fs::write(&log_path, "line 1\nline 2\n")
+            .await
+            .unwrap();
+
+        // Register a worktree entry pointing to the log file.
+        {
+            let mut state = shared.write().await;
+            state
+                .worktree_state
+                .worktrees
+                .push(crate::types::WorktreeEntry {
+                    id: "wt-test".into(),
+                    prd: "PRD-9999".into(),
+                    branch: "test-branch".into(),
+                    path: dir.path().to_string_lossy().into(),
+                    status: crate::types::WorktreeStatus::Active,
+                    run_pid: None,
+                    created_at: String::new(),
+                    updated_at: String::new(),
+                    merge_target: "main".into(),
+                    modified_files: vec![],
+                    log_file: Some(log_path.to_string_lossy().into()),
+                    events: vec![],
+                });
+        }
+
+        let url = format!("ws://{addr}/ws/logs/wt-test");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        // First message should contain the existing log content.
+        let msg = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let text = msg.into_text().unwrap();
+        assert!(text.contains("line 1"));
+        assert!(text.contains("line 2"));
+
+        ws.close(None).await.ok();
+    }
+
+    #[tokio::test]
+    async fn log_ws_streams_new_content_in_realtime() {
+        let (addr, shared) = start_log_test_server().await;
+
+        // Create a temp log file with initial content.
+        let dir = tempfile::tempdir().unwrap();
+        let log_path = dir.path().join("run.log");
+        tokio::fs::write(&log_path, "initial\n").await.unwrap();
+
+        // Register worktree entry.
+        {
+            let mut state = shared.write().await;
+            state
+                .worktree_state
+                .worktrees
+                .push(crate::types::WorktreeEntry {
+                    id: "wt-tail".into(),
+                    prd: "PRD-9998".into(),
+                    branch: "tail-branch".into(),
+                    path: dir.path().to_string_lossy().into(),
+                    status: crate::types::WorktreeStatus::Active,
+                    run_pid: None,
+                    created_at: String::new(),
+                    updated_at: String::new(),
+                    merge_target: "main".into(),
+                    modified_files: vec![],
+                    log_file: Some(log_path.to_string_lossy().into()),
+                    events: vec![],
+                });
+        }
+
+        let url = format!("ws://{addr}/ws/logs/wt-tail");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        // Consume initial content.
+        let _ = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        // Append new content to the log file (simulating real-time run output).
+        let mut file = tokio::fs::OpenOptions::new()
+            .append(true)
+            .open(&log_path)
+            .await
+            .unwrap();
+        file.write_all(b"new output line\n").await.unwrap();
+        file.flush().await.unwrap();
+
+        // The WebSocket should stream the new content within the poll interval (200ms).
+        let msg = tokio::time::timeout(Duration::from_secs(3), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let text = msg.into_text().unwrap();
+        assert!(text.contains("new output line"));
+
+        ws.close(None).await.ok();
+    }
+
+    #[tokio::test]
+    async fn log_ws_reports_missing_worktree() {
+        let (addr, _shared) = start_log_test_server().await;
+
+        // Connect with an unknown worktree ID.
+        let url = format!("ws://{addr}/ws/logs/nonexistent");
+        let (mut ws, _) = tokio_tungstenite::connect_async(&url).await.unwrap();
+
+        let msg = tokio::time::timeout(Duration::from_secs(2), ws.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+
+        let text = msg.into_text().unwrap();
+        assert!(text.contains("No log file found"));
 
         ws.close(None).await.ok();
     }
